@@ -559,3 +559,19 @@
   overflow: hidden;
   white-space: nowrap;
 }
+
+/* 慢速闪烁动画 - 用于 Philosophy 部分的 emoji */
+@keyframes slowTwinkle {
+  0%, 100% {
+    opacity: 0.3;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.1);
+  }
+}
+
+.animate-slow-twinkle {
+  animation: slowTwinkle 4s ease-in-out infinite;
+}
