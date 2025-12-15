@@ -37,7 +37,7 @@ const leadTeam: Member[] = [
     ],
     email: "yyin@eduhk.hk",
     scholar: "https://scholar.google.com/citations?user=bjITS38AAAAJ&hl=zh-CN&inst=9002373801639654337&oi=ao",
-    photo: "http://museaiwrite.eduhk.hk/wp-content/uploads/2025/05/图片11.png"
+    photo: "/Nicole.png"
   },
   {
     name: "Prof. LEE, Chi Kin John, JP (PhD)",
@@ -107,7 +107,7 @@ const team: Member[] = [
       "STEM"
     ],
     email: "tongliu@eduhk.hk",
-    photo: "https://museaiwrite.eduhk.hk/wp-content/uploads/2025/10/image-8-683x1024.png"
+    photo: "/Tony.png"
   }
 ]
 
