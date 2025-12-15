@@ -16,8 +16,8 @@ interface Member {
 const researchVision = {
   title: "Research Vision",
   paragraphs: [
-    "We are committed to designing human-centered, AI-supported learning frameworks that integrate self-regulated learning and educational technology to improve the effectiveness and equity of language and interdisciplinary learning.",
-    "We examine AI's role in teaching as an inspiration and feedback tool that helps learners remain agentic, develop critical digital literacy, and adopt sustainable learning strategies."
+    "Our research advances human-centered, AI-supported learning frameworks that integrate self-regulated learning (SRL) and AI to enhance the effectiveness, equity, and sustainability of language and interdisciplinary learning.",
+    "We investigate how learners can remain agentic, develop critical digital and AI literacy, and cultivate lifelong self-regulated learning strategies in AI-rich educational environments."
   ]
 }
 
