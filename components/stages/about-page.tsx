@@ -1,102 +1,215 @@
 "use client"
 
-import { useState, useEffect } from "react"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
 
-type Language = "en" | "zh"
-
-const translations = {
-  en: {
-    title: "Dr. Yang Yin Nicole",
-    subtitle: "Research Assistant Professor",
-    description: "Dr. Yang Yin Nicole specializes in cognitive science, language education, and educational technology. Her research bridges AI, human cognition, and instructional design to enhance technology-enhanced learning.",
-    degree: "Ph.D. in Education",
-    university: "The Education University of Hong Kong",
-    visionTitle: "Research Vision",
-    visionText1: "We are committed to designing human-centered, AI-supported learning frameworks that integrate self-regulated learning and educational technology to improve the effectiveness and equity of language and interdisciplinary learning.",
-    visionText2: "We examine AI's role in teaching as an inspiration and feedback tool that helps learners remain agentic, develop critical digital literacy, and adopt sustainable learning strategies.",
-    teamTitle: "Research Team",
-    team1Name: "Dr. Yang Yin Nicole",
-    team1Desc: "Principal Investigator\nSpecializes in AI & educational technology",
-    team2Name: "Mr. Liu Tong",
-    team2Desc: "Research Team Member\nGraduate of AI & Educational Technology, EdUHK",
-    marquee: "Research • Education • AI • Cognition • Learning Design",
-  },
-  zh: {
-    title: "楊茵博士",
-    subtitle: "研究助理教授",
-    description: "楊茵博士專注於認知科學、語言教育與教育科技。她的研究結合人工智能、人類認知與教學設計，以提升科技增強學習的效果。",
-    degree: "教育學博士",
-    university: "香港教育大學",
-    visionTitle: "研究願景",
-    visionText1: "我們致力於設計以人為本、AI支援的學習框架，整合自主學習與教育科技，以提升語言與跨學科學習的效能與公平性。",
-    visionText2: "我們探討AI在教學中作為啟發與回饋工具的角色，幫助學習者保持主動性，發展批判性數碼素養，並採用可持續的學習策略。",
-    teamTitle: "研究團隊",
-    team1Name: "楊茵博士",
-    team1Desc: "首席研究員\n專注AI與教育科技",
-    team2Name: "劉通先生",
-    team2Desc: "研究團隊成員\n香港教育大學AI與教育科技畢業生",
-    marquee: "研究 • 教育 • 人工智能 • 認知 • 學習設計",
-  },
+interface Member {
+  name: string
+  role: string
+  titles: string[]
+  interests: string[]
+  email: string
+  scholar?: string
+  photo: string
 }
 
-interface AboutPageProps {
-  onBack?: () => void
+const researchVision = {
+  title: "Research Vision",
+  paragraphs: [
+    "We are committed to designing human-centered, AI-supported learning frameworks that integrate self-regulated learning and educational technology to improve the effectiveness and equity of language and interdisciplinary learning.",
+    "We examine AI's role in teaching as an inspiration and feedback tool that helps learners remain agentic, develop critical digital literacy, and adopt sustainable learning strategies."
+  ]
 }
 
-export default function AboutPage({ onBack }: AboutPageProps) {
-  const [language, setLanguage] = useState<Language>("en")
-  const t = translations[language]
+const leadTeam: Member[] = [
+  {
+    name: "Dr. YANG, Yin Nicole (PhD)",
+    role: "Principal Investigator",
+    titles: [
+      "Research Assistant Professor"
+    ],
+    interests: [
+      "AI in interdisciplinary education",
+      "Digital literacy and competency",
+      "Second language acquisition",
+      "Cognitive science in learning",
+      "Emerging technologies and pedagogical innovation"
+    ],
+    email: "yyin@eduhk.hk",
+    scholar: "https://scholar.google.com/citations?user=bjITS38AAAAJ&hl=zh-CN&inst=9002373801639654337&oi=ao",
+    photo: "http://museaiwrite.eduhk.hk/wp-content/uploads/2025/05/图片11.png"
+  },
+  {
+    name: "Prof. LEE, Chi Kin John, JP (PhD)",
+    role: "Co-Principal Investigator & Advisor",
+    titles: [
+      "President",
+      "Chair Professor of Curriculum and Instruction",
+      "Director, Academy for Applied Policy Studies and Education Futures",
+      "Director, Academy for Educational Development and Innovation"
+    ],
+    interests: [
+      "Curriculum and instruction",
+      "Geographical and environmental education",
+      "School improvement",
+      "Teacher development",
+      "Life and values education"
+    ],
+    email: "poffice@eduhk.hk",
+    photo: "/placeholder-user.jpg"
+  }
+]
 
-  useEffect(() => {
-    // 从localStorage同步语言设置
-    if (typeof window !== 'undefined') {
-      const savedLang = localStorage.getItem('siteLanguage') as Language | null
-      // 兼容旧数据：将 "yue" 转换为 "zh"
-      if (savedLang === 'yue') {
-        setLanguage('zh')
-        localStorage.setItem('siteLanguage', 'zh')
-      } else if (savedLang && (savedLang === 'en' || savedLang === 'zh')) {
-        setLanguage(savedLang)
-      }
-      
-      // 监听Header的语言切换事件
-      const handleLanguageChangeEvent = (e: Event) => {
-        const customEvent = e as CustomEvent
-        const newLang = customEvent.detail as Language
-        // 兼容旧数据：将 "yue" 转换为 "zh"
-        if (newLang === 'yue') {
-          setLanguage('zh')
-        } else if (newLang === 'en' || newLang === 'zh') {
-          setLanguage(newLang)
-        }
-      }
-      
-      window.addEventListener('headerLanguageChange', handleLanguageChangeEvent)
-      
-      // 监听localStorage变化（跨标签页同步）
-      const handleStorageChange = (e: StorageEvent) => {
-        if (e.key === 'siteLanguage' && e.newValue) {
-          const newLang = e.newValue as Language
-          // 兼容旧数据：将 "yue" 转换为 "zh"
-          if (newLang === 'yue') {
-            setLanguage('zh')
-            localStorage.setItem('siteLanguage', 'zh')
-          } else if (newLang === 'en' || newLang === 'zh') {
-            setLanguage(newLang)
-          }
-        }
-      }
-      
-      window.addEventListener('storage', handleStorageChange)
-      
-      return () => {
-        window.removeEventListener('headerLanguageChange', handleLanguageChangeEvent)
-        window.removeEventListener('storage', handleStorageChange)
-      }
-    }
-  }, [])
+const team: Member[] = [
+  {
+    name: "Prof. GU, Ming Yue Michelle (PhD)",
+    role: "Co-Investigator",
+    titles: [
+      "Professor",
+      "Assistant Vice President (Research)"
+    ],
+    interests: [
+      "Multilingualism and mobility",
+      "Internationalization in higher education",
+      "(Digital) citizenship and identity studies",
+      "Minority education",
+      "Family language policy"
+    ],
+    email: "mygu@eduhk.hk",
+    scholar: "https://scholar.google.com/citations?user=PLuccV8AAAAJ&hl=en",
+    photo: "/placeholder-user.jpg"
+  },
+  {
+    name: "Dr LIU, Yiqi April (PhD)",
+    role: "Co-Investigator",
+    titles: [
+      "Assistant Professor"
+    ],
+    interests: [
+      "Classroom discourse",
+      "Language and identity",
+      "Content and Language Integrated Learning",
+      "Translanguaging and trans-semiotizing"
+    ],
+    email: "liuyiqi@eduhk.hk",
+    scholar: "https://scholar.google.com/citations?user=d_x9D8KvDlYC&hl=zh-TW",
+    photo: "/placeholder-user.jpg"
+  },
+  {
+    name: "Mr. LIU, Tong Tony",
+    role: "Research Assistant",
+    titles: [
+      "Graduate of AI & Educational Technology, EdUHK"
+    ],
+    interests: [
+      "AI and design",
+      "Robotics automation",
+      "STEM"
+    ],
+    email: "tongliu@eduhk.hk",
+    photo: "https://museaiwrite.eduhk.hk/wp-content/uploads/2025/10/image-8-683x1024.png"
+  }
+]
+
+function MemberCard({ member, highlight }: { member: Member; highlight?: boolean }) {
+  return (
+    <div
+      className={`relative rounded-3xl p-8 border-4 shadow-2xl backdrop-blur-sm h-full flex flex-col gap-4 ${
+        highlight
+          ? "bg-gradient-to-br from-purple-50 via-pink-50 to-orange-50 border-purple-200"
+          : "bg-white/85 border-amber-200"
+      }`}
+    >
+      <div className="flex items-start gap-4">
+        <div className="relative w-24 h-24 rounded-2xl overflow-hidden border-4 border-purple-300 flex-shrink-0">
+          <Image
+            src={member.photo}
+            alt={member.name}
+            fill
+            className="object-cover"
+            unoptimized={member.photo.startsWith("http")}
+          />
+        </div>
+        <div className="space-y-2">
+          <h3 className="text-xl font-bold text-purple-800 leading-tight">{member.name}</h3>
+          <p className="text-sm font-semibold text-purple-600">{member.role}</p>
+          <div className="text-sm text-gray-700 leading-snug">
+            {member.titles.map((t, i) => (
+              <div key={i}>{t}</div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="rounded-2xl bg-white/80 border border-purple-100 p-4 shadow-inner">
+        <p className="text-sm font-semibold text-purple-700 mb-2">Research interests</p>
+        <ul className="text-sm text-gray-700 space-y-1 list-disc pl-4">
+          {member.interests.map((item, i) => (
+            <li key={i}>{item}</li>
+          ))}
+        </ul>
+      </div>
+
+      <div className="flex flex-wrap gap-3">
+        <Button asChild className="bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-700 hover:to-pink-700">
+          <a href={`mailto:${member.email}`}>✉️ Email</a>
+        </Button>
+        {member.scholar && (
+          <Button
+            asChild
+            variant="outline"
+            className="border-purple-200 text-purple-700 hover:bg-purple-50"
+          >
+            <a href={member.scholar} target="_blank" rel="noopener">
+              🎓 Google Scholar
+            </a>
+          </Button>
+        )}
+      </div>
+    </div>
+  )
+}
+
+export default function AboutPage({ onBack }: { onBack?: () => void }) {
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-indigo-100 via-purple-50 via-pink-50 to-orange-50 px-4" style={{ paddingTop: '120px', paddingBottom: '120px' }}>
+      <div className="max-w-7xl mx-auto space-y-10">
+        {/* Research Vision */}
+        <section className="bg-gradient-to-br from-purple-700 via-indigo-700 to-purple-900 text-white rounded-3xl p-10 shadow-2xl">
+          <h1 className="text-4xl md:text-5xl font-black mb-6">{researchVision.title}</h1>
+          <div className="space-y-4 text-lg leading-relaxed text-purple-50">
+            {researchVision.paragraphs.map((p, i) => (
+              <p key={i}>{p}</p>
+            ))}
+          </div>
+        </section>
+
+        {/* Lead team */}
+        <section className="space-y-6">
+          <h2 className="text-3xl md:text-4xl font-black text-purple-800">Research Team</h2>
+          <div className="grid md:grid-cols-2 gap-6">
+            {leadTeam.map((m) => (
+              <MemberCard key={m.name} member={m} highlight />
+            ))}
+          </div>
+        </section>
+
+        {/* Core team */}
+        <section className="space-y-6">
+          <div className="grid md:grid-cols-3 gap-6">
+            {team.map((m) => (
+              <MemberCard key={m.name} member={m} />
+            ))}
+          </div>
+        </section>
+
+        <footer className="bg-gradient-to-r from-purple-900 via-indigo-900 to-purple-900 text-white py-6 rounded-2xl text-center shadow-lg">
+          <p className="text-purple-200">© 2025 CWrite - The Education University of Hong Kong</p>
+        </footer>
+      </div>
+    </div>
+  )
+}
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-100 via-purple-50 via-pink-50 to-orange-50 px-4" style={{ paddingTop: '120px', paddingBottom: '120px' }}>
