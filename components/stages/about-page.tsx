@@ -56,7 +56,7 @@ const leadTeam: Member[] = [
       "Life and values education"
     ],
     email: "poffice@eduhk.hk",
-    photo: "/john.png"
+    photo: "/John.png"
   }
 ]
 
