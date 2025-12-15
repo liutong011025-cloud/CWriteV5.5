@@ -347,7 +347,7 @@ export default function HomePage({
               {/* Replaced the original single paragraph with the new 4-line centered bullet-like points using emojis.
                   The first line shows aboutText1, then four centered points with different emojis.
                   "creative writing", "personal voice", and "responsible" are bold and colored as requested. */}
-            <div className="text-base md:text-lg text-gray-700 leading-relaxed text-center">
+              <div className="text-base md:text-lg text-gray-700 leading-relaxed text-center">
   <p className="text-xl md:text-2xl font-bold mb-4">
     <strong>An AI-powered writing platform grounded in self-regulated learning and learning sciences</strong>
   </p>
