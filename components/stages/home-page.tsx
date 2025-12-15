@@ -25,13 +25,13 @@ const translations = {
     unleashCreativity: "Unleash Creativity,",
     empowerExpression: "Empower Expression",
     aboutTitle: "About CWrite",
-    aboutText1: "An AI-powered writing platform grounded in self-regulated learning and the learning science",
-    aboutText2: "support students' creative writing processes",
+    aboutText1: "An AI-powered writing platform grounded in self-regulated learning and the learning science support students' creative writing processes",
+    aboutText2: "",
     aboutText3: "",
     enhanceTitle: "How We Enhance Creative Writing",
     philosophyTitle: "The Philosophy behind LuminiAI",
-    philosophyText1: "Derived from the Latin lumen—meaning light—LuminAI represents illumination rather than domination. We believe that AI is not an all-knowing authority. LuminAI is grounded in the belief that intelligence should guide, reveal, and amplify, not replace human agency.",
-    philosophyText2: "LuminAI aligns with humanistic and constructivist traditions in education, where knowledge is actively constructed through reflection, dialogue, and experience. Intelligence is understood not as a static output, but as a dynamic process of meaning-making.",
+    philosophyText1: "Derived from the Latin lumen—meaning light—<strong>LuminAI</strong> represents <strong>illumination rather than domination</strong>. We believe that AI is not an all-knowing authority. LuminAI is grounded in the belief that intelligence should <strong>guide, reveal, and amplify</strong>, not replace human agency.",
+    philosophyText2: "<strong>LuminAI</strong> aligns with humanistic and constructivist traditions in education, where knowledge is actively constructed through reflection, dialogue, and experience. Intelligence is understood not as a static output, but as a <strong>dynamic process of meaning-making</strong>.",
     visionTitle: "Our Vision",
     visionItems: [
       "Reshape creative writing education for the digital age.",
@@ -78,8 +78,8 @@ const translations = {
     aboutText3: "創造個人化、互動的寫作體驗。",
     enhanceTitle: "我們如何增強創意寫作",
     philosophyTitle: "LuminiAI背後的哲學",
-    philosophyText1: "LuminAI源自拉丁語lumen（光），代表啟發而非支配。我們相信AI不是全知權威。LuminAI基於這樣的信念：智能應該引導、揭示和放大，而非取代人類的主動性。",
-    philosophyText2: "LuminAI與教育中的人本主義和建構主義傳統一致，知識通過反思、對話和經驗積極建構。智能被理解為動態的意義建構過程，而非靜態輸出。",
+    philosophyText1: "LuminAI源自拉丁語lumen（光），代表<strong>啟發而非支配</strong>。我們相信AI不是全知權威。<strong>LuminAI</strong>基於這樣的信念：智能應該<strong>引導、揭示和放大</strong>，而非取代人類的主動性。",
+    philosophyText2: "<strong>LuminAI</strong>與教育中的人本主義和建構主義傳統一致，知識通過反思、對話和經驗積極建構。智能被理解為<strong>動態的意義建構過程</strong>，而非靜態輸出。",
     visionTitle: "我們的願景",
     visionItems: [
       "重塑數碼時代的創意寫作教育。",
@@ -505,11 +505,11 @@ export default function HomePage({
             <div className="relative w-full h-[400px] md:h-[500px] overflow-hidden rounded-2xl shadow-2xl">
               {/* 背景图片 */}
               <div 
-                className="absolute inset-0 bg-contain bg-center bg-no-repeat"
+                className="absolute inset-0 bg-cover bg-center bg-no-repeat"
                 style={{
                   backgroundImage: 'url(/Background.png)',
-                  backgroundSize: 'contain',
-                  backgroundPosition: 'center',
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center top',
                 }}
               />
               
@@ -538,50 +538,24 @@ export default function HomePage({
             </div>
           </div>
 
-          {/* The Philosophy behind LuminiAI - 书本打开效果 */}
+          {/* The Philosophy behind LuminiAI - 平面设计 */}
           <div className="mb-16 mt-16 animate-fade-in" style={{ animationDelay: '0.65s' }}>
             <h2 className="text-4xl md:text-5xl font-black text-center mb-12 bg-gradient-to-r from-purple-600 via-pink-600 to-orange-600 bg-clip-text text-transparent">
               {t.philosophyTitle}
             </h2>
             
             <div className="max-w-6xl mx-auto px-4">
-              {/* 书本打开效果容器 */}
-              <div className="relative flex gap-0 perspective-1000" style={{ perspective: '1200px' }}>
-                {/* 左页 */}
-                <div className="relative bg-gradient-to-br from-amber-50 via-yellow-50 to-orange-50 rounded-l-3xl p-8 md:p-12 border-4 border-amber-200 shadow-2xl flex-1"
-                  style={{
-                    transform: 'perspective(1200px) rotateY(-12deg)',
-                    transformOrigin: 'left center',
-                    transformStyle: 'preserve-3d',
-                    borderRight: '2px solid rgba(251, 191, 36, 0.2)',
-                  }}
-                >
-                  <div className="pr-4 md:pr-8">
-                    <div className="text-5xl mb-6 text-center opacity-80">📖</div>
-                    <p className="text-base md:text-lg lg:text-xl text-gray-800 leading-relaxed mb-6 font-serif">
-                      {t.philosophyText1}
-                    </p>
-                  </div>
-                </div>
-                
-                {/* 书脊效果 */}
-                <div className="relative w-2 bg-gradient-to-b from-amber-600 via-amber-500 to-amber-600 shadow-lg z-10 flex-shrink-0"></div>
-                
-                {/* 右页 */}
-                <div className="relative bg-gradient-to-br from-amber-50 via-yellow-50 to-orange-50 rounded-r-3xl p-8 md:p-12 border-4 border-amber-200 shadow-2xl flex-1"
-                  style={{
-                    transform: 'perspective(1200px) rotateY(12deg)',
-                    transformOrigin: 'right center',
-                    transformStyle: 'preserve-3d',
-                    borderLeft: '2px solid rgba(251, 191, 36, 0.2)',
-                  }}
-                >
-                  <div className="pl-4 md:pl-8">
-                    <p className="text-base md:text-lg lg:text-xl text-gray-800 leading-relaxed font-serif">
-                      {t.philosophyText2}
-                    </p>
-                  </div>
-                </div>
+              {/* 平面设计容器 */}
+              <div className="bg-gradient-to-br from-amber-50 via-yellow-50 to-orange-50 rounded-3xl p-8 md:p-12 border-4 border-amber-200 shadow-2xl">
+                <div className="text-5xl mb-6 text-center opacity-80">📖</div>
+                <p 
+                  className="text-base md:text-lg lg:text-xl text-gray-800 leading-relaxed mb-6 font-serif"
+                  dangerouslySetInnerHTML={{ __html: t.philosophyText1 }}
+                />
+                <p 
+                  className="text-base md:text-lg lg:text-xl text-gray-800 leading-relaxed font-serif"
+                  dangerouslySetInnerHTML={{ __html: t.philosophyText2 }}
+                />
               </div>
             </div>
           </div>
