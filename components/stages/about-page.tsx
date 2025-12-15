@@ -56,7 +56,7 @@ const leadTeam: Member[] = [
       "Life and values education"
     ],
     email: "poffice@eduhk.hk",
-    photo: "/placeholder-user.jpg"
+    photo: "/john.png"
   }
 ]
 
@@ -77,7 +77,7 @@ const team: Member[] = [
     ],
     email: "mygu@eduhk.hk",
     scholar: "https://scholar.google.com/citations?user=PLuccV8AAAAJ&hl=en",
-    photo: "/placeholder-user.jpg"
+    photo: "/apple.png"
   },
   {
     name: "Dr LIU, Yiqi April (PhD)",
@@ -93,7 +93,7 @@ const team: Member[] = [
     ],
     email: "liuyiqi@eduhk.hk",
     scholar: "https://scholar.google.com/citations?user=d_x9D8KvDlYC&hl=zh-TW",
-    photo: "/placeholder-user.jpg"
+    photo: "/Liu.png"
   },
   {
     name: "Mr. LIU, Tong Tony",
