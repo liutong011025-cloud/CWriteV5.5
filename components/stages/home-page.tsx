@@ -379,7 +379,6 @@ export default function HomePage({
     </p>
   </div>
 </div>
-
           {/* 第二行：三个功能卡片 - 滚动展开/收缩效果 */}
           <div className="mb-6 animate-fade-in" style={{ animationDelay: '0.5s' }}>
             <h2 className="text-3xl md:text-4xl font-bold text-center mb-8 bg-gradient-to-r from-purple-600 via-pink-600 to-orange-600 bg-clip-text text-transparent">
