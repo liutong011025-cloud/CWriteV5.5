@@ -17,7 +17,8 @@ const researchVision = {
   title: "Research Vision",
   paragraphs: [
     "Our research advances human-centered, AI-supported learning frameworks that integrate self-regulated learning (SRL) and AI to enhance the effectiveness, equity, and sustainability of language and interdisciplinary learning.",
-    "We investigate how learners can remain agentic, develop critical digital and AI literacy, and cultivate lifelong self-regulated learning strategies in AI-rich educational environments."
+    "We investigate how learners can remain agentic, develop critical digital and AI literacy, and cultivate lifelong self-regulated learning strategies in AI-rich educational environments.",
+    "Intelligence is understood not as a static output, but as a dynamic process of meaning-making."
   ]
 }
 
