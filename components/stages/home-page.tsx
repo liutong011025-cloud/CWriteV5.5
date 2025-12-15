@@ -546,16 +546,32 @@ export default function HomePage({
             
             <div className="max-w-6xl mx-auto px-4">
               {/* 平面设计容器 */}
-              <div className="bg-gradient-to-br from-amber-50 via-yellow-50 to-orange-50 rounded-3xl p-8 md:p-12 border-4 border-amber-200 shadow-2xl">
-                <div className="text-5xl mb-6 text-center opacity-80">📖</div>
-                <p 
-                  className="text-base md:text-lg lg:text-xl text-gray-800 leading-relaxed mb-6 font-serif"
-                  dangerouslySetInnerHTML={{ __html: t.philosophyText1 }}
-                />
-                <p 
-                  className="text-base md:text-lg lg:text-xl text-gray-800 leading-relaxed font-serif"
-                  dangerouslySetInnerHTML={{ __html: t.philosophyText2 }}
-                />
+              <div className="relative bg-gradient-to-br from-amber-50 via-yellow-50 to-orange-50 rounded-3xl p-8 md:p-12 border-4 border-amber-200 shadow-2xl overflow-hidden">
+                {/* 装饰性 emoji - 均匀分布在文本下方 */}
+                <div className="absolute inset-0 pointer-events-none flex items-end justify-center pb-4 md:pb-6">
+                  <div className="flex gap-4 md:gap-6 lg:gap-8 items-center">
+                    <span className="text-2xl md:text-3xl opacity-30 animate-slow-twinkle" style={{ animationDelay: '0s' }}>🌙</span>
+                    <span className="text-xl md:text-2xl opacity-30 animate-slow-twinkle" style={{ animationDelay: '0.5s' }}>✨</span>
+                    <span className="text-2xl md:text-3xl opacity-30 animate-slow-twinkle" style={{ animationDelay: '1s' }}>💡</span>
+                    <span className="text-xl md:text-2xl opacity-30 animate-slow-twinkle" style={{ animationDelay: '1.5s' }}>🌟</span>
+                    <span className="text-2xl md:text-3xl opacity-30 animate-slow-twinkle" style={{ animationDelay: '2s' }}>🌙</span>
+                    <span className="text-xl md:text-2xl opacity-30 animate-slow-twinkle" style={{ animationDelay: '2.5s' }}>✨</span>
+                    <span className="text-2xl md:text-3xl opacity-30 animate-slow-twinkle" style={{ animationDelay: '3s' }}>💫</span>
+                  </div>
+                </div>
+                
+                {/* 文本内容 - 相对定位确保在 emoji 上方 */}
+                <div className="relative z-10">
+                  <div className="text-5xl mb-6 text-center opacity-80">📖</div>
+                  <p 
+                    className="text-base md:text-lg lg:text-xl text-gray-800 leading-relaxed mb-6 font-serif"
+                    dangerouslySetInnerHTML={{ __html: t.philosophyText1 }}
+                  />
+                  <p 
+                    className="text-base md:text-lg lg:text-xl text-gray-800 leading-relaxed font-serif"
+                    dangerouslySetInnerHTML={{ __html: t.philosophyText2 }}
+                  />
+                </div>
               </div>
             </div>
           </div>
