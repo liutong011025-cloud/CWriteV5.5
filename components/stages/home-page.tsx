@@ -547,17 +547,33 @@ export default function HomePage({
             <div className="max-w-6xl mx-auto px-4">
               {/* 平面设计容器 */}
               <div className="relative bg-gradient-to-br from-amber-50 via-yellow-50 to-orange-50 rounded-3xl p-8 md:p-12 border-4 border-amber-200 shadow-2xl overflow-hidden">
-                {/* 装饰性 emoji - 均匀分布在文本下方 */}
-                <div className="absolute inset-0 pointer-events-none flex items-end justify-center pb-4 md:pb-6">
-                  <div className="flex gap-4 md:gap-6 lg:gap-8 items-center">
-                    <span className="text-2xl md:text-3xl opacity-30 animate-slow-twinkle" style={{ animationDelay: '0s' }}>🌙</span>
-                    <span className="text-xl md:text-2xl opacity-30 animate-slow-twinkle" style={{ animationDelay: '0.5s' }}>✨</span>
-                    <span className="text-2xl md:text-3xl opacity-30 animate-slow-twinkle" style={{ animationDelay: '1s' }}>💡</span>
-                    <span className="text-xl md:text-2xl opacity-30 animate-slow-twinkle" style={{ animationDelay: '1.5s' }}>🌟</span>
-                    <span className="text-2xl md:text-3xl opacity-30 animate-slow-twinkle" style={{ animationDelay: '2s' }}>🌙</span>
-                    <span className="text-xl md:text-2xl opacity-30 animate-slow-twinkle" style={{ animationDelay: '2.5s' }}>✨</span>
-                    <span className="text-2xl md:text-3xl opacity-30 animate-slow-twinkle" style={{ animationDelay: '3s' }}>💫</span>
-                  </div>
+                {/* 装饰性 emoji - 随机分布在整个容器中 */}
+                <div className="absolute inset-0 pointer-events-none">
+                  {/* 第一行 - 顶部区域 */}
+                  <span className="absolute text-xl md:text-2xl opacity-30 animate-slow-twinkle" style={{ top: '8%', left: '10%', animationDelay: '0s' }}>🌙</span>
+                  <span className="absolute text-lg md:text-xl opacity-30 animate-slow-twinkle" style={{ top: '12%', right: '15%', animationDelay: '0.7s' }}>✨</span>
+                  <span className="absolute text-xl md:text-2xl opacity-30 animate-slow-twinkle" style={{ top: '6%', left: '45%', animationDelay: '1.4s' }}>💡</span>
+                  
+                  {/* 第二行 - 中间偏上 */}
+                  <span className="absolute text-lg md:text-xl opacity-30 animate-slow-twinkle" style={{ top: '25%', left: '5%', animationDelay: '2.1s' }}>🌟</span>
+                  <span className="absolute text-xl md:text-2xl opacity-30 animate-slow-twinkle" style={{ top: '30%', right: '8%', animationDelay: '2.8s' }}>🌙</span>
+                  <span className="absolute text-lg md:text-xl opacity-30 animate-slow-twinkle" style={{ top: '28%', left: '60%', animationDelay: '3.5s' }}>✨</span>
+                  
+                  {/* 第三行 - 中间区域 */}
+                  <span className="absolute text-xl md:text-2xl opacity-30 animate-slow-twinkle" style={{ top: '45%', left: '12%', animationDelay: '0.3s' }}>💫</span>
+                  <span className="absolute text-lg md:text-xl opacity-30 animate-slow-twinkle" style={{ top: '50%', right: '12%', animationDelay: '1s' }}>🌙</span>
+                  <span className="absolute text-xl md:text-2xl opacity-30 animate-slow-twinkle" style={{ top: '48%', left: '70%', animationDelay: '1.7s' }}>✨</span>
+                  
+                  {/* 第四行 - 中间偏下 */}
+                  <span className="absolute text-lg md:text-xl opacity-30 animate-slow-twinkle" style={{ top: '65%', left: '8%', animationDelay: '2.4s' }}>💡</span>
+                  <span className="absolute text-xl md:text-2xl opacity-30 animate-slow-twinkle" style={{ top: '70%', right: '10%', animationDelay: '3.1s' }}>🌟</span>
+                  <span className="absolute text-lg md:text-xl opacity-30 animate-slow-twinkle" style={{ top: '68%', left: '55%', animationDelay: '3.8s' }}>🌙</span>
+                  
+                  {/* 第五行 - 底部区域 */}
+                  <span className="absolute text-xl md:text-2xl opacity-30 animate-slow-twinkle" style={{ top: '85%', left: '15%', animationDelay: '0.6s' }}>✨</span>
+                  <span className="absolute text-lg md:text-xl opacity-30 animate-slow-twinkle" style={{ top: '88%', right: '18%', animationDelay: '1.3s' }}>💫</span>
+                  <span className="absolute text-xl md:text-2xl opacity-30 animate-slow-twinkle" style={{ top: '90%', left: '50%', animationDelay: '2s' }}>🌟</span>
+                  <span className="absolute text-lg md:text-xl opacity-30 animate-slow-twinkle" style={{ top: '92%', right: '5%', animationDelay: '2.7s' }}>🌙</span>
                 </div>
                 
                 {/* 文本内容 - 相对定位确保在 emoji 上方 */}
