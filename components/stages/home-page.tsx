@@ -347,38 +347,38 @@ export default function HomePage({
               {/* Replaced the original single paragraph with the new 4-line centered bullet-like points using emojis.
                   The first line shows aboutText1, then four centered points with different emojis.
                   "creative writing", "personal voice", and "responsible" are bold and colored as requested. */}
-              <div className="text-base md:text-lg text-gray-700 leading-relaxed text-center">
-                <p>{t.aboutText1}</p>
+            <div className="text-base md:text-lg text-gray-700 leading-relaxed text-center">
+  <p className="text-xl md:text-2xl font-bold mb-4">
+    <strong>An AI-powered writing platform grounded in self-regulated learning and learning sciences</strong>
+  </p>
 
-                <div className="mt-6 space-y-3">
-                  <p className="flex items-center justify-center gap-3">
-                    <span className="text-2xl">✨</span>
-                    <span className="text-sm md:text-base text-gray-700 font-medium">
-                      Support students’ <span className="font-bold text-purple-600">creative writing</span> processes
-                    </span>
-                  </p>
-                  <p className="flex items-center justify-center gap-3">
-                    <span className="text-2xl">🪄</span>
-                    <span className="text-sm md:text-base text-gray-700 font-medium">
-                      Preserve students’ <span className="font-bold text-green-600">personal voice</span>
-                    </span>
-                  </p>
-                  <p className="flex items-center justify-center gap-3">
-                    <span className="text-2xl">🧠</span>
-                    <span className="text-sm md:text-base text-gray-700 font-medium">
-                      Encourage metacognitive engagement
-                    </span>
-                  </p>
-                  <p className="flex items-center justify-center gap-3">
-                    <span className="text-2xl">🔒</span>
-                    <span className="text-sm md:text-base text-gray-700 font-medium">
-                      Promote <span className="font-bold text-rose-600">responsible</span> AI use.
-                    </span>
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
+  <div className="mt-6 space-y-3">
+    <p className="flex items-center justify-center gap-3">
+      <span className="text-2xl">✨</span>
+      <span className="text-sm md:text-base text-gray-700 font-medium">
+        Support students’ <span className="font-bold text-purple-600">creative writing</span> processes
+      </span>
+    </p>
+    <p className="flex items-center justify-center gap-3">
+      <span className="text-2xl">🪄</span>
+      <span className="text-sm md:text-base text-gray-700 font-medium">
+        Preserve students’ <span className="font-bold text-green-600">personal voice</span>
+      </span>
+    </p>
+    <p className="flex items-center justify-center gap-3">
+      <span className="text-2xl">🧠</span>
+      <span className="text-sm md:text-base text-gray-700 font-medium">
+        Encourage metacognitive engagement
+      </span>
+    </p>
+    <p className="flex items-center justify-center gap-3">
+      <span className="text-2xl">🔒</span>
+      <span className="text-sm md:text-base text-gray-700 font-medium">
+        Promote <span className="font-bold text-rose-600">responsible</span> AI use.
+      </span>
+    </p>
+  </div>
+</div>
 
           {/* 第二行：三个功能卡片 - 滚动展开/收缩效果 */}
           <div className="mb-6 animate-fade-in" style={{ animationDelay: '0.5s' }}>
