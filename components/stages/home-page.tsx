@@ -25,7 +25,6 @@ const translations = {
     unleashCreativity: "Unleash Creativity,",
     empowerExpression: "Empower Expression",
     aboutTitle: "About CWrite",
-    // Modified per your request:
     aboutText1: "An AI-powered writing platform grounded in self-regulated learning and learning sciences",
     aboutText2: "",
     aboutText3: "",
@@ -344,23 +343,19 @@ export default function HomePage({
           <div className="mb-12 animate-fade-in" style={{ animationDelay: '0.4s' }} data-about-section>
             <div className="bg-white/80 backdrop-blur-lg rounded-3xl p-8 border-2 border-purple-200 shadow-xl max-w-3xl mx-auto">
               <h3 className="text-2xl font-bold text-purple-700 mb-4 text-center">{t.aboutTitle}</h3>
-              {/* Replaced the original single paragraph with the new 4-line centered bullet-like points using emojis.
-                  The first line shows aboutText1, then four centered points with different emojis.
-                  "creative writing", "personal voice", and "responsible" are bold and colored as requested. */}
               <div className="text-base md:text-lg text-gray-700 leading-relaxed text-center">
                 <p>{t.aboutText1}</p>
-
                 <div className="mt-6 space-y-3">
                   <p className="flex items-center justify-center gap-3">
                     <span className="text-2xl">✨</span>
                     <span className="text-sm md:text-base text-gray-700 font-medium">
-                      Support students’ <span className="font-bold text-purple-600">creative writing</span> processes
+                      Support students' <span className="font-bold text-purple-600">creative writing</span> processes
                     </span>
                   </p>
                   <p className="flex items-center justify-center gap-3">
                     <span className="text-2xl">🪄</span>
                     <span className="text-sm md:text-base text-gray-700 font-medium">
-                      Preserve students’ <span className="font-bold text-green-600">personal voice</span>
+                      Preserve students' <span className="font-bold text-green-600">personal voice</span>
                     </span>
                   </p>
                   <p className="flex items-center justify-center gap-3">
@@ -620,8 +615,8 @@ export default function HomePage({
             <div className="max-w-5xl mx-auto">
               <ul className="space-y-4 text-xl md:text-2xl lg:text-3xl font-bold text-black leading-relaxed">
                 {t.visionItems.map((item, index) => (
-                  <li key={index} className="flex items-start gap-4">
-                    <span className="text-purple-600 mt-1">•</span>
+                  <li key={index} className="flex items-center justify-center gap-4">
+                    <span className="text-purple-600">•</span>
                     <span>{item}</span>
                   </li>
                 ))}
@@ -642,7 +637,7 @@ export default function HomePage({
                 onStartPlan?.()
               }}
               size="lg"
-              className="bg-gradient-to-r from-purple-600 via-pink-600 to-orange-600 hover:from-purple-700 hover:via-pink-700 hover:to-orange-700 text-white border-0 shadow-2xl py-8 px-16 text-2xl md:text-3xl lg:text-4xl font-bold hover:scale-105 transition-all duration-300 rounded-full relative overflow-hidden group.animate-gentle-bounce"
+              className="bg-gradient-to-r from-purple-600 via-pink-600 to-orange-600 hover:from-purple-700 hover:via-pink-700 hover:to-orange-700 text-white border-0 shadow-2xl py-8 px-16 text-2xl md:text-3xl lg:text-4xl font-bold hover:scale-105 transition-all duration-300 rounded-full relative overflow-hidden group animate-gentle-bounce"
             >
               <span className="relative z-10">{t.startButton}</span>
               <div className="absolute inset-0 bg-gradient-to-r from-purple-700 via-pink-700 to-orange-700 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-full"></div>
@@ -653,3 +648,4 @@ export default function HomePage({
     </div>
   )
 }
+
