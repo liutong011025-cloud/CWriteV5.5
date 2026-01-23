@@ -71,16 +71,25 @@ export default function JourneyTicket({
   const [selectedType, setSelectedType] = useState<JourneyType | null>(null)
   const [difficulty, setDifficulty] = useState<number | null>(null)
   const [isDeparting, setIsDeparting] = useState(false)
+  const [isFireworks, setIsFireworks] = useState(false)
+  const [dragOver, setDragOver] = useState(false)
 
   const notice = useMemo(() => {
     if (!difficulty) return ""
-    if (difficulty < level) {
-      return "你确定不要增加一些挑战性吗？"
+    const gap = difficulty - level
+    if (gap < 0) {
+      if (Math.abs(gap) >= 3) {
+        return "This looks much easier than your level. Want a bigger challenge?"
+      }
+      return "This might be a little too easy. Want a bigger challenge?"
     }
-    if (difficulty > level) {
-      return "你确定吗，会有点难哦。"
+    if (gap > 0) {
+      if (gap >= 3) {
+        return "This looks much harder than your level. You can try, but it may be tough."
+      }
+      return "This might be a bit challenging. Are you sure you want to try it?"
     }
-    return ""
+    return "Great match for your current level."
   }, [difficulty, level])
 
   const handleStart = () => {
@@ -89,6 +98,13 @@ export default function JourneyTicket({
     window.setTimeout(() => {
       onStart({ type: selectedType, difficulty })
     }, 900)
+  }
+
+  const handleDropType = (type: JourneyType) => {
+    setSelectedType(type)
+    setDragOver(false)
+    setIsFireworks(true)
+    window.setTimeout(() => setIsFireworks(false), 1100)
   }
 
   return (
@@ -116,7 +132,7 @@ export default function JourneyTicket({
           <h1 className="text-5xl md:text-6xl lg:text-7xl font-black mb-4 bg-gradient-to-r from-purple-600 via-pink-600 to-orange-600 bg-clip-text text-transparent">
             Your Journey Ticket
           </h1>
-          <p className="text-lg md:text-xl text-gray-600">Choose a journey and set your challenge level.</p>
+          <p className="text-lg md:text-xl text-gray-600">Drag a journey type onto the ticket, then choose your difficulty.</p>
         </div>
 
         <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
@@ -125,6 +141,11 @@ export default function JourneyTicket({
             return (
               <button
                 key={option.id}
+                draggable
+                onDragStart={(event) => {
+                  event.dataTransfer.setData("text/plain", option.id)
+                  event.dataTransfer.effectAllowed = "move"
+                }}
                 onClick={() => setSelectedType(option.id)}
                 className={`relative text-left rounded-3xl border-2 ${option.border} bg-gradient-to-br ${option.bg} p-6 shadow-xl transition-all duration-300 ${
                   isSelected ? "scale-[1.03] ring-4 ring-purple-200" : "hover:scale-[1.02]"
@@ -141,7 +162,7 @@ export default function JourneyTicket({
                     </h3>
                   </div>
                   <div className="text-sm text-gray-600 font-semibold px-3 py-1 rounded-full bg-white/70">
-                    Ticket
+                    Drag Me
                   </div>
                 </div>
               </button>
@@ -150,57 +171,131 @@ export default function JourneyTicket({
         </div>
 
         <div className="max-w-5xl mx-auto">
-          <div className={`relative rounded-3xl border-2 border-dashed border-purple-200 bg-white/90 backdrop-blur-lg p-8 shadow-2xl ${isDeparting ? "animate-ticket-tear" : ""}`}>
+          <div className={`relative ticket-pass rounded-[32px] border-2 border-dashed border-purple-200 bg-white/90 backdrop-blur-lg p-8 shadow-2xl ${isDeparting ? "animate-ticket-tear" : ""}`}>
             <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-3 text-xs text-gray-400 bg-white px-4 py-1 rounded-full border">
-              Boarding Pass
+              BOARDING PASS
+            </div>
+            <div className="ticket-hole ticket-hole-left" aria-hidden="true" />
+            <div className="ticket-hole ticket-hole-right" aria-hidden="true" />
+            {isFireworks && (
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <div className="relative">
+                  <div className="ticket-firework" />
+                  <div className="ticket-firework ticket-firework-delayed" />
+                  <div className="ticket-firework-label">
+                    {selectedType ? journeyOptions.find((option) => option.id === selectedType)?.title : "Journey"}
+                  </div>
+                </div>
+              </div>
+            )}
+            <div className={`absolute -top-6 right-10 text-4xl ${isDeparting ? "plane-flyaway" : ""}`}>
+              ✈️
             </div>
 
-            <div className="grid md:grid-cols-3 gap-6 items-center">
-              <div className="space-y-2">
-                <p className="text-sm uppercase tracking-widest text-gray-500">Passenger</p>
-                <p className="text-2xl font-bold text-gray-800">{userName}</p>
-              </div>
-              <div className="space-y-2">
-                <p className="text-sm uppercase tracking-widest text-gray-500">Writing Level</p>
-                <p className="text-2xl font-bold text-purple-600">Level {level}</p>
-                <p className="text-sm text-gray-500">Score: {score}/7</p>
-              </div>
-              <div className="space-y-2">
-                <p className="text-sm uppercase tracking-widest text-gray-500">Journey</p>
-                <p className="text-2xl font-bold text-gray-800">
-                  {selectedType ? journeyOptions.find((option) => option.id === selectedType)?.title : "—"}
-                </p>
-              </div>
-            </div>
+            <div className="grid lg:grid-cols-[1.2fr_0.8fr] gap-6">
+              <div>
+                <div className="grid md:grid-cols-3 gap-6 items-center">
+                  <div className="space-y-2">
+                    <p className="text-xs uppercase tracking-[0.3em] text-gray-500">Passenger</p>
+                    <p className="text-2xl font-bold text-gray-800">{userName}</p>
+                  </div>
+                  <div className="space-y-2">
+                    <p className="text-xs uppercase tracking-[0.3em] text-gray-500">Writing Level</p>
+                    <p className="text-2xl font-bold text-purple-600">Level {level}</p>
+                    <p className="text-sm text-gray-500">Score: {score}/7</p>
+                  </div>
+                  <div className="space-y-2">
+                    <p className="text-xs uppercase tracking-[0.3em] text-gray-500">Journey</p>
+                    <p className="text-2xl font-bold text-gray-800">
+                      {selectedType ? journeyOptions.find((option) => option.id === selectedType)?.title : "—"}
+                    </p>
+                  </div>
+                </div>
 
-            <div className="mt-8">
-              <p className="text-sm uppercase tracking-widest text-gray-500 mb-3">Choose Difficulty</p>
-              <div className="grid grid-cols-5 gap-3">
-                {[1, 2, 3, 4, 5].map((value) => (
-                  <button
-                    key={value}
-                    onClick={() => setDifficulty(value)}
-                    className={`rounded-2xl border-2 px-4 py-3 font-bold transition-all ${
-                      difficulty === value
-                        ? "border-purple-500 bg-purple-50 text-purple-700"
-                        : "border-gray-200 bg-white text-gray-600 hover:border-purple-300"
+                <div className="mt-6 grid sm:grid-cols-3 gap-4 text-sm text-gray-600">
+                  <div className="ticket-chip">
+                    <p className="text-[11px] uppercase tracking-[0.3em] text-gray-400">Flight</p>
+                    <p className="text-lg font-bold text-gray-800">CW-2024</p>
+                  </div>
+                  <div className="ticket-chip">
+                    <p className="text-[11px] uppercase tracking-[0.3em] text-gray-400">Gate</p>
+                    <p className="text-lg font-bold text-gray-800">LUNA</p>
+                  </div>
+                  <div className="ticket-chip">
+                    <p className="text-[11px] uppercase tracking-[0.3em] text-gray-400">Seat</p>
+                    <p className="text-lg font-bold text-gray-800">A1</p>
+                  </div>
+                </div>
+
+                <div className="mt-8">
+                  <p className="text-sm uppercase tracking-widest text-gray-500 mb-3">Choose Difficulty</p>
+                  <div className="grid grid-cols-5 gap-3">
+                    {[1, 2, 3, 4, 5].map((value) => (
+                      <button
+                        key={value}
+                        onClick={() => setDifficulty(value)}
+                        className={`rounded-2xl border-2 px-4 py-3 font-bold transition-all ${
+                          difficulty === value
+                            ? "border-purple-500 bg-purple-50 text-purple-700"
+                            : "border-gray-200 bg-white text-gray-600 hover:border-purple-300"
+                        }`}
+                      >
+                        {value}
+                      </button>
+                    ))}
+                  </div>
+                  {notice && <p className="mt-3 text-sm text-orange-600 font-semibold">{notice}</p>}
+                </div>
+              </div>
+
+              <div className="relative flex flex-col items-center justify-between">
+                <div className="ticket-stub">
+                  <p className="text-xs uppercase tracking-[0.3em] text-gray-400 mb-3">Boarding</p>
+                  <div className="ticket-barcode" aria-hidden="true" />
+                  <div className="mt-4 text-xs text-gray-400 uppercase tracking-[0.3em]">Code</div>
+                  <div className="text-sm font-semibold text-gray-700">CW-LUNA</div>
+                </div>
+
+                <div className="mt-6 flex flex-col items-center">
+                  <p className="text-xs uppercase tracking-widest text-gray-400 mb-3">Drop Type</p>
+                  <div
+                    className={`w-24 h-24 rounded-2xl border-2 border-dashed flex items-center justify-center text-center text-xs font-semibold transition-all ${
+                      dragOver ? "border-purple-500 bg-purple-50 text-purple-700 scale-105" : "border-purple-200 text-gray-400"
                     }`}
+                    onDragOver={(event) => {
+                      event.preventDefault()
+                      event.dataTransfer.dropEffect = "move"
+                      if (!dragOver) setDragOver(true)
+                    }}
+                    onDragLeave={() => setDragOver(false)}
+                    onDrop={(event) => {
+                      event.preventDefault()
+                      const id = event.dataTransfer.getData("text/plain") as JourneyType
+                      if (id) {
+                        handleDropType(id)
+                      }
+                    }}
                   >
-                    {value}
-                  </button>
-                ))}
+                    {selectedType ? (
+                      <div className="text-sm text-purple-700 font-bold">
+                        {journeyOptions.find((option) => option.id === selectedType)?.title}
+                      </div>
+                    ) : (
+                      <div>Drop Here</div>
+                    )}
+                  </div>
+                </div>
               </div>
-              {notice && <p className="mt-3 text-sm text-orange-600 font-semibold">{notice}</p>}
             </div>
           </div>
         </div>
 
         <div className="text-center mt-10 space-y-3">
           {mapImageStatus === "loading" && (
-            <p className="text-sm text-gray-500">地图生成中，请稍等…</p>
+            <p className="text-sm text-gray-500">Map is generating. Please wait...</p>
           )}
           {mapImageStatus === "error" && (
-            <p className="text-sm text-red-500">地图生成失败，请稍后重试。</p>
+            <p className="text-sm text-red-500">Map generation failed. Please try again.</p>
           )}
           <Button
             onClick={handleStart}
@@ -208,7 +303,7 @@ export default function JourneyTicket({
             disabled={!selectedType || !difficulty || mapImageStatus !== "ready"}
             className="bg-gradient-to-r from-sky-500 via-blue-600 to-indigo-600 hover:opacity-90 text-white border-0 shadow-2xl py-6 px-14 text-xl md:text-2xl font-bold hover:scale-105 transition-all duration-300 rounded-full disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            ✈️ 启程
+            ✈️ Depart
           </Button>
         </div>
       </div>
