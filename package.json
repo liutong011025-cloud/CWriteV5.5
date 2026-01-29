@@ -16,8 +16,6 @@
     "db:init": "tsx scripts/init-db.ts"
   },
   "dependencies": {
-    "@react-three/drei": "^9.122.0",
-    "@react-three/fiber": "^8.15.0",
     "@hookform/resolvers": "^3.10.0",
     "@prisma/client": "5.20.0",
     "@radix-ui/react-accordion": "1.2.2",
