@@ -305,7 +305,7 @@ export default function Home() {
             setStage("journeyTicket")
 
             const favorite = result.favoriteTopic.trim() || "a magical story world"
-            const prompt = `A whimsical illustrated fantasy map inspired by ${favorite}. Colorful, kid-friendly, top-down, no text labels.`
+            const prompt = `A whimsical illustrated fantasy map inspired by ${favorite}. Colorful, kid-friendly, top-down, no text labels, with a deep dark background (navy and purple night sky tones) so bright pins and labels on top are clearly visible.`
 
             try {
               const response = await fetch("/api/generate-image", {
