@@ -16,8 +16,8 @@
     "db:init": "tsx scripts/init-db.ts"
   },
   "dependencies": {
-    "@react-three/drei": "^9.120.0",
-    "@react-three/fiber": "^9.0.0",
+    "@react-three/drei": "^9.122.0",
+    "@react-three/fiber": "^8.15.0",
     "@react-three/rapier": "^1.16.1",
     "@hookform/resolvers": "^3.10.0",
     "@prisma/client": "5.20.0",
