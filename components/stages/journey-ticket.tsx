@@ -334,7 +334,7 @@ export default function JourneyTicket({
 
         <div className="text-center mt-10 space-y-3">
           {mapImageStatus === "loading" && (
-            <p className="text-sm text-orange-600 font-semibold">Waiting for departure... Please wait while the background is being prepared.</p>
+            <p className="text-sm text-orange-600 font-semibold">Still preparing your journey, please wait a second</p>
           )}
           {mapImageStatus === "error" && (
             <p className="text-sm text-red-500">Background generation failed. Please try again.</p>
