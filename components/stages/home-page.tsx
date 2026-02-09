@@ -401,24 +401,24 @@ export default function HomePage({
         {/* 文章类型介绍区（使用 VariableProximity 字体特效） */}
         {activeType && (
           <div className="max-w-5xl mx-auto mb-20 animate-fade-in" style={{ animationDelay: "0.6s" }}>
-            {/* 外层容器：专门放边框特效 */}
-            <div className="relative rounded-3xl">
-              {/* ShapeBlur 边框特效：只在外框，颜色已改为黄色 */}
+            {/* 外层容器：黄边框 + 光晕特效 */}
+            <div className="relative rounded-3xl ring-4 ring-yellow-300 shadow-[0_0_45px_rgba(250,204,21,0.85)]">
+              {/* ShapeBlur 边框特效：覆盖整个外框，增加动态感 */}
               <div className="pointer-events-none absolute inset-0 z-0">
                 <ShapeBlur
                   variation={0}
-                  shapeSize={1.25}
+                  shapeSize={1.3}
                   roundness={0.55}
-                  borderSize={0.09}   // 边框更粗一点
-                  circleSize={0.25}
-                  circleEdge={0.5}
+                  borderSize={0.12}   // 再加粗一点，确保可见
+                  circleSize={0.28}
+                  circleEdge={0.55}
                 />
               </div>
 
-              {/* 内层实际卡片：留一点 margin 让边框露出来 */}
+              {/* 内层实际卡片：往里缩一点，让外层 ring + ShapeBlur 都露出来 */}
               <div
                 ref={introContainerRef}
-                className="relative z-10 m-[10px] rounded-3xl bg-white/96 backdrop-blur-xl shadow-[0_25px_60px_rgba(148,27,153,0.25)] px-6 py-8 md:px-10 md:py-10"
+                className="relative z-10 m-[10px] rounded-3xl bg-white/96 backdrop-blur-xl px-6 py-8 md:px-10 md:py-10"
               >
                 <div className="space-y-6">
                 {/* 返回按钮 */}
