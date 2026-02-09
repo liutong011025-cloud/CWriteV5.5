@@ -206,7 +206,7 @@ const buildComingSoonTasks = (): MapTask[] => [
     id: "coming-soon",
     stage: "",
     x: 50,
-    y: 40, // 上移一些，不在正中间
+    y: 48, // 上移一些，不在正中间
     isComplete: false,
     isEnabled: false,
     title: "Coming Soon",
@@ -375,3 +375,4 @@ export default function JourneyMap({
     </div>
   )
 }
+
