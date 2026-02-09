@@ -6,7 +6,7 @@ import Image from "next/image"
 import type { Language } from "@/app/page"
 import Aurora from "@/components/effects/aurora"
 import BounceCards from "@/components/ui/bounce-cards"
-import VariableProximity from "@/components/ui/variable-proximity"
+import ShapeBlur from "@/components/effects/shape-blur"
 
 interface HomePageProps {
   language?: Language
@@ -401,16 +401,24 @@ export default function HomePage({
         {/* 文章类型介绍区（使用 VariableProximity 字体特效） */}
         {activeType && (
           <div className="max-w-5xl mx-auto mb-20 animate-fade-in" style={{ animationDelay: "0.6s" }}>
-            <div
-              ref={introContainerRef}
-              className="relative overflow-hidden rounded-3xl border border-purple-200 bg-white/90 backdrop-blur-xl shadow-[0_25px_60px_rgba(148,27,153,0.25)] px-6 py-8 md:px-10 md:py-10"
-            >
-              {/* 背景渐变装饰 */}
-              <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-purple-50 via-pink-50 to-orange-50 opacity-70" />
-              <div className="pointer-events-none absolute -top-32 -right-20 h-64 w-64 rounded-full bg-purple-300/40 blur-3xl" />
-              <div className="pointer-events-none absolute -bottom-32 -left-10 h-72 w-72 rounded-full bg-orange-300/40 blur-3xl" />
+              <div
+                ref={introContainerRef}
+                className="relative overflow-hidden rounded-3xl bg-white/92 backdrop-blur-xl shadow-[0_25px_60px_rgba(148,27,153,0.25)] px-6 py-8 md:px-10 md:py-10"
+              >
+                {/* ShapeBlur 边框特效 */}
+                <div className="pointer-events-none absolute inset-0 z-0">
+                  <ShapeBlur
+                    variation={0}
+                    shapeSize={1.3}
+                    roundness={0.5}
+                    borderSize={0.035}
+                    circleSize={0.25}
+                    circleEdge={0.5}
+                  />
+                </div>
 
-              <div className="relative z-10 space-y-6">
+                {/* 文字内容容器 */}
+                <div className="relative z-10 space-y-6">
                 {/* 返回按钮 */}
                 <div className="flex justify-between items-center mb-4">
                   <Button
@@ -425,331 +433,135 @@ export default function HomePage({
                   </span>
                 </div>
 
-                {/* 标题 + VariableProximity 特效行 */}
-                <div className="space-y-4">
-                  <VariableProximity
-                    label={
-                      activeType === "story"
-                        ? "Story Writing"
-                        : activeType === "review"
-                        ? "Book Review"
-                        : activeType === "letter"
-                        ? "Letter Writing"
-                        : activeType === "drama"
-                        ? "Drama Script"
-                        : "Poetry"
-                    }
-                    className="block text-3xl md:text-4xl lg:text-5xl font-black text-slate-900 tracking-tight"
-                    fromFontVariationSettings="'wght' 500, 'wdth' 95"
-                    toFontVariationSettings="'wght' 950, 'wdth' 115"
-                    containerRef={introContainerRef as any}
-                    radius={160}
-                    falloff="linear"
-                  />
-
-                  <VariableProximity
-                    label={
-                      activeType === "story"
-                        ? "Build worlds, invent characters, and shape unforgettable plots."
-                        : activeType === "review"
-                        ? "Think deeply, take a stance, and guide readers with your opinion."
-                        : activeType === "letter"
-                        ? "Write with a real voice to connect hearts across distance."
-                        : activeType === "drama"
-                        ? "Turn words into scenes, voices, and action on stage."
-                        : "Play with rhythm, images, and silence between the lines."
-                    }
-                    className="block text-lg md:text-2xl text-slate-800"
-                    fromFontVariationSettings="'wght' 350, 'wdth' 95"
-                    toFontVariationSettings="'wght' 900, 'wdth' 110"
-                    containerRef={introContainerRef as any}
-                    radius={140}
-                    falloff="linear"
-                  />
+                {/* 标题 + 一句话介绍（普通文本，可换行） */}
+                <div className="space-y-3">
+                  <h2 className="text-3xl md:text-4xl lg:text-5xl font-black text-slate-900 tracking-tight">
+                    {activeType === "story" && "Story Writing"}
+                    {activeType === "review" && "Book Review"}
+                    {activeType === "letter" && "Letter Writing"}
+                    {activeType === "drama" && "Drama Script"}
+                    {activeType === "poetry" && "Poetry"}
+                  </h2>
+                  <p className="text-lg md:text-2xl text-slate-800 leading-relaxed">
+                    {activeType === "story" &&
+                      "Build worlds, invent characters, and shape unforgettable plots."}
+                    {activeType === "review" &&
+                      "Think deeply, take a stance, and guide readers with your opinion."}
+                    {activeType === "letter" &&
+                      "Write with a real voice to connect hearts across distance."}
+                    {activeType === "drama" &&
+                      "Turn words into scenes, voices, and action on stage."}
+                    {activeType === "poetry" &&
+                      "Play with rhythm, images, and silence between the lines."}
+                  </p>
                 </div>
 
-                {/* 简短说明 + 关键要点（全部使用 VariableProximity 特效） */}
+                {/* 简短说明 + 关键要点（普通文本，正常换行） */}
                 <div className="grid gap-6 md:grid-cols-[minmax(0,1.7fr)_minmax(0,1.3fr)] md:items-start">
                   <div className="space-y-3 text-base md:text-lg text-slate-700 leading-relaxed">
                     {activeType === "story" && (
                       <>
-                        <VariableProximity
-                          label="Story writing invites you to create characters with goals, place them in meaningful settings, and let their choices drive a satisfying plot."
-                          className="block"
-                          fromFontVariationSettings="'wght' 350, 'wdth' 95"
-                          toFontVariationSettings="'wght' 800, 'wdth' 110"
-                          containerRef={introContainerRef as any}
-                          radius={130}
-                          falloff="linear"
-                        />
-                        <VariableProximity
-                          label="In CWrite, stories help you practise narrative structure, description, and voice in a playful, low‑pressure way."
-                          className="block"
-                          fromFontVariationSettings="'wght' 350, 'wdth' 95"
-                          toFontVariationSettings="'wght' 800, 'wdth' 110"
-                          containerRef={introContainerRef as any}
-                          radius={130}
-                          falloff="linear"
-                        />
+                        <p>
+                          Story writing invites you to create characters with goals, place them in meaningful settings,
+                          and let their choices drive a satisfying plot.
+                        </p>
+                        <p>
+                          In CWrite, stories help you practise <strong>narrative structure</strong>,{" "}
+                          <strong>description</strong>, and <strong>voice</strong> in a playful, low‑pressure way.
+                        </p>
                       </>
                     )}
                     {activeType === "review" && (
                       <>
-                        <VariableProximity
-                          label='A book review is more than "I like it" or "I don&apos;t like it" — it explains why with clear reasons and examples.'
-                          className="block"
-                          fromFontVariationSettings="'wght' 350, 'wdth' 95"
-                          toFontVariationSettings="'wght' 800, 'wdth' 110"
-                          containerRef={introContainerRef as any}
-                          radius={130}
-                          falloff="linear"
-                        />
-                        <VariableProximity
-                          label="Here you practise argument, evidence, and evaluation, so your opinion can genuinely help other readers."
-                          className="block"
-                          fromFontVariationSettings="'wght' 350, 'wdth' 95"
-                          toFontVariationSettings="'wght' 800, 'wdth' 110"
-                          containerRef={introContainerRef as any}
-                          radius={130}
-                          falloff="linear"
-                        />
+                        <p>
+                          A book review is more than “I like it” or “I don&apos;t like it” — it explains{" "}
+                          <strong>why</strong> with clear reasons and examples.
+                        </p>
+                        <p>
+                          Here you practise <strong>argument, evidence, and evaluation</strong>, so your opinion can
+                          genuinely help other readers.
+                        </p>
                       </>
                     )}
                     {activeType === "letter" && (
                       <>
-                        <VariableProximity
-                          label="Letter writing keeps language close to real life: you write to someone specific, for a real purpose and tone."
-                          className="block"
-                          fromFontVariationSettings="'wght' 350, 'wdth' 95"
-                          toFontVariationSettings="'wght' 800, 'wdth' 110"
-                          containerRef={introContainerRef as any}
-                          radius={130}
-                          falloff="linear"
-                        />
-                        <VariableProximity
-                          label="It is a powerful way to practise audience awareness, clarity, and emotional expression."
-                          className="block"
-                          fromFontVariationSettings="'wght' 350, 'wdth' 95"
-                          toFontVariationSettings="'wght' 800, 'wdth' 110"
-                          containerRef={introContainerRef as any}
-                          radius={130}
-                          falloff="linear"
-                        />
+                        <p>
+                          Letter writing keeps language close to real life: you write to someone specific, for a real
+                          purpose and tone.
+                        </p>
+                        <p>
+                          It is a powerful way to practise <strong>audience awareness</strong>,{" "}
+                          <strong>clarity</strong>, and <strong>emotional expression</strong>.
+                        </p>
                       </>
                     )}
                     {activeType === "drama" && (
                       <>
-                        <VariableProximity
-                          label="Drama turns stories into scripts with dialogue, stage directions, and clear scene changes."
-                          className="block"
-                          fromFontVariationSettings="'wght' 350, 'wdth' 95"
-                          toFontVariationSettings="'wght' 800, 'wdth' 110"
-                          containerRef={introContainerRef as any}
-                          radius={130}
-                          falloff="linear"
-                        />
-                        <VariableProximity
-                          label="You learn to write for performance — imagining how words look and sound when actors bring them to life."
-                          className="block"
-                          fromFontVariationSettings="'wght' 350, 'wdth' 95"
-                          toFontVariationSettings="'wght' 800, 'wdth' 110"
-                          containerRef={introContainerRef as any}
-                          radius={130}
-                          falloff="linear"
-                        />
+                        <p>
+                          Drama turns stories into scripts with <strong>dialogue</strong>,{" "}
+                          <strong>stage directions</strong>, and clear scene changes.
+                        </p>
+                        <p>
+                          You learn to write for <strong>performance</strong> — imagining how words look and sound when
+                          actors bring them to life.
+                        </p>
                       </>
                     )}
                     {activeType === "poetry" && (
                       <>
-                        <VariableProximity
-                          label="Poetry uses condensed language, images, and rhythm to say a lot with very few words."
-                          className="block"
-                          fromFontVariationSettings="'wght' 350, 'wdth' 95"
-                          toFontVariationSettings="'wght' 800, 'wdth' 110"
-                          containerRef={introContainerRef as any}
-                          radius={130}
-                          falloff="linear"
-                        />
-                        <VariableProximity
-                          label="It cultivates your sense of sound, metaphor, and line breaks, helping you see how small changes in wording can change the whole feeling."
-                          className="block"
-                          fromFontVariationSettings="'wght' 350, 'wdth' 95"
-                          toFontVariationSettings="'wght' 800, 'wdth' 110"
-                          containerRef={introContainerRef as any}
-                          radius={130}
-                          falloff="linear"
-                        />
+                        <p>
+                          Poetry uses <strong>condensed language</strong>, images, and rhythm to say a lot with very few
+                          words.
+                        </p>
+                        <p>
+                          It cultivates your sense of <strong>sound, metaphor, and line breaks</strong>, helping you see
+                          how small changes in wording can change the whole feeling.
+                        </p>
                       </>
                     )}
                   </div>
 
                   <div className="space-y-3 rounded-2xl bg-white/85 border border-purple-100 shadow-inner px-5 py-4">
-                    <VariableProximity
-                      label="In this genre you will practise"
-                      className="block text-xs uppercase tracking-[0.2em] text-purple-500 font-semibold"
-                      fromFontVariationSettings="'wght' 450, 'wdth' 95"
-                      toFontVariationSettings="'wght' 850, 'wdth' 115"
-                      containerRef={introContainerRef as any}
-                      radius={120}
-                      falloff="linear"
-                    />
-                    <div className="space-y-1.5 text-sm md:text-base text-slate-800">
+                    <p className="text-xs uppercase tracking-[0.2em] text-purple-500 font-semibold">
+                      In this genre you will practise
+                    </p>
+                    <ul className="space-y-1.5 text-sm md:text-base text-slate-800">
                       {activeType === "story" && (
                         <>
-                          <VariableProximity
-                            label="• Designing characters, settings, and conflicts"
-                            className="block"
-                            fromFontVariationSettings="'wght' 350, 'wdth' 95"
-                            toFontVariationSettings="'wght' 750, 'wdth' 110"
-                            containerRef={introContainerRef as any}
-                            radius={110}
-                            falloff="linear"
-                          />
-                          <VariableProximity
-                            label="• Organising events into a clear beginning, middle, and end"
-                            className="block"
-                            fromFontVariationSettings="'wght' 350, 'wdth' 95"
-                            toFontVariationSettings="'wght' 750, 'wdth' 110"
-                            containerRef={introContainerRef as any}
-                            radius={110}
-                            falloff="linear"
-                          />
-                          <VariableProximity
-                            label="• Using detail to show rather than tell"
-                            className="block"
-                            fromFontVariationSettings="'wght' 350, 'wdth' 95"
-                            toFontVariationSettings="'wght' 750, 'wdth' 110"
-                            containerRef={introContainerRef as any}
-                            radius={110}
-                            falloff="linear"
-                          />
+                          <li>• Designing characters, settings, and conflicts</li>
+                          <li>• Organising events into a clear beginning, middle, and end</li>
+                          <li>• Using detail to show rather than tell</li>
                         </>
                       )}
                       {activeType === "review" && (
                         <>
-                          <VariableProximity
-                            label="• Stating a clear opinion about a text"
-                            className="block"
-                            fromFontVariationSettings="'wght' 350, 'wdth' 95"
-                            toFontVariationSettings="'wght' 750, 'wdth' 110"
-                            containerRef={introContainerRef as any}
-                            radius={110}
-                            falloff="linear"
-                          />
-                          <VariableProximity
-                            label="• Supporting ideas with quotes, scenes, or examples"
-                            className="block"
-                            fromFontVariationSettings="'wght' 350, 'wdth' 95"
-                            toFontVariationSettings="'wght' 750, 'wdth' 110"
-                            containerRef={introContainerRef as any}
-                            radius={110}
-                            falloff="linear"
-                          />
-                          <VariableProximity
-                            label="• Balancing summary with analysis"
-                            className="block"
-                            fromFontVariationSettings="'wght' 350, 'wdth' 95"
-                            toFontVariationSettings="'wght' 750, 'wdth' 110"
-                            containerRef={introContainerRef as any}
-                            radius={110}
-                            falloff="linear"
-                          />
+                          <li>• Stating a clear opinion about a text</li>
+                          <li>• Supporting ideas with quotes, scenes, or examples</li>
+                          <li>• Balancing summary with analysis</li>
                         </>
                       )}
                       {activeType === "letter" && (
                         <>
-                          <VariableProximity
-                            label="• Matching tone to your relationship with the reader"
-                            className="block"
-                            fromFontVariationSettings="'wght' 350, 'wdth' 95"
-                            toFontVariationSettings="'wght' 750, 'wdth' 110"
-                            containerRef={introContainerRef as any}
-                            radius={110}
-                            falloff="linear"
-                          />
-                          <VariableProximity
-                            label="• Explaining events and feelings clearly"
-                            className="block"
-                            fromFontVariationSettings="'wght' 350, 'wdth' 95"
-                            toFontVariationSettings="'wght' 750, 'wdth' 110"
-                            containerRef={introContainerRef as any}
-                            radius={110}
-                            falloff="linear"
-                          />
-                          <VariableProximity
-                            label="• Organising real‑life details into a readable flow"
-                            className="block"
-                            fromFontVariationSettings="'wght' 350, 'wdth' 95"
-                            toFontVariationSettings="'wght' 750, 'wdth' 110"
-                            containerRef={introContainerRef as any}
-                            radius={110}
-                            falloff="linear"
-                          />
+                          <li>• Matching tone to your relationship with the reader</li>
+                          <li>• Explaining events and feelings clearly</li>
+                          <li>• Organising real‑life details into a readable flow</li>
                         </>
                       )}
                       {activeType === "drama" && (
                         <>
-                          <VariableProximity
-                            label="• Writing believable dialogue"
-                            className="block"
-                            fromFontVariationSettings="'wght' 350, 'wdth' 95"
-                            toFontVariationSettings="'wght' 750, 'wdth' 110"
-                            containerRef={introContainerRef as any}
-                            radius={110}
-                            falloff="linear"
-                          />
-                          <VariableProximity
-                            label="• Using stage directions to guide actors"
-                            className="block"
-                            fromFontVariationSettings="'wght' 350, 'wdth' 95"
-                            toFontVariationSettings="'wght' 750, 'wdth' 110"
-                            containerRef={introContainerRef as any}
-                            radius={110}
-                            falloff="linear"
-                          />
-                          <VariableProximity
-                            label="• Thinking in scenes, beats, and entrances/exits"
-                            className="block"
-                            fromFontVariationSettings="'wght' 350, 'wdth' 95"
-                            toFontVariationSettings="'wght' 750, 'wdth' 110"
-                            containerRef={introContainerRef as any}
-                            radius={110}
-                            falloff="linear"
-                          />
+                          <li>• Writing believable dialogue</li>
+                          <li>• Using stage directions to guide actors</li>
+                          <li>• Thinking in scenes, beats, and entrances/exits</li>
                         </>
                       )}
                       {activeType === "poetry" && (
                         <>
-                          <VariableProximity
-                            label="• Choosing precise, image‑rich words"
-                            className="block"
-                            fromFontVariationSettings="'wght' 350, 'wdth' 95"
-                            toFontVariationSettings="'wght' 750, 'wdth' 110"
-                            containerRef={introContainerRef as any}
-                            radius={110}
-                            falloff="linear"
-                          />
-                          <VariableProximity
-                            label="• Playing with rhythm, repetition, and line breaks"
-                            className="block"
-                            fromFontVariationSettings="'wght' 350, 'wdth' 95"
-                            toFontVariationSettings="'wght' 750, 'wdth' 110"
-                            containerRef={introContainerRef as any}
-                            radius={110}
-                            falloff="linear"
-                          />
-                          <VariableProximity
-                            label="• Exploring different poetic forms and voices"
-                            className="block"
-                            fromFontVariationSettings="'wght' 350, 'wdth' 95"
-                            toFontVariationSettings="'wght' 750, 'wdth' 110"
-                            containerRef={introContainerRef as any}
-                            radius={110}
-                            falloff="linear"
-                          />
+                          <li>• Choosing precise, image‑rich words</li>
+                          <li>• Playing with rhythm, repetition, and line breaks</li>
+                          <li>• Exploring different poetic forms and voices</li>
                         </>
                       )}
-                    </div>
+                    </ul>
                   </div>
                 </div>
               </div>
