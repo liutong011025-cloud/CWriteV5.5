@@ -252,7 +252,7 @@ export default function JourneyTicket({
                 <div className="mt-6 grid sm:grid-cols-3 gap-4 text-sm text-gray-600">
                   <div className="ticket-chip">
                     <p className="text-[11px] uppercase tracking-[0.3em] text-gray-400">Flight</p>
-                    <p className="text-lg font-bold text-gray-800">CW-2024</p>
+                    <p className="text-lg font-bold text-gray-800">YL-2024</p>
                   </div>
                   <div className="ticket-chip">
                     <p className="text-[11px] uppercase tracking-[0.3em] text-gray-400">Gate</p>
