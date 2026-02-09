@@ -401,24 +401,26 @@ export default function HomePage({
         {/* 文章类型介绍区（使用 VariableProximity 字体特效） */}
         {activeType && (
           <div className="max-w-5xl mx-auto mb-20 animate-fade-in" style={{ animationDelay: "0.6s" }}>
+            {/* 外层容器：专门放边框特效 */}
+            <div className="relative rounded-3xl">
+              {/* ShapeBlur 边框特效：只在外框，颜色已改为黄色 */}
+              <div className="pointer-events-none absolute inset-0 z-0">
+                <ShapeBlur
+                  variation={0}
+                  shapeSize={1.25}
+                  roundness={0.55}
+                  borderSize={0.09}   // 边框更粗一点
+                  circleSize={0.25}
+                  circleEdge={0.5}
+                />
+              </div>
+
+              {/* 内层实际卡片：留一点 margin 让边框露出来 */}
               <div
                 ref={introContainerRef}
-                className="relative overflow-hidden rounded-3xl bg-white/92 backdrop-blur-xl shadow-[0_25px_60px_rgba(148,27,153,0.25)] px-6 py-8 md:px-10 md:py-10"
+                className="relative z-10 m-[10px] rounded-3xl bg-white/96 backdrop-blur-xl shadow-[0_25px_60px_rgba(148,27,153,0.25)] px-6 py-8 md:px-10 md:py-10"
               >
-                {/* ShapeBlur 边框特效 */}
-                <div className="pointer-events-none absolute inset-0 z-0">
-                  <ShapeBlur
-                    variation={0}
-                    shapeSize={1.3}
-                    roundness={0.5}
-                    borderSize={0.035}
-                    circleSize={0.25}
-                    circleEdge={0.5}
-                  />
-                </div>
-
-                {/* 文字内容容器 */}
-                <div className="relative z-10 space-y-6">
+                <div className="space-y-6">
                 {/* 返回按钮 */}
                 <div className="flex justify-between items-center mb-4">
                   <Button
@@ -433,31 +435,31 @@ export default function HomePage({
                   </span>
                 </div>
 
-                {/* 标题 + 一句话介绍（普通文本，可换行） */}
-                <div className="space-y-3">
-                  <h2 className="text-3xl md:text-4xl lg:text-5xl font-black text-slate-900 tracking-tight">
-                    {activeType === "story" && "Story Writing"}
-                    {activeType === "review" && "Book Review"}
-                    {activeType === "letter" && "Letter Writing"}
-                    {activeType === "drama" && "Drama Script"}
-                    {activeType === "poetry" && "Poetry"}
-                  </h2>
-                  <p className="text-lg md:text-2xl text-slate-800 leading-relaxed">
-                    {activeType === "story" &&
-                      "Build worlds, invent characters, and shape unforgettable plots."}
-                    {activeType === "review" &&
-                      "Think deeply, take a stance, and guide readers with your opinion."}
-                    {activeType === "letter" &&
-                      "Write with a real voice to connect hearts across distance."}
-                    {activeType === "drama" &&
-                      "Turn words into scenes, voices, and action on stage."}
-                    {activeType === "poetry" &&
-                      "Play with rhythm, images, and silence between the lines."}
-                  </p>
-                </div>
+                  {/* 标题 + 一句话介绍（普通文本，可换行） */}
+                  <div className="space-y-3">
+                    <h2 className="text-3xl md:text-4xl lg:text-5xl font-black text-slate-900 tracking-tight">
+                      {activeType === "story" && "Story Writing"}
+                      {activeType === "review" && "Book Review"}
+                      {activeType === "letter" && "Letter Writing"}
+                      {activeType === "drama" && "Drama Script"}
+                      {activeType === "poetry" && "Poetry"}
+                    </h2>
+                    <p className="text-lg md:text-2xl text-slate-800 leading-relaxed">
+                      {activeType === "story" &&
+                        "Build worlds, invent characters, and shape unforgettable plots."}
+                      {activeType === "review" &&
+                        "Think deeply, take a stance, and guide readers with your opinion."}
+                      {activeType === "letter" &&
+                        "Write with a real voice to connect hearts across distance."}
+                      {activeType === "drama" &&
+                        "Turn words into scenes, voices, and action on stage."}
+                      {activeType === "poetry" &&
+                        "Play with rhythm, images, and silence between the lines."}
+                    </p>
+                  </div>
 
-                {/* 简短说明 + 关键要点（普通文本，正常换行） */}
-                <div className="grid gap-6 md:grid-cols-[minmax(0,1.7fr)_minmax(0,1.3fr)] md:items-start">
+                  {/* 简短说明 + 关键要点（普通文本，正常换行） */}
+                  <div className="grid gap-6 md:grid-cols-[minmax(0,1.7fr)_minmax(0,1.3fr)] md:items-start">
                   <div className="space-y-3 text-base md:text-lg text-slate-700 leading-relaxed">
                     {activeType === "story" && (
                       <>
@@ -562,6 +564,7 @@ export default function HomePage({
                         </>
                       )}
                     </ul>
+                  </div>
                   </div>
                 </div>
               </div>
