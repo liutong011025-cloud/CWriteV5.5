@@ -1,5 +1,6 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { ArrowLeft, MapPin, CheckCircle2 } from "lucide-react"
 import { toast } from "sonner"
@@ -43,7 +44,7 @@ const buildStoryTasks = (storyState: StoryState): MapTask[] => {
       id: "story-character",
       stage: "character",
       x: (100 / (taskCount + 1)) * 1, // 约16.67%
-      y: 50, // 固定在中间高度
+      y: 42, // 上移一些，不在正中间
       isComplete: hasCharacter,
       isEnabled: true,
       title: "Character",
@@ -52,7 +53,7 @@ const buildStoryTasks = (storyState: StoryState): MapTask[] => {
       id: "story-plot",
       stage: "plot",
       x: (100 / (taskCount + 1)) * 2, // 约33.33%
-      y: 50,
+      y: 42, // 上移一些，不在正中间
       isComplete: hasPlot,
       isEnabled: true,
       title: "Plot",
@@ -61,7 +62,7 @@ const buildStoryTasks = (storyState: StoryState): MapTask[] => {
       id: "story-structure",
       stage: "structure",
       x: (100 / (taskCount + 1)) * 3, // 约50%
-      y: 50,
+      y: 42, // 上移一些，不在正中间
       isComplete: hasStructure,
       isEnabled: true,
       title: "Structure",
@@ -70,7 +71,7 @@ const buildStoryTasks = (storyState: StoryState): MapTask[] => {
       id: "story-writing",
       stage: "writing",
       x: (100 / (taskCount + 1)) * 4, // 约66.67%
-      y: 50,
+      y: 42, // 上移一些，不在正中间
       isComplete: hasStory,
       isEnabled: hasCharacter && hasPlot && hasStructure,
       title: "Writing",
@@ -79,7 +80,7 @@ const buildStoryTasks = (storyState: StoryState): MapTask[] => {
       id: "story-review",
       stage: "review",
       x: (100 / (taskCount + 1)) * 5, // 约83.33%
-      y: 50,
+      y: 42, // 上移一些，不在正中间
       isComplete: hasStory,
       isEnabled: hasStory,
       title: "Review",
@@ -102,7 +103,7 @@ const buildBookReviewTasks = (bookReviewState: BookReviewState, noAi?: boolean):
       id: "review-type",
       stage: "bookReviewTypeSelection",
       x: (100 / (taskCount + 1)) * 1,
-      y: 50,
+      y: 42, // 上移一些，不在正中间
       isComplete: hasType,
       isEnabled: true,
       title: "Review Type",
@@ -111,7 +112,7 @@ const buildBookReviewTasks = (bookReviewState: BookReviewState, noAi?: boolean):
       id: "review-book",
       stage: noAi ? "bookSelectionNoAi" : "bookSelection",
       x: (100 / (taskCount + 1)) * 2,
-      y: 50,
+      y: 42, // 上移一些，不在正中间
       isComplete: hasBook,
       isEnabled: hasType,
       title: "Book Selection",
@@ -123,7 +124,7 @@ const buildBookReviewTasks = (bookReviewState: BookReviewState, noAi?: boolean):
             id: "review-outline",
             stage: "bookReviewLoading",
             x: (100 / (taskCount + 1)) * 3,
-            y: 50,
+            y: 42, // 上移一些，不在正中间
             isComplete: hasStructure,
             isEnabled: hasType && hasBook,
             title: "Outline",
@@ -133,7 +134,7 @@ const buildBookReviewTasks = (bookReviewState: BookReviewState, noAi?: boolean):
       id: "review-writing",
       stage: writingStage,
       x: (100 / (taskCount + 1)) * (noAi ? 3 : 4),
-      y: 50,
+      y: 42, // 上移一些，不在正中间
       isComplete: hasReview,
       isEnabled: hasType && hasBook && (noAi ? true : hasStructure),
       title: "Writing",
@@ -142,7 +143,7 @@ const buildBookReviewTasks = (bookReviewState: BookReviewState, noAi?: boolean):
       id: "review-complete",
       stage: completeStage,
       x: (100 / (taskCount + 1)) * (noAi ? 4 : 5),
-      y: 50,
+      y: 42, // 上移一些，不在正中间
       isComplete: hasReview,
       isEnabled: hasReview,
       title: "Complete",
@@ -165,7 +166,7 @@ const buildLetterTasks = (letterState: LetterState, noAi?: boolean): MapTask[] =
       id: "letter-start",
       stage: "letterAdventure",
       x: (100 / (taskCount + 1)) * 1, // 约20%
-      y: 50,
+      y: 42, // 上移一些，不在正中间
       isComplete: hasIntro,
       isEnabled: true,
       title: "Letter Adventure",
@@ -174,7 +175,7 @@ const buildLetterTasks = (letterState: LetterState, noAi?: boolean): MapTask[] =
       id: "letter-game",
       stage: gameStage,
       x: (100 / (taskCount + 1)) * 2, // 约40%
-      y: 50,
+      y: 42, // 上移一些，不在正中间
       isComplete: hasSections,
       isEnabled: hasIntro,
       title: "Letter Game",
@@ -183,7 +184,7 @@ const buildLetterTasks = (letterState: LetterState, noAi?: boolean): MapTask[] =
       id: "letter-puzzle",
       stage: "letterPuzzle",
       x: (100 / (taskCount + 1)) * 3, // 约60%
-      y: 50,
+      y: 42, // 上移一些，不在正中间
       isComplete: hasLetter,
       isEnabled: hasSections,
       title: "Letter Puzzle",
@@ -192,7 +193,7 @@ const buildLetterTasks = (letterState: LetterState, noAi?: boolean): MapTask[] =
       id: "letter-complete",
       stage: "letterComplete",
       x: (100 / (taskCount + 1)) * 4, // 约80%
-      y: 50,
+      y: 42, // 上移一些，不在正中间
       isComplete: hasLetter,
       isEnabled: hasLetter,
       title: "Letter Complete",
@@ -205,7 +206,7 @@ const buildComingSoonTasks = (): MapTask[] => [
     id: "coming-soon",
     stage: "",
     x: 50,
-    y: 50,
+    y: 42, // 上移一些，不在正中间
     isComplete: false,
     isEnabled: false,
     title: "Coming Soon",
@@ -223,6 +224,19 @@ export default function JourneyMap({
   onNavigate,
   onBack,
 }: JourneyMapProps) {
+  const [showBlur, setShowBlur] = useState(true)
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY
+      // 当滚动超过100px时，隐藏虚化效果
+      setShowBlur(currentScrollY < 100)
+    }
+
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
+
   const getTasks = (): MapTask[] => {
     if (type === "story") return buildStoryTasks(storyState)
     if (type === "bookReview") return buildBookReviewTasks(bookReviewState, noAi)
@@ -260,15 +274,17 @@ export default function JourneyMap({
             }}
           />
           {/* 顶部渐变模糊层，虚化header后面的图片 */}
-          <div 
-            className="absolute top-0 left-0 right-0 z-[5] pointer-events-none"
-            style={{
-              height: '180px', // 大约header高度 + 一些额外空间
-              background: 'linear-gradient(to bottom, rgba(15, 23, 42, 0.85) 0%, rgba(15, 23, 42, 0.6) 40%, rgba(15, 23, 42, 0.3) 70%, transparent 100%)',
-              backdropFilter: 'blur(8px)',
-              WebkitBackdropFilter: 'blur(8px)',
-            }}
-          />
+          {showBlur && (
+            <div 
+              className="absolute top-0 left-0 right-0 z-[5] pointer-events-none transition-opacity duration-300"
+              style={{
+                height: '250px', // 增加高度，让渐变更平滑
+                background: 'linear-gradient(to bottom, rgba(15, 23, 42, 0.9) 0%, rgba(15, 23, 42, 0.75) 15%, rgba(15, 23, 42, 0.5) 35%, rgba(15, 23, 42, 0.25) 60%, rgba(15, 23, 42, 0.1) 80%, transparent 100%)',
+                backdropFilter: 'blur(12px)',
+                WebkitBackdropFilter: 'blur(12px)',
+              }}
+            />
+          )}
         </>
       ) : (
         <div
