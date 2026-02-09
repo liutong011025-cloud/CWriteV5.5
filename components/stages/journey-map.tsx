@@ -193,7 +193,7 @@ const buildLetterTasks = (letterState: LetterState, noAi?: boolean): MapTask[] =
       id: "letter-complete",
       stage: "letterComplete",
       x: (100 / (taskCount + 1)) * 4, // 约80%
-      y: 40, // 上移一些，不在正中间
+      y: 50, // 上移一些，不在正中间
       isComplete: hasLetter,
       isEnabled: hasLetter,
       title: "Letter Complete",
@@ -375,4 +375,5 @@ export default function JourneyMap({
     </div>
   )
 }
+
 
