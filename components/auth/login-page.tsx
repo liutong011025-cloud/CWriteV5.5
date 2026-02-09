@@ -1,15 +1,10 @@
 "use client"
 
-import React, { useState, useRef } from "react"
+import { useState } from "react"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { toast } from "sonner"
-
-interface Position {
-  x: number;
-  y: number;
-}
 
 interface LoginPageProps {
   onLogin: (user: { username: string; role: 'teacher' | 'student'; noAi?: boolean }, showContinueDialog?: boolean) => void
@@ -19,35 +14,6 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
   const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)
-  const divRef = useRef<HTMLDivElement>(null)
-  const [isFocused, setIsFocused] = useState<boolean>(false)
-  const [position, setPosition] = useState<Position>({ x: 0, y: 0 })
-  const [opacity, setOpacity] = useState<number>(0)
-
-  const handleMouseMove: React.MouseEventHandler<HTMLDivElement> = e => {
-    if (!divRef.current || isFocused) return
-
-    const rect = divRef.current.getBoundingClientRect()
-    setPosition({ x: e.clientX - rect.left, y: e.clientY - rect.top })
-  }
-
-  const handleFocus = () => {
-    setIsFocused(true)
-    setOpacity(0.6)
-  }
-
-  const handleBlur = () => {
-    setIsFocused(false)
-    setOpacity(0)
-  }
-
-  const handleMouseEnter = () => {
-    setOpacity(0.6)
-  }
-
-  const handleMouseLeave = () => {
-    setOpacity(0)
-  }
 
   const handleLogin = async () => {
     if (!username.trim() || !password.trim()) {
@@ -117,26 +83,11 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
       </div>
 
       <div className="max-w-md w-full relative z-10">
-        <div
-          ref={divRef}
-          onMouseMove={handleMouseMove}
-          onFocus={handleFocus}
-          onBlur={handleBlur}
-          onMouseEnter={handleMouseEnter}
-          onMouseLeave={handleMouseLeave}
-          className="relative rounded-3xl border border-neutral-700 bg-neutral-800/80 backdrop-blur-sm overflow-hidden p-8"
-        >
-          <div
-            className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-500 ease-in-out"
-            style={{
-              opacity,
-              background: `radial-gradient(circle at ${position.x}px ${position.y}px, rgba(255, 255, 255, 0.25), transparent 80%)`
-            }}
-          />
+        <div className="bg-white/95 backdrop-blur-xl rounded-3xl px-8 py-6 border-2 border-white/50 shadow-2xl">
           <div className="text-center mb-6">
             <div className="mb-3 mt-6 flex justify-center">
               <Image
-                src="/logo2.png"
+                src="/logo.png"
                 alt="CWrite Logo"
                 width={350}
                 height={350}
@@ -145,12 +96,12 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
                 unoptimized
               />
             </div>
-            <p className="text-white font-semibold">Login to start your creative journey</p>
+            <p className="text-gray-700 font-semibold">Login to start your creative journey</p>
           </div>
 
           <div className="space-y-5">
             <div>
-              <label className="block text-sm font-bold mb-2 text-white">Username</label>
+              <label className="block text-sm font-bold mb-2 text-purple-700">Username</label>
               <Input
                 type="text"
                 placeholder="Enter your username"
@@ -159,12 +110,12 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
                 onKeyDown={(e) => {
                   if (e.key === "Enter") handleLogin()
                 }}
-                className="text-base py-3 border-2 border-purple-200 focus:border-purple-500 rounded-xl text-white bg-neutral-700/50 placeholder:text-gray-400"
+                className="text-base py-3 border-2 border-purple-200 focus:border-purple-500 rounded-xl"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-bold mb-2 text-white">Password</label>
+              <label className="block text-sm font-bold mb-2 text-pink-700">Password</label>
               <Input
                 type="password"
                 placeholder="Enter your password"
@@ -173,7 +124,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
                 onKeyDown={(e) => {
                   if (e.key === "Enter") handleLogin()
                 }}
-                className="text-base py-3 border-2 border-pink-200 focus:border-pink-500 rounded-xl text-white bg-neutral-700/50 placeholder:text-gray-400"
+                className="text-base py-3 border-2 border-pink-200 focus:border-pink-500 rounded-xl"
               />
             </div>
 
