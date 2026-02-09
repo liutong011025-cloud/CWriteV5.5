@@ -83,21 +83,23 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
         <div className="absolute bottom-20 right-10 w-96 h-96 bg-pink-300 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-pulse" style={{ animationDelay: '2s' }}></div>
       </div>
 
-      <div className="max-w-xs w-full relative z-10">
-        <SpotlightCard className="px-5 py-4 shadow-2xl" spotlightColor="rgba(0, 229, 255, 0.2)">
-          <div className="text-center mb-5">
-            <div className="mb-2 mt-4 flex justify-center">
+      <div className="max-w-md w-full relative z-10">
+        <SpotlightCard className="px-8 py-4 shadow-2xl" spotlightColor="rgba(0, 229, 255, 0.2)">
+          <div className="text-center mb-4">
+            <div className="mb-1 mt-2 flex justify-center">
               <Image
                 src="/logo2.png"
                 alt="CWrite Logo"
-                width={220}
-                height={220}
+                width={200}
+                height={200}
                 className="object-contain animate-pulse"
                 priority
                 unoptimized
               />
             </div>
-            <p className="text-white font-semibold">Login to start your creative journey</p>
+            <p className="text-white font-semibold whitespace-nowrap text-base md:text-lg">
+              Login to start your creative journey
+            </p>
           </div>
 
           <div className="space-y-5">
