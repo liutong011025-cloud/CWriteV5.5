@@ -7,7 +7,6 @@ import type { Language } from "@/app/page"
 import Aurora from "@/components/effects/aurora"
 import BounceCards from "@/components/ui/bounce-cards"
 import VariableProximity from "@/components/ui/variable-proximity"
-import BounceCards from "@/components/ui/bounce-cards"
 
 interface HomePageProps {
   language?: Language
