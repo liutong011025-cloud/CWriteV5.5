@@ -412,7 +412,7 @@ export default function HomePage({
                   variation={0}
                   shapeSize={1.35}
                   roundness={0.55}
-                  borderSize={0.18}   // 边框更粗、更明显
+                  borderSize={0.18}  {/* 边框更粗、更明显 */}
                   circleSize={0.3}
                   circleEdge={0.55}
                 />
