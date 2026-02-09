@@ -44,7 +44,7 @@ const buildStoryTasks = (storyState: StoryState): MapTask[] => {
       id: "story-character",
       stage: "character",
       x: (100 / (taskCount + 1)) * 1, // 约16.67%
-      y: 36, // 上移一些，不在正中间
+      y: 40, // 上移一些，不在正中间
       isComplete: hasCharacter,
       isEnabled: true,
       title: "Character",
@@ -375,3 +375,4 @@ export default function JourneyMap({
     </div>
   )
 }
+
