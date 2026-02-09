@@ -83,7 +83,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
         <div className="absolute bottom-20 right-10 w-96 h-96 bg-pink-300 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-pulse" style={{ animationDelay: '2s' }}></div>
       </div>
 
-      <div className="max-w-md w-full relative z-10">
+      <div className="max-w-sm w-full relative z-10">
         <SpotlightCard className="px-8 py-4 shadow-2xl" spotlightColor="rgba(0, 229, 255, 0.2)">
           <div className="text-center mb-4">
             <div className="mb-1 mt-2 flex justify-center">
