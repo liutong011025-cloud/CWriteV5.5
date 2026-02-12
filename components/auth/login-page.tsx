@@ -23,7 +23,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
     // 按你提供的 GIF 时长约 3.79 秒来设置，稍微多给一点时间保证播完
     const timer = setTimeout(() => {
       setShowFinalLogo(true)
-    }, 3900)
+    }, 3700)
     return () => clearTimeout(timer)
   }, [])
 
