@@ -1,7 +1,6 @@
 "use client"
 
-import React, { useState, useEffect } from "react"
-import Image from "next/image"
+import React, { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { toast } from "sonner"
@@ -15,17 +14,6 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
   const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)
-
-  // 控制 logo：先播 GIF，再切换到最终静态图
-  const [showFinalLogo, setShowFinalLogo] = useState(false)
-
-  useEffect(() => {
-    // 这里按照你提供的 GIF 时长约 3.02 秒来设置
-    const timer = setTimeout(() => {
-      setShowFinalLogo(true)
-    }, 2200) // 略多给一点缓冲，保证动画完整播完
-    return () => clearTimeout(timer)
-  }, [])
 
   const handleLogin = async () => {
     if (!username.trim() || !password.trim()) {
@@ -98,27 +86,21 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
         <SpotlightCard className="px-10 py-6 shadow-2xl" spotlightColor="rgba(0, 229, 255, 0.2)">
           <div className="text-center mb-4">
             <div className="mb-2 mt-4 flex justify-center">
-              {showFinalLogo ? (
-                <Image
-                  src="/logofinal.png"
-                  alt="CWrite Logo Final"
-                  width={220}
-                  height={220}
-                  className="object-contain"
-                  priority
-                  unoptimized
-                />
-              ) : (
-                <Image
-                  src="/logo.gif"
-                  alt="CWrite Logo"
-                  width={220}
-                  height={220}
-                  className="object-contain"
-                  priority
-                  unoptimized
-                />
-              )}
+              <video
+                src="/logo.mp4"
+                className="w-[220px] h-[220px] object-contain"
+                autoPlay
+                muted
+                playsInline
+                disablePictureInPicture
+                disableRemotePlayback
+                onEnded={(e: React.SyntheticEvent<HTMLVideoElement>) => {
+                  const video = e.currentTarget
+                  // 播放完成后停留在最后一帧
+                  video.pause()
+                  video.currentTime = video.duration
+                }}
+              />
             </div>
             <p className="text-white font-semibold whitespace-nowrap text-base md:text-lg">
               Login to start your creative journey
