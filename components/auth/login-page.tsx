@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useState } from "react"
+import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { toast } from "sonner"
@@ -86,19 +87,14 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
         <SpotlightCard className="px-10 py-6 shadow-2xl" spotlightColor="rgba(0, 229, 255, 0.2)">
           <div className="text-center mb-4">
             <div className="mb-2 mt-4 flex justify-center">
-              <video
-                src="https://v3b.fal.media/files/b/0a8e28bd/0ILHzYH0U8EUSztwqIUD__output.mp4"
-                className="w-[220px] h-[220px] object-contain"
-                autoPlay
-                muted
-                playsInline
-                disablePictureInPicture
-                disableRemotePlayback
-                onEnded={(e: React.SyntheticEvent<HTMLVideoElement>) => {
-                  const video = e.currentTarget
-                  video.pause()
-                  video.currentTime = video.duration
-                }}
+              <Image
+                src="/logo.gif"
+                alt="CWrite Logo"
+                width={220}
+                height={220}
+                className="object-contain"
+                priority
+                unoptimized
               />
             </div>
             <p className="text-white font-semibold whitespace-nowrap text-base md:text-lg">
