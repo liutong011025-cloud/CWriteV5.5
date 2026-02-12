@@ -87,7 +87,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
           <div className="text-center mb-4">
             <div className="mb-2 mt-4 flex justify-center">
               <video
-                src="/logo.mp4"
+                src="/logo.mov"
                 className="w-[220px] h-[220px] object-contain"
                 autoPlay
                 muted
