@@ -367,7 +367,7 @@ export default function CharacterCreation({ language, onCharacterCreate, onBack,
                 }}
               >
                 {/* 配料列表 */}
-                <div className="flex flex-col gap-6 w-full mt-8">
+                <div className="flex flex-col gap-6 w-full mt-12">
                   {allFields.map((fieldId, index) => {
                     const cfg = FIELD_CONFIG[fieldId as keyof typeof FIELD_CONFIG]
                     if (!cfg) return null
@@ -402,7 +402,7 @@ export default function CharacterCreation({ language, onCharacterCreate, onBack,
 
                 {/* 生成按钮 - 所有字段完成后显示在paper下面 */}
                 {allFieldsComplete && (
-                  <div className="mt-auto pt-8 w-full">
+                  <div className="mt-auto pt-4 w-full">
                     <Button
                       onClick={handleStartGenerate}
                       className="w-full font-ancient text-lg py-4 shadow-lg"
@@ -493,16 +493,16 @@ export default function CharacterCreation({ language, onCharacterCreate, onBack,
                 </div>
               ))}
 
-              {/* Generated image overlays cup - 更大 */}
+              {/* Generated image overlays cup - 更大，但不遮挡按钮 */}
               {imageUrl && (
                 <div
                   className="absolute flex items-center justify-center"
                   style={{ 
                     zIndex: 40,
                     width: '140%',
-                    height: '140%',
+                    height: '120%',
                     left: '-20%',
-                    top: '-20%',
+                    top: '-25%',
                   }}
                 >
                   <img
@@ -540,7 +540,7 @@ export default function CharacterCreation({ language, onCharacterCreate, onBack,
 
             {/* After image: Back to Map + Regenerate */}
             {allFieldsComplete && imageUrl && (
-              <div className="mt-2 flex flex-col gap-2 w-full max-w-[220px]">
+              <div className="mt-16 flex flex-col gap-2 w-full max-w-[220px] relative z-50">
                 <Button onClick={handleCreate} className="w-full font-ancient bg-blue-800 hover:bg-blue-900 text-white">
                   Back to Map →
                 </Button>
