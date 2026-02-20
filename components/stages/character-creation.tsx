@@ -134,10 +134,10 @@ export default function CharacterCreation({ language, onCharacterCreate, onBack,
   const [completedFields, setCompletedFields] = useState<Set<string>>(new Set())
   const [cupColors, setCupColors] = useState<Array<{ color: string; hexFrom: string; hexTo: string }>>([])
   const [flyingItems, setFlyingItems] = useState<FlyingItem[]>([])
+  const [currentField, setCurrentField] = useState<string | null>(null) // 当前选中的字段
+  const [showIngredientList, setShowIngredientList] = useState(true) // 是否显示配料表
 
   const cupRef = useRef<HTMLDivElement>(null)
-  const leftBoxRef = useRef<HTMLDivElement>(null)
-  const rightBoxRef = useRef<HTMLDivElement>(null)
 
   const isHighLevel = level >= 4
   const baseFields = ["name", "species", "age", "traits"]
@@ -175,6 +175,7 @@ export default function CharacterCreation({ language, onCharacterCreate, onBack,
 
     setCompletedFields((prev) => new Set(prev).add(fieldId))
     setFlyingItems((prev: FlyingItem[]) => [...prev, { fieldId, text: value, color: cfg.color, hex: cfg.hex }])
+    setCurrentField(null) // 倒入后隐藏box
 
     setTimeout(() => {
       setFlyingItems((prev: FlyingItem[]) => prev.filter((f: FlyingItem) => f.fieldId !== fieldId))
@@ -236,13 +237,18 @@ export default function CharacterCreation({ language, onCharacterCreate, onBack,
     } catch (error) {
       console.error("Error generating image:", error)
       toast.error("Failed to generate image, please try again")
+      setCupShake(false)
     } finally {
       setIsGenerating(false)
-      // 杯子抖动持续到图片生成完成（imageUrl 设置后）
-      if (!imageUrl) {
-        setCupShake(false)
-      }
     }
+  }
+
+  const handleStartGenerate = () => {
+    setShowIngredientList(false) // 隐藏配料表
+    // 延迟一点再开始生成，让动画更流畅
+    setTimeout(() => {
+      generateImage()
+    }, 300)
   }
 
   const finalSpecies = species === "Custom" ? customSpecies.trim() : species
@@ -261,9 +267,9 @@ export default function CharacterCreation({ language, onCharacterCreate, onBack,
     }
   }
 
-  const boxClass = "font-ancient rounded-lg border-2 p-5 shadow-lg transition-all duration-300 text-lg min-w-0 break-words overflow-visible relative"
-  const labelClass = "block text-base font-bold mb-3 font-ancient whitespace-normal break-words text-amber-600"
-  const inputClass = "font-ancient text-lg rounded border bg-white/95 px-4 py-2.5 w-full min-w-0 text-amber-900 font-semibold"
+  const boxClass = "font-ancient rounded-lg border-2 p-6 shadow-lg transition-all duration-300 text-xl min-w-0 break-words overflow-visible relative"
+  const labelClass = "block text-lg font-bold mb-4 font-ancient whitespace-normal break-words text-amber-600"
+  const inputClass = "font-ancient text-xl rounded border bg-white/95 px-5 py-3 w-full min-w-0 text-amber-900 font-semibold"
 
   const renderField = (
     fieldId: string,
@@ -304,18 +310,13 @@ export default function CharacterCreation({ language, onCharacterCreate, onBack,
         size="sm"
         onClick={() => handleImportToDish(fieldId)}
         disabled={importDisabled}
-        className="mt-3 w-full font-ancient text-base py-2.5 bg-amber-900/90 hover:bg-amber-950 text-amber-200 border-2 border-amber-800 shadow-lg"
+        className="mt-4 w-full font-ancient text-lg py-3 bg-amber-900/90 hover:bg-amber-950 text-amber-200 border-2 border-amber-800 shadow-lg"
         style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.5)' }}
       >
         Import to culture dish
       </Button>
     </div>
   )
-
-  const leftFieldsAll = isHighLevel ? ["name", "species", "age", "traits"] : ["name", "species"]
-  const rightFieldsAll = isHighLevel ? ["background", "emotional", "symbolic"] : ["age", "traits"]
-  const leftFields = leftFieldsAll.filter((id) => !completedFields.has(id))
-  const rightFields = rightFieldsAll.filter((id) => !completedFields.has(id))
 
   return (
     <div
@@ -342,154 +343,96 @@ export default function CharacterCreation({ language, onCharacterCreate, onBack,
       <div className="absolute inset-0 bg-black/5 z-[1]" />
 
       <div className="relative z-10 flex flex-col flex-1 min-h-0">
-        <div className="flex-shrink-0 px-4 py-2">
-          <StageHeader stage={1} title="Create Your Character" onBack={onBack} />
+        <div className="flex-shrink-0 px-4 pt-12 pb-4">
+          <StageHeader 
+            stage={1} 
+            title="Create Your Character" 
+            onBack={onBack}
+            className="[&_h1]:text-white [&_.text-muted-foreground]:text-white/80"
+          />
         </div>
 
-        <div className="flex-1 flex items-stretch justify-center gap-1 px-8 min-h-0">
-          {/* Left boxes: 两列、宽一些，紧挨杯子 */}
-          <div ref={leftBoxRef} className="grid grid-cols-2 gap-3 content-start w-[420px] min-w-[420px] flex-shrink-0 overflow-hidden py-2">
-            {leftFields.map((fieldId) => {
-              const cfg = FIELD_CONFIG[fieldId as keyof typeof FIELD_CONFIG]
-              if (!cfg) return null
-              if (fieldId === "name") {
-                return (
-                  <div key={fieldId}>
-                    {renderField(
-                      fieldId,
-                      cfg.label,
-                      cfg.borderColor,
-                      cfg.textColor,
-                      <Input
-                        placeholder="Enter name..."
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        className={inputClass}
-                      />,
-                      !name.trim()
-                    )}
-                  </div>
-                )
-              }
-              if (fieldId === "species") {
-                return (
-                  <div key={fieldId}>
-                    {renderField(
-                      fieldId,
-                      cfg.label,
-                      cfg.borderColor,
-                      cfg.textColor,
-                      <div className="space-y-1">
-                        <div className="grid grid-cols-2 gap-1.5">
-                          {SPECIES.slice(0, 6).map((spec) => (
-                            <button
-                              key={spec.name}
-                              type="button"
-                              onClick={() => setSpecies(spec.name)}
-                              className={`p-2.5 rounded text-base font-ancient border ${
-                                species === spec.name ? "bg-blue-200 border-blue-600" : "bg-white/95 border-gray-400"
-                              }`}
-                              style={{ color: species === spec.name ? '#1e3a8a' : '#8B5A2B', fontWeight: 'bold' }}
-                            >
-                              {spec.icon} {spec.name}
-                            </button>
-                          ))}
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => setSpecies("Custom")}
-                          className={`w-full p-2.5 rounded text-base font-ancient border ${species === "Custom" ? "bg-blue-200 border-blue-600" : "bg-white/95 border-gray-400"}`}
-                          style={{ color: species === "Custom" ? '#1e3a8a' : '#8B5A2B', fontWeight: 'bold' }}
+        <div className="flex-1 flex items-stretch justify-center gap-4 px-8 min-h-0">
+          {/* Left: 配料表 */}
+          {showIngredientList && (
+            <div className="flex flex-col items-center w-[300px] flex-shrink-0 py-4 relative">
+              {/* Paper背景 */}
+              <div 
+                className="relative w-full h-full min-h-[500px] flex flex-col items-center p-8"
+                style={{
+                  backgroundImage: 'url(/paper.png)',
+                  backgroundSize: 'contain',
+                  backgroundRepeat: 'no-repeat',
+                  backgroundPosition: 'center',
+                }}
+              >
+                {/* 配料列表 */}
+                <div className="flex flex-col gap-6 w-full mt-8">
+                  {allFields.map((fieldId, index) => {
+                    const cfg = FIELD_CONFIG[fieldId as keyof typeof FIELD_CONFIG]
+                    if (!cfg) return null
+                    const isCompleted = completedFields.has(fieldId)
+                    
+                    return (
+                      <div
+                        key={fieldId}
+                        className="flex items-center justify-between cursor-pointer group transition-all duration-300"
+                        onClick={() => !isCompleted && setCurrentField(fieldId)}
+                        style={{
+                          pointerEvents: isCompleted ? 'none' : 'auto',
+                          opacity: isCompleted ? 0.6 : 1,
+                        }}
+                      >
+                        <span
+                          className="font-handwriting text-2xl font-bold text-amber-900 group-hover:text-3xl transition-all duration-300"
+                          style={{
+                            fontFamily: '"Kalam", "Comic Sans MS", cursive',
+                            textShadow: '1px 1px 2px rgba(0,0,0,0.2)',
+                          }}
                         >
-                          Custom
-                        </button>
-                        {species === "Custom" && (
-                          <Input
-                            placeholder="Custom species..."
-                            value={customSpecies}
-                            onChange={(e) => setCustomSpecies(e.target.value)}
-                            className={inputClass}
-                          />
+                          {cfg.label}
+                        </span>
+                        {isCompleted && (
+                          <span className="text-3xl text-green-600 font-bold ml-2">✓</span>
                         )}
-                      </div>,
-                      !canImport("species")
-                    )}
-                  </div>
-                )
-              }
-              if (fieldId === "age") {
-                return (
-                  <div key={fieldId}>
-                    {renderField(
-                      fieldId,
-                      cfg.label,
-                      cfg.borderColor,
-                      cfg.textColor,
-                      <Input
-                        type="number"
-                        placeholder="Age..."
-                        value={age}
-                        onChange={(e) => setAge(e.target.value)}
-                        className={inputClass}
-                      />,
-                      !age.trim()
-                    )}
-                  </div>
-                )
-              }
-              if (fieldId === "traits") {
-                return (
-                  <div key={fieldId}>
-                    {renderField(
-                      fieldId,
-                      cfg.label,
-                      cfg.borderColor,
-                      cfg.textColor,
-                      <div className="grid grid-cols-2 gap-1.5">
-                        {TRAITS.map((t) => (
-                          <button
-                            key={t.name}
-                            type="button"
-                            onClick={() => toggleTrait(t.name)}
-                            className={`p-2.5 rounded text-base font-ancient border ${
-                              selectedTraits.includes(t.name) ? "bg-orange-200 border-orange-600" : "bg-white/95 border-gray-400"
-                            }`}
-                            style={{ color: selectedTraits.includes(t.name) ? '#ea580c' : '#8B5A2B', fontWeight: 'bold' }}
-                          >
-                            {t.name}
-                          </button>
-                        ))}
-                      </div>,
-                      selectedTraits.length === 0
-                    )}
-                  </div>
-                )
-              }
-              if (fieldId === "background") {
-                return (
-                  <div key={fieldId}>
-                    {renderField(
-                      fieldId,
-                      cfg.label,
-                      cfg.borderColor,
-                      cfg.textColor,
-                      <textarea
-                        placeholder="Background..."
-                        value={background}
-                        onChange={(e) => setBackground(e.target.value)}
-                        className={`${inputClass} h-16 resize-none text-amber-900 font-semibold`}
-                        rows={2}
-                      />,
-                      !background.trim()
-                    )}
-                  </div>
-                )
-              }
-              return null
-            })}
-          </div>
+                      </div>
+                    )
+                  })}
+                </div>
 
-          {/* Center: cup 靠下，固定宽度让左右 box 紧贴杯子 */}
+                {/* 生成按钮 - 所有字段完成后显示在paper下面 */}
+                {allFieldsComplete && (
+                  <div className="mt-auto pt-8 w-full">
+                    <Button
+                      onClick={handleStartGenerate}
+                      className="w-full font-ancient text-lg py-4 shadow-lg"
+                      style={{
+                        background: `
+                          linear-gradient(135deg, rgba(139, 90, 43, 0.95) 0%, rgba(101, 67, 33, 0.95) 50%, rgba(139, 90, 43, 0.95) 100%),
+                          repeating-linear-gradient(
+                            0deg,
+                            transparent,
+                            transparent 2px,
+                            rgba(101, 67, 33, 0.3) 2px,
+                            rgba(101, 67, 33, 0.3) 4px
+                          )
+                        `,
+                        borderColor: '#8B5A2B',
+                        borderWidth: '2px',
+                        color: '#fbbf24',
+                        fontWeight: 'bold',
+                        textShadow: '1px 1px 2px rgba(0,0,0,0.5)',
+                      }}
+                    >
+                      Generate Character
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Center: cup 靠下，固定宽度 */}
           <div className="flex flex-col items-center justify-end w-[260px] flex-shrink-0 relative pb-4">
             <div
               ref={cupRef}
@@ -572,8 +515,8 @@ export default function CharacterCreation({ language, onCharacterCreate, onBack,
               )}
             </div>
 
-            {/* Generate button when all imported */}
-            {allFieldsComplete && !imageUrl && (
+            {/* Generate button when all imported - 只在配料表隐藏后显示 */}
+            {!showIngredientList && allFieldsComplete && !imageUrl && (
               <div className="mt-2 w-full max-w-[220px]">
                 <Button
                   onClick={generateImage}
@@ -614,9 +557,162 @@ export default function CharacterCreation({ language, onCharacterCreate, onBack,
             )}
           </div>
 
-          {/* Right boxes */}
-          <div ref={rightBoxRef} className="grid grid-cols-2 gap-3 content-start w-[420px] min-w-[420px] flex-shrink-0 overflow-hidden py-2">
-            {rightFields.map((fieldId) => {
+          {/* Right: 动态显示当前选中的box，比现在大 */}
+          {currentField && !completedFields.has(currentField) && (
+            <div className="w-[500px] flex-shrink-0 flex items-center justify-center py-4">
+              {(() => {
+                const cfg = FIELD_CONFIG[currentField as keyof typeof FIELD_CONFIG]
+                if (!cfg) return null
+
+                if (currentField === "name") {
+                  return renderField(
+                    currentField,
+                    cfg.label,
+                    cfg.borderColor,
+                    cfg.textColor,
+                    <Input
+                      placeholder="Enter name..."
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      className={inputClass}
+                    />,
+                    !name.trim()
+                  )
+                }
+                if (currentField === "species") {
+                  return renderField(
+                    currentField,
+                    cfg.label,
+                    cfg.borderColor,
+                    cfg.textColor,
+                    <div className="space-y-2">
+                      <div className="grid grid-cols-3 gap-2">
+                        {SPECIES.slice(0, 6).map((spec) => (
+                          <button
+                            key={spec.name}
+                            type="button"
+                            onClick={() => setSpecies(spec.name)}
+                            className={`p-3 rounded text-lg font-ancient border ${
+                              species === spec.name ? "bg-blue-200 border-blue-600" : "bg-white/95 border-gray-400"
+                            }`}
+                            style={{ color: species === spec.name ? '#1e3a8a' : '#8B5A2B', fontWeight: 'bold' }}
+                          >
+                            {spec.icon} {spec.name}
+                          </button>
+                        ))}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setSpecies("Custom")}
+                        className={`w-full p-3 rounded text-lg font-ancient border ${species === "Custom" ? "bg-blue-200 border-blue-600" : "bg-white/95 border-gray-400"}`}
+                        style={{ color: species === "Custom" ? '#1e3a8a' : '#8B5A2B', fontWeight: 'bold' }}
+                      >
+                        Custom
+                      </button>
+                      {species === "Custom" && (
+                        <Input
+                          placeholder="Custom species..."
+                          value={customSpecies}
+                          onChange={(e) => setCustomSpecies(e.target.value)}
+                          className={inputClass}
+                        />
+                      )}
+                    </div>,
+                    !canImport("species")
+                  )
+                }
+                if (currentField === "age") {
+                  return renderField(
+                    currentField,
+                    cfg.label,
+                    cfg.borderColor,
+                    cfg.textColor,
+                    <Input
+                      type="number"
+                      placeholder="Age..."
+                      value={age}
+                      onChange={(e) => setAge(e.target.value)}
+                      className={inputClass}
+                    />,
+                    !age.trim()
+                  )
+                }
+                if (currentField === "traits") {
+                  return renderField(
+                    currentField,
+                    cfg.label,
+                    cfg.borderColor,
+                    cfg.textColor,
+                    <div className="grid grid-cols-2 gap-2">
+                      {TRAITS.map((t) => (
+                        <button
+                          key={t.name}
+                          type="button"
+                          onClick={() => toggleTrait(t.name)}
+                          className={`p-3 rounded text-lg font-ancient border ${
+                            selectedTraits.includes(t.name) ? "bg-orange-200 border-orange-600" : "bg-white/95 border-gray-400"
+                          }`}
+                          style={{ color: selectedTraits.includes(t.name) ? '#ea580c' : '#8B5A2B', fontWeight: 'bold' }}
+                        >
+                          {t.name}
+                        </button>
+                      ))}
+                    </div>,
+                    selectedTraits.length === 0
+                  )
+                }
+                if (currentField === "background") {
+                  return renderField(
+                    currentField,
+                    cfg.label,
+                    cfg.borderColor,
+                    cfg.textColor,
+                    <textarea
+                      placeholder="Background..."
+                      value={background}
+                      onChange={(e) => setBackground(e.target.value)}
+                      className={`${inputClass} h-20 resize-none text-amber-900 font-semibold`}
+                      rows={3}
+                    />,
+                    !background.trim()
+                  )
+                }
+                if (currentField === "emotional") {
+                  return renderField(
+                    currentField,
+                    cfg.label,
+                    cfg.borderColor,
+                    cfg.textColor,
+                    <textarea
+                      placeholder="Emotional..."
+                      value={emotional}
+                      onChange={(e) => setEmotional(e.target.value)}
+                      className={`${inputClass} h-20 resize-none text-amber-900 font-semibold`}
+                      rows={3}
+                    />,
+                    !emotional.trim()
+                  )
+                }
+                if (currentField === "symbolic") {
+                  return renderField(
+                    currentField,
+                    cfg.label,
+                    cfg.borderColor,
+                    cfg.textColor,
+                    <textarea
+                      placeholder="Symbolic..."
+                      value={symbolic}
+                      onChange={(e) => setSymbolic(e.target.value)}
+                      className={`${inputClass} h-20 resize-none text-amber-900 font-semibold`}
+                      rows={3}
+                    />,
+                    !symbolic.trim()
+                  )
+                }
+                return null
+              })()}
+            </div>
+          )}
               const cfg = FIELD_CONFIG[fieldId as keyof typeof FIELD_CONFIG]
               if (!cfg) return null
               if (fieldId === "age") {
@@ -633,6 +729,7 @@ export default function CharacterCreation({ language, onCharacterCreate, onBack,
                         value={age}
                         onChange={(e) => setAge(e.target.value)}
                         className={inputClass}
+                        disabled={completedFields.has(fieldId)}
                       />,
                       !age.trim()
                     )}
@@ -647,16 +744,16 @@ export default function CharacterCreation({ language, onCharacterCreate, onBack,
                       cfg.label,
                       cfg.borderColor,
                       cfg.textColor,
-                      <div className="grid grid-cols-2 gap-1.5">
+                      <div className="grid grid-cols-2 gap-1">
                         {TRAITS.map((t) => (
                           <button
                             key={t.name}
                             type="button"
                             onClick={() => toggleTrait(t.name)}
-                            className={`p-2.5 rounded text-base font-ancient border ${
-                              selectedTraits.includes(t.name) ? "bg-orange-200 border-orange-600" : "bg-white/95 border-gray-400"
+                            disabled={completedFields.has("traits")}
+                            className={`p-1 rounded text-xs font-ancient border ${
+                              selectedTraits.includes(t.name) ? "bg-orange-200 border-orange-600" : "bg-white border-gray-300"
                             }`}
-                            style={{ color: selectedTraits.includes(t.name) ? '#ea580c' : '#8B5A2B', fontWeight: 'bold' }}
                           >
                             {t.name}
                           </button>
@@ -679,7 +776,8 @@ export default function CharacterCreation({ language, onCharacterCreate, onBack,
                         placeholder="Background..."
                         value={background}
                         onChange={(e) => setBackground(e.target.value)}
-                        className={`${inputClass} h-16 resize-none text-amber-900 font-semibold`}
+                        className={`${inputClass} h-14 resize-none`}
+                        disabled={completedFields.has(fieldId)}
                         rows={2}
                       />,
                       !background.trim()
@@ -699,7 +797,8 @@ export default function CharacterCreation({ language, onCharacterCreate, onBack,
                         placeholder="Emotional..."
                         value={emotional}
                         onChange={(e) => setEmotional(e.target.value)}
-                        className={`${inputClass} h-16 resize-none text-amber-900 font-semibold`}
+                        className={`${inputClass} h-14 resize-none`}
+                        disabled={completedFields.has(fieldId)}
                         rows={2}
                       />,
                       !emotional.trim()
@@ -719,7 +818,8 @@ export default function CharacterCreation({ language, onCharacterCreate, onBack,
                         placeholder="Symbolic..."
                         value={symbolic}
                         onChange={(e) => setSymbolic(e.target.value)}
-                        className={`${inputClass} h-16 resize-none text-amber-900 font-semibold`}
+                        className={`${inputClass} h-14 resize-none`}
+                        disabled={completedFields.has(fieldId)}
                         rows={2}
                       />,
                       !symbolic.trim()
@@ -737,6 +837,10 @@ export default function CharacterCreation({ language, onCharacterCreate, onBack,
         .font-ancient {
           font-family: Georgia, "Times New Roman", "Palatino Linotype", serif;
         }
+        .font-handwriting {
+          font-family: "Kalam", "Comic Sans MS", "Comic Neue", cursive;
+        }
+        @import url('https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&display=swap');
         @keyframes flyToCup {
           0% {
             transform: translate(-50%, 0) scale(1);
