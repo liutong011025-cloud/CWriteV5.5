@@ -256,9 +256,9 @@ export default function CharacterCreation({ language, onCharacterCreate, onBack,
     }
   }
 
-  const boxClass = "font-ancient rounded-lg border-2 p-4 shadow-md transition-all duration-300 text-base"
-  const labelClass = "block text-sm font-bold mb-2 font-ancient"
-  const inputClass = "font-ancient text-base rounded border bg-white/90 px-3 py-2 w-full"
+  const boxClass = "font-ancient rounded-lg border-2 p-4 shadow-md transition-all duration-300 text-base min-w-0 break-words overflow-visible"
+  const labelClass = "block text-sm font-bold mb-2 font-ancient whitespace-normal break-words"
+  const inputClass = "font-ancient text-base rounded border bg-white/90 px-3 py-2 w-full min-w-0"
 
   const renderField = (
     fieldId: string,
@@ -317,9 +317,9 @@ export default function CharacterCreation({ language, onCharacterCreate, onBack,
           <StageHeader stage={1} title="Create Your Character" onBack={onBack} />
         </div>
 
-        <div className="flex-1 flex items-stretch justify-center gap-2 px-4 min-h-0">
-          {/* Left boxes: 两列网格，不滚动 */}
-          <div ref={leftBoxRef} className="grid grid-cols-2 gap-3 content-start w-[280px] flex-shrink-0 overflow-hidden py-2">
+        <div className="flex-1 flex items-stretch justify-center gap-1 px-8 min-h-0">
+          {/* Left boxes: 两列、宽一些，紧挨杯子 */}
+          <div ref={leftBoxRef} className="grid grid-cols-2 gap-3 content-start w-[420px] min-w-[420px] flex-shrink-0 overflow-hidden py-2">
             {leftFields.map((fieldId) => {
               const cfg = FIELD_CONFIG[fieldId as keyof typeof FIELD_CONFIG]
               if (!cfg) return null
@@ -457,8 +457,8 @@ export default function CharacterCreation({ language, onCharacterCreate, onBack,
             })}
           </div>
 
-          {/* Center: cup 靠下 */}
-          <div className="flex flex-col items-center justify-end flex-1 min-w-0 relative pb-4">
+          {/* Center: cup 靠下，固定宽度让左右 box 紧贴杯子 */}
+          <div className="flex flex-col items-center justify-end w-[260px] flex-shrink-0 relative pb-4">
             <div
               ref={cupRef}
               className={`relative flex items-end justify-center transition-transform origin-center ${cupShake ? "animate-shake-and-grow-cup" : ""}`}
@@ -576,7 +576,7 @@ export default function CharacterCreation({ language, onCharacterCreate, onBack,
           </div>
 
           {/* Right boxes */}
-          <div ref={rightBoxRef} className="grid grid-cols-2 gap-3 content-start w-[280px] flex-shrink-0 overflow-hidden py-2">
+          <div ref={rightBoxRef} className="grid grid-cols-2 gap-3 content-start w-[420px] min-w-[420px] flex-shrink-0 overflow-hidden py-2">
             {rightFields.map((fieldId) => {
               const cfg = FIELD_CONFIG[fieldId as keyof typeof FIELD_CONFIG]
               if (!cfg) return null
