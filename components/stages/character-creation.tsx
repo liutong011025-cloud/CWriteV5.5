@@ -256,9 +256,9 @@ export default function CharacterCreation({ language, onCharacterCreate, onBack,
     }
   }
 
-  const boxClass = "font-ancient rounded-lg border-2 p-3 shadow-md transition-all duration-300"
-  const labelClass = "block text-xs font-bold mb-1.5 font-ancient"
-  const inputClass = "font-ancient text-sm rounded border bg-white/90 px-2 py-1 w-full"
+  const boxClass = "font-ancient rounded-lg border-2 p-4 shadow-md transition-all duration-300 text-base"
+  const labelClass = "block text-sm font-bold mb-2 font-ancient"
+  const inputClass = "font-ancient text-base rounded border bg-white/90 px-3 py-2 w-full"
 
   const renderField = (
     fieldId: string,
@@ -268,27 +268,25 @@ export default function CharacterCreation({ language, onCharacterCreate, onBack,
     children: React.ReactNode,
     importDisabled: boolean
   ) => (
-    <div
-      className={`${boxClass} ${borderColor} bg-amber-50/95 ${
-        completedFields.has(fieldId) ? "opacity-90 ring-2 ring-amber-600/50" : ""
-      }`}
-    >
+    <div className={`${boxClass} ${borderColor} bg-amber-50/95`}>
       <label className={`${labelClass} ${textColor}`}>{label}</label>
       {children}
       <Button
         type="button"
         size="sm"
         onClick={() => handleImportToDish(fieldId)}
-        disabled={importDisabled || completedFields.has(fieldId)}
-        className="mt-2 w-full font-ancient text-xs bg-amber-700/80 hover:bg-amber-800 text-amber-100 border border-amber-800"
+        disabled={importDisabled}
+        className="mt-2 w-full font-ancient text-sm py-2 bg-amber-700/80 hover:bg-amber-800 text-amber-100 border border-amber-800"
       >
-        {completedFields.has(fieldId) ? "Imported" : "Import to culture dish"}
+        Import to culture dish
       </Button>
     </div>
   )
 
-  const leftFields = isHighLevel ? ["name", "species", "age", "traits"] : ["name", "species"]
-  const rightFields = isHighLevel ? ["background", "emotional", "symbolic"] : ["age", "traits"]
+  const leftFieldsAll = isHighLevel ? ["name", "species", "age", "traits"] : ["name", "species"]
+  const rightFieldsAll = isHighLevel ? ["background", "emotional", "symbolic"] : ["age", "traits"]
+  const leftFields = leftFieldsAll.filter((id) => !completedFields.has(id))
+  const rightFields = rightFieldsAll.filter((id) => !completedFields.has(id))
 
   return (
     <div
@@ -301,12 +299,12 @@ export default function CharacterCreation({ language, onCharacterCreate, onBack,
         maxHeight: "100vh",
       }}
     >
-      {/* 背景：铺满整页，图片 contain 居中且完整显示，不随缩放变化 */}
+      {/* 背景：宽度铺满左右，高度自适应，不随缩放变化 */}
       <div
         className="fixed inset-0 bg-no-repeat bg-center"
         style={{
           backgroundImage: "url(/magictable.png)",
-          backgroundSize: "contain",
+          backgroundSize: "100% auto",
           backgroundColor: "rgb(253, 246, 236)",
           backgroundAttachment: "fixed",
           zIndex: 0,
@@ -319,9 +317,9 @@ export default function CharacterCreation({ language, onCharacterCreate, onBack,
           <StageHeader stage={1} title="Create Your Character" onBack={onBack} />
         </div>
 
-        <div className="flex-1 flex items-stretch justify-center gap-1 px-2 min-h-0">
+        <div className="flex-1 flex items-stretch justify-center gap-0 px-1 min-h-0">
           {/* Left boxes */}
-          <div ref={leftBoxRef} className="flex flex-col gap-2 w-[180px] flex-shrink-0 overflow-auto py-2">
+          <div ref={leftBoxRef} className="flex flex-col gap-3 w-[240px] flex-shrink-0 overflow-auto py-2">
             {leftFields.map((fieldId) => {
               const cfg = FIELD_CONFIG[fieldId as keyof typeof FIELD_CONFIG]
               if (!cfg) return null
@@ -338,7 +336,6 @@ export default function CharacterCreation({ language, onCharacterCreate, onBack,
                         value={name}
                         onChange={(e) => setName(e.target.value)}
                         className={inputClass}
-                        disabled={completedFields.has(fieldId)}
                       />,
                       !name.trim()
                     )}
@@ -354,14 +351,13 @@ export default function CharacterCreation({ language, onCharacterCreate, onBack,
                       cfg.borderColor,
                       cfg.textColor,
                       <div className="space-y-1">
-                        <div className="grid grid-cols-2 gap-1">
+                        <div className="grid grid-cols-2 gap-1.5">
                           {SPECIES.slice(0, 6).map((spec) => (
                             <button
                               key={spec.name}
                               type="button"
-                              onClick={() => !completedFields.has("species") && setSpecies(spec.name)}
-                              disabled={completedFields.has("species")}
-                              className={`p-1 rounded text-xs font-ancient border ${
+                              onClick={() => setSpecies(spec.name)}
+                              className={`p-2 rounded text-sm font-ancient border ${
                                 species === spec.name ? "bg-blue-200 border-blue-600" : "bg-white border-gray-300"
                               }`}
                             >
@@ -371,13 +367,12 @@ export default function CharacterCreation({ language, onCharacterCreate, onBack,
                         </div>
                         <button
                           type="button"
-                          onClick={() => !completedFields.has("species") && setSpecies("Custom")}
-                          disabled={completedFields.has("species")}
-                          className={`w-full p-1 rounded text-xs border ${species === "Custom" ? "bg-blue-200 border-blue-600" : "bg-white border-gray-300"}`}
+                          onClick={() => setSpecies("Custom")}
+                          className={`w-full p-2 rounded text-sm font-ancient border ${species === "Custom" ? "bg-blue-200 border-blue-600" : "bg-white border-gray-300"}`}
                         >
                           Custom
                         </button>
-                        {species === "Custom" && !completedFields.has("species") && (
+                        {species === "Custom" && (
                           <Input
                             placeholder="Custom species..."
                             value={customSpecies}
@@ -405,7 +400,6 @@ export default function CharacterCreation({ language, onCharacterCreate, onBack,
                         value={age}
                         onChange={(e) => setAge(e.target.value)}
                         className={inputClass}
-                        disabled={completedFields.has(fieldId)}
                       />,
                       !age.trim()
                     )}
@@ -420,14 +414,13 @@ export default function CharacterCreation({ language, onCharacterCreate, onBack,
                       cfg.label,
                       cfg.borderColor,
                       cfg.textColor,
-                      <div className="grid grid-cols-2 gap-1">
+                      <div className="grid grid-cols-2 gap-1.5">
                         {TRAITS.map((t) => (
                           <button
                             key={t.name}
                             type="button"
                             onClick={() => toggleTrait(t.name)}
-                            disabled={completedFields.has("traits")}
-                            className={`p-1 rounded text-xs font-ancient border ${
+                            className={`p-2 rounded text-sm font-ancient border ${
                               selectedTraits.includes(t.name) ? "bg-orange-200 border-orange-600" : "bg-white border-gray-300"
                             }`}
                           >
@@ -452,8 +445,7 @@ export default function CharacterCreation({ language, onCharacterCreate, onBack,
                         placeholder="Background..."
                         value={background}
                         onChange={(e) => setBackground(e.target.value)}
-                        className={`${inputClass} h-14 resize-none`}
-                        disabled={completedFields.has(fieldId)}
+                        className={`${inputClass} h-16 resize-none`}
                         rows={2}
                       />,
                       !background.trim()
@@ -584,7 +576,7 @@ export default function CharacterCreation({ language, onCharacterCreate, onBack,
           </div>
 
           {/* Right boxes */}
-          <div ref={rightBoxRef} className="flex flex-col gap-2 w-[180px] flex-shrink-0 overflow-auto py-2">
+          <div ref={rightBoxRef} className="flex flex-col gap-3 w-[240px] flex-shrink-0 overflow-auto py-2">
             {rightFields.map((fieldId) => {
               const cfg = FIELD_CONFIG[fieldId as keyof typeof FIELD_CONFIG]
               if (!cfg) return null
@@ -602,7 +594,6 @@ export default function CharacterCreation({ language, onCharacterCreate, onBack,
                         value={age}
                         onChange={(e) => setAge(e.target.value)}
                         className={inputClass}
-                        disabled={completedFields.has(fieldId)}
                       />,
                       !age.trim()
                     )}
@@ -617,14 +608,13 @@ export default function CharacterCreation({ language, onCharacterCreate, onBack,
                       cfg.label,
                       cfg.borderColor,
                       cfg.textColor,
-                      <div className="grid grid-cols-2 gap-1">
+                      <div className="grid grid-cols-2 gap-1.5">
                         {TRAITS.map((t) => (
                           <button
                             key={t.name}
                             type="button"
                             onClick={() => toggleTrait(t.name)}
-                            disabled={completedFields.has("traits")}
-                            className={`p-1 rounded text-xs font-ancient border ${
+                            className={`p-2 rounded text-sm font-ancient border ${
                               selectedTraits.includes(t.name) ? "bg-orange-200 border-orange-600" : "bg-white border-gray-300"
                             }`}
                           >
@@ -649,8 +639,7 @@ export default function CharacterCreation({ language, onCharacterCreate, onBack,
                         placeholder="Background..."
                         value={background}
                         onChange={(e) => setBackground(e.target.value)}
-                        className={`${inputClass} h-14 resize-none`}
-                        disabled={completedFields.has(fieldId)}
+                        className={`${inputClass} h-16 resize-none`}
                         rows={2}
                       />,
                       !background.trim()
@@ -670,8 +659,7 @@ export default function CharacterCreation({ language, onCharacterCreate, onBack,
                         placeholder="Emotional..."
                         value={emotional}
                         onChange={(e) => setEmotional(e.target.value)}
-                        className={`${inputClass} h-14 resize-none`}
-                        disabled={completedFields.has(fieldId)}
+                        className={`${inputClass} h-16 resize-none`}
                         rows={2}
                       />,
                       !emotional.trim()
@@ -691,8 +679,7 @@ export default function CharacterCreation({ language, onCharacterCreate, onBack,
                         placeholder="Symbolic..."
                         value={symbolic}
                         onChange={(e) => setSymbolic(e.target.value)}
-                        className={`${inputClass} h-14 resize-none`}
-                        disabled={completedFields.has(fieldId)}
+                        className={`${inputClass} h-16 resize-none`}
                         rows={2}
                       />,
                       !symbolic.trim()
