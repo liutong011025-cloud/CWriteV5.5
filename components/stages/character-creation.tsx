@@ -130,7 +130,6 @@ export default function CharacterCreation({ language, onCharacterCreate, onBack,
   const [imageUrl, setImageUrl] = useState<string>("")
   const [isGenerating, setIsGenerating] = useState(false)
   const [cupShake, setCupShake] = useState(false)
-  const [flashWords, setFlashWords] = useState<string[]>([])
 
   const [completedFields, setCompletedFields] = useState<Set<string>>(new Set())
   const [cupColors, setCupColors] = useState<Array<{ color: string; hexFrom: string; hexTo: string }>>([])
@@ -203,12 +202,8 @@ export default function CharacterCreation({ language, onCharacterCreate, onBack,
     }
 
     setCupShake(true)
-    setFlashWords(allFields.map((id) => getFieldValue(id)).filter(Boolean))
     setIsGenerating(true)
     toast.info("Generating character image...")
-
-    const t1 = setTimeout(() => setCupShake(false), 2500)
-    const t2 = setTimeout(() => setFlashWords([]), 4000)
 
     try {
       let prompt = `A charming cartoon illustration of ${species === "Boy" || species === "Girl" ? `a young ${species.toLowerCase()}` : `a ${finalSpecies.toLowerCase()}`} character named ${name}.`
@@ -241,8 +236,7 @@ export default function CharacterCreation({ language, onCharacterCreate, onBack,
       toast.error("Failed to generate image, please try again")
     } finally {
       setIsGenerating(false)
-      clearTimeout(t1)
-      clearTimeout(t2)
+      setCupShake(false)
     }
   }
 
@@ -307,11 +301,14 @@ export default function CharacterCreation({ language, onCharacterCreate, onBack,
         maxHeight: "100vh",
       }}
     >
+      {/* 背景：铺满整页，图片 contain 居中且完整显示，不随缩放变化 */}
       <div
-        className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+        className="fixed inset-0 bg-no-repeat bg-center"
         style={{
           backgroundImage: "url(/magictable.png)",
-          backgroundSize: "67%",
+          backgroundSize: "contain",
+          backgroundColor: "rgb(253, 246, 236)",
+          backgroundAttachment: "fixed",
           zIndex: 0,
         }}
       />
@@ -322,9 +319,9 @@ export default function CharacterCreation({ language, onCharacterCreate, onBack,
           <StageHeader stage={1} title="Create Your Character" onBack={onBack} />
         </div>
 
-        <div className="flex-1 flex items-stretch justify-center gap-4 px-4 min-h-0">
+        <div className="flex-1 flex items-stretch justify-center gap-1 px-2 min-h-0">
           {/* Left boxes */}
-          <div ref={leftBoxRef} className="flex flex-col gap-2 w-[200px] flex-shrink-0 overflow-auto py-2">
+          <div ref={leftBoxRef} className="flex flex-col gap-2 w-[180px] flex-shrink-0 overflow-auto py-2">
             {leftFields.map((fieldId) => {
               const cfg = FIELD_CONFIG[fieldId as keyof typeof FIELD_CONFIG]
               if (!cfg) return null
@@ -472,7 +469,7 @@ export default function CharacterCreation({ language, onCharacterCreate, onBack,
           <div className="flex flex-col items-center justify-center flex-1 min-w-0 relative">
             <div
               ref={cupRef}
-              className={`relative flex items-end justify-center transition-transform ${cupShake ? "animate-shake-cup" : ""}`}
+              className={`relative flex items-end justify-center transition-transform origin-center ${cupShake ? "animate-shake-and-grow-cup" : ""}`}
               style={{ width: "220px", height: "240px" }}
             >
               {/* Cup image (behind liquid) */}
@@ -492,7 +489,7 @@ export default function CharacterCreation({ language, onCharacterCreate, onBack,
                     bottom: "24%",
                     height: `${liquidHeightPercent}%`,
                     zIndex: 20,
-                    borderRadius: "20px 20px 10px 10px",
+                    borderRadius: "8px 8px 20px 20px",
                     overflow: "hidden",
                     display: "flex",
                     flexDirection: "column-reverse",
@@ -528,20 +525,6 @@ export default function CharacterCreation({ language, onCharacterCreate, onBack,
                   {item.text.length > 12 ? item.text.slice(0, 12) + "…" : item.text}
                 </div>
               ))}
-
-              {/* Flash words when generating */}
-              {flashWords.length > 0 && (
-                <div
-                  className="absolute inset-0 flex flex-wrap items-center justify-center gap-1 p-2 pointer-events-none font-ancient text-xs font-bold text-amber-800 animate-pulse"
-                  style={{ zIndex: 25 }}
-                >
-                  {flashWords.map((w: string, i: number) => (
-                    <span key={i} className="bg-amber-200/90 px-1 rounded">
-                      {w.length > 8 ? w.slice(0, 8) + "…" : w}
-                    </span>
-                  ))}
-                </div>
-              )}
 
               {/* Generated image overlays cup */}
               {imageUrl && (
@@ -601,7 +584,7 @@ export default function CharacterCreation({ language, onCharacterCreate, onBack,
           </div>
 
           {/* Right boxes */}
-          <div ref={rightBoxRef} className="flex flex-col gap-2 w-[200px] flex-shrink-0 overflow-auto py-2">
+          <div ref={rightBoxRef} className="flex flex-col gap-2 w-[180px] flex-shrink-0 overflow-auto py-2">
             {rightFields.map((fieldId) => {
               const cfg = FIELD_CONFIG[fieldId as keyof typeof FIELD_CONFIG]
               if (!cfg) return null
@@ -744,20 +727,31 @@ export default function CharacterCreation({ language, onCharacterCreate, onBack,
         .fly-to-cup {
           animation: flyToCup 1.2s ease-in forwards;
         }
-        @keyframes shakeCup {
-          0%, 100% { transform: translateX(0); }
-          10% { transform: translateX(-4px); }
-          20% { transform: translateX(4px); }
-          30% { transform: translateX(-4px); }
-          40% { transform: translateX(4px); }
-          50% { transform: translateX(-3px); }
-          60% { transform: translateX(3px); }
-          70% { transform: translateX(-2px); }
-          80% { transform: translateX(2px); }
-          90% { transform: translateX(-1px); }
+        @keyframes shakeAndGrowCup {
+          0% { transform: translateX(0) scale(1); }
+          5% { transform: translateX(-5px) scale(1.03); }
+          10% { transform: translateX(5px) scale(1.06); }
+          15% { transform: translateX(-5px) scale(1.09); }
+          20% { transform: translateX(5px) scale(1.12); }
+          25% { transform: translateX(-4px) scale(1.15); }
+          30% { transform: translateX(4px) scale(1.18); }
+          35% { transform: translateX(-4px) scale(1.21); }
+          40% { transform: translateX(4px) scale(1.24); }
+          45% { transform: translateX(-3px) scale(1.27); }
+          50% { transform: translateX(3px) scale(1.29); }
+          55% { transform: translateX(-3px) scale(1.31); }
+          60% { transform: translateX(3px) scale(1.33); }
+          65% { transform: translateX(-2px) scale(1.34); }
+          70% { transform: translateX(2px) scale(1.34); }
+          75% { transform: translateX(-2px) scale(1.35); }
+          80% { transform: translateX(2px) scale(1.35); }
+          85% { transform: translateX(-1px) scale(1.35); }
+          90% { transform: translateX(1px) scale(1.35); }
+          95% { transform: translateX(-1px) scale(1.35); }
+          100% { transform: translateX(0) scale(1.35); }
         }
-        .animate-shake-cup {
-          animation: shakeCup 0.4s ease-in-out infinite;
+        .animate-shake-and-grow-cup {
+          animation: shakeAndGrowCup 4s ease-in-out forwards;
         }
       `}</style>
     </div>
