@@ -227,16 +227,21 @@ export default function CharacterCreation({ language, onCharacterCreate, onBack,
       }
       if (data.imageUrl) {
         setImageUrl(data.imageUrl)
+        setCupShake(false) // 图片生成完成后停止抖动
         toast.success("Image generated successfully!")
       } else {
         toast.error("Failed to generate image, please try again")
+        setCupShake(false)
       }
     } catch (error) {
       console.error("Error generating image:", error)
       toast.error("Failed to generate image, please try again")
     } finally {
       setIsGenerating(false)
-      setCupShake(false)
+      // 杯子抖动持续到图片生成完成（imageUrl 设置后）
+      if (!imageUrl) {
+        setCupShake(false)
+      }
     }
   }
 
@@ -256,9 +261,9 @@ export default function CharacterCreation({ language, onCharacterCreate, onBack,
     }
   }
 
-  const boxClass = "font-ancient rounded-lg border-2 p-4 shadow-md transition-all duration-300 text-base min-w-0 break-words overflow-visible"
-  const labelClass = "block text-sm font-bold mb-2 font-ancient whitespace-normal break-words"
-  const inputClass = "font-ancient text-base rounded border bg-white/90 px-3 py-2 w-full min-w-0"
+  const boxClass = "font-ancient rounded-lg border-2 p-5 shadow-lg transition-all duration-300 text-lg min-w-0 break-words overflow-visible relative"
+  const labelClass = "block text-base font-bold mb-3 font-ancient whitespace-normal break-words text-amber-600"
+  const inputClass = "font-ancient text-lg rounded border bg-white/95 px-4 py-2.5 w-full min-w-0 text-amber-900 font-semibold"
 
   const renderField = (
     fieldId: string,
@@ -268,15 +273,39 @@ export default function CharacterCreation({ language, onCharacterCreate, onBack,
     children: React.ReactNode,
     importDisabled: boolean
   ) => (
-    <div className={`${boxClass} ${borderColor} bg-amber-50/95`}>
-      <label className={`${labelClass} ${textColor}`}>{label}</label>
+    <div 
+      className={`${boxClass} ${borderColor}`}
+      style={{
+        background: `
+          linear-gradient(135deg, rgba(139, 90, 43, 0.95) 0%, rgba(101, 67, 33, 0.95) 50%, rgba(139, 90, 43, 0.95) 100%),
+          repeating-linear-gradient(
+            0deg,
+            transparent,
+            transparent 2px,
+            rgba(101, 67, 33, 0.3) 2px,
+            rgba(101, 67, 33, 0.3) 4px
+          ),
+          repeating-linear-gradient(
+            90deg,
+            transparent,
+            transparent 2px,
+            rgba(101, 67, 33, 0.2) 2px,
+            rgba(101, 67, 33, 0.2) 4px
+          )
+        `,
+        borderColor: '#8B5A2B',
+        boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.3), 0 4px 8px rgba(0,0,0,0.4)',
+      }}
+    >
+      <label className={`${labelClass} text-amber-200`} style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.5), 0 0 4px rgba(255, 215, 0, 0.5)' }}>{label}</label>
       {children}
       <Button
         type="button"
         size="sm"
         onClick={() => handleImportToDish(fieldId)}
         disabled={importDisabled}
-        className="mt-2 w-full font-ancient text-sm py-2 bg-amber-700/80 hover:bg-amber-800 text-amber-100 border border-amber-800"
+        className="mt-3 w-full font-ancient text-base py-2.5 bg-amber-900/90 hover:bg-amber-950 text-amber-200 border-2 border-amber-800 shadow-lg"
+        style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.5)' }}
       >
         Import to culture dish
       </Button>
@@ -357,9 +386,10 @@ export default function CharacterCreation({ language, onCharacterCreate, onBack,
                               key={spec.name}
                               type="button"
                               onClick={() => setSpecies(spec.name)}
-                              className={`p-2 rounded text-sm font-ancient border ${
-                                species === spec.name ? "bg-blue-200 border-blue-600" : "bg-white border-gray-300"
+                              className={`p-2.5 rounded text-base font-ancient border ${
+                                species === spec.name ? "bg-blue-200 border-blue-600" : "bg-white/95 border-gray-400"
                               }`}
+                              style={{ color: species === spec.name ? '#1e3a8a' : '#8B5A2B', fontWeight: 'bold' }}
                             >
                               {spec.icon} {spec.name}
                             </button>
@@ -368,7 +398,8 @@ export default function CharacterCreation({ language, onCharacterCreate, onBack,
                         <button
                           type="button"
                           onClick={() => setSpecies("Custom")}
-                          className={`w-full p-2 rounded text-sm font-ancient border ${species === "Custom" ? "bg-blue-200 border-blue-600" : "bg-white border-gray-300"}`}
+                          className={`w-full p-2.5 rounded text-base font-ancient border ${species === "Custom" ? "bg-blue-200 border-blue-600" : "bg-white/95 border-gray-400"}`}
+                          style={{ color: species === "Custom" ? '#1e3a8a' : '#8B5A2B', fontWeight: 'bold' }}
                         >
                           Custom
                         </button>
@@ -420,9 +451,10 @@ export default function CharacterCreation({ language, onCharacterCreate, onBack,
                             key={t.name}
                             type="button"
                             onClick={() => toggleTrait(t.name)}
-                            className={`p-2 rounded text-sm font-ancient border ${
-                              selectedTraits.includes(t.name) ? "bg-orange-200 border-orange-600" : "bg-white border-gray-300"
+                            className={`p-2.5 rounded text-base font-ancient border ${
+                              selectedTraits.includes(t.name) ? "bg-orange-200 border-orange-600" : "bg-white/95 border-gray-400"
                             }`}
+                            style={{ color: selectedTraits.includes(t.name) ? '#ea580c' : '#8B5A2B', fontWeight: 'bold' }}
                           >
                             {t.name}
                           </button>
@@ -445,7 +477,7 @@ export default function CharacterCreation({ language, onCharacterCreate, onBack,
                         placeholder="Background..."
                         value={background}
                         onChange={(e) => setBackground(e.target.value)}
-                        className={`${inputClass} h-16 resize-none`}
+                        className={`${inputClass} h-16 resize-none text-amber-900 font-semibold`}
                         rows={2}
                       />,
                       !background.trim()
@@ -461,8 +493,8 @@ export default function CharacterCreation({ language, onCharacterCreate, onBack,
           <div className="flex flex-col items-center justify-end w-[260px] flex-shrink-0 relative pb-4">
             <div
               ref={cupRef}
-              className={`relative flex items-end justify-center transition-transform origin-center ${cupShake ? "animate-shake-and-grow-cup" : ""}`}
-              style={{ width: "220px", height: "240px" }}
+              className={`relative flex items-end justify-center transition-transform origin-center ${cupShake || isGenerating ? "animate-shake-and-grow-cup" : ""}`}
+              style={{ width: "220px", height: "240px", transform: cupShake || isGenerating ? "scale(1.35)" : "scale(1)" }}
             >
               {/* Cup image (behind liquid) */}
               <img
@@ -518,16 +550,23 @@ export default function CharacterCreation({ language, onCharacterCreate, onBack,
                 </div>
               ))}
 
-              {/* Generated image overlays cup */}
+              {/* Generated image overlays cup - 更大 */}
               {imageUrl && (
                 <div
-                  className="absolute inset-0 flex items-center justify-center"
-                  style={{ zIndex: 40 }}
+                  className="absolute flex items-center justify-center"
+                  style={{ 
+                    zIndex: 40,
+                    width: '140%',
+                    height: '140%',
+                    left: '-20%',
+                    top: '-20%',
+                  }}
                 >
                   <img
                     src={imageUrl}
                     alt="Character"
-                    className="max-w-full max-h-full object-contain drop-shadow-lg"
+                    className="w-full h-full object-contain drop-shadow-2xl"
+                    style={{ filter: 'drop-shadow(0 8px 16px rgba(0,0,0,0.5))' }}
                   />
                 </div>
               )}
@@ -614,9 +653,10 @@ export default function CharacterCreation({ language, onCharacterCreate, onBack,
                             key={t.name}
                             type="button"
                             onClick={() => toggleTrait(t.name)}
-                            className={`p-2 rounded text-sm font-ancient border ${
-                              selectedTraits.includes(t.name) ? "bg-orange-200 border-orange-600" : "bg-white border-gray-300"
+                            className={`p-2.5 rounded text-base font-ancient border ${
+                              selectedTraits.includes(t.name) ? "bg-orange-200 border-orange-600" : "bg-white/95 border-gray-400"
                             }`}
+                            style={{ color: selectedTraits.includes(t.name) ? '#ea580c' : '#8B5A2B', fontWeight: 'bold' }}
                           >
                             {t.name}
                           </button>
@@ -639,7 +679,7 @@ export default function CharacterCreation({ language, onCharacterCreate, onBack,
                         placeholder="Background..."
                         value={background}
                         onChange={(e) => setBackground(e.target.value)}
-                        className={`${inputClass} h-16 resize-none`}
+                        className={`${inputClass} h-16 resize-none text-amber-900 font-semibold`}
                         rows={2}
                       />,
                       !background.trim()
@@ -659,7 +699,7 @@ export default function CharacterCreation({ language, onCharacterCreate, onBack,
                         placeholder="Emotional..."
                         value={emotional}
                         onChange={(e) => setEmotional(e.target.value)}
-                        className={`${inputClass} h-16 resize-none`}
+                        className={`${inputClass} h-16 resize-none text-amber-900 font-semibold`}
                         rows={2}
                       />,
                       !emotional.trim()
@@ -679,7 +719,7 @@ export default function CharacterCreation({ language, onCharacterCreate, onBack,
                         placeholder="Symbolic..."
                         value={symbolic}
                         onChange={(e) => setSymbolic(e.target.value)}
-                        className={`${inputClass} h-16 resize-none`}
+                        className={`${inputClass} h-16 resize-none text-amber-900 font-semibold`}
                         rows={2}
                       />,
                       !symbolic.trim()
@@ -714,31 +754,30 @@ export default function CharacterCreation({ language, onCharacterCreate, onBack,
         .fly-to-cup {
           animation: flyToCup 1.2s ease-in forwards;
         }
-        @keyframes shakeAndGrowCup {
-          0% { transform: translateX(0) scale(1); }
-          5% { transform: translateX(-5px) scale(1.03); }
-          10% { transform: translateX(5px) scale(1.06); }
-          15% { transform: translateX(-5px) scale(1.09); }
-          20% { transform: translateX(5px) scale(1.12); }
-          25% { transform: translateX(-4px) scale(1.15); }
-          30% { transform: translateX(4px) scale(1.18); }
-          35% { transform: translateX(-4px) scale(1.21); }
-          40% { transform: translateX(4px) scale(1.24); }
-          45% { transform: translateX(-3px) scale(1.27); }
-          50% { transform: translateX(3px) scale(1.29); }
-          55% { transform: translateX(-3px) scale(1.31); }
-          60% { transform: translateX(3px) scale(1.33); }
-          65% { transform: translateX(-2px) scale(1.34); }
-          70% { transform: translateX(2px) scale(1.34); }
-          75% { transform: translateX(-2px) scale(1.35); }
-          80% { transform: translateX(2px) scale(1.35); }
-          85% { transform: translateX(-1px) scale(1.35); }
-          90% { transform: translateX(1px) scale(1.35); }
-          95% { transform: translateX(-1px) scale(1.35); }
-          100% { transform: translateX(0) scale(1.35); }
+        @keyframes shakeCupContinuous {
+          0%, 100% { transform: translateX(0) scale(1.35); }
+          5% { transform: translateX(-6px) scale(1.35); }
+          10% { transform: translateX(6px) scale(1.35); }
+          15% { transform: translateX(-5px) scale(1.35); }
+          20% { transform: translateX(5px) scale(1.35); }
+          25% { transform: translateX(-4px) scale(1.35); }
+          30% { transform: translateX(4px) scale(1.35); }
+          35% { transform: translateX(-5px) scale(1.35); }
+          40% { transform: translateX(5px) scale(1.35); }
+          45% { transform: translateX(-6px) scale(1.35); }
+          50% { transform: translateX(6px) scale(1.35); }
+          55% { transform: translateX(-4px) scale(1.35); }
+          60% { transform: translateX(4px) scale(1.35); }
+          65% { transform: translateX(-5px) scale(1.35); }
+          70% { transform: translateX(5px) scale(1.35); }
+          75% { transform: translateX(-6px) scale(1.35); }
+          80% { transform: translateX(6px) scale(1.35); }
+          85% { transform: translateX(-4px) scale(1.35); }
+          90% { transform: translateX(4px) scale(1.35); }
+          95% { transform: translateX(-5px) scale(1.35); }
         }
         .animate-shake-and-grow-cup {
-          animation: shakeAndGrowCup 4s ease-in-out forwards;
+          animation: shakeCupContinuous 0.6s ease-in-out infinite;
         }
       `}</style>
     </div>
