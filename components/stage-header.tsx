@@ -8,11 +8,12 @@ interface StageHeaderProps {
   title: string
   onBack: () => void
   character?: string
+  className?: string
 }
 
-export default function StageHeader({ stage, title, onBack, character }: StageHeaderProps) {
+export default function StageHeader({ stage, title, onBack, character, className }: StageHeaderProps) {
   return (
-    <div className="flex items-center justify-between mb-8">
+    <div className={`flex items-center justify-between mb-8 ${className || ""}`}>
       <div className="flex items-center gap-4">
         <Button onClick={onBack} variant="ghost" size="icon" className="rounded-full hover:bg-secondary/20">
           <ChevronLeft className="w-5 h-5" />
