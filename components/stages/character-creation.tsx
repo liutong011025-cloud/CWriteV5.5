@@ -367,7 +367,7 @@ export default function CharacterCreation({ language, onCharacterCreate, onBack,
                 }}
               >
                 {/* 配料列表 */}
-                <div className="flex flex-col gap-6 w-full mt-12">
+                <div className="flex flex-col gap-6 w-full mt-20">
                   {allFields.map((fieldId, index) => {
                     const cfg = FIELD_CONFIG[fieldId as keyof typeof FIELD_CONFIG]
                     if (!cfg) return null
@@ -400,9 +400,9 @@ export default function CharacterCreation({ language, onCharacterCreate, onBack,
                   })}
                 </div>
 
-                {/* 生成按钮 - 所有字段完成后显示在paper下面 */}
+                {/* 生成按钮 - 所有字段完成后显示在单词下面 */}
                 {allFieldsComplete && (
-                  <div className="mt-auto pt-4 w-full">
+                  <div className="mt-6 w-full">
                     <Button
                       onClick={handleStartGenerate}
                       className="w-full font-ancient text-lg py-4 shadow-lg"
