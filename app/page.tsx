@@ -706,6 +706,7 @@ export default function Home() {
             }}
             onBack={() => setStage("journeyMap")}
             userId={user.username}
+            level={writingAssessment?.level || 1}
           />
         )
       )}
