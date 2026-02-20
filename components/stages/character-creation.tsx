@@ -123,6 +123,8 @@ export default function CharacterCreation({ language, onCharacterCreate, onBack,
   const [customSpecies, setCustomSpecies] = useState("")
   const [age, setAge] = useState("")
   const [selectedTraits, setSelectedTraits] = useState<string[]>([])
+  const [customTraits, setCustomTraits] = useState("")
+  const [showCustomTraits, setShowCustomTraits] = useState(false)
   const [background, setBackground] = useState("")
   const [emotional, setEmotional] = useState("")
   const [symbolic, setSymbolic] = useState("")
@@ -149,7 +151,13 @@ export default function CharacterCreation({ language, onCharacterCreate, onBack,
       case "name": return name.trim()
       case "species": return species === "Custom" ? customSpecies.trim() : species
       case "age": return age.trim()
-      case "traits": return selectedTraits.join(", ")
+      case "traits": {
+        const traits = [...selectedTraits]
+        if (showCustomTraits && customTraits.trim()) {
+          traits.push(customTraits.trim())
+        }
+        return traits.join(", ")
+      }
       case "background": return background.trim()
       case "emotional": return emotional.trim()
       case "symbolic": return symbolic.trim()
@@ -159,7 +167,7 @@ export default function CharacterCreation({ language, onCharacterCreate, onBack,
 
   const canImport = (fieldId: string): boolean => {
     const v = getFieldValue(fieldId)
-    if (fieldId === "traits") return selectedTraits.length > 0
+    if (fieldId === "traits") return selectedTraits.length > 0 || (showCustomTraits && customTraits.trim() !== "")
     return v !== ""
   }
 
@@ -209,7 +217,11 @@ export default function CharacterCreation({ language, onCharacterCreate, onBack,
     try {
       let prompt = `A charming cartoon illustration of ${species === "Boy" || species === "Girl" ? `a young ${species.toLowerCase()}` : `a ${finalSpecies.toLowerCase()}`} character named ${name}.`
       if (age.trim()) prompt += ` The character is ${age} years old.`
-      if (selectedTraits.length > 0) prompt += ` The character looks ${selectedTraits.join(", ")}.`
+      const allTraits = [...selectedTraits]
+      if (showCustomTraits && customTraits.trim()) {
+        allTraits.push(customTraits.trim())
+      }
+      if (allTraits.length > 0) prompt += ` The character looks ${allTraits.join(", ")}.`
       if (background.trim()) prompt += ` Background: ${background}.`
       if (emotional.trim()) prompt += ` Emotional experiences: ${emotional}.`
       if (symbolic.trim()) prompt += ` Symbolic objects: ${symbolic}.`
@@ -358,7 +370,7 @@ export default function CharacterCreation({ language, onCharacterCreate, onBack,
             <div className="flex flex-col items-center w-[300px] flex-shrink-0 py-4 relative">
               {/* Paper背景 */}
               <div 
-                className="relative w-full h-full min-h-[500px] flex flex-col items-center p-8"
+                className="relative w-full h-full min-h-[500px] flex flex-col items-center p-8 pb-12"
                 style={{
                   backgroundImage: 'url(/paper.png)',
                   backgroundSize: 'contain',
@@ -643,22 +655,40 @@ export default function CharacterCreation({ language, onCharacterCreate, onBack,
                     cfg.label,
                     cfg.borderColor,
                     cfg.textColor,
-                    <div className="grid grid-cols-2 gap-2">
-                      {TRAITS.map((t) => (
-                        <button
-                          key={t.name}
-                          type="button"
-                          onClick={() => toggleTrait(t.name)}
-                          className={`p-3 rounded text-lg font-ancient border ${
-                            selectedTraits.includes(t.name) ? "bg-orange-200 border-orange-600" : "bg-white/95 border-gray-400"
-                          }`}
-                          style={{ color: selectedTraits.includes(t.name) ? '#ea580c' : '#8B5A2B', fontWeight: 'bold' }}
-                        >
-                          {t.name}
-                        </button>
-                      ))}
+                    <div className="space-y-2">
+                      <div className="grid grid-cols-2 gap-2">
+                        {TRAITS.map((t) => (
+                          <button
+                            key={t.name}
+                            type="button"
+                            onClick={() => toggleTrait(t.name)}
+                            className={`p-3 rounded text-lg font-ancient border ${
+                              selectedTraits.includes(t.name) ? "bg-orange-200 border-orange-600" : "bg-white/95 border-gray-400"
+                            }`}
+                            style={{ color: selectedTraits.includes(t.name) ? '#ea580c' : '#8B5A2B', fontWeight: 'bold' }}
+                          >
+                            {t.name}
+                          </button>
+                        ))}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setShowCustomTraits(!showCustomTraits)}
+                        className={`w-full p-3 rounded text-lg font-ancient border ${showCustomTraits ? "bg-orange-200 border-orange-600" : "bg-white/95 border-gray-400"}`}
+                        style={{ color: showCustomTraits ? '#ea580c' : '#8B5A2B', fontWeight: 'bold' }}
+                      >
+                        Custom
+                      </button>
+                      {showCustomTraits && (
+                        <Input
+                          placeholder="Enter custom traits..."
+                          value={customTraits}
+                          onChange={(e) => setCustomTraits(e.target.value)}
+                          className={inputClass}
+                        />
+                      )}
                     </div>,
-                    selectedTraits.length === 0
+                    selectedTraits.length === 0 && !(showCustomTraits && customTraits.trim())
                   )
                 }
                 if (currentField === "background") {
