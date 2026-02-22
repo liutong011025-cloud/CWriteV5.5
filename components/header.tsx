@@ -177,7 +177,7 @@ export default function Header() {
       onMouseEnter={() => setIsHovering(true)}
       onMouseLeave={() => setIsHovering(false)}
       style={{
-        overflow: 'hidden',
+        overflow: 'visible',
         background: showBackground
           ? 'linear-gradient(135deg, rgba(15, 23, 42, 0.98) 0%, rgba(30, 58, 138, 0.95) 50%, rgba(15, 23, 42, 0.98) 100%)'
           : 'transparent',
@@ -263,8 +263,9 @@ export default function Header() {
           </Link>
         </div>
 
-               {/* Navigation Links */}
-               <nav className="flex items-center gap-3">
+               {/* Navigation Links + 用户头像 + 语言 */}
+               <nav className="flex items-center gap-2 sm:gap-3 flex-shrink-0 min-w-0">
+                 <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-wrap justify-end">
                  {navItems.map((item) => {
                    // 检查是否激活
                   const isHomePageActive = (currentStage === 'home' || pathname === '/') && item.href === "/"
@@ -295,18 +296,25 @@ export default function Header() {
                      </Link>
                    )
                  })}
+                 </div>
                  
                  {/* User avatar - 登录后显示，点击进入用户资料 */}
                  {userInfo && (
                    <button
                      type="button"
                      onClick={() => window.dispatchEvent(new CustomEvent("navigateToUserProfile"))}
-                     className="relative ml-2 rounded-full ring-2 ring-transparent hover:ring-yellow-400/50 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                     className="relative flex-shrink-0 ml-1 rounded-full ring-2 ring-transparent hover:ring-yellow-400/50 focus:outline-none focus:ring-2 focus:ring-yellow-400"
                      aria-label="Open profile"
                    >
-                     <Avatar className="h-9 w-9 rounded-full border-2 border-white/20">
+                     <Avatar className={`h-9 w-9 rounded-full border-2 flex-shrink-0 ${
+                       showBackground ? 'border-white/20' : 'border-slate-300/80 bg-white/95'
+                     }`}>
                        <AvatarImage src={userInfo.avatarUrl || undefined} alt={userInfo.username} />
-                       <AvatarFallback className="rounded-full bg-primary/20 text-sm font-bold text-yellow-200">
+                       <AvatarFallback className={`rounded-full text-sm font-bold ${
+                         showBackground
+                           ? 'bg-primary/20 text-yellow-200'
+                           : 'bg-slate-200 text-slate-700'
+                       }`}>
                          {userInfo.avatarEmoji || (userInfo.username || "?").slice(0, 2).toUpperCase()}
                        </AvatarFallback>
                      </Avatar>
@@ -319,7 +327,7 @@ export default function Header() {
                  )}
 
                  {/* Language Selector - 所有页面都显示 */}
-                 <div className="flex gap-2 ml-4">
+                 <div className="flex gap-2 ml-2 flex-shrink-0">
                    <Button
                      onClick={() => handleLanguageChange("en")}
                      variant={language === "en" ? "default" : "outline"}
