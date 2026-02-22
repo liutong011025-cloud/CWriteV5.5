@@ -294,13 +294,7 @@ export default function Home() {
     return () => window.removeEventListener("headerRefreshUserInfo", onRefresh)
   }, [user?.username])
 
-  if (!isReady) {
-    return null
-  }
-
-  const showLevelBadge = user && writingAssessment && writingAssessment.level >= 1 && writingAssessment.level <= 5 && !["login", "home", "planTest"].includes(stage)
   const currentLevel = writingAssessment?.level ?? 1
-
   useEffect(() => {
     try {
       if (typeof window !== "undefined") {
@@ -310,6 +304,12 @@ export default function Home() {
       // ignore
     }
   }, [currentLevel])
+
+  if (!isReady) {
+    return null
+  }
+
+  const showLevelBadge = user && writingAssessment && writingAssessment.level >= 1 && writingAssessment.level <= 5 && !["login", "home", "planTest"].includes(stage)
 
   return (
     <main className="min-h-screen">
