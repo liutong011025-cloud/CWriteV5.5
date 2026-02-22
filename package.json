@@ -4,7 +4,7 @@
   "packageManager": "npm@10.8.1",
   "private": true,
   "scripts": {
-    "build": "prisma generate && prisma migrate deploy && next build",
+    "build": "prisma generate && next build",
     "dev": "next dev",
     "lint": "eslint .",
     "start": "next start",
