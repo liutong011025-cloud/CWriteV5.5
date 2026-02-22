@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
     if (!user) {
       return NextResponse.json({ error: "User not found" }, { status: 404 })
     }
-    const updates = {
+    const updates: Record<string, string | null | undefined> = {
       avatarUrl: body.avatarUrl !== undefined ? body.avatarUrl : undefined,
       avatarEmoji: body.avatarEmoji !== undefined ? body.avatarEmoji : undefined,
       birthday: body.birthday !== undefined ? body.birthday : undefined,
@@ -51,21 +51,26 @@ export async function POST(request: NextRequest) {
       grade: body.grade !== undefined ? body.grade : undefined,
       gender: body.gender !== undefined ? body.gender : undefined,
     }
-    const profile = user.profile
-      ? await prisma.userProfile.update({
+    const data = Object.fromEntries(
+      Object.entries(updates).filter(([, v]) => v !== undefined)
+    ) as Record<string, string | null>
+
+    let profile = user.profile
+    if (user.profile) {
+      if (Object.keys(data).length > 0) {
+        profile = await prisma.userProfile.update({
           where: { userId: user.id },
-          data: Object.fromEntries(
-            Object.entries(updates).filter(([, v]) => v !== undefined)
-          ),
+          data,
         })
-      : await prisma.userProfile.create({
-          data: {
-            userId: user.id,
-            ...Object.fromEntries(
-              Object.entries(updates).filter(([, v]) => v !== undefined)
-            ),
-          },
-        })
+      }
+    } else {
+      profile = await prisma.userProfile.create({
+        data: {
+          userId: user.id,
+          ...data,
+        },
+      })
+    }
     return NextResponse.json({
       avatarUrl: profile.avatarUrl,
       avatarEmoji: profile.avatarEmoji,
@@ -75,7 +80,11 @@ export async function POST(request: NextRequest) {
       gender: profile.gender,
     })
   } catch (e) {
+    const message = e instanceof Error ? e.message : String(e)
     console.error("[user-profile] POST", e)
-    return NextResponse.json({ error: "Internal error" }, { status: 500 })
+    return NextResponse.json(
+      { error: process.env.NODE_ENV === "development" ? message : "Internal error" },
+      { status: 500 }
+    )
   }
 }
