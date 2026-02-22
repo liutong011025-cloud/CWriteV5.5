@@ -19,8 +19,47 @@ model User {
   letters      Letter[]
   reviews      Review[]
   stories      Story[]
+  profile      UserProfile?
+  reviewsReceived WorkReview[] @relation("AuthorReviews")
+  reviewsGiven   WorkReview[] @relation("ReviewerReviews")
 
   @@map("users")
+}
+
+model UserProfile {
+  id         String   @id @default(cuid())
+  userId     String   @unique
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  avatarUrl  String?  @db.Text
+  avatarEmoji String?
+  birthday   String?
+  email      String?
+  grade      String?
+  gender     String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @default(now()) @updatedAt
+
+  @@map("user_profiles")
+}
+
+model WorkReview {
+  id             String   @id @default(cuid())
+  workType       String   // "story" | "bookReview" | "letter"
+  workInteractionId String? // interaction id or story/review/letter id for the work
+  authorId       String   // user who wrote the work
+  author         User     @relation("AuthorReviews", fields: [authorId], references: [id], onDelete: Cascade)
+  reviewerId     String   // user who wrote the review
+  reviewer       User     @relation("ReviewerReviews", fields: [reviewerId], references: [id], onDelete: Cascade)
+  reviewerRole   String   // "teacher" | "student"
+  content        String   @db.Text
+  workTitle      String?  // optional title for display
+  workContent    String?  @db.Text // snapshot of work content for display
+  readAt         DateTime? // when author read this review (for notification)
+  createdAt      DateTime @default(now())
+
+  @@index([authorId])
+  @@index([reviewerId])
+  @@map("work_reviews")
 }
 
 model Interaction {
