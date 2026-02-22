@@ -246,6 +246,12 @@ export default function Home() {
       }
       return
     }
+    // 立即通知 header 显示用户（头像先用 username 首字母），避免等接口才出现
+    const initialInfo = { username: user.username, avatarUrl: null as string | null, avatarEmoji: null as string | null, unreadCount: 0 }
+    setHeaderUserInfo(initialInfo)
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("headerUserInfo", { detail: initialInfo }))
+    }
     let cancelled = false
     Promise.all([
       fetch(`/api/user-profile?user_id=${user.username}`).then((r) => r.json()),
@@ -312,7 +318,7 @@ export default function Home() {
   const showLevelBadge = user && writingAssessment && writingAssessment.level >= 1 && writingAssessment.level <= 5 && !["login", "home", "planTest"].includes(stage)
 
   return (
-    <main className="min-h-screen">
+    <main className="min-h-screen" data-stage={stage}>
       {showLevelBadge && writingAssessment && (
         <div className="fixed top-6 right-6 z-[100]">
           <LevelBadge level={Math.min(5, Math.max(1, writingAssessment.level))} className="text-lg" />
