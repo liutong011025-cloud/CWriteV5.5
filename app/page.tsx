@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import HomePage from "@/components/stages/home-page"
 import WelcomePage from "@/components/stages/welcome-page"
 import BookReviewWelcome from "@/components/stages/book-review-welcome"
@@ -130,16 +130,29 @@ export default function Home() {
   const [editingWorkId, setEditingWorkId] = useState<string | null>(null)
   const [galleryFromEdit, setGalleryFromEdit] = useState<{ type: 'story' | 'review' | 'letter' } | null>(null)
 
-  const dramaProgress = useDramaStore((s) => ({ hasDramaBook: !!s.dramaBook }))
-  const poetryProgress = usePoetryStore((s) => ({
-    hasForm: !!s.form,
-    hasTopic: !!s.topic,
-    hasLines: s.lines.length > 0,
-    phase: s.phase,
-  }))
-
-  // Hydration safety
+  // Hydration safety: only use store-derived progress after mount
   const [isReady, setIsReady] = useState(false)
+  const hasDramaBook = useDramaStore((s) => !!s.dramaBook)
+  const poetryForm = usePoetryStore((s) => !!s.form)
+  const poetryTopic = usePoetryStore((s) => !!s.topic)
+  const poetryHasLines = usePoetryStore((s) => s.lines.length > 0)
+  const poetryPhase = usePoetryStore((s) => s.phase)
+  const dramaProgress = useMemo(
+    () => (isReady ? { hasDramaBook } : undefined),
+    [isReady, hasDramaBook]
+  )
+  const poetryProgress = useMemo(
+    () =>
+      isReady
+        ? {
+            hasForm: poetryForm,
+            hasTopic: poetryTopic,
+            hasLines: poetryHasLines,
+            phase: poetryPhase,
+          }
+        : undefined,
+    [isReady, poetryForm, poetryTopic, poetryHasLines, poetryPhase]
+  )
   useEffect(() => {
     setIsReady(true)
     
