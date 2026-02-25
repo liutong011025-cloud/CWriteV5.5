@@ -42,6 +42,7 @@ import BookReviewEdit from "@/components/stages/book-review-edit"
 import LetterEdit from "@/components/stages/letter-edit"
 import DramaWriting from "@/components/stages/drama-writing"
 import PoetryWriting from "@/components/stages/poetry-writing"
+import ResearchRoom from "@/components/stages/research-room"
 import { useDramaStore } from "@/lib/drama-store"
 import { usePoetryStore } from "@/lib/poetry-store"
 
@@ -100,7 +101,7 @@ interface WritingAssessment {
 
 export default function Home() {
   const [user, setUser] = useState<{ username: string; role: 'teacher' | 'student'; noAi?: boolean } | null>(null)
-  const [stage, setStage] = useState<"login" | "home" | "planTest" | "journeyTicket" | "journeyMap" | "writeTypeSelection" | "bookReviewWelcome" | "bookReviewTypeSelection" | "bookSelection" | "bookReviewLoading" | "bookReviewWriting" | "bookReviewComplete" | "bookReviewWritingNoAi" | "bookReviewCompleteNoAi" | "letterAdventure" | "letterGame" | "letterPuzzle" | "letterComplete" | "welcome" | "character" | "plot" | "structure" | "writing" | "review" | "dashboard" | "about" | "gallery" | "userProfile" | "userSettings" | "storyEdit" | "bookReviewEdit" | "letterEdit" | "dramaWriting" | "dramaBook" | "poetryWriting" | "poetryForm" | "poetryTopic" | "poetryEditor" | "poetryReview">("login")
+  const [stage, setStage] = useState<"login" | "home" | "planTest" | "journeyTicket" | "journeyMap" | "writeTypeSelection" | "bookReviewWelcome" | "bookReviewTypeSelection" | "bookSelection" | "bookReviewLoading" | "bookReviewWriting" | "bookReviewComplete" | "bookReviewWritingNoAi" | "bookReviewCompleteNoAi" | "letterAdventure" | "letterGame" | "letterPuzzle" | "letterComplete" | "welcome" | "character" | "plot" | "structure" | "writing" | "review" | "dashboard" | "about" | "gallery" | "userProfile" | "userSettings" | "storyEdit" | "bookReviewEdit" | "letterEdit" | "dramaWriting" | "dramaBook" | "poetryWriting" | "poetryForm" | "poetryTopic" | "poetryEditor" | "poetryReview" | "research">("login")
   const [language, setLanguage] = useState<Language>("en")
   const [writingAssessment, setWritingAssessment] = useState<WritingAssessment | null>(null)
   const [journeySelection, setJourneySelection] = useState<{ type: JourneyType; difficulty: number } | null>(null)
@@ -210,6 +211,12 @@ export default function Home() {
       setStage("gallery")
     }
 
+    const handleNavigateToResearch = () => {
+      if (user) {
+        setStage("research")
+      }
+    }
+
     const handleNavigateToUserProfile = () => {
       if (user) setStage("userProfile")
     }
@@ -234,6 +241,7 @@ export default function Home() {
     window.addEventListener('navigateToHome', handleNavigateToHome as EventListener)
     window.addEventListener('navigateToAbout', handleNavigateToAbout as EventListener)
     window.addEventListener('navigateToGallery', handleNavigateToGallery as EventListener)
+    window.addEventListener('navigateToResearch', handleNavigateToResearch as EventListener)
     window.addEventListener('navigateToUserProfile', handleNavigateToUserProfile as EventListener)
     window.addEventListener('navigateToUserSettings', handleNavigateToUserSettings as EventListener)
     window.addEventListener('headerLanguageChange', handleLanguageChange as EventListener)
@@ -243,6 +251,7 @@ export default function Home() {
       window.removeEventListener('navigateToHome', handleNavigateToHome as EventListener)
       window.removeEventListener('navigateToAbout', handleNavigateToAbout as EventListener)
       window.removeEventListener('navigateToGallery', handleNavigateToGallery as EventListener)
+      window.removeEventListener('navigateToResearch', handleNavigateToResearch as EventListener)
       window.removeEventListener('navigateToUserProfile', handleNavigateToUserProfile as EventListener)
       window.removeEventListener('navigateToUserSettings', handleNavigateToUserSettings as EventListener)
       window.removeEventListener('headerLanguageChange', handleLanguageChange as EventListener)
@@ -1300,6 +1309,11 @@ export default function Home() {
           backLabel={journeyActive ? "Back to Map" : undefined}
           onBack={() => setStage(journeyActive ? "journeyMap" : "writeTypeSelection")}
           onComplete={() => setStage(journeyActive ? "journeyMap" : "home")}
+        />
+      )}
+      {stage === "research" && user && (
+        <ResearchRoom
+          onBack={() => setStage("home")}
         />
       )}
     </main>
