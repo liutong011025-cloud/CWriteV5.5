@@ -159,8 +159,9 @@ export default function Home() {
   useEffect(() => {
     setIsReady(true)
     
-    // 从localStorage读取语言设置，默认英语
+    // 从localStorage读取语言设置和登录用户，默认英语
     if (typeof window !== 'undefined') {
+      // 語言
       const savedLang = localStorage.getItem('siteLanguage') as Language | null
       if (savedLang === 'yue') {
         setLanguage('zh')
@@ -168,9 +169,21 @@ export default function Home() {
       } else if (savedLang && (savedLang === 'en' || savedLang === 'zh')) {
         setLanguage(savedLang)
       } else {
-        // 如果没有保存的语言设置，默认使用英语
         setLanguage('en')
         localStorage.setItem('siteLanguage', 'en')
+      }
+
+      // 嘗試恢復已登入用戶，讓刷新後 Header 仍能顯示頭像
+      try {
+        const savedUser = localStorage.getItem('cwriteUser')
+        if (savedUser && !user) {
+          const parsed = JSON.parse(savedUser) as { username: string; role: 'teacher' | 'student'; noAi?: boolean }
+          if (parsed && parsed.username && parsed.role) {
+            setUser(parsed)
+          }
+        }
+      } catch {
+        // ignore parse errors
       }
     }
     
@@ -328,6 +341,14 @@ export default function Home() {
         <LoginPage
           onLogin={(userData, showDialog = false) => {
             setUser(userData)
+            // 持久化當前用戶，讓刷新後可以自動恢復並驅動 Header 顯示頭像
+            if (typeof window !== "undefined") {
+              try {
+                localStorage.setItem("cwriteUser", JSON.stringify(userData))
+              } catch {
+                // ignore
+              }
+            }
             if (userData.role === "teacher") {
               setStage("dashboard")
             } else {
