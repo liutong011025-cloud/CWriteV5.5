@@ -1,0 +1,177 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String        @id @default(cuid())
+  username     String        @unique
+  password     String
+  role         String        @default("student")
+  noAi         Boolean       @default(false)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @default(now()) @updatedAt
+  interactions Interaction[]
+  letters      Letter[]
+  reviews      Review[]
+  stories      Story[]
+  dramas       Drama[]
+  poetries     Poetry[]
+  profile      UserProfile?
+  reviewsReceived WorkReview[] @relation("AuthorReviews")
+  reviewsGiven   WorkReview[] @relation("ReviewerReviews")
+
+  @@map("users")
+}
+
+model UserProfile {
+  id         String   @id @default(cuid())
+  userId     String   @unique
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  avatarUrl  String?  @db.Text
+  avatarEmoji String?
+  birthday   String?
+  email      String?
+  grade      String?
+  gender     String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @default(now()) @updatedAt
+
+  @@map("user_profiles")
+}
+
+model WorkReview {
+  id             String   @id @default(cuid())
+  workType       String   // "story" | "bookReview" | "letter"
+  workInteractionId String? // interaction id or story/review/letter id for the work
+  authorId       String   // user who wrote the work
+  author         User     @relation("AuthorReviews", fields: [authorId], references: [id], onDelete: Cascade)
+  reviewerId     String   // user who wrote the review
+  reviewer       User     @relation("ReviewerReviews", fields: [reviewerId], references: [id], onDelete: Cascade)
+  reviewerRole   String   // "teacher" | "student"
+  content        String   @db.Text
+  workTitle      String?  // optional title for display
+  workContent    String?  @db.Text // snapshot of work content for display
+  readAt         DateTime? // when author read this review (for notification)
+  createdAt      DateTime @default(now())
+
+  @@index([authorId])
+  @@index([reviewerId])
+  @@map("work_reviews")
+}
+
+model Interaction {
+  id        String   @id @default(cuid())
+  userId    String
+  stage     String
+  timestamp DateTime @default(now())
+  apiCalls  Json?
+  input     Json?
+  output    Json?
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  letters   Letter?
+  reviews   Review?
+  stories   Story?
+  drama     Drama?
+  poetry    Poetry?
+
+  @@index([userId])
+  @@index([stage])
+  @@index([timestamp])
+  @@map("interactions")
+}
+
+model Story {
+  id            String       @id @default(cuid())
+  userId        String
+  interactionId String?      @unique
+  content       String       @default("")
+  character     Json?
+  plot          Json?
+  structure     Json?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @default(now()) @updatedAt
+  interactions  Interaction? @relation(fields: [interactionId], references: [id])
+  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("stories")
+}
+
+model Review {
+  id            String       @id @default(cuid())
+  userId        String
+  interactionId String?      @unique
+  content       String       @default("")
+  bookTitle     String?
+  reviewType    String?
+  coverImage    String?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @default(now()) @updatedAt
+  bookCoverUrl  String?
+  bookSummary   String?
+  structure     Json?
+  interactions  Interaction? @relation(fields: [interactionId], references: [id])
+  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("reviews")
+}
+
+model Letter {
+  id             String       @id @default(cuid())
+  userId         String
+  interactionId  String?      @unique
+  content        String       @default("")
+  recipient      String?
+  occasion       String?
+  readerImage    String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @default(now()) @updatedAt
+  guidance       String?
+  readerImageUrl String?
+  sections       Json?
+  interactions   Interaction? @relation(fields: [interactionId], references: [id])
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("letters")
+}
+
+model Drama {
+  id            String       @id @default(cuid())
+  userId        String
+  interactionId String?      @unique
+  title         String?
+  content       String       @default("") @db.Text
+  summary       String?      @db.Text
+  suggestions   Json?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @default(now()) @updatedAt
+  interactions  Interaction? @relation(fields: [interactionId], references: [id])
+  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("dramas")
+}
+
+model Poetry {
+  id            String       @id @default(cuid())
+  userId        String
+  interactionId String?      @unique
+  form          String?
+  topic         String?
+  content       String       @default("") @db.Text
+  lines         Json?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @default(now()) @updatedAt
+  interactions  Interaction? @relation(fields: [interactionId], references: [id])
+  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("poetries")
+}
