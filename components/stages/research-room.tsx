@@ -56,8 +56,8 @@ export default function ResearchRoom({ onBack }: ResearchRoomProps) {
 
   const handleOpen = (fileName: string) => {
     if (typeof window !== "undefined") {
-      // 從後端 app/api/research/[file] 讀取實際 PDF
-      const url = `/api/research/${encodeURIComponent(fileName)}`
+      // 直接打開靜態 PDF，等同於用瀏覽器 PDF 閱讀器查看
+      const url = `/research/${encodeURIComponent(fileName)}`
       window.open(url, "_blank")
     }
   }
