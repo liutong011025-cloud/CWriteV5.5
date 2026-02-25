@@ -147,7 +147,11 @@ export default function Header() {
         window.dispatchEvent(new CustomEvent('navigateToGallery'))
       }
     } },
-    { label: "Resources", href: "/resources", action: () => {} },
+    { label: "Research", href: "/research", action: () => {
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("navigateToResearch"))
+      }
+    } },
     { label: "About us", href: "/#about", action: () => {
       // 触发自定义事件来通知主页面切换到about
       if (typeof window !== 'undefined') {
