@@ -39,6 +39,8 @@ Your tasks:
 2. For EACH of the three types, write ONE short, friendly guiding question in English that invites the student to write that kind of review about "${bookTitle}".
    - The questions should be clear, simple, and engaging.
    - They should directly mention the book title "${bookTitle}".
+   - They should briefly connect to what happens in the story, the main character, or an important scene in "${bookTitle}" (for example, by mentioning a hero, a problem, or a lesson).
+   - Each question MUST stay short (no more than 30 words).
    - They should sound like a warm teacher speaking to a child.
 
 VERY IMPORTANT: 
