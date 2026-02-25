@@ -387,7 +387,7 @@ export default function BookReviewTypeSelection({ language = "en", bookTitle, on
                       </h2>
                     </div>
                   </div>
-                  <p className="text-base md:text-lg text-gray-800 mb-5 leading-relaxed">
+                  <p className="text-base md:text-lg text-gray-800 mb-5 leading-relaxed font-hand">
                     {question ||
                       (type.id === "recommendation"
                         ? `Would you like to write a recommendation review of "${bookTitle}" to tell others why they should read it?`
