@@ -35,6 +35,45 @@ export default function Header() {
     return () => window.removeEventListener("headerUserInfo", onUserInfo)
   }, [])
 
+  // 只要能看到 Header，就認為已登入：啟動時從 localStorage 自動恢復用戶並拉取頭像
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    // 優先使用主頁持久化的用戶資訊
+    try {
+      const savedUser = localStorage.getItem("cwriteUser")
+      if (savedUser) {
+        const parsed = JSON.parse(savedUser) as { username: string }
+        if (parsed?.username) {
+          const baseInfo: HeaderUserInfo = {
+            username: parsed.username,
+            avatarUrl: null,
+            avatarEmoji: null,
+            unreadCount: 0,
+          }
+          setUserInfo((prev) => prev ?? baseInfo)
+          // 再用 /api/user-profile 補齊頭像與表情
+          fetch(`/api/user-profile?user_id=${encodeURIComponent(parsed.username)}`)
+            .then((r) => r.json())
+            .then((data) => {
+              if (data && !data.error) {
+                setUserInfo((prevInfo) => ({
+                  username: parsed.username,
+                  avatarUrl: data.avatarUrl ?? prevInfo?.avatarUrl ?? null,
+                  avatarEmoji: data.avatarEmoji ?? prevInfo?.avatarEmoji ?? null,
+                  unreadCount: prevInfo?.unreadCount ?? 0,
+                }))
+              }
+            })
+            .catch(() => {
+              // 失敗時保留基本 username，仍然顯示縮寫頭像
+            })
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }, [])
+
   // 监听 stage 变化
   useEffect(() => {
     const checkStage = () => {
