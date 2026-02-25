@@ -1,5 +1,6 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import Image from "next/image"
 
@@ -7,43 +8,57 @@ interface ResearchRoomProps {
   onBack?: () => void
 }
 
-const books = [
-  {
-    id: 1,
-    title: "Research Book 1",
-    description: "Click to open this PDF and explore.",
-    file: "/research/book1.pdf",
-  },
-  {
-    id: 2,
-    title: "Research Book 2",
-    description: "Click to open this PDF and explore.",
-    file: "/research/book2.pdf",
-  },
-  {
-    id: 3,
-    title: "Research Book 3",
-    description: "Click to open this PDF and explore.",
-    file: "/research/book3.pdf",
-  },
-  {
-    id: 4,
-    title: "Research Book 4",
-    description: "Click to open this PDF and explore.",
-    file: "/research/book4.pdf",
-  },
-  {
-    id: 5,
-    title: "Research Book 5",
-    description: "Click to open this PDF and explore.",
-    file: "/research/book5.pdf",
-  },
-]
+interface ResearchBook {
+  id: number
+  title: string
+  description: string
+  fileName: string
+}
 
 export default function ResearchRoom({ onBack }: ResearchRoomProps) {
-  const handleOpen = (file: string) => {
+  const [books, setBooks] = useState<ResearchBook[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+
+    const loadBooks = async () => {
+      try {
+        setIsLoading(true)
+        setError(null)
+        const res = await fetch("/api/research/list")
+        if (!res.ok) {
+          throw new Error(`Failed to load research books (${res.status})`)
+        }
+        const data = await res.json()
+        if (!cancelled) {
+          setBooks(data.books || [])
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setError("Unable to load research books. Please contact your teacher.")
+          console.error(err)
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false)
+        }
+      }
+    }
+
+    loadBooks()
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const handleOpen = (fileName: string) => {
     if (typeof window !== "undefined") {
-      window.open(file, "_blank")
+      // 從後端 app/api/research/[file] 讀取實際 PDF
+      const url = `/api/research/${encodeURIComponent(fileName)}`
+      window.open(url, "_blank")
     }
   }
 
@@ -92,56 +107,70 @@ export default function ResearchRoom({ onBack }: ResearchRoomProps) {
           </p>
         </div>
 
+        {/* 狀態提示 */}
+        {isLoading && (
+          <div className="mt-10 text-center text-slate-200/80">
+            Loading research books...
+          </div>
+        )}
+        {error && !isLoading && (
+          <div className="mt-10 text-center text-red-200 text-sm">
+            {error}
+          </div>
+        )}
+
         {/* 書架區域 */}
-        <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-          {books.map((book) => (
-            <button
-              key={book.id}
-              type="button"
-              onClick={() => handleOpen(book.file)}
-              className="group relative h-72 md:h-80 w-full max-w-sm mx-auto"
-            >
-              {/* 書本陰影 */}
-              <div className="absolute inset-x-6 bottom-0 h-5 rounded-full bg-black/40 blur-lg opacity-0 group-hover:opacity-80 transition-opacity duration-300" />
+        {!isLoading && !error && books.length > 0 && (
+          <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+            {books.map((book) => (
+              <button
+                key={book.id}
+                type="button"
+                onClick={() => handleOpen(book.fileName)}
+                className="group relative h-72 md:h-80 w-full max-w-sm mx-auto"
+              >
+                {/* 書本陰影 */}
+                <div className="absolute inset-x-6 bottom-0 h-5 rounded-full bg-black/40 blur-lg opacity-0 group-hover:opacity-80 transition-opacity duration-300" />
 
-              {/* 書本本體 */}
-              <div className="relative h-full w-full">
-                <div className="absolute inset-0 rounded-[18px] bg-gradient-to-br from-amber-100 via-amber-200 to-amber-300 shadow-2xl border border-amber-500/60 transform origin-left group-hover:-rotate-y-6 group-hover:-translate-y-1 group-hover:translate-x-1 transition-transform duration-500 ease-out">
-                  {/* 書脊 */}
-                  <div className="absolute inset-y-3 left-0 w-7 bg-gradient-to-b from-amber-600 via-amber-700 to-amber-800 rounded-l-[18px] shadow-inner">
-                    <div className="h-full flex items-center justify-center">
-                      <span className="text-[11px] font-semibold tracking-[0.18em] text-amber-100 rotate-180 [writing-mode:vertical-rl]">
-                        RESEARCH
-                      </span>
+                {/* 書本本體 */}
+                <div className="relative h-full w-full">
+                  <div className="absolute inset-0 rounded-[18px] bg-gradient-to-br from-amber-100 via-amber-200 to-amber-300 shadow-2xl border border-amber-500/60 transform origin-left group-hover:-rotate-y-6 group-hover:-translate-y-1 group-hover:translate-x-1 transition-transform duration-500 ease-out">
+                    {/* 書脊 */}
+                    <div className="absolute inset-y-3 left-0 w-7 bg-gradient-to-b from-amber-600 via-amber-700 to-amber-800 rounded-l-[18px] shadow-inner">
+                      <div className="h-full flex items-center justify-center">
+                        <span className="text-[11px] font-semibold tracking-[0.18em] text-amber-100 rotate-180 [writing-mode:vertical-rl]">
+                          RESEARCH
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* 封面內容 */}
+                    <div className="ml-7 h-full flex flex-col justify-between p-4">
+                      <div>
+                        <p className="text-xs uppercase tracking-[0.2em] text-amber-800/80 mb-1">
+                          Book {book.id.toString().padStart(2, "0")}
+                        </p>
+                        <h2 className="text-lg md:text-xl font-bold text-amber-950 leading-tight line-clamp-2">
+                          {book.title}
+                        </h2>
+                      </div>
+                      <div className="text-xs md:text-sm text-amber-900/90 line-clamp-3">
+                        {book.description}
+                      </div>
+                      <div className="flex items-center justify-between mt-2 text-[11px] text-amber-900/80">
+                        <span>Click to open PDF</span>
+                        <span className="font-semibold group-hover:text-amber-950">Flip ▶</span>
+                      </div>
                     </div>
                   </div>
 
-                  {/* 封面內容 */}
-                  <div className="ml-7 h-full flex flex-col justify-between p-4">
-                    <div>
-                      <p className="text-xs uppercase tracking-[0.2em] text-amber-800/80 mb-1">
-                        Book {book.id.toString().padStart(2, "0")}
-                      </p>
-                      <h2 className="text-lg md:text-xl font-bold text-amber-950 leading-tight line-clamp-2">
-                        {book.title}
-                      </h2>
-                    </div>
-                    <div className="text-xs md:text-sm text-amber-900/90 line-clamp-3">
-                      {book.description}
-                    </div>
-                    <div className="flex items-center justify-between mt-2 text-[11px] text-amber-900/80">
-                      <span>Click to open PDF</span>
-                      <span className="font-semibold group-hover:text-amber-950">Flip ▶</span>
-                    </div>
-                  </div>
+                  {/* 模擬翻頁效果的「內頁」 */}
+                  <div className="absolute inset-1 ml-6 rounded-[14px] bg-gradient-to-br from-white via-amber-50 to-amber-100 shadow-md opacity-0 group-hover:opacity-100 group-hover:translate-x-1 group-hover:-translate-y-1 transition-all duration-500 ease-out" />
                 </div>
-
-                {/* 模擬翻頁效果的「內頁」 */}
-                <div className="absolute inset-1 ml-6 rounded-[14px] bg-gradient-to-br from-white via-amber-50 to-amber-100 shadow-md opacity-0 group-hover:opacity-100 group-hover:translate-x-1 group-hover:-translate-y-1 transition-all duration-500 ease-out" />
-              </div>
-            </button>
-          ))}
-        </div>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   )
