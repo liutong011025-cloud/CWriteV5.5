@@ -157,7 +157,7 @@ export default function ContinueWorksDialog({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-gradient-to-br from-white via-purple-50 to-pink-50 border-4 border-purple-300 shadow-2xl">
+      <DialogContent className="w-full max-w-3xl max-h-[90vh] overflow-y-auto overflow-x-hidden bg-gradient-to-br from-white via-purple-50 to-pink-50 border-4 border-purple-300 shadow-2xl">
         <DialogHeader className="pb-2">
           <div className="flex items-center gap-4">
             {/* 左側用戶頭像，大小約等於標題行高 */}
