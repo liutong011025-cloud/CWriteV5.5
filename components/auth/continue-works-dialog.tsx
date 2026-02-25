@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Sparkles, BookOpen, Mail, FileText, Clock, ArrowRight } from "lucide-react"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { toast } from "sonner"
 
 interface Work {
@@ -33,11 +33,25 @@ export default function ContinueWorksDialog({
 }: ContinueWorksDialogProps) {
   const [works, setWorks] = useState<Work[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
+  const [avatarEmoji, setAvatarEmoji] = useState<string | null>(null)
 
   useEffect(() => {
-    if (open && userId) {
-      fetchUserWorks()
-    }
+    if (!open || !userId) return
+    fetchUserWorks()
+
+    // 同時拉取用戶頭像資料，讓這裡顯示和 header 一樣的頭像
+    fetch(`/api/user-profile?user_id=${encodeURIComponent(userId)}`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (!data.error) {
+          setAvatarUrl(data.avatarUrl ?? null)
+          setAvatarEmoji(data.avatarEmoji ?? null)
+        }
+      })
+      .catch(() => {
+        // 如果失敗就保持使用縮寫 fallback
+      })
   }, [open, userId])
 
   const fetchUserWorks = async () => {
@@ -148,8 +162,11 @@ export default function ContinueWorksDialog({
           <div className="flex items-center justify-center gap-4">
             {/* 左側用戶頭像，大小約等於標題行高 */}
             <Avatar className="h-14 w-14 rounded-full border-2 border-purple-300 shadow-md bg-white">
+              {avatarUrl && (
+                <AvatarImage src={avatarUrl} alt={userId} />
+              )}
               <AvatarFallback className="rounded-full bg-gradient-to-br from-purple-500 to-pink-500 text-white text-xl font-bold">
-                {userId.slice(0, 2).toUpperCase()}
+                {avatarEmoji || userId.slice(0, 2).toUpperCase()}
               </AvatarFallback>
             </Avatar>
             <div className="flex flex-col items-start">
