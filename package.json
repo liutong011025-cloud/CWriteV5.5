@@ -4,7 +4,7 @@
   "packageManager": "npm@10.8.1",
   "private": true,
   "scripts": {
-    "build": "prisma generate && next build",
+    "build": "prisma generate && prisma migrate deploy && next build",
     "dev": "next dev",
     "lint": "eslint .",
     "start": "next start",
@@ -13,7 +13,8 @@
     "db:push": "npx prisma db push",
     "db:migrate": "npx prisma migrate dev",
     "db:studio": "npx prisma studio",
-    "db:init": "tsx scripts/init-db.ts"
+    "db:init": "tsx scripts/init-db.ts",
+    "db:run-sql": "tsx scripts/run-migration-sql.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
