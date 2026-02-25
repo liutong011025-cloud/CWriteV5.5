@@ -1,13 +1,13 @@
-\"use client\"
+"use client"
 
-import { useState } from \"react\"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from \"@/components/ui/dialog\"
-import { Button } from \"@/components/ui/button\"
-import { Textarea } from \"@/components/ui/textarea\"
-import { toast } from \"sonner\"
-import { Sparkles, Star } from \"lucide-react\"
+import { useState } from "react"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
+import { Button } from "@/components/ui/button"
+import { Textarea } from "@/components/ui/textarea"
+import { toast } from "sonner"
+import { Sparkles, Star } from "lucide-react"
 
-type WritingType = \"story\" | \"review\" | \"letter\"
+type WritingType = "story" | "review" | "letter"
 
 interface WritingFeedbackDialogProps {
   open: boolean
