@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Sparkles, BookOpen, Mail, FileText, Clock, ArrowRight } from "lucide-react"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { toast } from "sonner"
 
 interface Work {
@@ -144,13 +145,23 @@ export default function ContinueWorksDialog({
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-gradient-to-br from-white via-purple-50 to-pink-50 border-4 border-purple-300 shadow-2xl">
         <DialogHeader>
-          <DialogTitle className="text-4xl font-black bg-gradient-to-r from-purple-600 via-pink-600 to-orange-600 bg-clip-text text-transparent text-center flex items-center justify-center gap-3">
-            <Sparkles className="w-8 h-8 text-purple-600" />
-            Welcome Back!
-          </DialogTitle>
-          <DialogDescription className="text-center text-lg text-gray-700 mt-2">
-            Would you like to start a new writing project or continue with your previous work?
-          </DialogDescription>
+          <div className="flex items-center justify-center gap-4">
+            {/* 左側用戶頭像，大小約等於標題行高 */}
+            <Avatar className="h-14 w-14 rounded-full border-2 border-purple-300 shadow-md bg-white">
+              <AvatarFallback className="rounded-full bg-gradient-to-br from-purple-500 to-pink-500 text-white text-xl font-bold">
+                {userId.slice(0, 2).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex flex-col items-start">
+              <DialogTitle className="text-3xl md:text-4xl font-black bg-gradient-to-r from-purple-600 via-pink-600 to-orange-600 bg-clip-text text-transparent flex items-center gap-2">
+                <Sparkles className="w-7 h-7 text-purple-600" />
+                Welcome Back!
+              </DialogTitle>
+              <DialogDescription className="text-left text-base md:text-lg text-gray-700 mt-1">
+                Would you like to start a new writing project or continue with your previous work?
+              </DialogDescription>
+            </div>
+          </div>
         </DialogHeader>
 
         <div className="mt-6 space-y-6">
