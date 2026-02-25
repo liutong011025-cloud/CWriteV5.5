@@ -102,7 +102,6 @@ Be warm, cute, and encouraging. Use English.${levelSuffix}`
     console.log('URL:', url)
     console.log('Request Body app_id:', requestBody.app_id)
     console.log('Full Request Body:', JSON.stringify(requestBody, null, 2))
-    console.log('Review Type:', reviewType)
     console.log('Book Title:', bookTitle)
     console.log('========================================')
 
@@ -150,7 +149,7 @@ Be warm, cute, and encouraging. Use English.${levelSuffix}`
       bookSelectionUserId,
       'bookSelection',
       '/api/dify-book-selection',
-      { reviewType, bookTitle, conversation_id: 'new-conversation' },
+      { bookTitle, conversation_id: 'new-conversation' },
       { answer: message, conversation_id: data.conversation_id, message_id: data.id }
     )
 
