@@ -17,6 +17,7 @@
     "db:run-sql": "tsx scripts/run-migration-sql.ts"
   },
   "dependencies": {
+    "@fal-ai/client": "1.9.4",
     "@hookform/resolvers": "^3.10.0",
     "@prisma/client": "5.20.0",
     "@radix-ui/react-accordion": "1.2.2",
