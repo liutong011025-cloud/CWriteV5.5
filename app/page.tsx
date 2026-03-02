@@ -883,6 +883,9 @@ export default function Home() {
             }}
             onBack={() => setStage(journeyActive ? "journeyMap" : "bookReviewLoading")}
             userId={user.username}
+            onDraftChange={(draft) => {
+              setBookReviewState(prev => ({ ...prev, review: draft }))
+            }}
         />
       )}
       {stage === "bookReviewWritingNoAi" && user && bookReviewState.bookTitle && bookReviewState.reviewType && (
@@ -900,6 +903,9 @@ export default function Home() {
             }}
             onBack={() => setStage(journeyActive ? "journeyMap" : "bookSelectionNoAi")}
             userId={user.username}
+            onDraftChange={(draft) => {
+              setBookReviewState(prev => ({ ...prev, review: draft }))
+            }}
         />
       )}
       {stage === "bookReviewComplete" && user && bookReviewState.review && bookReviewState.bookTitle && (
@@ -1076,6 +1082,9 @@ export default function Home() {
               }}
               onBack={() => setStage(journeyActive ? "journeyMap" : "structure")}
               userId={user.username}
+              onDraftChange={(draft) => {
+                setStoryState(prev => ({ ...prev, story: draft }))
+              }}
             />
           ) : (
             <GuidedWriting
@@ -1087,6 +1096,9 @@ export default function Home() {
               }}
               onBack={() => setStage(journeyActive ? "journeyMap" : "structure")}
               userId={user.username}
+              onDraftChange={(draft) => {
+                setStoryState(prev => ({ ...prev, story: draft }))
+              }}
             />
           )
         )}
@@ -1214,6 +1226,9 @@ export default function Home() {
               }}
               onBack={() => setStage(journeyActive ? "journeyMap" : "letterAdventure")}
               userId={user.username}
+              onDraftChange={(draft) => {
+                setLetterState(prev => ({ ...prev, letter: draft }))
+              }}
             />
           ) : letterState.guidance !== null ? (
             <LetterGame
@@ -1230,6 +1245,9 @@ export default function Home() {
               }}
               onBack={() => setStage(journeyActive ? "journeyMap" : "letterAdventure")}
               userId={user.username}
+              onDraftChange={(draft) => {
+                setLetterState(prev => ({ ...prev, letter: draft }))
+              }}
             />
           ) : null
       )}
