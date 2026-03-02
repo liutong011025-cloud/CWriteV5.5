@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useCallback, useEffect, useRef } from "react"
-import { Loader2 } from "lucide-react"
 
 export type CagentMood = "normal" | "like" | "angry"
 
@@ -114,6 +113,15 @@ export default function Cagent({
 
   const avatarSrc = isSleeping ? SLEEP_IMAGE : IMAGE_MAP[mood]
 
+  // 氣泡自動在 10s 後消失
+  useEffect(() => {
+    if (!showBubble || !displayMessage) return
+    const t = setTimeout(() => {
+      setShowBubble(false)
+    }, 10000)
+    return () => clearTimeout(t)
+  }, [showBubble, displayMessage])
+
   return (
     <div className="fixed bottom-6 left-6 z-[200] flex items-end gap-3 pointer-events-none">
       <button
@@ -125,32 +133,20 @@ export default function Cagent({
         <img
           src={avatarSrc}
           alt="Cagent"
-          className="h-20 w-20 object-contain shadow-lg md:h-24 md:w-24"
+          className="h-24 w-24 object-contain md:h-28 md:w-28"
         />
         <span className="text-xs font-semibold text-purple-600 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
           Cagent
         </span>
       </button>
 
-      {showBubble && (
+      {showBubble && displayMessage && (
         <div className="pointer-events-auto max-w-xs rounded-2xl border border-purple-200 bg-gradient-to-br from-purple-50 via-pink-50 to-amber-50 px-4 py-3 shadow-xl">
-          <div className="flex items-start gap-2">
-            <img
-              src={IMAGE_MAP["normal"]}
-              alt=""
-              className="mt-0.5 h-8 w-8 object-contain"
-            />
-            <div className="flex-1 text-sm text-foreground">
-              {loading ? (
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Cagent is thinking...
-                </div>
-              ) : displayMessage ? (
-                <p className="whitespace-pre-wrap">{displayMessage}</p>
-              ) : (
-                <p className="text-muted-foreground">Ask Cagent anything about this page!</p>
-              )}
+          <div className="flex items-start gap-2 text-sm text-foreground">
+            <div className="flex-1">
+              <p className="whitespace-pre-wrap" style={{ fontFamily: '"Comic Neue", var(--font-comic-neue), "Comic Sans MS", cursive' }}>
+                {displayMessage}
+              </p>
             </div>
             <button
               type="button"
