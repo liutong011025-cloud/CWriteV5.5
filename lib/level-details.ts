@@ -133,22 +133,27 @@ export function getLevelInstruction(level: number): string {
   return ` [Student level: ${d.title} ${d.subtitle} (${d.scoreRange}). Teaching focus: ${tips}. Keep suggestions and language appropriate for this level.]`
 }
 
-/** Level-specific prompt suffixes for different writing supports (story, book review, letter, etc.) */
+/**
+ * Level-specific prompt suffixes for different writing supports.
+ * IMPORTANT: Only adjusts vocabulary difficulty, sentence length, and tone.
+ * Does NOT add or change output structure — each API's main prompt defines the format.
+ */
 export function getLevelPromptSuffix(level: number, context: "story" | "book" | "letter" | "general"): string {
   const d = getLevelDetail(level)
   if (!d) return ""
+  const preserve = " Do NOT change the output format or structure. Only adapt vocabulary and sentence complexity for this level."
   switch (level) {
     case 1:
-      return " Use very simple sentences and high scaffolding: picture prompts, sentence frames, word banks. Focus on task completion and basic mechanics."
+      return " Use very simple words and short sentences (P1–P2). Be extra encouraging." + preserve
     case 2:
-      return " Use short paragraphs (3–5 sentences), common conjunctions (and, but, because), and simple past/present. Provide paragraph frames and phrase lists."
+      return " Use simple vocabulary and short, clear sentences (P2–P3). Be encouraging." + preserve
     case 3:
-      return " Support 5–8 sentence texts with when/because/if/that. Use Why/How/When questions to expand. Focus on organization and sentence variety."
+      return " Use age-appropriate vocabulary and varied sentences (P3–P4). Be supportive." + preserve
     case 4:
-      return " Support opinion paragraphs with reasons and examples. Encourage however/therefore/although. Focus on PEEL structure and register."
+      return " Use richer vocabulary and clearer structure (P4–P5). Be constructive." + preserve
     case 5:
-      return " Support clear, well-organized 150–250 word texts. Give high-level editing feedback on ideas, evidence, and language polish."
+      return " Use precise vocabulary and well-structured feedback (P5–P6). Be concise and polished." + preserve
     default:
-      return getLevelInstruction(level)
+      return " " + preserve
   }
 }
