@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server"
 
 const DIFY_API_URL = "https://api.dify.ai/v1/chat-messages"
-const DIFY_API_KEY = process.env.DIFY_API_KEY || "app-TFDykrjN8LpJROY6eTRNjwo5"
+// 使用環境變量中的真正 API Key
+const DIFY_API_KEY = process.env.DIFY_API_KEY || ""
+// Cagent 專用 Dify 應用 ID（你提供的）
+const DIFY_CAGENT_APP_ID = "app-lOPsCIBr4Fb97gxv1fTDq1GU"
 
 /**
  * Cagent page-context guide: tells the student what they did, how they're doing, and what to do next.
@@ -9,6 +12,14 @@ const DIFY_API_KEY = process.env.DIFY_API_KEY || "app-TFDykrjN8LpJROY6eTRNjwo5"
  */
 export async function POST(request: NextRequest) {
   try {
+    if (!DIFY_API_KEY) {
+      console.error("[dify-cagent-guide] DIFY_API_KEY not configured")
+      return NextResponse.json(
+        { error: "Guide unavailable", message: "Cagent is resting. Try again in a bit! 🧸" },
+        { status: 200 }
+      )
+    }
+
     const { stage, contextSummary, user_id, userMessage } = await request.json()
 
     const basePrompt = `You are Cagent, a friendly AI assistant for elementary students in a creative writing app. You know every page of the app.
@@ -45,6 +56,7 @@ In your reply, respond directly to what they said while still sounding like a cu
         query: prompt,
         response_mode: "blocking",
         user: user_id || "cagent-user",
+        app_id: DIFY_CAGENT_APP_ID,
       }),
     })
 
