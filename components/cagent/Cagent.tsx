@@ -1,5 +1,6 @@
 "use client"
 
+import type { FormEvent, ChangeEvent } from "react"
 import { useState, useCallback, useEffect, useRef } from "react"
 
 export type CagentMood = "normal" | "like" | "angry"
@@ -11,7 +12,8 @@ const IMAGE_MAP: Record<CagentMood, string> = {
 }
 
 const SLEEP_IMAGE = "/Cagentsleep.png"
-const SLEEP_TIMEOUT_MS = 30000
+// 延長入睡時間，讓小熊陪伴更久一點
+const SLEEP_TIMEOUT_MS = 60000
 
 export interface CagentProps {
   /** Current page/stage identifier for Dify context */
@@ -42,6 +44,8 @@ export default function Cagent({
   const [guideText, setGuideText] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [isSleeping, setIsSleeping] = useState(false)
+  const [userInput, setUserInput] = useState("")
+  const [isSending, setIsSending] = useState(false)
   const sleepTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const scheduleSleep = useCallback(() => {
@@ -62,34 +66,44 @@ export default function Cagent({
     }
   }, [scheduleSleep])
 
-  const fetchGuide = useCallback(async () => {
-    setLoading(true)
-    setGuideText(null)
-    try {
-      const res = await fetch("/api/dify-cagent-guide", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          stage,
-          contextSummary: contextSummary || "",
-          user_id: userId,
-        }),
-      })
-      const data = await res.json()
-      if (data.error) {
-        setGuideText("Oops, Cagent is resting. Try again in a bit! 🧸")
-        return
+  const fetchGuide = useCallback(
+    async (opts?: { userMessage?: string }) => {
+      setLoading(true)
+      // 每次主動請求新提示前，清空舊內容，避免新頁面先顯示舊進度
+      if (!opts?.userMessage) {
+        setGuideText(null)
       }
-      setGuideText(data.message || data.answer || "Keep going! You're doing great! ✨")
-    } catch {
-      setGuideText("Something went wrong. Try again! 🌟")
-    } finally {
-      setLoading(false)
-    }
-  }, [stage, contextSummary, userId])
+      try {
+        const res = await fetch("/api/dify-cagent-guide", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            stage,
+            contextSummary: contextSummary || "",
+            user_id: userId,
+            userMessage: opts?.userMessage || null,
+          }),
+        })
+        const data = await res.json()
+        if (data.error) {
+          setGuideText("Oops, Cagent is resting. Try again in a bit! 🧸")
+          return
+        }
+        setGuideText(data.message || data.answer || "Keep going! You're doing great! ✨")
+      } catch {
+        setGuideText("Something went wrong. Try again! 🌟")
+      } finally {
+        setLoading(false)
+      }
+    },
+    [stage, contextSummary, userId]
+  )
 
   // Auto-speak when entering a new stage or when values message appears
   useEffect(() => {
+    // 切換頁面時立刻清空舊文案與輸入，避免帶出上一頁內容
+    setGuideText(null)
+    setUserInput("")
     setIsSleeping(false)
     setShowBubble(true)
     scheduleSleep()
@@ -102,10 +116,25 @@ export default function Cagent({
     setShowBubble(true)
     setIsSleeping(false)
     scheduleSleep()
-    if (!valuesMessage) {
+    if (!valuesMessage && !guideText && !loading) {
       fetchGuide()
     }
-  }, [valuesMessage, fetchGuide, scheduleSleep])
+  }, [valuesMessage, guideText, loading, fetchGuide, scheduleSleep])
+
+  const handleSendMessage = useCallback(
+    async (e?: FormEvent) => {
+      if (e) e.preventDefault()
+      const message = userInput.trim()
+      if (!message || isSending) return
+      setIsSending(true)
+      try {
+        await fetchGuide({ userMessage: message })
+      } finally {
+        setIsSending(false)
+      }
+    },
+    [userInput, isSending, fetchGuide]
+  )
 
   const displayMessage = valuesMessage
     ? `${valuesMessage}${valuesSuggestion ? `\n\nSuggestion: ${valuesSuggestion}` : ""}`
@@ -113,12 +142,12 @@ export default function Cagent({
 
   const avatarSrc = isSleeping ? SLEEP_IMAGE : IMAGE_MAP[mood]
 
-  // 氣泡自動在 10s 後消失
+  // 氣泡自動在更短時間後消失（例如 6s），點擊小熊可重新打開並保留當前對話
   useEffect(() => {
     if (!showBubble || !displayMessage) return
     const t = setTimeout(() => {
       setShowBubble(false)
-    }, 10000)
+    }, 6000)
     return () => clearTimeout(t)
   }, [showBubble, displayMessage])
 
@@ -127,7 +156,7 @@ export default function Cagent({
       <button
         type="button"
         onClick={handleOpen}
-        className="group flex flex-col items-center gap-1 transition-transform duration-200 hover:scale-110 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:ring-offset-2 pointer-events-auto"
+        className="group flex flex-col items-center gap-1 transition-transform duration-200 hover:scale-110 focus:outline-none pointer-events-auto"
         aria-label="Open Cagent"
       >
         <img
@@ -144,9 +173,30 @@ export default function Cagent({
         <div className="pointer-events-auto max-w-xs rounded-2xl border border-purple-200 bg-gradient-to-br from-purple-50 via-pink-50 to-amber-50 px-4 py-3 shadow-xl">
           <div className="flex items-start gap-2 text-sm text-foreground">
             <div className="flex-1">
-              <p className="whitespace-pre-wrap" style={{ fontFamily: '"Comic Neue", var(--font-comic-neue), "Comic Sans MS", cursive' }}>
+              <p
+                className="whitespace-pre-wrap"
+                style={{ fontFamily: '"Comic Neue", var(--font-comic-neue), "Comic Sans MS", cursive' }}
+              >
                 {displayMessage}
               </p>
+              {!valuesMessage && (
+                <form onSubmit={handleSendMessage} className="mt-3 flex gap-2">
+                  <input
+                    type="text"
+                    value={userInput}
+                    onChange={(e: ChangeEvent<HTMLInputElement>) => setUserInput(e.target.value)}
+                    placeholder="Talk to Cagent..."
+                    className="flex-1 rounded-full border border-purple-200 bg-white/80 px-3 py-1 text-xs focus:outline-none focus:ring-0"
+                  />
+                  <button
+                    type="submit"
+                    disabled={!userInput.trim() || isSending}
+                    className="rounded-full bg-purple-500 px-3 py-1 text-xs font-semibold text-white hover:bg-purple-600 disabled:opacity-50"
+                  >
+                    Send
+                  </button>
+                </form>
+              )}
             </div>
             <button
               type="button"
