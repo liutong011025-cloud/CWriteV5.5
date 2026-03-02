@@ -346,7 +346,7 @@ export default function LetterGame({
             <div className="bg-gradient-to-br from-purple-100 via-pink-100 to-blue-100 rounded-2xl p-6 border-4 border-purple-300 shadow-xl">
               <div className="flex items-center gap-2 mb-4">
                 <Sparkles className="w-6 h-6 text-purple-600 animate-pulse" />
-                <h3 className="text-xl font-bold text-purple-700">✨ <span className="bg-gradient-to-r from-purple-600 via-pink-600 to-orange-600 bg-clip-text text-transparent">C</span><span>agent</span>'s Feedback</h3>
+                <h3 className="text-xl font-bold text-purple-700">✨ Writing Feedback</h3>
               </div>
               
               {isLoadingEvaluation ? (
