@@ -14,67 +14,61 @@ export const EOB_TRAITS: EobTrait[] = [
   {
     name: "Kind",
     explanationTemplate:
-      "Kindness is a good trait. It means in life, {{name}} is someone who cares for others and shows warmth and compassion.",
+      "Kindness means {{name}} likes to care for others and be warm and gentle.",
     writingTips: [
-      "shows warmth and care for others",
-      "always has a gentle word for those in need",
-      "goes out of their way to help someone feel better",
+      "is kind and caring to others",
+      "uses warm words to make others feel better",
     ],
   },
   {
     name: "Helpful",
     explanationTemplate:
-      "Caring for elders is a good trait. It means in life, {{name}} is someone who knows how to care for the elderly and shows respect for grandparents and older people.",
+      "Helpful means {{name}} likes to help others, especially family and elders.",
     writingTips: [
       "shows respect and care for grandparents",
-      "helps elders with daily tasks",
-      "always thinks of the elderly and lends a helping hand",
+      "helps elders with simple daily tasks",
     ],
   },
   {
     name: "Brave",
     explanationTemplate:
-      "Being brave is a good trait. It means in life, {{name}} is someone who faces difficulties with courage and does not give up easily.",
+      "Brave means {{name}} faces hard things with courage and does not give up easily.",
     writingTips: [
       "faces challenges with courage",
-      "stands up for what is right even when it is hard",
-      "never gives up when things get difficult",
+      "keeps trying even when it feels scary",
     ],
   },
   {
     name: "Honest",
     explanationTemplate:
-      "Honesty is a good trait. It means in life, {{name}} is someone who tells the truth and can be trusted by others.",
+      "Honest means {{name}} tells the truth and can be trusted by others.",
     writingTips: [
       "always tells the truth and keeps their word",
       "admits mistakes and takes responsibility",
-      "is trusted by everyone because they are sincere",
     ],
   },
   {
     name: "Responsible",
     explanationTemplate:
-      "Being responsible is a good trait. It means in life, {{name}} is someone who completes tasks and keeps their promises.",
+      "Responsible means {{name}} finishes tasks and keeps promises.",
     writingTips: [
       "finishes what they start and keeps promises",
-      "takes care of their duties without being reminded",
-      "others can rely on them to do the right thing",
+      "takes care of their own duties without being reminded",
     ],
   },
   {
     name: "Team-player",
     explanationTemplate:
-      "Being a team player is a good trait. It means in life, {{name}} is someone who works well with others and values cooperation.",
+      "Being a team player means {{name}} likes to work with others and share.",
     writingTips: [
-      "works well with others and shares the load",
-      "listens to teammates and supports the group",
-      "puts the team's success before personal glory",
+      "works well with teammates and shares the work",
+      "listens to friends and supports the group",
     ],
   },
   {
     name: "Obeys rules",
     explanationTemplate:
-      "Obeying rules is a good trait. It means in life, {{name}} is someone who follows rules and respects order, which keeps everyone safe and fair.",
+      "Obeying rules means {{name}} follows class and family rules to keep everyone safe and fair.",
     writingTips: [
       "follows rules and encourages others to do the same",
       "respects boundaries and plays fair",
@@ -84,17 +78,16 @@ export const EOB_TRAITS: EobTrait[] = [
   {
     name: "Hardworking",
     explanationTemplate:
-      "Being hardworking is a good trait. It means in life, {{name}} is someone who tries their best and does not shy away from effort.",
+      "Hardworking means {{name}} tries their best and does not shy away from effort.",
     writingTips: [
       "gives their best effort in everything they do",
       "keeps trying until they get it right",
-      "believes that practice and effort lead to success",
     ],
   },
   {
     name: "Empathetic",
     explanationTemplate:
-      "Being empathetic is a good trait. It means in life, {{name}} is someone who understands how others feel and cares about their emotions.",
+      "Empathetic means {{name}} understands how others feel and cares about their emotions.",
     writingTips: [
       "understands how others feel and shows compassion",
       "puts themselves in someone else's shoes",
