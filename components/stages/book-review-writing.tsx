@@ -66,9 +66,11 @@ export default function BookReviewWriting({
   const [isLoadingSummary, setIsLoadingSummary] = useState(false)
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null)
   const textareaRefs = useRef<Record<number, HTMLTextAreaElement | null>>({})
-  const [writingMood, setWritingMood] = useState<"sit" | "like" | "angry">("sit")
+  const [writingMood, setWritingMood] = useState<"sit" | "like" | "angry" | "hang">("sit")
   const [showWritingBubble, setShowWritingBubble] = useState(false)
   const [isDangerFlash, setIsDangerFlash] = useState(false)
+  const hangTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [isHoveringHang, setIsHoveringHang] = useState(false)
 
   // 如果有原始顺序，使用原始顺序显示；否则使用打乱后的顺序
   // 但实际写作时仍使用打乱后的顺序（用于测试）
@@ -226,6 +228,10 @@ export default function BookReviewWriting({
   }, [currentSectionText])
 
   const updateWritingMoodFromText = (text: string) => {
+    // 任何輸入都視為「被喚醒」，先從 hang 狀態恢復
+    if (writingMood === "hang") {
+      setWritingMood("sit")
+    }
     const lower = text.toLowerCase()
     const dangerWords = ["kill", "murder", "fuck"]
     const loveWords = ["love", "admire"]
@@ -241,6 +247,26 @@ export default function BookReviewWriting({
       setWritingMood("sit")
     }
   }
+
+  // 當小熊長時間保持 sit 狀態時，30 秒後自動變為「懸掛」狀態 hang
+  useEffect(() => {
+    if (hangTimeoutRef.current) {
+      clearTimeout(hangTimeoutRef.current)
+      hangTimeoutRef.current = null
+    }
+    if (writingMood !== "sit") {
+      return
+    }
+    hangTimeoutRef.current = setTimeout(() => {
+      setWritingMood("hang")
+    }, 30000)
+    return () => {
+      if (hangTimeoutRef.current) {
+        clearTimeout(hangTimeoutRef.current)
+        hangTimeoutRef.current = null
+      }
+    }
+  }, [writingMood])
 
   const handleSectionTextChange = (sectionIndex: number, text: string) => {
     setSectionTexts(prev => ({
@@ -474,14 +500,26 @@ export default function BookReviewWriting({
                 </div>
 
                 <div className="relative">
-                  {/* 小熊坐在輸入框上方：sit 狀態略向下 16%，like/angry 回到更高的標準位置 */}
+                  {/* 小熊：sit 坐在輸入框上方；like/angry 回到標準高度；hang 掉落到文本框內側 */}
                   <div
                     className="absolute right-4 z-20 flex flex-col items-center"
-                    style={writingMood === "sit" ? { top: "-16%" } : { top: "-32%" }}
+                    style={
+                      writingMood === "hang"
+                        ? { top: "8%" }
+                        : writingMood === "sit"
+                        ? { top: "-16%" }
+                        : { top: "-32%" }
+                    }
                   >
                     <button
                       type="button"
-                      onClick={() => setShowWritingBubble((v) => !v)}
+                      onClick={() => {
+                        // 從 hang 或其他狀態重新回到 sit
+                        setWritingMood("sit")
+                        setShowWritingBubble((v) => !v)
+                      }}
+                      onMouseEnter={() => setIsHoveringHang(true)}
+                      onMouseLeave={() => setIsHoveringHang(false)}
                       className="flex flex-col items-center gap-1 focus:outline-none"
                     >
                       <img
@@ -490,15 +528,22 @@ export default function BookReviewWriting({
                             ? "/Cagentangry.png"
                             : writingMood === "like"
                             ? "/Cagentlike.png"
+                            : writingMood === "hang"
+                            ? "/Cagenthang.png"
                             : "/Cagentsit.png"
                         }
                         alt="Cagent"
                         className="h-24 w-24 object-contain drop-shadow-lg"
                       />
                     </button>
+                    {writingMood === "hang" && isHoveringHang && (
+                      <div className="mt-1 rounded-full bg-black/70 px-3 py-1 text-[11px] text-white shadow-lg">
+                        Save me!
+                      </div>
+                    )}
                     {showWritingBubble && writingMood === "angry" && (
                       <div className="mt-2 max-w-xs rounded-2xl border border-red-300 bg-white/95 px-3 py-2 text-xs text-red-700 shadow-xl">
-                        這段內容出現了暴力或粗俗詞語，試試用更安全、更尊重的表達方式吧。
+                        This part contains words that do not match our community values (violent or offensive). Please choose a safer and more respectful way to express your idea.
                       </div>
                     )}
                   </div>
@@ -516,10 +561,10 @@ export default function BookReviewWriting({
                     placeholder={`Start writing the "${sections[currentSection]}" section here... Let your thoughts flow! 💭`}
                     value={currentSectionText}
                     onChange={(e) => handleSectionTextChange(currentSection, e.target.value)}
-                    className={`relative w-full h-[500px] p-6 rounded-xl border-4 bg-white/90 text-foreground placeholder-gray-400 font-serif text-base leading-relaxed shadow-inner focus:shadow-lg transition-all duration-300 focus:ring-4 ${
+                    className={`relative w-full h-[500px] p-6 rounded-xl border-4 text-foreground placeholder-gray-400 font-serif text-base leading-relaxed shadow-inner focus:shadow-lg transition-all duration-300 focus:ring-4 ${
                       writingMood === "angry"
-                        ? "border-red-400 focus:border-red-500 focus:ring-red-200"
-                        : "border-purple-300 focus:border-pink-400 focus:ring-pink-200"
+                        ? "border-red-400 bg-pink-50 focus:border-red-500 focus:ring-red-200"
+                        : "border-purple-300 bg-white/90 focus:border-pink-400 focus:ring-pink-200"
                     }`}
                     style={{ fontFamily: 'var(--font-comic-neue)' }}
                   />
