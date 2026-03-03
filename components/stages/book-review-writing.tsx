@@ -71,10 +71,10 @@ export default function BookReviewWriting({
   const [isDangerFlash, setIsDangerFlash] = useState(false)
   const hangTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [isHoveringHang, setIsHoveringHang] = useState(false)
-  // 開發輔助：用數字（百分比）微調各狀態的垂直位置，方便你在瀏覽器裡試到合適高度後把數值給我
-  const [debugTopSit, setDebugTopSit] = useState(-16)
-  const [debugTopStand, setDebugTopStand] = useState(-32)
-  const [debugTopHang, setDebugTopHang] = useState(8)
+  // 初始值：sit 在輸入框上方，like/angry 比 sit 略高一點（約一個身位的 16%），hang 頂部貼近輸入框上邊框
+  const [debugTopSit, setDebugTopSit] = useState(-16)   // 坐在框上
+  const [debugTopStand, setDebugTopStand] = useState(-20) // like/angry：比 sit 稍高一點
+  const [debugTopHang, setDebugTopHang] = useState(0)   // 懸掛：頂部基本與輸入框上邊框齊平
 
   // 如果有原始顺序，使用原始顺序显示；否则使用打乱后的顺序
   // 但实际写作时仍使用打乱后的顺序（用于测试）
@@ -509,10 +509,10 @@ export default function BookReviewWriting({
                     className="absolute right-4 z-20 flex flex-col items-center"
                     style={
                       writingMood === "hang"
-                        ? { top: `${debugTopHang}%` }
+                        ? { top: "8%" }
                         : writingMood === "sit"
-                        ? { top: `${debugTopSit}%` }
-                        : { top: `${debugTopStand}%` }
+                        ? { top: "-16%" }
+                        : { top: "-32%" }
                     }
                   >
                     <button
@@ -575,42 +575,6 @@ export default function BookReviewWriting({
 
                   {currentSectionText.length === 0 && (
                     <div className="absolute top-4 right-4 text-2xl opacity-20 animate-pulse">✨</div>
-                  )}
-
-                  {/* 開發用：調整小熊位置的微調面板（只在非 production 環境顯示） */}
-                  {process.env.NODE_ENV !== "production" && (
-                    <div className="absolute -bottom-10 right-0 rounded-md bg-white/80 px-2 py-1 text-[10px] text-gray-700 shadow-md space-x-2 whitespace-nowrap">
-                      <label>
-                        sit:
-                        <input
-                          type="number"
-                          value={debugTopSit}
-                          onChange={(e) => setDebugTopSit(Number(e.target.value) || 0)}
-                          className="w-12 ml-1 border border-gray-300 rounded px-1"
-                        />
-                        %
-                      </label>
-                      <label className="ml-2">
-                        stand:
-                        <input
-                          type="number"
-                          value={debugTopStand}
-                          onChange={(e) => setDebugTopStand(Number(e.target.value) || 0)}
-                          className="w-12 ml-1 border border-gray-300 rounded px-1"
-                        />
-                        %
-                      </label>
-                      <label className="ml-2">
-                        hang:
-                        <input
-                          type="number"
-                          value={debugTopHang}
-                          onChange={(e) => setDebugTopHang(Number(e.target.value) || 0)}
-                          className="w-12 ml-1 border border-gray-300 rounded px-1"
-                        />
-                        %
-                      </label>
-                    </div>
                   )}
                 </div>
 
