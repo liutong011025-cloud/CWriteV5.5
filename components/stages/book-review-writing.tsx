@@ -66,6 +66,9 @@ export default function BookReviewWriting({
   const [isLoadingSummary, setIsLoadingSummary] = useState(false)
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null)
   const textareaRefs = useRef<Record<number, HTMLTextAreaElement | null>>({})
+  const [writingMood, setWritingMood] = useState<"sit" | "like" | "angry">("sit")
+  const [showWritingBubble, setShowWritingBubble] = useState(false)
+  const [isDangerFlash, setIsDangerFlash] = useState(false)
 
   // 如果有原始顺序，使用原始顺序显示；否则使用打乱后的顺序
   // 但实际写作时仍使用打乱后的顺序（用于测试）
@@ -222,11 +225,31 @@ export default function BookReviewWriting({
     return countWords(currentSectionText)
   }, [currentSectionText])
 
+  const updateWritingMoodFromText = (text: string) => {
+    const lower = text.toLowerCase()
+    const dangerWords = ["kill", "murder", "fuck"]
+    const loveWords = ["love", "admire"]
+    if (dangerWords.some((w) => lower.includes(w))) {
+      setWritingMood("angry")
+      setShowWritingBubble(true)
+      setIsDangerFlash(true)
+      setTimeout(() => setIsDangerFlash(false), 600)
+    } else if (loveWords.some((w) => lower.includes(w))) {
+      setWritingMood("like")
+      // 愛的詞不自動彈氣泡，只用表情表達
+    } else {
+      setWritingMood("sit")
+    }
+  }
+
   const handleSectionTextChange = (sectionIndex: number, text: string) => {
     setSectionTexts(prev => ({
       ...prev,
       [sectionIndex]: text
     }))
+    if (sectionIndex === currentSection) {
+      updateWritingMoodFromText(text)
+    }
 
     if (text.trim().toLowerCase() === "test") {
       setSectionDone(prev => ({
@@ -451,7 +474,40 @@ export default function BookReviewWriting({
                 </div>
 
                 <div className="relative">
-                  <div className="absolute -inset-1 bg-gradient-to-r from-purple-400 via-pink-400 to-orange-400 rounded-xl opacity-20 blur-sm"></div>
+                  {/* 小熊坐在輸入框上方，向下偏移約 16% 讓腿壓在框上 */}
+                  <div
+                    className="absolute left-1/2 z-20 -translate-x-1/2"
+                    style={{ top: "0", transform: "translate(-50%, 16%)" }}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => setShowWritingBubble((v) => !v)}
+                      className="flex flex-col items-center gap-1 focus:outline-none"
+                    >
+                      <img
+                        src={
+                          writingMood === "angry"
+                            ? "/Cagentangry.png"
+                            : writingMood === "like"
+                            ? "/Cagentlike.png"
+                            : "/Cagentsit.png"
+                        }
+                        alt="Cagent"
+                        className="h-24 w-24 object-contain drop-shadow-lg"
+                      />
+                    </button>
+                    {showWritingBubble && writingMood === "angry" && (
+                      <div className="mt-2 max-w-xs rounded-2xl border border-red-300 bg-white/95 px-3 py-2 text-xs text-red-700 shadow-xl">
+                        這段內容出現了暴力或粗俗詞語，試試用更安全、更尊重的表達方式吧。
+                      </div>
+                    )}
+                  </div>
+
+                  <div
+                    className={`absolute -inset-1 rounded-xl bg-gradient-to-r from-purple-400 via-pink-400 to-orange-400 blur-sm ${
+                      writingMood === "angry" && isDangerFlash ? "animate-pulse" : "opacity-20"
+                    }`}
+                  ></div>
                   <textarea
                     key={currentSection}
                     ref={(el) => {
@@ -460,7 +516,11 @@ export default function BookReviewWriting({
                     placeholder={`Start writing the "${sections[currentSection]}" section here... Let your thoughts flow! 💭`}
                     value={currentSectionText}
                     onChange={(e) => handleSectionTextChange(currentSection, e.target.value)}
-                    className="relative w-full h-[500px] p-6 rounded-xl border-4 border-purple-300 focus:border-pink-400 bg-white/90 text-foreground placeholder-gray-400 font-serif text-base leading-relaxed shadow-inner focus:shadow-lg transition-all duration-300 focus:ring-4 focus:ring-pink-200"
+                    className={`relative w-full h-[500px] p-6 rounded-xl border-4 bg-white/90 text-foreground placeholder-gray-400 font-serif text-base leading-relaxed shadow-inner focus:shadow-lg transition-all duration-300 focus:ring-4 ${
+                      writingMood === "angry"
+                        ? "border-red-400 focus:border-red-500 focus:ring-red-200"
+                        : "border-purple-300 focus:border-pink-400 focus:ring-pink-200"
+                    }`}
                     style={{ fontFamily: 'var(--font-comic-neue)' }}
                   />
 
