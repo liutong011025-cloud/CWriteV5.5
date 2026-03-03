@@ -71,10 +71,10 @@ export default function BookReviewWriting({
   const [isDangerFlash, setIsDangerFlash] = useState(false)
   const hangTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [isHoveringHang, setIsHoveringHang] = useState(false)
-  // 初始值：sit 在輸入框上方，like/angry 比 sit 略高一點（約一個身位的 16%），hang 頂部貼近輸入框上邊框
-  const [debugTopSit, setDebugTopSit] = useState(-16)   // 坐在框上
-  const [debugTopStand, setDebugTopStand] = useState(-20) // like/angry：比 sit 稍高一點
-  const [debugTopHang, setDebugTopHang] = useState(0)   // 懸掛：頂部基本與輸入框上邊框齊平
+  // 固定的垂直位置：sit 在輸入框上方，like/angry 比 sit 略高一點，hang 頂部貼近輸入框上邊框
+  const SIT_TOP = -16   // %
+  const STAND_TOP = -18 // like / angry
+  const HANG_TOP = -1   // %
 
   // 如果有原始顺序，使用原始顺序显示；否则使用打乱后的顺序
   // 但实际写作时仍使用打乱后的顺序（用于测试）
@@ -504,16 +504,18 @@ export default function BookReviewWriting({
                 </div>
 
                 <div className="relative">
-                  {/* 小熊：sit 坐在輸入框上方；like/angry 回到標準高度；hang 掉落到文本框內側 */}
+                  {/* 小熊：sit 坐在輸入框上方；like/angry 幾乎同一水平（略高 16%）；hang 掉落到文本框內側 */}
                   <div
-                    className="absolute right-4 z-20 flex flex-col items-center"
-                    style={
-                      writingMood === "hang"
-                        ? { top: `${debugTopHang}%` }
-                        : writingMood === "sit"
-                        ? { top: `${debugTopSit}%` }
-                        : { top: `${debugTopStand}%` }
-                    }
+                    className="absolute z-20 flex flex-col items-center"
+                    style={{
+                      right: "1rem",
+                      top:
+                        writingMood === "hang"
+                          ? `${HANG_TOP}%`
+                          : writingMood === "sit"
+                          ? `${SIT_TOP}%`
+                          : `${STAND_TOP}%`,
+                    }}
                   >
                     <button
                       type="button"
@@ -576,40 +578,6 @@ export default function BookReviewWriting({
                   {currentSectionText.length === 0 && (
                     <div className="absolute top-4 right-4 text-2xl opacity-20 animate-pulse">✨</div>
                   )}
-
-                  {/* 小熊位置微調面板：永遠顯示，固定在頁面右下角避免被其他元素遮擋 */}
-                  <div className="fixed bottom-4 right-4 z-[9999] rounded-md bg-white/90 px-2 py-1 text-[10px] text-gray-700 shadow-md space-x-2 whitespace-nowrap">
-                    <label>
-                      sit:
-                      <input
-                        type="number"
-                        value={debugTopSit}
-                        onChange={(e) => setDebugTopSit(Number(e.target.value) || 0)}
-                        className="w-12 ml-1 border border-gray-300 rounded px-1 bg-white"
-                      />
-                      %
-                    </label>
-                    <label className="ml-2">
-                      stand:
-                      <input
-                        type="number"
-                        value={debugTopStand}
-                        onChange={(e) => setDebugTopStand(Number(e.target.value) || 0)}
-                        className="w-12 ml-1 border border-gray-300 rounded px-1 bg-white"
-                      />
-                      %
-                    </label>
-                    <label className="ml-2">
-                      hang:
-                      <input
-                        type="number"
-                        value={debugTopHang}
-                        onChange={(e) => setDebugTopHang(Number(e.target.value) || 0)}
-                        className="w-12 ml-1 border border-gray-300 rounded px-1 bg-white"
-                      />
-                      %
-                    </label>
-                  </div>
                 </div>
 
                 <div className="flex justify-between items-center mt-6 p-5 bg-gradient-to-r from-purple-50 via-pink-50 to-orange-50 rounded-xl border-3 border-purple-300 shadow-lg backdrop-blur-sm">
