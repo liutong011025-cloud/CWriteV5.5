@@ -41,7 +41,7 @@ const translations = {
       "Become a global innovator in creative writing education.",
       "Cultivate the next generation of creative leaders."
     ],
-    startButton: "Start with a Plan",
+    startButton: "Start Your Journey",
     question: "How can AI enhance creative writing for ESL learners while safeguarding originality, agency, and human imagination?",
     storyTitle: "Story Writing",
     storyDesc: "Create magical stories with help from your AI mentor",
@@ -89,7 +89,7 @@ const translations = {
       "成為創意寫作教育的全球創新者。",
       "培養下一代創意領袖。"
     ],
-    startButton: "開始制定計劃",
+    startButton: "開始旅程",
     question: "AI如何可以令創意寫作對ESL學習者更有吸引力，同時保持原創性？",
     storyTitle: "故事寫作",
     storyDesc: "在AI導師的幫助下創造魔法故事",
@@ -571,7 +571,7 @@ export default function HomePage({
           </div>
         )}
 
-        {/* Start with a Plan 按钮 */}
+        {/* Start Your Journey 按钮 */}
         <div className="text-center mb-12 mt-20 animate-fade-in" style={{ animationDelay: '0.7s' }}>
           <div className="mb-8">
             <span className="text-8xl md:text-9xl lg:text-[10rem] animate-wiggle" style={{ display: 'inline-block' }}>
