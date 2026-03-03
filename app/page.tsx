@@ -506,10 +506,6 @@ export default function Home() {
     }
   }, [currentLevel])
 
-  if (!isReady) {
-    return null
-  }
-
   // 基于 Dify 指标，决定本次成长主要维度（词汇 / 描写 / 逻辑）
   const chooseGrowthDimension = (metrics: WritingMetricsSnapshot, previous: WritingMetricsSnapshot | null): TreeGrowthDimension => {
     if (!previous) {
@@ -593,6 +589,10 @@ export default function Home() {
     },
     [trees, user, lastMetrics]
   )
+
+  if (!isReady) {
+    return null
+  }
 
   const showLevelBadge = user && writingAssessment && writingAssessment.level >= 1 && writingAssessment.level <= 5 && !["login", "home", "planTest"].includes(stage)
 
