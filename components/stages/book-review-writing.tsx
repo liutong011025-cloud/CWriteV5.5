@@ -474,10 +474,10 @@ export default function BookReviewWriting({
                 </div>
 
                 <div className="relative">
-                  {/* 小熊坐在輸入框上方，向下偏移約 16% 讓腿壓在框上 */}
+                  {/* 小熊坐在輸入框上方：sit 狀態略向下 16%，like/angry 回到更高的標準位置 */}
                   <div
-                    className="absolute left-1/2 z-20 -translate-x-1/2"
-                    style={{ top: "0", transform: "translate(-50%, 16%)" }}
+                    className="absolute right-4 z-20 flex flex-col items-center"
+                    style={writingMood === "sit" ? { top: "-16%" } : { top: "-32%" }}
                   >
                     <button
                       type="button"
