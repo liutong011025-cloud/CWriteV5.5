@@ -698,10 +698,35 @@ export default function Home() {
           language={language}
           user={user}
           onStartPlan={() => {
-            setJourneyActive(false)
-            setJourneySelection(null)
-            setWritingAssessment(null)
-            setStage("planTest")
+            // V2 设计：从首页直接进入地图，而不是先做测评问卷
+            // 初始化一次简单的写作旅程配置（默认 story + level 1），让地图可以渲染
+            setJourneyActive(true)
+            setJourneySelection({ type: "story", difficulty: 1 })
+            setWritingAssessment({
+              score: 0,
+              level: 1,
+              mapImageStatus: "idle",
+            })
+            // 清空当前 pin 和故事状态，进入一张空白地图
+            setCurrentPin(null)
+            setStoryState({ character: null, plot: null, structure: null, story: "" })
+            setBookReviewState({
+              reviewType: null,
+              bookTitle: null,
+              structure: null,
+              review: "",
+              bookCoverUrl: undefined,
+              bookSummary: undefined,
+            })
+            setLetterState({
+              recipient: null,
+              occasion: null,
+              guidance: null,
+              readerImageUrl: null,
+              sections: [],
+              letter: "",
+            })
+            setStage("journeyMap")
           }}
           onStartWrite={() => {
             setJourneyActive(false)
