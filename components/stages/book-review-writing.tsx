@@ -577,15 +577,15 @@ export default function BookReviewWriting({
                     <div className="absolute top-4 right-4 text-2xl opacity-20 animate-pulse">✨</div>
                   )}
 
-                  {/* 小熊位置微調面板：永遠顯示，方便你在頁面上直接調整百分比 */}
-                  <div className="absolute -bottom-10 right-0 rounded-md bg-white/90 px-2 py-1 text-[10px] text-gray-700 shadow-md space-x-2 whitespace-nowrap">
+                  {/* 小熊位置微調面板：永遠顯示，固定在頁面右下角避免被其他元素遮擋 */}
+                  <div className="fixed bottom-4 right-4 z-[9999] rounded-md bg-white/90 px-2 py-1 text-[10px] text-gray-700 shadow-md space-x-2 whitespace-nowrap">
                     <label>
                       sit:
                       <input
                         type="number"
                         value={debugTopSit}
                         onChange={(e) => setDebugTopSit(Number(e.target.value) || 0)}
-                        className="w-12 ml-1 border border-gray-300 rounded px-1"
+                        className="w-12 ml-1 border border-gray-300 rounded px-1 bg-white"
                       />
                       %
                     </label>
@@ -595,7 +595,7 @@ export default function BookReviewWriting({
                         type="number"
                         value={debugTopStand}
                         onChange={(e) => setDebugTopStand(Number(e.target.value) || 0)}
-                        className="w-12 ml-1 border border-gray-300 rounded px-1"
+                        className="w-12 ml-1 border border-gray-300 rounded px-1 bg-white"
                       />
                       %
                     </label>
@@ -605,7 +605,7 @@ export default function BookReviewWriting({
                         type="number"
                         value={debugTopHang}
                         onChange={(e) => setDebugTopHang(Number(e.target.value) || 0)}
-                        className="w-12 ml-1 border border-gray-300 rounded px-1"
+                        className="w-12 ml-1 border border-gray-300 rounded px-1 bg-white"
                       />
                       %
                     </label>
