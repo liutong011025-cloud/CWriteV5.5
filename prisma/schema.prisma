@@ -38,6 +38,10 @@ model UserProfile {
   email      String?
   grade      String?
   gender     String?
+  /// JSON 数组：最多 12 棵树，每棵 { id: number; stage: 1-6 }
+  trees      Json?
+  /// 上一次写作三指标，用于判断哪一项提升最大：{ vocabRichness, descriptiveAccuracy, logicalCoherence }
+  lastMetrics Json?
   createdAt  DateTime @default(now())
   updatedAt  DateTime @default(now()) @updatedAt
 
