@@ -99,10 +99,10 @@ export default function UserProfilePage({
   ]
 
   const [farmElementStates, setFarmElementStates] = useState<Record<FarmElementId, FarmElementState>>({
-    farmbacktomap: { x: 73.2, y: 42.2, scale: 1.35 },
-    farmsetting: { x: 33.8, y: 47.1, scale: 1.55 },
-    farmwrittingboard: { x: 60.9, y: 45.5, scale: 2.1 },
-    vistothersfarm: { x: 72.1, y: 35.1, scale: 1.4 },
+    farmbacktomap: { x: 74.1, y: 43.7, scale: 0.7 },
+    farmsetting: { x: 34.8, y: 50.0, scale: 0.8 },
+    farmwrittingboard: { x: 63.2, y: 50.6, scale: 1.1 },
+    vistothersfarm: { x: 73.1, y: 37.0, scale: 0.75 },
   })
 
   const farmImageRef = useRef<HTMLImageElement | null>(null)
@@ -318,21 +318,21 @@ export default function UserProfilePage({
               const state = farmElementStates[element.id]
               if (!state) return null
               const isHovered = hoveredFarmElement === element.id
-              const scale = state.scale * (isHovered ? 1.08 : 1)
-              const sizePercent = Math.min(25, 8 * scale)
+              const sizePercent = Math.min(25, 8 * state.scale)
               return (
                 <button
                   key={element.id}
                   type="button"
-                  className="absolute -translate-x-1/2 -translate-y-1/2 focus:outline-none"
+                  className="absolute -translate-x-1/2 -translate-y-1/2 focus:outline-none origin-center"
                   style={{
                     left: `${state.x}%`,
                     top: `${state.y}%`,
                     width: `${sizePercent}%`,
                     height: "auto",
                     aspectRatio: "1",
-                    transform: `translate(-50%, -50%)`,
-                    transition: draggingFarmElement === element.id ? "none" : "transform 150ms ease-out",
+                    transform: `translate(-50%, -50%) scale(${isHovered ? 1.08 : 1})`,
+                    transformOrigin: "center center",
+                    transition: draggingFarmElement === element.id ? "none" : "transform 0.25s ease-in-out",
                   }}
                   onMouseDown={(e) => {
                     e.preventDefault()
@@ -348,61 +348,12 @@ export default function UserProfilePage({
                   <img
                     src={element.imageSrc}
                     alt={element.label}
-                    className="w-full h-full object-contain select-none"
+                    className="w-full h-full object-contain select-none pointer-events-none"
                     draggable={false}
                   />
                 </button>
               )
             })}
-          </div>
-
-          {/* 測試用：右下角座標與縮放調整面板 */}
-          <div className="pointer-events-auto fixed bottom-4 right-4 z-50 w-80 max-w-[90vw] rounded-2xl bg-white/90 p-3 shadow-lg">
-            <p className="mb-2 text-[10px] font-hand text-gray-600">
-              My Farm 測試面板（僅開發時使用）
-            </p>
-            <div className="max-h-64 space-y-2 overflow-y-auto pr-1">
-              {farmElements.map((element) => {
-                const state = farmElementStates[element.id]
-                if (!state) return null
-                return (
-                  <div key={element.id} className="rounded-lg bg-gray-50 px-2 py-1.5">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="font-hand text-[11px] font-bold text-gray-800">
-                        {element.label}
-                      </span>
-                      <span className="font-hand text-[10px] text-gray-500">
-                        x: {state.x.toFixed(1)}%, y: {state.y.toFixed(1)}%
-                      </span>
-                    </div>
-                    <div className="mt-1 flex items-center gap-2">
-                      <span className="font-hand text-[10px] text-gray-500">scale</span>
-                      <input
-                        type="range"
-                        min={0.5}
-                        max={2.5}
-                        step={0.05}
-                        value={state.scale}
-                        onChange={(e) => {
-                          const nextScale = Number(e.target.value)
-                          setFarmElementStates((prev) => ({
-                            ...prev,
-                            [element.id]: {
-                              ...prev[element.id],
-                              scale: nextScale,
-                            },
-                          }))
-                        }}
-                        className="flex-1"
-                      />
-                      <span className="w-10 text-right font-hand text-[10px] text-gray-700">
-                        {state.scale.toFixed(2)}
-                      </span>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
           </div>
         </div>
 
