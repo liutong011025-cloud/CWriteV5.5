@@ -36,6 +36,21 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Fal 需要能從公網直接訪問的圖片 URL
+    // 如果傳進來的是類似 "/firstmap.png" 這種相對路徑，這裡補成完整的絕對 URL
+    let resolvedImageUrl = previousMapImageUrl
+    if (resolvedImageUrl.startsWith("/")) {
+      const host =
+        request.headers.get("x-forwarded-host") ||
+        request.headers.get("host") ||
+        ""
+      const proto = request.headers.get("x-forwarded-proto") || "https"
+
+      if (host) {
+        resolvedImageUrl = `${proto}://${host}${resolvedImageUrl}`
+      }
+    }
+
     const prompt = `
 You are updating a student's personal writing adventure map using image editing.
 
@@ -60,7 +75,7 @@ Very important:
     const result = await fal.subscribe(FAL_NANO_BANANA_EDIT_MODEL, {
       input: {
         prompt,
-        image_urls: [previousMapImageUrl],
+        image_urls: [resolvedImageUrl],
         // 可按需調整解析度與輸出格式
         resolution: "1K",
         output_format: "png",
