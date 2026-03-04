@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import {
   BookOpen,
@@ -47,6 +47,20 @@ interface UserProfilePageProps {
   recentGrowthDimension?: "vocab" | "detail" | "logic" | null
 }
 
+type FarmElementId = "farmbacktomap" | "farmsetting" | "farmwrittingboard" | "vistothersfarm" | "farmfile"
+
+interface FarmElementConfig {
+  id: FarmElementId
+  label: string
+  imageSrc: string
+}
+
+interface FarmElementState {
+  x: number
+  y: number
+  scale: number
+}
+
 export default function UserProfilePage({
   userId,
   userRole,
@@ -65,6 +79,59 @@ export default function UserProfilePage({
   const [loading, setLoading] = useState(true)
   const [forest, setForest] = useState<{ id: number; stage: number }[]>([])
   const [highlightTreeId, setHighlightTreeId] = useState<number | null>(null)
+  const farmContainerRef = useRef<HTMLDivElement | null>(null)
+  const [draggingFarmElement, setDraggingFarmElement] = useState<FarmElementId | null>(null)
+  const [hoveredFarmElement, setHoveredFarmElement] = useState<FarmElementId | null>(null)
+
+  const farmElements: FarmElementConfig[] = [
+    { id: "farmbacktomap", label: "Back to Map", imageSrc: "/farmbacktomap.png" },
+    { id: "farmsetting", label: "Settings", imageSrc: "/farmsetting.png" },
+    { id: "farmwrittingboard", label: "Writing Board", imageSrc: "/farmwrittingboard.png" },
+    { id: "vistothersfarm", label: "Visit Others' Farms", imageSrc: "/vistothersfarm.png" },
+    { id: "farmfile", label: "Work File", imageSrc: "/farmfile.png" },
+  ]
+
+  const [farmElementStates, setFarmElementStates] = useState<Record<FarmElementId, FarmElementState>>({
+    farmbacktomap: { x: 10, y: 10, scale: 1 },
+    farmsetting: { x: 90, y: 10, scale: 1 },
+    farmwrittingboard: { x: 50, y: 50, scale: 1 },
+    vistothersfarm: { x: 15, y: 80, scale: 1 },
+    farmfile: { x: 85, y: 80, scale: 1 },
+  })
+
+  useEffect(() => {
+    if (!draggingFarmElement) return
+
+    const handleMouseMove = (event: MouseEvent) => {
+      if (!farmContainerRef.current) return
+      const rect = farmContainerRef.current.getBoundingClientRect()
+      if (rect.width === 0 || rect.height === 0) return
+      const xPercent = ((event.clientX - rect.left) / rect.width) * 100
+      const yPercent = ((event.clientY - rect.top) / rect.height) * 100
+      const clampedX = Math.min(100, Math.max(0, xPercent))
+      const clampedY = Math.min(100, Math.max(0, yPercent))
+      setFarmElementStates((prev) => ({
+        ...prev,
+        [draggingFarmElement]: {
+          ...prev[draggingFarmElement],
+          x: clampedX,
+          y: clampedY,
+        },
+      }))
+    }
+
+    const handleMouseUp = () => {
+      setDraggingFarmElement(null)
+    }
+
+    window.addEventListener("mousemove", handleMouseMove)
+    window.addEventListener("mouseup", handleMouseUp)
+
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove)
+      window.removeEventListener("mouseup", handleMouseUp)
+    }
+  }, [draggingFarmElement])
 
   useEffect(() => {
     Promise.all([
@@ -196,59 +263,107 @@ export default function UserProfilePage({
         </div>
 
         <div className="grid gap-6 lg:grid-cols-3">
-          {/* Forest - 成长中的 12 棵树 */}
+          {/* My Farm - 測試版：在 farm.png 上拖動互動元素 */}
           <div className="lg:col-span-3 mb-4">
             <div className="rounded-2xl border-2 border-emerald-200/60 bg-gradient-to-b from-emerald-50/90 via-sky-50/80 to-emerald-100/70 p-6 shadow-lg backdrop-blur-sm">
               <div className="mb-3 flex items-center gap-2">
                 <Sparkles className="h-5 w-5 text-emerald-600" />
-                <h2 className="font-hand text-xl font-bold text-foreground">My Forest</h2>
+                <h2 className="font-hand text-xl font-bold text-foreground">My Farm (測試工具)</h2>
               </div>
               <p className="mb-4 font-hand text-xs text-muted-foreground">
-                每次完整完成一篇作品，你的森林里就会有一棵小树长高一节。
+                在下面的農場圖片上拖動圖標到正確位置，懸浮時會微微放大。座標和放大倍數會暫時保存在前端狀態，方便你先調試。
               </p>
-              <div className="grid grid-cols-3 gap-4">
-                {Array.from({ length: 12 }).map((_, index) => {
-                  const tree = forest[index]
-                  if (!tree) {
-                    return (
-                      <div
-                        key={index}
-                        className="aspect-[3/4] rounded-xl border border-emerald-200/60 bg-gradient-to-t from-emerald-200/80 via-emerald-100 to-sky-100/70 shadow-inner flex items-end justify-center overflow-hidden"
-                      >
-                        <div className="w-full h-1/4 bg-gradient-to-t from-emerald-500/80 via-emerald-400/60 to-transparent" />
+              <div
+                ref={farmContainerRef}
+                className="relative w-full aspect-[16/9] rounded-2xl overflow-hidden border border-emerald-300 bg-emerald-100/60 shadow-inner"
+              >
+                <img
+                  src="/farm.png"
+                  alt="My Farm Background"
+                  className="absolute inset-0 h-full w-full object-contain"
+                  draggable={false}
+                />
+
+                {farmElements.map((element) => {
+                  const state = farmElementStates[element.id]
+                  if (!state) return null
+                  const isHovered = hoveredFarmElement === element.id
+                  const scale = state.scale * (isHovered ? 1.08 : 1)
+                  return (
+                    <button
+                      key={element.id}
+                      type="button"
+                      className="absolute -translate-x-1/2 -translate-y-1/2 focus:outline-none"
+                      style={{
+                        left: `${state.x}%`,
+                        top: `${state.y}%`,
+                        transform: `translate(-50%, -50%) scale(${scale})`,
+                        transition: draggingFarmElement === element.id ? "none" : "transform 150ms ease-out",
+                      }}
+                      onMouseDown={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        setDraggingFarmElement(element.id)
+                      }}
+                      onMouseEnter={() => setHoveredFarmElement(element.id)}
+                      onMouseLeave={() => setHoveredFarmElement((prev) => (prev === element.id ? null : prev))}
+                      onClick={() => {
+                        // 目前只是測試：真正跳轉行為之後再接到 stage / 路由
+                        console.log("[MyFarm click]", element.id, farmElementStates[element.id])
+                      }}
+                    >
+                      <div className="rounded-xl bg-white/0 shadow-lg">
+                        <img
+                          src={element.imageSrc}
+                          alt={element.label}
+                          className="h-16 w-16 md:h-20 md:w-20 object-contain select-none"
+                          draggable={false}
+                        />
                       </div>
-                    )
-                  }
-                  const stage = Math.min(6, Math.max(1, tree.stage))
-                  const src = `/tree${stage}.png`
-                  const isHighlighted = tree.id === highlightTreeId
+                    </button>
+                  )
+                })}
+              </div>
+
+              {/* 右側簡單控制面板：顯示座標與縮放倍數，可微調 scale */}
+              <div className="mt-4 grid gap-3 md:grid-cols-2">
+                {farmElements.map((element) => {
+                  const state = farmElementStates[element.id]
+                  if (!state) return null
                   return (
                     <div
-                      key={tree.id}
-                      className={`aspect-[3/4] rounded-xl border bg-gradient-to-t from-emerald-200/80 via-emerald-100 to-sky-100/70 shadow-inner flex items-end justify-center overflow-hidden transition-transform duration-500 ${
-                        isHighlighted ? "border-emerald-400 shadow-[0_0_30px_rgba(16,185,129,0.7)] scale-105" : "border-emerald-200/60"
-                      }`}
+                      key={element.id}
+                      className="rounded-xl border border-emerald-200/80 bg-white/80 p-3 shadow-sm flex flex-col gap-2"
                     >
-                      <div className="relative w-full h-full flex items-end justify-center">
-                        <img
-                          src={src}
-                          alt={`Tree ${tree.id}`}
-                          className={`max-h-[80%] w-auto drop-shadow-lg transition-transform duration-500 ${
-                            isHighlighted ? "scale-110" : "scale-100"
-                          }`}
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-hand text-xs font-bold text-emerald-800">{element.label}</span>
+                        <span className="font-hand text-[10px] text-emerald-700">
+                          x: {state.x.toFixed(1)}%, y: {state.y.toFixed(1)}%
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-hand text-[10px] text-muted-foreground">scale</span>
+                        <input
+                          type="range"
+                          min={0.5}
+                          max={1.8}
+                          step={0.05}
+                          value={state.scale}
+                          onChange={(e) => {
+                            const nextScale = Number(e.target.value)
+                            setFarmElementStates((prev) => ({
+                              ...prev,
+                              [element.id]: {
+                                ...prev[element.id],
+                                scale: nextScale,
+                              },
+                            }))
+                          }}
+                          className="flex-1"
                         />
-                        {isHighlighted && (
-                          <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-                            <div className="h-20 w-20 rounded-full bg-emerald-200/40 blur-md animate-pulse" />
-                          </div>
-                        )}
-                        {isHighlighted && recentGrowthDimension && (
-                          <div className="pointer-events-none absolute top-2 left-2 rounded-full bg-white/80 px-2 py-0.5 text-[10px] font-hand text-emerald-700 shadow">
-                            {recentGrowthDimension === "vocab" && "Words ↑"}
-                            {recentGrowthDimension === "detail" && "Details ↑"}
-                            {recentGrowthDimension === "logic" && "Logic ↑"}
-                          </div>
-                        )}
+                        <span className="font-hand text-[10px] w-10 text-right text-emerald-800">
+                          {state.scale.toFixed(2)}
+                        </span>
                       </div>
                     </div>
                   )
