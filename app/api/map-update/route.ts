@@ -100,12 +100,6 @@ Very important:
     return NextResponse.json({
       imageUrl: firstImage.url as string,
       description: (data?.description as string) || "",
-      // 前端可用來更新本地狀態
-      scores: {
-        vocabRichness: vocabRichness ?? 0,
-        descriptiveAccuracy: descriptiveAccuracy ?? 0,
-        logicalCoherence: logicalCoherence ?? 0,
-      },
       topic,
       title,
       mapX,
