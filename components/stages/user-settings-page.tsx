@@ -14,7 +14,7 @@ interface UserSettingsPageProps {
   userId: string
   onBack: () => void
   onProfileUpdated?: (profile: { avatarUrl?: string | null; avatarEmoji?: string | null }) => void
-  /** 返回按鈕文字，例如「返回農場」 */
+  /** Back button label, e.g. "Back to Farm" */
   backLabel?: string
 }
 
