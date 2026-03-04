@@ -1055,23 +1055,6 @@ export default function Home() {
 
             if (journeyActive && user && currentPin && bookReviewState.review.trim().length > 0) {
               try {
-                const metricsRes = await fetch("/api/writing-metrics", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({
-                    text: bookReviewState.review,
-                    type: "review",
-                    user_id: user.username,
-                  }),
-                })
-                const metricsJson = await metricsRes.json()
-                const metrics = metricsJson.metrics || {
-                  vocabRichness: 40,
-                  descriptiveAccuracy: 40,
-                  logicalCoherence: 40,
-                }
-                await applyTreeGrowthFromMetrics(metrics)
-
                 const title = bookReviewState.bookTitle || "My Book Review"
                 const topic = bookReviewState.bookTitle || "book world"
                 const isFirstMap = !mapImageUrl
@@ -1082,11 +1065,17 @@ export default function Home() {
                   topic,
                   mapX: currentPin.x,
                   mapY: currentPin.y,
-                  scores: {
-                    vocabRichness: metrics.vocabRichness,
-                    descriptiveAccuracy: metrics.descriptiveAccuracy,
-                    logicalCoherence: metrics.logicalCoherence,
+                  reviewSummary: {
+                    bookTitle: bookReviewState.bookTitle,
+                    reviewType: bookReviewState.reviewType,
                   },
+                  mapPrompt: `Use the previous map image as a reference. At the student's starting position (x=${currentPin.x.toFixed(
+                    1,
+                  )}%, y=${currentPin.y.toFixed(
+                    1,
+                  )}%), add visual elements related to this book review (title: ${
+                    bookReviewState.bookTitle
+                  }, type: ${bookReviewState.reviewType}). Update the surrounding area so the map reflects this reading journey.`,
                 }
                 if (!isFirstMap) {
                   payload.previousMapImageUrl = mapImageUrl
@@ -1171,23 +1160,6 @@ export default function Home() {
 
             if (journeyActive && user && currentPin && bookReviewState.review.trim().length > 0) {
               try {
-                const metricsRes = await fetch("/api/writing-metrics", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({
-                    text: bookReviewState.review,
-                    type: "review",
-                    user_id: user.username,
-                  }),
-                })
-                const metricsJson = await metricsRes.json()
-                const metrics = metricsJson.metrics || {
-                  vocabRichness: 40,
-                  descriptiveAccuracy: 40,
-                  logicalCoherence: 40,
-                }
-                await applyTreeGrowthFromMetrics(metrics)
-
                 const title = bookReviewState.bookTitle || "My Book Review"
                 const topic = bookReviewState.bookTitle || "book world"
                 const isFirstMap = !mapImageUrl
@@ -1198,11 +1170,17 @@ export default function Home() {
                   topic,
                   mapX: currentPin.x,
                   mapY: currentPin.y,
-                  scores: {
-                    vocabRichness: metrics.vocabRichness,
-                    descriptiveAccuracy: metrics.descriptiveAccuracy,
-                    logicalCoherence: metrics.logicalCoherence,
+                  reviewSummary: {
+                    bookTitle: bookReviewState.bookTitle,
+                    reviewType: bookReviewState.reviewType,
                   },
+                  mapPrompt: `Use the previous map image as a reference. At the student's starting position (x=${currentPin.x.toFixed(
+                    1,
+                  )}%, y=${currentPin.y.toFixed(
+                    1,
+                  )}%), add visual elements related to this book review (title: ${
+                    bookReviewState.bookTitle
+                  }, type: ${bookReviewState.reviewType}). Update the surrounding area so the map reflects this reading journey.`,
                 }
                 if (!isFirstMap) {
                   payload.previousMapImageUrl = mapImageUrl
@@ -1400,10 +1378,19 @@ export default function Home() {
                     ? `${storyState.character.name}'s Story`
                     : "My Story"
 
-                const topic =
-                  storyState.plot?.setting && storyState.plot.setting.trim().length > 0
-                    ? storyState.plot.setting
-                    : "fantasy adventure"
+                const species = storyState.character?.species
+                const setting = storyState.plot?.setting
+                const structureType = storyState.structure?.type
+
+                const topic = setting && setting.trim().length > 0 ? setting : "fantasy adventure"
+
+                const storySummaryForMap = [
+                  species ? `Species: ${species}` : null,
+                  setting ? `Setting: ${setting}` : null,
+                  structureType ? `Structure: ${structureType}` : null,
+                ]
+                  .filter(Boolean)
+                  .join(" | ")
 
                 const isFirstMap = !mapImageUrl
                 const endpoint = isFirstMap ? "/api/map-generate" : "/api/map-update"
@@ -1418,6 +1405,18 @@ export default function Home() {
                     descriptiveAccuracy: metrics.descriptiveAccuracy,
                     logicalCoherence: metrics.logicalCoherence,
                   },
+                  storySummary: {
+                    species: species ?? null,
+                    setting: setting ?? null,
+                    structureType: structureType ?? null,
+                  },
+                  // 提示給 Fal / nanobanana2edit：參考舊地圖，在起點附近根據 Story Summary 做局部放射狀更新
+                  mapPrompt: `Use the previous map image as a reference. At the student's starting position (x=${currentPin.x.toFixed(
+                    1,
+                  )}%, y=${currentPin.y.toFixed(
+                    1,
+                  )}%), add design elements that match this story summary: ${storySummaryForMap ||
+                    "no details provided"}. Radially update and enrich the area around this point so the map reflects the new story.`,
                 }
                 if (!isFirstMap) {
                   payload.previousMapImageUrl = mapImageUrl
@@ -1436,7 +1435,10 @@ export default function Home() {
                   setMapFlags((prev) => [
                     ...prev,
                     {
-                      id: mapJson.userId && mapJson.title ? `${mapJson.userId}-${mapJson.title}-${Date.now()}` : `${Date.now()}`,
+                      id:
+                        mapJson.userId && mapJson.title
+                          ? `${mapJson.userId}-${mapJson.title}-${Date.now()}`
+                          : `${Date.now()}`,
                       x: mapJson.mapX ?? currentPin.x,
                       y: mapJson.mapY ?? currentPin.y,
                       title: mapJson.title || title,
@@ -1626,23 +1628,6 @@ export default function Home() {
 
             if (journeyActive && user && currentPin && letterState.letter.trim().length > 0) {
               try {
-                const metricsRes = await fetch("/api/writing-metrics", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({
-                    text: letterState.letter,
-                    type: "letter",
-                    user_id: user.username,
-                  }),
-                })
-                const metricsJson = await metricsRes.json()
-                const metrics = metricsJson.metrics || {
-                  vocabRichness: 40,
-                  descriptiveAccuracy: 40,
-                  logicalCoherence: 40,
-                }
-                await applyTreeGrowthFromMetrics(metrics)
-
                 const title = `Letter to ${letterState.recipient}`
                 const topic = letterState.occasion || `letter to ${letterState.recipient}`
 
@@ -1654,11 +1639,17 @@ export default function Home() {
                   topic,
                   mapX: currentPin.x,
                   mapY: currentPin.y,
-                  scores: {
-                    vocabRichness: metrics.vocabRichness,
-                    descriptiveAccuracy: metrics.descriptiveAccuracy,
-                    logicalCoherence: metrics.logicalCoherence,
+                  letterSummary: {
+                    recipient: letterState.recipient,
+                    occasion: letterState.occasion,
                   },
+                  mapPrompt: `Use the previous map image as a reference. At the student's starting position (x=${currentPin.x.toFixed(
+                    1,
+                  )}%, y=${currentPin.y.toFixed(
+                    1,
+                  )}%), add visual elements that match this letter (recipient: ${
+                    letterState.recipient
+                  }, occasion: ${letterState.occasion}). Update the surrounding area so the map reflects this letter journey.`,
                 }
                 if (!isFirstMap) {
                   payload.previousMapImageUrl = mapImageUrl
