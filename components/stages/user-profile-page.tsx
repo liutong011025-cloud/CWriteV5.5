@@ -100,6 +100,7 @@ export default function UserProfilePage({
   const [cagentSending, setCagentSending] = useState(false)
   const [cagentTriggerPosition, setCagentTriggerPosition] = useState({ x: 50, y: 42 })
   const [cagentBubblePosition, setCagentBubblePosition] = useState({ x: 56, y: 30 })
+  const [cagentHelloBubblePosition, setCagentHelloBubblePosition] = useState({ x: 48, y: 30 })
   const [showBubblePositionTool, setShowBubblePositionTool] = useState(false)
   const [cagentHoverTrigger, setCagentHoverTrigger] = useState(false)
 
@@ -576,13 +577,13 @@ export default function UserProfilePage({
               aria-label="Open Cagent"
             />
 
-            {/* Single bubble: shows "Hello there!" on hover over trigger, or conversation after click */}
+            {/* Single bubble: "Hello there!" uses left position, conversation uses cagentBubblePosition */}
             {(cagentHoverTrigger && !cagentBubbleOpen) || cagentBubbleOpen ? (
               <div
                 className="absolute z-50 max-w-xs rounded-2xl border border-purple-200 bg-gradient-to-br from-purple-50 via-pink-50 to-amber-50 px-4 py-3 shadow-xl"
                 style={{
-                  left: `${cagentBubblePosition.x}%`,
-                  top: `${cagentBubblePosition.y}%`,
+                  left: cagentBubbleOpen ? `${cagentBubblePosition.x}%` : `${cagentHelloBubblePosition.x}%`,
+                  top: cagentBubbleOpen ? `${cagentBubblePosition.y}%` : `${cagentHelloBubblePosition.y}%`,
                   transform: "translate(-50%, -100%)",
                 }}
               >
@@ -663,7 +664,7 @@ export default function UserProfilePage({
                     className="w-16 rounded border border-purple-200 px-1 py-0.5"
                   />
                 </div>
-                <p className="font-hand font-semibold text-purple-800 mt-2">Bubble position %</p>
+                <p className="font-hand font-semibold text-purple-800 mt-2">Bubble position % (conversation)</p>
                 <div className="flex gap-2 items-center">
                   <label className="font-hand">x</label>
                   <input
@@ -683,6 +684,29 @@ export default function UserProfilePage({
                     step={1}
                     value={cagentBubblePosition.y}
                     onChange={(e) => setCagentBubblePosition((p) => ({ ...p, y: Number(e.target.value) }))}
+                    className="w-16 rounded border border-purple-200 px-1 py-0.5"
+                  />
+                </div>
+                <p className="font-hand font-semibold text-purple-800 mt-2">Hello bubble position %</p>
+                <div className="flex gap-2 items-center">
+                  <label className="font-hand">x</label>
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    step={1}
+                    value={cagentHelloBubblePosition.x}
+                    onChange={(e) => setCagentHelloBubblePosition((p) => ({ ...p, x: Number(e.target.value) }))}
+                    className="w-16 rounded border border-purple-200 px-1 py-0.5"
+                  />
+                  <label className="font-hand">y</label>
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    step={1}
+                    value={cagentHelloBubblePosition.y}
+                    onChange={(e) => setCagentHelloBubblePosition((p) => ({ ...p, y: Number(e.target.value) }))}
                     className="w-16 rounded border border-purple-200 px-1 py-0.5"
                   />
                 </div>
