@@ -8,7 +8,6 @@ import type { Language, StoryState, BookReviewState, LetterState } from "@/app/p
 import type { JourneyType } from "@/components/stages/journey-ticket"
 import Antigravity from "@/components/effects/antigravity"
 import ShapeBlur from "@/components/effects/shape-blur"
-import SplashCursor from "@/components/effects/splash-cursor"
 
 export interface DramaProgress {
   hasDramaBook: boolean
@@ -117,7 +116,6 @@ export default function JourneyMap({
 
   return (
     <div className="min-h-screen relative overflow-hidden pt-0">
-      <SplashCursor />
       <img
         src={effectiveMapImageUrl}
         alt="Journey Map"
@@ -270,57 +268,7 @@ export default function JourneyMap({
             ))}
           </div>
 
-          <div className="w-full max-w-xs bg-white/90 backdrop-blur-md border-l border-white/60 shadow-2xl p-4 flex flex-col gap-4">
-            <div className="space-y-1">
-              <p className="text-xs font-semibold text-purple-700 uppercase tracking-wide">
-                Your Journey Map
-              </p>
-              <h2 className="text-lg font-bold text-gray-900">
-                Pick a starting point
-              </h2>
-              <p className="text-xs text-gray-600">
-                Click the pin box, then place a pin on the map. A START flag will appear there and lead you into your next writing journey.
-              </p>
-            </div>
-
-            <div className="space-y-3 text-xs">
-              <div className="space-y-1">
-                <div className="flex items-center justify-between">
-                  <span className="font-semibold text-gray-800">Vocabulary Richness</span>
-                  <span className="text-[11px] text-gray-500">More words → more colors</span>
-                </div>
-                <div className="h-2 w-full rounded-full bg-gray-200 overflow-hidden">
-                  <div className="h-full w-2/12 bg-gradient-to-r from-gray-300 via-sky-400 to-emerald-400" />
-                </div>
-              </div>
-
-              <div className="space-y-1">
-                <div className="flex items-center justify-between">
-                  <span className="font-semibold text-gray-800">Descriptive Accuracy</span>
-                  <span className="text-[11px] text-gray-500">More detail → clearer map</span>
-                </div>
-                <div className="h-2 w-full rounded-full bg-gray-200 overflow-hidden">
-                  <div className="h-full w-2/12 bg-gradient-to-r from-gray-400 via-indigo-400 to-purple-500" />
-                </div>
-              </div>
-
-              <div className="space-y-1">
-                <div className="flex items-center justify-between">
-                  <span className="font-semibold text-gray-800">Logical Coherence</span>
-                  <span className="text-[11px] text-gray-500">Better logic → tidy layout</span>
-                </div>
-                <div className="h-2 w-full rounded-full bg-gray-200 overflow-hidden">
-                  <div className="h-full w-2/12 bg-gradient-to-r from-slate-400 via-emerald-400 to-emerald-600" />
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-auto space-y-2">
-              <p className="text-[11px] text-gray-500 text-center">
-                Each time you finish a piece, we&apos;ll grow this map and add more flags to remember your journeys.
-              </p>
-            </div>
-          </div>
+          {/* 右側原說明面板已移除，保留空間以後可放其它內容 */}
         </div>
       </div>
     </div>
