@@ -1337,7 +1337,8 @@ export default function Home() {
                   })
 
                   const mapJson = await mapRes.json()
-                  if (mapRes.ok && mapJson.imageUrl) {
+                  // 明確檢查是否真正調到 Fal 並拿到圖片
+                  if (mapRes.ok && !mapJson.error && mapJson.imageUrl) {
                     setMapImageUrl(mapJson.imageUrl as string)
                     setMapFlags((prev) => [
                       ...prev,
@@ -1351,9 +1352,29 @@ export default function Home() {
                         title: mapJson.title || title,
                       },
                     ])
+                  } else {
+                    console.error("Map update after plot brainstorm failed:", {
+                      status: mapRes.status,
+                      body: mapJson,
+                    })
+                    if (typeof window !== "undefined") {
+                      const message =
+                        mapJson?.message ||
+                        mapJson?.error ||
+                        `Map service failed with status ${mapRes.status}.`
+                      // 如果後端因為 FAL_KEY 缺失等原因根本沒調到 Fal，mapJson.error 會是 map_unavailable
+                      window.alert(
+                        `Map image was NOT updated on Fal.\n\nReason: ${message}\n\nPlease check FAL_KEY / Fal dashboard.`
+                      )
+                    }
                   }
                 } catch (error) {
                   console.error("Error updating map after plot brainstorm:", error)
+                  if (typeof window !== "undefined") {
+                    window.alert(
+                      "Map image was NOT updated on Fal due to a network or server error.\n\n請查看瀏覽器 Console 以獲取詳細錯誤日誌。"
+                    )
+                  }
                 }
               }
 
