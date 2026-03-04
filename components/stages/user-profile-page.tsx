@@ -101,7 +101,6 @@ export default function UserProfilePage({
   const [cagentTriggerPosition, setCagentTriggerPosition] = useState({ x: 50, y: 42 })
   const [cagentBubblePosition, setCagentBubblePosition] = useState({ x: 56, y: 30 })
   const [cagentHelloBubblePosition, setCagentHelloBubblePosition] = useState({ x: 50, y: 32 })
-  const [showBubblePositionTool, setShowBubblePositionTool] = useState(false)
   const [cagentHoverTrigger, setCagentHoverTrigger] = useState(false)
 
   const farmElements: FarmElementConfig[] = [
@@ -627,91 +626,6 @@ export default function UserProfilePage({
                 )}
               </div>
             ) : null}
-          </div>
-
-          {/* Bubble position adjustment tool (farm) */}
-          <div className="fixed bottom-4 right-4 z-50 pointer-events-auto">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowBubblePositionTool((b) => !b)}
-              className="rounded-xl font-hand text-xs bg-white/90 shadow"
-            >
-              {showBubblePositionTool ? "Hide bubble position tool" : "Bubble position adjustment"}
-            </Button>
-            {showBubblePositionTool && (
-              <div className="mt-2 rounded-xl border border-purple-200 bg-white/95 p-3 space-y-2 text-xs shadow-lg">
-                <p className="font-hand font-semibold text-purple-800">Trigger (bear position) %</p>
-                <div className="flex gap-2 items-center">
-                  <label className="font-hand">x</label>
-                  <input
-                    type="number"
-                    min={0}
-                    max={100}
-                    step={1}
-                    value={cagentTriggerPosition.x}
-                    onChange={(e) => setCagentTriggerPosition((p) => ({ ...p, x: Number(e.target.value) }))}
-                    className="w-16 rounded border border-purple-200 px-1 py-0.5"
-                  />
-                  <label className="font-hand">y</label>
-                  <input
-                    type="number"
-                    min={0}
-                    max={100}
-                    step={1}
-                    value={cagentTriggerPosition.y}
-                    onChange={(e) => setCagentTriggerPosition((p) => ({ ...p, y: Number(e.target.value) }))}
-                    className="w-16 rounded border border-purple-200 px-1 py-0.5"
-                  />
-                </div>
-                <p className="font-hand font-semibold text-purple-800 mt-2">Bubble position % (conversation)</p>
-                <div className="flex gap-2 items-center">
-                  <label className="font-hand">x</label>
-                  <input
-                    type="number"
-                    min={0}
-                    max={100}
-                    step={1}
-                    value={cagentBubblePosition.x}
-                    onChange={(e) => setCagentBubblePosition((p) => ({ ...p, x: Number(e.target.value) }))}
-                    className="w-16 rounded border border-purple-200 px-1 py-0.5"
-                  />
-                  <label className="font-hand">y</label>
-                  <input
-                    type="number"
-                    min={0}
-                    max={100}
-                    step={1}
-                    value={cagentBubblePosition.y}
-                    onChange={(e) => setCagentBubblePosition((p) => ({ ...p, y: Number(e.target.value) }))}
-                    className="w-16 rounded border border-purple-200 px-1 py-0.5"
-                  />
-                </div>
-                <p className="font-hand font-semibold text-purple-800 mt-2">Hello bubble position %</p>
-                <div className="flex gap-2 items-center">
-                  <label className="font-hand">x</label>
-                  <input
-                    type="number"
-                    min={0}
-                    max={100}
-                    step={1}
-                    value={cagentHelloBubblePosition.x}
-                    onChange={(e) => setCagentHelloBubblePosition((p) => ({ ...p, x: Number(e.target.value) }))}
-                    className="w-16 rounded border border-purple-200 px-1 py-0.5"
-                  />
-                  <label className="font-hand">y</label>
-                  <input
-                    type="number"
-                    min={0}
-                    max={100}
-                    step={1}
-                    value={cagentHelloBubblePosition.y}
-                    onChange={(e) => setCagentHelloBubblePosition((p) => ({ ...p, y: Number(e.target.value) }))}
-                    className="w-16 rounded border border-purple-200 px-1 py-0.5"
-                  />
-                </div>
-              </div>
-            )}
           </div>
         </div>
 
