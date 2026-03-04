@@ -205,7 +205,10 @@ export default function JourneyMap({
           )}
 
           {/* 右下角：圖釘盒 box，點擊後拿起圖釘 */}
-          <div className="absolute right-6 bottom-6 z-20">
+          <div className="absolute right-6 bottom-6 z-20 flex flex-col items-center gap-1">
+            <p className="mb-1 text-sm md:text-base font-hand text-purple-900 text-center drop-shadow-[0_1px_1px_rgba(255,255,255,0.95)]">
+              Drop a pin on the map to start a new adventure!
+            </p>
             <button
               type="button"
               onMouseEnter={() => setIsHoveringBox(true)}
@@ -223,9 +226,6 @@ export default function JourneyMap({
                 draggable={false}
               />
             </button>
-            <p className="mt-1 text-xs font-hand text-purple-800 text-center drop-shadow-[0_1px_1px_rgba(255,255,255,0.9)]">
-              Drop a pin on the map to start a new adventure!
-            </p>
             {isHoveringBox && (
               <div className="absolute right-full mr-3 bottom-1/2 translate-y-1/2 rounded-xl border border-purple-200 bg-white/95 px-3 py-2 text-xs font-hand text-purple-800 shadow-lg max-w-xs">
                 Drag and place the pin to mark the starting point of your journey!
