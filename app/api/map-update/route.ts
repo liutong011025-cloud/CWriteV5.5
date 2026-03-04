@@ -63,9 +63,10 @@ Student's new writing step:
 - Virtual map coordinate for this step: (${mapX}, ${mapY})
 
 Task:
-- ONLY update a **small local patch** around that virtual coordinate (roughly a circle with radius about 5–8% of the map width).
+- Focus your main changes on a **small local patch** around that virtual coordinate (roughly a circle with radius about 5–8% of the map width).
 - Inside this small area, add or modify terrain, paths, rivers, buildings, plants, or other objects that clearly reflect this new topic.
-- Outside this small area, keep the previous map almost completely unchanged.
+- You may also sprinkle a few very small, subtle details related to this topic elsewhere on the map (for example, tiny props, hints of color, or distant shapes), but they should feel naturally integrated and not dominate the image.
+- Outside the local patch, the map should remain almost completely unchanged at a glance.
 
 Very important:
 - This MUST look like a natural evolution of the previous map, not a brand‑new style.
