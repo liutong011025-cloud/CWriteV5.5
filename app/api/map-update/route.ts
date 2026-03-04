@@ -63,9 +63,9 @@ Student's new writing step:
 - Virtual map coordinate for this step: (${mapX}, ${mapY})
 
 Task:
-- At the region around that virtual coordinate, add or modify a local scene so that it clearly reflects this new topic.
-- Use terrain, paths, rivers, buildings, plants, or other objects that match the story, but keep them consistent with the existing art style.
-- Slightly expand and enrich the surrounding area around this point, as if this part of the world has grown with the story.
+- ONLY update a **small local patch** around that virtual coordinate (roughly a circle with radius about 5–8% of the map width).
+- Inside this small area, add or modify terrain, paths, rivers, buildings, plants, or other objects that clearly reflect this new topic.
+- Outside this small area, keep the previous map almost completely unchanged.
 
 Very important:
 - This MUST look like a natural evolution of the previous map, not a brand‑new style.
