@@ -36,6 +36,8 @@ interface JourneyMapProps {
   onNavigate: (stage: string) => void
   onBack?: () => void
   onGoProfile?: () => void
+  overlayTitle?: string | null
+  hidePins?: boolean
 }
 
 interface MapFlag {
@@ -55,6 +57,8 @@ export default function JourneyMap({
   onNavigate,
   onBack,
   onGoProfile,
+  overlayTitle,
+  hidePins = false,
 }: JourneyMapProps) {
   const [internalPin, setInternalPin] = useState<{ x: number; y: number } | null>(pin ?? null)
   // 是否已在地圖上放置起點旗幟（還沒開始寫作）
@@ -171,19 +175,30 @@ export default function JourneyMap({
           )}
         </div>
 
+        <div className="pt-4 pb-2 text-center">
+          <h1 className="font-hand text-4xl md:text-5xl font-extrabold text-purple-900 drop-shadow-[0_2px_2px_rgba(255,255,255,0.9)]">
+            Your Writing Atlas
+          </h1>
+          {overlayTitle && (
+            <p className="mt-2 font-hand text-lg md:text-xl font-bold text-emerald-800 drop-shadow-[0_1px_1px_rgba(255,255,255,0.8)]">
+              {overlayTitle}
+            </p>
+          )}
+        </div>
+
         <div className="relative w-full h-[calc(100vh-120px)] flex">
           {/* 左上角：My Farm 房子按鈕 */}
           {onGoProfile && (
             <button
               type="button"
               onClick={onGoProfile}
-              className="absolute left-4 top-4 z-20 rounded-2xl bg-white/0 hover:bg-white/10 transition-transform duration-200"
+              className="absolute left-10 top-6 z-20 rounded-2xl bg-white/0 hover:bg-white/10 transition-transform duration-200"
               aria-label="Go to My Farm"
             >
               <img
                 src="/myfarm.png"
                 alt="My Farm"
-                className="w-28 h-auto object-contain drop-shadow-lg transition-transform duration-200 hover:scale-110"
+                className="w-40 h-auto object-contain drop-shadow-lg transition-transform duration-200 hover:scale-110"
                 draggable={false}
               />
             </button>
@@ -204,7 +219,7 @@ export default function JourneyMap({
               <img
                 src="/box.png"
                 alt="Pin box"
-                className="w-24 h-auto object-contain drop-shadow-lg transition-transform duration-200 hover:scale-110"
+                className="w-36 h-auto object-contain drop-shadow-lg transition-transform duration-200 hover:scale-110 motion-safe:animate-bounce"
                 draggable={false}
               />
             </button>
@@ -222,7 +237,7 @@ export default function JourneyMap({
               cursor: isHoldingPin ? 'url("/pin.png") 16 32, pointer' : "default",
             }}
           >
-            {pinPosition && (
+            {pinPosition && !hidePins && (
               <button
                 type="button"
                 onClick={handleStartJourney}
@@ -252,7 +267,8 @@ export default function JourneyMap({
               </button>
             )}
 
-            {flags.map((flag) => (
+            {!hidePins &&
+              flags.map((flag) => (
               <div
                 key={flag.id}
                 className="absolute -translate-x-1/2 -translate-y-full"
@@ -265,7 +281,7 @@ export default function JourneyMap({
                   </span>
                 </div>
               </div>
-            ))}
+              ))}
           </div>
 
           {/* 右側原說明面板已移除，保留空間以後可放其它內容 */}
