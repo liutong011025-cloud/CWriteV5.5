@@ -1295,8 +1295,6 @@ export default function Home() {
                   const species = storyState.character?.species
                   const characterName = storyState.character?.name
                   const setting = plot.setting
-                  const conflict = plot.conflict
-                  const goal = plot.goal
 
                   const topic = setting && setting.trim().length > 0 ? setting : "fantasy adventure"
 
@@ -1304,8 +1302,6 @@ export default function Home() {
                     characterName ? `Character: ${characterName}` : null,
                     species ? `Species: ${species}` : null,
                     setting ? `Setting: ${setting}` : null,
-                    conflict ? `Conflict: ${conflict}` : null,
-                    goal ? `Goal: ${goal}` : null,
                   ]
                     .filter(Boolean)
                     .join(" | ")
@@ -1328,8 +1324,6 @@ export default function Home() {
                       characterName: characterName ?? null,
                       species: species ?? null,
                       setting: setting ?? null,
-                      conflict: conflict ?? null,
-                      goal: goal ?? null,
                     },
                     previousMapImageUrl,
                     mapPrompt: `Use the previous map image as a reference. At the student's starting position (x=${currentPin.x.toFixed(
