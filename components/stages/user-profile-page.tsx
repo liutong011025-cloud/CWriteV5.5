@@ -102,8 +102,7 @@ export default function UserProfilePage({
   const [cagentBubblePosition, setCagentBubblePosition] = useState({ x: 56, y: 30 })
   const [cagentHelloBubblePosition, setCagentHelloBubblePosition] = useState({ x: 50, y: 32 })
   const [cagentHoverTrigger, setCagentHoverTrigger] = useState(false)
-  const [bearLogoPosition, setBearLogoPosition] = useState({ x: 50, y: 48, scale: 1, rotation: 0 })
-  const [showBearLogoTool, setShowBearLogoTool] = useState(false)
+  const [bearLogoPosition, setBearLogoPosition] = useState({ x: 49.7, y: 43.7, scale: 0.5, rotation: -11 })
 
   const farmElements: FarmElementConfig[] = [
     { id: "farmbacktomap", label: "Back to Map", imageSrc: "/farmbacktomap.png" },
@@ -647,80 +646,6 @@ export default function UserProfilePage({
               />
             </div>
           </div>
-        </div>
-
-        {/* Bear logo position tool */}
-        <div className="fixed bottom-4 right-4 z-50 pointer-events-auto">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowBearLogoTool((b) => !b)}
-            className="rounded-xl font-hand text-xs bg-white/90 shadow"
-          >
-            {showBearLogoTool ? "Hide logo position tool" : "Logo position tool"}
-          </Button>
-          {showBearLogoTool && (
-            <div className="mt-2 rounded-xl border border-purple-200 bg-white/95 p-3 space-y-2 text-xs shadow-lg">
-              <p className="font-hand font-semibold text-purple-800">Sweater logo position %</p>
-              <div className="flex gap-2 items-center">
-                <label className="font-hand">x</label>
-                <input
-                  type="number"
-                  min={0}
-                  max={100}
-                  step={0.5}
-                  value={bearLogoPosition.x}
-                  onChange={(e) => setBearLogoPosition((p) => ({ ...p, x: Number(e.target.value) }))}
-                  className="w-16 rounded border border-purple-200 px-1 py-0.5"
-                />
-                <label className="font-hand">y</label>
-                <input
-                  type="number"
-                  min={0}
-                  max={100}
-                  step={0.5}
-                  value={bearLogoPosition.y}
-                  onChange={(e) => setBearLogoPosition((p) => ({ ...p, y: Number(e.target.value) }))}
-                  className="w-16 rounded border border-purple-200 px-1 py-0.5"
-                />
-              </div>
-              <p className="font-hand font-semibold text-purple-800 mt-2">Sweater logo size & rotation</p>
-              <div className="flex flex-wrap gap-2 items-center">
-                <label className="font-hand">size</label>
-                <input
-                  type="number"
-                  min={0.2}
-                  max={3}
-                  step={0.1}
-                  value={bearLogoPosition.scale}
-                  onChange={(e) =>
-                    setBearLogoPosition((p) => ({
-                      ...p,
-                      scale: Number(e.target.value),
-                    }))
-                  }
-                  className="w-16 rounded border border-purple-200 px-1 py-0.5"
-                />
-                <span className="text-[10px] text-muted-foreground">× base</span>
-                <label className="font-hand ml-2">rotate</label>
-                <input
-                  type="number"
-                  min={-180}
-                  max={180}
-                  step={1}
-                  value={bearLogoPosition.rotation}
-                  onChange={(e) =>
-                    setBearLogoPosition((p) => ({
-                      ...p,
-                      rotation: Number(e.target.value),
-                    }))
-                  }
-                  className="w-20 rounded border border-purple-200 px-1 py-0.5"
-                />
-                <span className="text-[10px] text-muted-foreground">deg</span>
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Modal: selected review + work content */}
