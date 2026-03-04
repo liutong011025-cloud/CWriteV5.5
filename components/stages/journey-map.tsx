@@ -58,10 +58,15 @@ export default function JourneyMap({
   onGoProfile,
 }: JourneyMapProps) {
   const [internalPin, setInternalPin] = useState<{ x: number; y: number } | null>(pin ?? null)
-  const [isPlacingPin, setIsPlacingPin] = useState(true)
+  // 是否已在地圖上放置起點旗幟（還沒開始寫作）
+  const [isPlacingPin, setIsPlacingPin] = useState(false)
+  // 是否當前手上正「拿著」圖釘，準備放置
+  const [isHoldingPin, setIsHoldingPin] = useState(false)
+  const [isHoveringBox, setIsHoveringBox] = useState(false)
   const [flags] = useState<MapFlag[]>(mapFlags ?? [])
 
   const pinPosition = pin ?? internalPin
+  const effectiveMapImageUrl = mapImageUrl || "/firstmap.png"
 
   // 设置data-no-header属性，隐藏header
   useEffect(() => {
@@ -79,16 +84,18 @@ export default function JourneyMap({
   }, [])
 
   const handleMapClick = (event: React.MouseEvent<HTMLDivElement>) => {
-    if (!isPlacingPin) return
+    // 只有在手上拿著圖釘時，才能在地圖上放置起點
+    if (!isHoldingPin) return
     const rect = event.currentTarget.getBoundingClientRect()
     const xPercent = ((event.clientX - rect.left) / rect.width) * 100
     const yPercent = ((event.clientY - rect.top) / rect.height) * 100
     const nextPin = { x: xPercent, y: yPercent }
-    if (onPinChange) {
-      onPinChange(nextPin)
-    } else {
-      setInternalPin(nextPin)
-    }
+    if (onPinChange) onPinChange(nextPin)
+    else setInternalPin(nextPin)
+
+    // 放下圖釘之後，變成「已放置但還沒開始寫作」狀態
+    setIsHoldingPin(false)
+    setIsPlacingPin(true)
   }
 
   const handleStartJourney = () => {
@@ -111,25 +118,14 @@ export default function JourneyMap({
   return (
     <div className="min-h-screen relative overflow-hidden pt-0">
       <SplashCursor />
-      {mapImageUrl ? (
-        <>
-          <img
-            src={mapImageUrl}
-            alt="Journey Map"
-            className="absolute inset-0 w-full h-full object-cover"
-            style={{
-              imageRendering: 'high-quality',
-            }}
-          />
-        </>
-      ) : (
-        <div
-          className="absolute inset-0"
-          style={{
-            background: "linear-gradient(135deg, #020617 0%, #020617 35%, #1e293b 70%, #020617 100%)",
-          }}
-        ></div>
-      )}
+      <img
+        src={effectiveMapImageUrl}
+        alt="Journey Map"
+        className="absolute inset-0 w-full h-full object-cover"
+        style={{
+          imageRendering: "high-quality",
+        }}
+      />
       <div className="absolute inset-0 opacity-60">
         <Antigravity
           count={300}
@@ -178,32 +174,84 @@ export default function JourneyMap({
         </div>
 
         <div className="relative w-full h-[calc(100vh-120px)] flex">
+          {/* 左上角：My Farm 房子按鈕 */}
+          {onGoProfile && (
+            <button
+              type="button"
+              onClick={onGoProfile}
+              className="absolute left-4 top-4 z-20 rounded-2xl bg-white/0 hover:bg-white/10 transition-transform duration-200"
+              aria-label="Go to My Farm"
+            >
+              <img
+                src="/myfarm.png"
+                alt="My Farm"
+                className="w-28 h-auto object-contain drop-shadow-lg transition-transform duration-200 hover:scale-110"
+                draggable={false}
+              />
+            </button>
+          )}
+
+          {/* 右下角：圖釘盒 box，點擊後拿起圖釘 */}
+          <div className="absolute right-6 bottom-6 z-20">
+            <button
+              type="button"
+              onMouseEnter={() => setIsHoveringBox(true)}
+              onMouseLeave={() => setIsHoveringBox(false)}
+              onClick={() => {
+                setIsHoldingPin(true)
+              }}
+              className="relative rounded-2xl bg-white/0 hover:bg-white/10 transition-transform duration-200"
+              aria-label="Pick up pin"
+            >
+              <img
+                src="/box.png"
+                alt="Pin box"
+                className="w-24 h-auto object-contain drop-shadow-lg transition-transform duration-200 hover:scale-110"
+                draggable={false}
+              />
+            </button>
+            {isHoveringBox && (
+              <div className="absolute right-full mr-3 bottom-1/2 translate-y-1/2 rounded-xl border border-purple-200 bg-white/95 px-3 py-2 text-xs font-hand text-purple-800 shadow-lg max-w-xs">
+                Drag and place the pin to mark the starting point of your journey!
+              </div>
+            )}
+          </div>
+
           <div
             className="relative flex-1 h-full cursor-crosshair"
             onClick={handleMapClick}
+            style={{
+              cursor: isHoldingPin ? 'url("/pin.png") 16 32, pointer' : "default",
+            }}
           >
             {pinPosition && (
-              <div
-                className="absolute -translate-x-1/2 -translate-y-full"
+              <button
+                type="button"
+                onClick={handleStartJourney}
+                className="absolute -translate-x-1/2 -translate-y-full group"
                 style={{ left: `${pinPosition.x}%`, top: `${pinPosition.y}%` }}
+                aria-label="Start writing from here"
               >
                 <div className="flex flex-col items-center gap-1">
                   <Image
-                    src="/圖釘.png"
+                    src="/pin.png"
                     alt="Writing start pin"
                     width={40}
                     height={40}
-                    className="drop-shadow-lg"
+                    className="drop-shadow-lg group-hover:scale-110 transition-transform"
                     unoptimized
                   />
+                  <span className="inline-flex items-center gap-1 rounded-full bg-white/95 px-3 py-1 text-xs font-semibold text-purple-700 shadow">
+                    <Flag className="w-3 h-3 text-purple-500" />
+                    Start
+                  </span>
                   {isPlacingPin && (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-purple-700 shadow">
-                      <Wand2 className="w-3 h-3" />
-                      Tap Continue to start
+                    <span className="mt-1 text-[11px] text-white bg-purple-500/80 rounded-full px-3 py-0.5 shadow">
+                      Click the START flag to begin!
                     </span>
                   )}
                 </div>
-              </div>
+              </button>
             )}
 
             {flags.map((flag) => (
@@ -225,13 +273,13 @@ export default function JourneyMap({
           <div className="w-full max-w-xs bg-white/90 backdrop-blur-md border-l border-white/60 shadow-2xl p-4 flex flex-col gap-4">
             <div className="space-y-1">
               <p className="text-xs font-semibold text-purple-700 uppercase tracking-wide">
-                Your Writing Map
+                Your Journey Map
               </p>
               <h2 className="text-lg font-bold text-gray-900">
-                Vocabulary · Detail · Logic
+                Pick a starting point
               </h2>
               <p className="text-xs text-gray-600">
-                Drop a pin anywhere to start a new writing adventure. When you finish, this map will grow with colorful, sharper scenes.
+                Click the pin box, then place a pin on the map. A START flag will appear there and lead you into your next writing journey.
               </p>
             </div>
 
@@ -268,15 +316,8 @@ export default function JourneyMap({
             </div>
 
             <div className="mt-auto space-y-2">
-              <Button
-                onClick={handleStartJourney}
-                disabled={!pinPosition}
-                className="w-full bg-gradient-to-r from-purple-600 via-pink-600 to-orange-500 hover:opacity-90 text-white border-0 shadow-lg"
-              >
-                {pinPosition ? "Continue" : "Tap map to place a pin"}
-              </Button>
               <p className="text-[11px] text-gray-500 text-center">
-                Each time you finish a piece, we&apos;ll plant a new flag here and gently upgrade your map art.
+                Each time you finish a piece, we&apos;ll grow this map and add more flags to remember your journeys.
               </p>
             </div>
           </div>
