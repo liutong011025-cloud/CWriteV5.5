@@ -223,6 +223,9 @@ export default function JourneyMap({
                 draggable={false}
               />
             </button>
+            <p className="mt-1 text-xs font-hand text-purple-800 text-center drop-shadow-[0_1px_1px_rgba(255,255,255,0.9)]">
+              Drop a pin on the map to start a new adventure!
+            </p>
             {isHoveringBox && (
               <div className="absolute right-full mr-3 bottom-1/2 translate-y-1/2 rounded-xl border border-purple-200 bg-white/95 px-3 py-2 text-xs font-hand text-purple-800 shadow-lg max-w-xs">
                 Drag and place the pin to mark the starting point of your journey!
@@ -282,6 +285,24 @@ export default function JourneyMap({
                 </div>
               </div>
               ))}
+
+            {/* 完成後：在最後一次圖釘位置顯示可點擊的故事標題框 */}
+            {pinPosition && hidePins && overlayTitle && (
+              <button
+                type="button"
+                onClick={() => onNavigate("review")}
+                className="absolute -translate-x-1/2 -translate-y-full group"
+                style={{ left: `${pinPosition.x}%`, top: `${pinPosition.y}%` }}
+                aria-label="Open full story"
+              >
+                <div className="rounded-2xl bg-white/92 border-2 border-purple-300 px-4 py-2 shadow-xl flex items-center gap-2 group-hover:bg-purple-50 transition-colors">
+                  <Flag className="w-4 h-4 text-purple-500" />
+                  <span className="font-hand text-sm font-bold text-purple-800 whitespace-nowrap">
+                    {overlayTitle}
+                  </span>
+                </div>
+              </button>
+            )}
           </div>
 
           {/* 右側原說明面板已移除，保留空間以後可放其它內容 */}
