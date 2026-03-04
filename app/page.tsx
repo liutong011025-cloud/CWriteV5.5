@@ -1058,6 +1058,7 @@ export default function Home() {
                 const title = bookReviewState.bookTitle || "My Book Review"
                 const topic = bookReviewState.bookTitle || "book world"
                 const isFirstMap = !mapImageUrl
+                const previousMapImageUrl = isFirstMap ? "/firstmap.png" : mapImageUrl
                 const endpoint = isFirstMap ? "/api/map-generate" : "/api/map-update"
                 const payload: any = {
                   userId: user.username,
@@ -1069,6 +1070,7 @@ export default function Home() {
                     bookTitle: bookReviewState.bookTitle,
                     reviewType: bookReviewState.reviewType,
                   },
+                  previousMapImageUrl,
                   mapPrompt: `Use the previous map image as a reference. At the student's starting position (x=${currentPin.x.toFixed(
                     1,
                   )}%, y=${currentPin.y.toFixed(
@@ -1076,9 +1078,6 @@ export default function Home() {
                   )}%), add visual elements related to this book review (title: ${
                     bookReviewState.bookTitle
                   }, type: ${bookReviewState.reviewType}). Update the surrounding area so the map reflects this reading journey.`,
-                }
-                if (!isFirstMap) {
-                  payload.previousMapImageUrl = mapImageUrl
                 }
 
                 const mapRes = await fetch(endpoint, {
@@ -1163,6 +1162,7 @@ export default function Home() {
                 const title = bookReviewState.bookTitle || "My Book Review"
                 const topic = bookReviewState.bookTitle || "book world"
                 const isFirstMap = !mapImageUrl
+                const previousMapImageUrl = isFirstMap ? "/firstmap.png" : mapImageUrl
                 const endpoint = isFirstMap ? "/api/map-generate" : "/api/map-update"
                 const payload: any = {
                   userId: user.username,
@@ -1174,6 +1174,7 @@ export default function Home() {
                     bookTitle: bookReviewState.bookTitle,
                     reviewType: bookReviewState.reviewType,
                   },
+                  previousMapImageUrl,
                   mapPrompt: `Use the previous map image as a reference. At the student's starting position (x=${currentPin.x.toFixed(
                     1,
                   )}%, y=${currentPin.y.toFixed(
@@ -1181,9 +1182,6 @@ export default function Home() {
                   )}%), add visual elements related to this book review (title: ${
                     bookReviewState.bookTitle
                   }, type: ${bookReviewState.reviewType}). Update the surrounding area so the map reflects this reading journey.`,
-                }
-                if (!isFirstMap) {
-                  payload.previousMapImageUrl = mapImageUrl
                 }
 
                 const mapRes = await fetch(endpoint, {
@@ -1393,6 +1391,7 @@ export default function Home() {
                   .join(" | ")
 
                 const isFirstMap = !mapImageUrl
+                const previousMapImageUrl = isFirstMap ? "/firstmap.png" : mapImageUrl
                 const endpoint = isFirstMap ? "/api/map-generate" : "/api/map-update"
                 const payload: any = {
                   userId: user.username,
@@ -1400,16 +1399,12 @@ export default function Home() {
                   topic,
                   mapX: currentPin.x,
                   mapY: currentPin.y,
-                  scores: {
-                    vocabRichness: metrics.vocabRichness,
-                    descriptiveAccuracy: metrics.descriptiveAccuracy,
-                    logicalCoherence: metrics.logicalCoherence,
-                  },
                   storySummary: {
                     species: species ?? null,
                     setting: setting ?? null,
                     structureType: structureType ?? null,
                   },
+                  previousMapImageUrl,
                   // 提示給 Fal / nanobanana2edit：參考舊地圖，在起點附近根據 Story Summary 做局部放射狀更新
                   mapPrompt: `Use the previous map image as a reference. At the student's starting position (x=${currentPin.x.toFixed(
                     1,
@@ -1417,9 +1412,6 @@ export default function Home() {
                     1,
                   )}%), add design elements that match this story summary: ${storySummaryForMap ||
                     "no details provided"}. Radially update and enrich the area around this point so the map reflects the new story.`,
-                }
-                if (!isFirstMap) {
-                  payload.previousMapImageUrl = mapImageUrl
                 }
 
                 const mapRes = await fetch(endpoint, {
@@ -1632,6 +1624,7 @@ export default function Home() {
                 const topic = letterState.occasion || `letter to ${letterState.recipient}`
 
                 const isFirstMap = !mapImageUrl
+                const previousMapImageUrl = isFirstMap ? "/firstmap.png" : mapImageUrl
                 const endpoint = isFirstMap ? "/api/map-generate" : "/api/map-update"
                 const payload: any = {
                   userId: user.username,
@@ -1643,6 +1636,7 @@ export default function Home() {
                     recipient: letterState.recipient,
                     occasion: letterState.occasion,
                   },
+                  previousMapImageUrl,
                   mapPrompt: `Use the previous map image as a reference. At the student's starting position (x=${currentPin.x.toFixed(
                     1,
                   )}%, y=${currentPin.y.toFixed(
@@ -1650,9 +1644,6 @@ export default function Home() {
                   )}%), add visual elements that match this letter (recipient: ${
                     letterState.recipient
                   }, occasion: ${letterState.occasion}). Update the surrounding area so the map reflects this letter journey.`,
-                }
-                if (!isFirstMap) {
-                  payload.previousMapImageUrl = mapImageUrl
                 }
 
                 const mapRes = await fetch(endpoint, {
