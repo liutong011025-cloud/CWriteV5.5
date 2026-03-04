@@ -224,10 +224,10 @@ export default function UserProfilePage({
   return (
     <div
       className="min-h-screen bg-transparent"
-      style={{ paddingTop: "128px", paddingBottom: "0px" }}
+      style={{ paddingTop: 0, paddingBottom: 0 }}
       data-stage="userProfile"
     >
-      <div className="w-full h-[calc(100vh-128px)]">
+      <div className="w-full h-screen">
         {/* My Farm - 全屏農場圖片 + 可拖拽元素 */}
         <div ref={farmContainerRef} className="relative w-full h-full overflow-hidden">
           <img
@@ -264,17 +264,64 @@ export default function UserProfilePage({
                   console.log("[MyFarm click]", element.id, farmElementStates[element.id])
                 }}
               >
-                <div>
-                  <img
-                    src={element.imageSrc}
-                    alt={element.label}
-                    className="h-16 w-16 md:h-20 md:w-20 object-contain select-none"
-                    draggable={false}
-                  />
-                </div>
+                <img
+                  src={element.imageSrc}
+                  alt={element.label}
+                  className="h-16 w-16 md:h-20 md:w-20 object-contain select-none"
+                  draggable={false}
+                />
               </button>
             )
           })}
+
+          {/* 測試用：右下角座標與縮放調整面板 */}
+          <div className="pointer-events-auto fixed bottom-4 right-4 z-50 w-80 max-w-[90vw] rounded-2xl bg-white/90 p-3 shadow-lg">
+            <p className="mb-2 text-[10px] font-hand text-gray-600">
+              My Farm 測試面板（僅開發時使用）
+            </p>
+            <div className="max-h-64 space-y-2 overflow-y-auto pr-1">
+              {farmElements.map((element) => {
+                const state = farmElementStates[element.id]
+                if (!state) return null
+                return (
+                  <div key={element.id} className="rounded-lg bg-gray-50 px-2 py-1.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-hand text-[11px] font-bold text-gray-800">
+                        {element.label}
+                      </span>
+                      <span className="font-hand text-[10px] text-gray-500">
+                        x: {state.x.toFixed(1)}%, y: {state.y.toFixed(1)}%
+                      </span>
+                    </div>
+                    <div className="mt-1 flex items-center gap-2">
+                      <span className="font-hand text-[10px] text-gray-500">scale</span>
+                      <input
+                        type="range"
+                        min={0.5}
+                        max={2.5}
+                        step={0.05}
+                        value={state.scale}
+                        onChange={(e) => {
+                          const nextScale = Number(e.target.value)
+                          setFarmElementStates((prev) => ({
+                            ...prev,
+                            [element.id]: {
+                              ...prev[element.id],
+                              scale: nextScale,
+                            },
+                          }))
+                        }}
+                        className="flex-1"
+                      />
+                      <span className="w-10 text-right font-hand text-[10px] text-gray-700">
+                        {state.scale.toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
         </div>
 
         {/* Modal: selected review + work content（暫時用不到，但保留代碼） */}
