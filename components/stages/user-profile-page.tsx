@@ -98,10 +98,10 @@ export default function UserProfilePage({
   const [cagentLoading, setCagentLoading] = useState(false)
   const [cagentUserInput, setCagentUserInput] = useState("")
   const [cagentSending, setCagentSending] = useState(false)
-  const [cagentTriggerPosition, setCagentTriggerPosition] = useState({ x: 28, y: 58 })
-  const [cagentBubblePosition, setCagentBubblePosition] = useState({ x: 32, y: 42 })
+  const [cagentTriggerPosition, setCagentTriggerPosition] = useState({ x: 50, y: 42 })
+  const [cagentBubblePosition, setCagentBubblePosition] = useState({ x: 56, y: 30 })
   const [showBubblePositionTool, setShowBubblePositionTool] = useState(false)
-  const [showHelloTooltip, setShowHelloTooltip] = useState(false)
+  const [cagentHoverTrigger, setCagentHoverTrigger] = useState(false)
 
   const farmElements: FarmElementConfig[] = [
     { id: "farmbacktomap", label: "Back to Map", imageSrc: "/farmbacktomap.png" },
@@ -562,32 +562,22 @@ export default function UserProfilePage({
               )
             })}
 
-            {/* Cagent: trigger (bear is in background), hover "Hello there!", click opens dialogue bubble */}
-            <div
-              className="absolute"
+            {/* Cagent: invisible trigger (larger), no visible region; hover shows bubble with "Hello there!", click opens conversation in same bubble */}
+            <button
+              type="button"
+              className="absolute w-20 h-20 -translate-x-1/2 -translate-y-1/2 border-0 focus:outline-none bg-transparent cursor-pointer"
               style={{
                 left: `${cagentTriggerPosition.x}%`,
                 top: `${cagentTriggerPosition.y}%`,
-                transform: "translate(-50%, -50%)",
               }}
-            >
-              <button
-                type="button"
-                className="w-14 h-14 rounded-full border-0 focus:outline-none bg-transparent hover:bg-purple-100/30 transition-colors"
-                onMouseEnter={() => setShowHelloTooltip(true)}
-                onMouseLeave={() => setShowHelloTooltip(false)}
-                onClick={handleCagentOpen}
-                aria-label="Open Cagent"
-              />
-              {showHelloTooltip && (
-                <div className="absolute left-1/2 bottom-full mb-2 -translate-x-1/2 pointer-events-none z-50 rounded-xl border border-purple-200 bg-gradient-to-br from-purple-50 via-pink-50 to-amber-50 px-3 py-2 text-sm font-hand text-purple-800 shadow-lg whitespace-nowrap">
-                  Hello there!
-                </div>
-              )}
-            </div>
+              onMouseEnter={() => setCagentHoverTrigger(true)}
+              onMouseLeave={() => setCagentHoverTrigger(false)}
+              onClick={handleCagentOpen}
+              aria-label="Open Cagent"
+            />
 
-            {/* Cagent dialogue bubble (no bear image) */}
-            {cagentBubbleOpen && (
+            {/* Single bubble: shows "Hello there!" on hover over trigger, or conversation after click */}
+            {(cagentHoverTrigger && !cagentBubbleOpen) || cagentBubbleOpen ? (
               <div
                 className="absolute z-50 max-w-xs rounded-2xl border border-purple-200 bg-gradient-to-br from-purple-50 via-pink-50 to-amber-50 px-4 py-3 shadow-xl"
                 style={{
@@ -596,42 +586,46 @@ export default function UserProfilePage({
                   transform: "translate(-50%, -100%)",
                 }}
               >
-                <div className="flex items-start gap-2 text-sm text-foreground">
-                  <div className="flex-1">
-                    <p
-                      className="whitespace-pre-wrap"
-                      style={{ fontFamily: '"Comic Neue", var(--font-comic-neue), "Comic Sans MS", cursive' }}
-                    >
-                      {cagentLoading ? "..." : cagentGuideText || "Loading..."}
-                    </p>
-                    <form onSubmit={handleCagentSend} className="mt-3 flex gap-2">
-                      <input
-                        type="text"
-                        value={cagentUserInput}
-                        onChange={(e) => setCagentUserInput(e.target.value)}
-                        placeholder="Talk to Cagent..."
-                        className="flex-1 rounded-full border border-purple-200 bg-white/80 px-3 py-1 text-xs focus:outline-none focus:ring-0"
-                      />
-                      <button
-                        type="submit"
-                        disabled={!cagentUserInput.trim() || cagentSending}
-                        className="rounded-full bg-purple-500 px-3 py-1 text-xs font-semibold text-white hover:bg-purple-600 disabled:opacity-50"
+                {cagentBubbleOpen ? (
+                  <div className="flex items-start gap-2 text-sm text-foreground">
+                    <div className="flex-1">
+                      <p
+                        className="whitespace-pre-wrap"
+                        style={{ fontFamily: '"Comic Neue", var(--font-comic-neue), "Comic Sans MS", cursive' }}
                       >
-                        Send
-                      </button>
-                    </form>
+                        {cagentLoading ? "..." : cagentGuideText || "Loading..."}
+                      </p>
+                      <form onSubmit={handleCagentSend} className="mt-3 flex gap-2">
+                        <input
+                          type="text"
+                          value={cagentUserInput}
+                          onChange={(e) => setCagentUserInput(e.target.value)}
+                          placeholder="Talk to Cagent..."
+                          className="flex-1 rounded-full border border-purple-200 bg-white/80 px-3 py-1 text-xs focus:outline-none focus:ring-0"
+                        />
+                        <button
+                          type="submit"
+                          disabled={!cagentUserInput.trim() || cagentSending}
+                          className="rounded-full bg-purple-500 px-3 py-1 text-xs font-semibold text-white hover:bg-purple-600 disabled:opacity-50"
+                        >
+                          Send
+                        </button>
+                      </form>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setCagentBubbleOpen(false)}
+                      className="text-xs text-purple-500 hover:text-purple-700"
+                      aria-label="Close"
+                    >
+                      ✕
+                    </button>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setCagentBubbleOpen(false)}
-                    className="text-xs text-purple-500 hover:text-purple-700"
-                    aria-label="Close"
-                  >
-                    ✕
-                  </button>
-                </div>
+                ) : (
+                  <p className="font-hand text-sm text-purple-800">Hello there!</p>
+                )}
               </div>
-            )}
+            ) : null}
           </div>
 
           {/* Bubble position adjustment tool (farm) */}
