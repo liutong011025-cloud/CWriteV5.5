@@ -36,8 +36,6 @@ interface JourneyMapProps {
   onNavigate: (stage: string) => void
   onBack?: () => void
   onGoProfile?: () => void
-  overlayTitle?: string | null
-  hidePins?: boolean
 }
 
 interface MapFlag {
@@ -57,8 +55,6 @@ export default function JourneyMap({
   onNavigate,
   onBack,
   onGoProfile,
-  overlayTitle,
-  hidePins = false,
 }: JourneyMapProps) {
   const [internalPin, setInternalPin] = useState<{ x: number; y: number } | null>(pin ?? null)
   // 是否已在地圖上放置起點旗幟（還沒開始寫作）
@@ -179,11 +175,6 @@ export default function JourneyMap({
           <h1 className="font-hand text-4xl md:text-5xl font-extrabold text-purple-900 drop-shadow-[0_2px_2px_rgba(255,255,255,0.9)]">
             Your Writing Atlas
           </h1>
-          {overlayTitle && (
-            <p className="mt-2 font-hand text-lg md:text-xl font-bold text-emerald-800 drop-shadow-[0_1px_1px_rgba(255,255,255,0.8)]">
-              {overlayTitle}
-            </p>
-          )}
         </div>
 
         <div className="relative w-full h-[calc(100vh-120px)] flex">
@@ -248,7 +239,7 @@ export default function JourneyMap({
               cursor: isHoldingPin ? 'url("/pin.png") 16 32, pointer' : "default",
             }}
           >
-            {pinPosition && !hidePins && (
+            {pinPosition && (
               <button
                 type="button"
                 onClick={handleStartJourney}
@@ -278,39 +269,35 @@ export default function JourneyMap({
               </button>
             )}
 
-            {!hidePins &&
-              flags.map((flag) => (
-              <div
-                key={flag.id}
-                className="absolute -translate-x-1/2 -translate-y-full"
-                style={{ left: `${flag.x}%`, top: `${flag.y}%` }}
-              >
-                <div className="flex flex-col items-center gap-1">
-                  <Flag className="text-emerald-500 drop-shadow-lg" size={32} />
-                  <span className="max-w-[120px] truncate rounded-full bg-white/90 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 shadow">
-                    {flag.title}
-                  </span>
-                </div>
-              </div>
-              ))}
-
-            {/* 完成後：在最後一次圖釘位置顯示可點擊的故事標題框 */}
-            {pinPosition && hidePins && overlayTitle && (
-              <button
-                type="button"
-                onClick={() => onNavigate("review")}
-                className="absolute -translate-x-1/2 -translate-y-full group"
-                style={{ left: `${pinPosition.x}%`, top: `${pinPosition.y}%` }}
-                aria-label="Open full story"
-              >
-                <div className="rounded-2xl bg-white/92 border-2 border-purple-300 px-4 py-2 shadow-xl flex items-center gap-2 group-hover:bg-purple-50 transition-colors">
-                  <Flag className="w-4 h-4 text-purple-500" />
-                  <span className="font-hand text-sm font-bold text-purple-800 whitespace-nowrap">
-                    {overlayTitle}
-                  </span>
-                </div>
-              </button>
-            )}
+            {flags.map((flag, idx) => {
+              const colors = [
+                "from-pink-100 to-pink-200 border-pink-300 text-pink-800",
+                "from-purple-100 to-purple-200 border-purple-300 text-purple-800",
+                "from-emerald-100 to-emerald-200 border-emerald-300 text-emerald-800",
+                "from-sky-100 to-sky-200 border-sky-300 text-sky-800",
+                "from-amber-100 to-amber-200 border-amber-300 text-amber-800",
+              ]
+              const colorClass = colors[idx % colors.length]
+              return (
+                <button
+                  key={flag.id}
+                  type="button"
+                  onClick={() => onNavigate("review")}
+                  className="absolute -translate-x-1/2 -translate-y-full group"
+                  style={{ left: `${flag.x}%`, top: `${flag.y}%` }}
+                  aria-label={flag.title}
+                >
+                  <div
+                    className={`rounded-2xl bg-gradient-to-r ${colorClass} px-4 py-2 shadow-xl flex items-center gap-2 group-hover:brightness-110 transition`}
+                  >
+                    <Flag className="w-4 h-4 text-white drop-shadow" />
+                    <span className="font-hand text-sm font-bold text-white whitespace-nowrap drop-shadow">
+                      {flag.title}
+                    </span>
+                  </div>
+                </button>
+              )
+            })}
           </div>
 
           {/* 右側原說明面板已移除，保留空間以後可放其它內容 */}
