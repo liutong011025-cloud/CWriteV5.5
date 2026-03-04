@@ -98,11 +98,10 @@ export default function UserProfilePage({
   const [cagentLoading, setCagentLoading] = useState(false)
   const [cagentUserInput, setCagentUserInput] = useState("")
   const [cagentSending, setCagentSending] = useState(false)
-  const [cagentTriggerPosition, setCagentTriggerPosition] = useState({ x: 8, y: 85 })
-  const [cagentBubblePosition, setCagentBubblePosition] = useState({ x: 12, y: 60 })
+  const [cagentTriggerPosition, setCagentTriggerPosition] = useState({ x: 28, y: 58 })
+  const [cagentBubblePosition, setCagentBubblePosition] = useState({ x: 32, y: 42 })
   const [showBubblePositionTool, setShowBubblePositionTool] = useState(false)
   const [showHelloTooltip, setShowHelloTooltip] = useState(false)
-  const writingsLeftRef = useRef<HTMLDivElement | null>(null)
 
   const farmElements: FarmElementConfig[] = [
     { id: "farmbacktomap", label: "Back to Map", imageSrc: "/farmbacktomap.png" },
@@ -288,8 +287,8 @@ export default function UserProfilePage({
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            stage: "userProfileWritings",
-            contextSummary: "User is viewing their writings and reviews.",
+            stage: "userProfileFarm",
+            contextSummary: "User is on the farm interface (writing board, settings, etc.).",
             user_id: userId,
             userMessage: userMessage || null,
           }),
@@ -361,11 +360,11 @@ export default function UserProfilePage({
             className="mb-6 gap-1.5 rounded-xl font-hand text-sm"
           >
             <ChevronLeft className="h-4 w-4" />
-            返回農場
+            Back to Farm
           </Button>
           <div className="grid gap-6 lg:grid-cols-3">
-            {/* 左：My Writings + Cagent 觸發區與氣泡（無小熊圖） */}
-            <div ref={writingsLeftRef} className="lg:col-span-2 relative">
+            {/* Left: My Writings */}
+            <div className="lg:col-span-2">
               <div className="rounded-2xl border-2 border-amber-200/60 bg-white/80 p-6 shadow-lg backdrop-blur-sm">
                 <div className="mb-4 flex items-center gap-2">
                   <BookOpen className="h-6 w-6 text-amber-600" />
@@ -394,142 +393,9 @@ export default function UserProfilePage({
                   </ul>
                 )}
               </div>
-
-              {/* Cagent 觸發區：小熊位置（無圖），懸停顯示 Hello there!，點擊打開對話 */}
-              <div
-                className="absolute"
-                style={{
-                  left: `${cagentTriggerPosition.x}%`,
-                  top: `${cagentTriggerPosition.y}%`,
-                  transform: "translate(-50%, -50%)",
-                }}
-              >
-                <button
-                  type="button"
-                  className="w-14 h-14 rounded-full border-0 focus:outline-none bg-transparent hover:bg-purple-100/50 transition-colors"
-                  onMouseEnter={() => setShowHelloTooltip(true)}
-                  onMouseLeave={() => setShowHelloTooltip(false)}
-                  onClick={handleCagentOpen}
-                  aria-label="Open Cagent"
-                />
-                {showHelloTooltip && (
-                  <div className="absolute left-1/2 bottom-full mb-2 -translate-x-1/2 pointer-events-none z-50 rounded-xl border border-purple-200 bg-gradient-to-br from-purple-50 via-pink-50 to-amber-50 px-3 py-2 text-sm font-hand text-purple-800 shadow-lg whitespace-nowrap">
-                    Hello there!
-                  </div>
-                )}
-              </div>
-
-              {/* Cagent 氣泡（僅文字，無小熊） */}
-              {cagentBubbleOpen && (
-                <div
-                  className="absolute z-50 max-w-xs rounded-2xl border border-purple-200 bg-gradient-to-br from-purple-50 via-pink-50 to-amber-50 px-4 py-3 shadow-xl"
-                  style={{
-                    left: `${cagentBubblePosition.x}%`,
-                    top: `${cagentBubblePosition.y}%`,
-                    transform: "translateY(-100%)",
-                  }}
-                >
-                  <div className="flex items-start gap-2 text-sm text-foreground">
-                    <div className="flex-1">
-                      <p
-                        className="whitespace-pre-wrap"
-                        style={{ fontFamily: '"Comic Neue", var(--font-comic-neue), "Comic Sans MS", cursive' }}
-                      >
-                        {cagentLoading ? "..." : cagentGuideText || "Loading..."}
-                      </p>
-                      <form onSubmit={handleCagentSend} className="mt-3 flex gap-2">
-                        <input
-                          type="text"
-                          value={cagentUserInput}
-                          onChange={(e) => setCagentUserInput(e.target.value)}
-                          placeholder="Talk to Cagent..."
-                          className="flex-1 rounded-full border border-purple-200 bg-white/80 px-3 py-1 text-xs focus:outline-none focus:ring-0"
-                        />
-                        <button
-                          type="submit"
-                          disabled={!cagentUserInput.trim() || cagentSending}
-                          className="rounded-full bg-purple-500 px-3 py-1 text-xs font-semibold text-white hover:bg-purple-600 disabled:opacity-50"
-                        >
-                          Send
-                        </button>
-                      </form>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setCagentBubbleOpen(false)}
-                      className="text-xs text-purple-500 hover:text-purple-700"
-                      aria-label="Close"
-                    >
-                      ✕
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* 氣泡位置調整工具 */}
-              <div className="mt-4">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowBubblePositionTool((b) => !b)}
-                  className="rounded-xl font-hand text-xs"
-                >
-                  {showBubblePositionTool ? "隱藏氣泡位置調整" : "氣泡位置調整"}
-                </Button>
-                {showBubblePositionTool && (
-                  <div className="mt-2 rounded-xl border border-purple-200 bg-white/90 p-3 space-y-2 text-xs">
-                    <p className="font-hand font-semibold text-purple-800">觸發區（小熊位置） %</p>
-                    <div className="flex gap-2 items-center">
-                      <label className="font-hand">x</label>
-                      <input
-                        type="number"
-                        min={0}
-                        max={100}
-                        step={1}
-                        value={cagentTriggerPosition.x}
-                        onChange={(e) => setCagentTriggerPosition((p) => ({ ...p, x: Number(e.target.value) }))}
-                        className="w-16 rounded border border-purple-200 px-1 py-0.5"
-                      />
-                      <label className="font-hand">y</label>
-                      <input
-                        type="number"
-                        min={0}
-                        max={100}
-                        step={1}
-                        value={cagentTriggerPosition.y}
-                        onChange={(e) => setCagentTriggerPosition((p) => ({ ...p, y: Number(e.target.value) }))}
-                        className="w-16 rounded border border-purple-200 px-1 py-0.5"
-                      />
-                    </div>
-                    <p className="font-hand font-semibold text-purple-800 mt-2">氣泡位置 %</p>
-                    <div className="flex gap-2 items-center">
-                      <label className="font-hand">x</label>
-                      <input
-                        type="number"
-                        min={0}
-                        max={100}
-                        step={1}
-                        value={cagentBubblePosition.x}
-                        onChange={(e) => setCagentBubblePosition((p) => ({ ...p, x: Number(e.target.value) }))}
-                        className="w-16 rounded border border-purple-200 px-1 py-0.5"
-                      />
-                      <label className="font-hand">y</label>
-                      <input
-                        type="number"
-                        min={0}
-                        max={100}
-                        step={1}
-                        value={cagentBubblePosition.y}
-                        onChange={(e) => setCagentBubblePosition((p) => ({ ...p, y: Number(e.target.value) }))}
-                        className="w-16 rounded border border-purple-200 px-1 py-0.5"
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
             </div>
 
-            {/* 右：Teacher Reviews & Peer Reviews */}
+            {/* Right: Teacher Reviews & Peer Reviews */}
             <div className="space-y-6">
               <div className="rounded-2xl border-2 border-blue-200/60 bg-white/80 p-5 shadow-lg backdrop-blur-sm">
                 <div className="mb-3 flex items-center gap-2">
@@ -695,10 +561,143 @@ export default function UserProfilePage({
                 </button>
               )
             })}
+
+            {/* Cagent: trigger (bear is in background), hover "Hello there!", click opens dialogue bubble */}
+            <div
+              className="absolute"
+              style={{
+                left: `${cagentTriggerPosition.x}%`,
+                top: `${cagentTriggerPosition.y}%`,
+                transform: "translate(-50%, -50%)",
+              }}
+            >
+              <button
+                type="button"
+                className="w-14 h-14 rounded-full border-0 focus:outline-none bg-transparent hover:bg-purple-100/30 transition-colors"
+                onMouseEnter={() => setShowHelloTooltip(true)}
+                onMouseLeave={() => setShowHelloTooltip(false)}
+                onClick={handleCagentOpen}
+                aria-label="Open Cagent"
+              />
+              {showHelloTooltip && (
+                <div className="absolute left-1/2 bottom-full mb-2 -translate-x-1/2 pointer-events-none z-50 rounded-xl border border-purple-200 bg-gradient-to-br from-purple-50 via-pink-50 to-amber-50 px-3 py-2 text-sm font-hand text-purple-800 shadow-lg whitespace-nowrap">
+                  Hello there!
+                </div>
+              )}
+            </div>
+
+            {/* Cagent dialogue bubble (no bear image) */}
+            {cagentBubbleOpen && (
+              <div
+                className="absolute z-50 max-w-xs rounded-2xl border border-purple-200 bg-gradient-to-br from-purple-50 via-pink-50 to-amber-50 px-4 py-3 shadow-xl"
+                style={{
+                  left: `${cagentBubblePosition.x}%`,
+                  top: `${cagentBubblePosition.y}%`,
+                  transform: "translate(-50%, -100%)",
+                }}
+              >
+                <div className="flex items-start gap-2 text-sm text-foreground">
+                  <div className="flex-1">
+                    <p
+                      className="whitespace-pre-wrap"
+                      style={{ fontFamily: '"Comic Neue", var(--font-comic-neue), "Comic Sans MS", cursive' }}
+                    >
+                      {cagentLoading ? "..." : cagentGuideText || "Loading..."}
+                    </p>
+                    <form onSubmit={handleCagentSend} className="mt-3 flex gap-2">
+                      <input
+                        type="text"
+                        value={cagentUserInput}
+                        onChange={(e) => setCagentUserInput(e.target.value)}
+                        placeholder="Talk to Cagent..."
+                        className="flex-1 rounded-full border border-purple-200 bg-white/80 px-3 py-1 text-xs focus:outline-none focus:ring-0"
+                      />
+                      <button
+                        type="submit"
+                        disabled={!cagentUserInput.trim() || cagentSending}
+                        className="rounded-full bg-purple-500 px-3 py-1 text-xs font-semibold text-white hover:bg-purple-600 disabled:opacity-50"
+                      >
+                        Send
+                      </button>
+                    </form>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setCagentBubbleOpen(false)}
+                    className="text-xs text-purple-500 hover:text-purple-700"
+                    aria-label="Close"
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Bubble position adjustment tool (farm) */}
+          <div className="fixed bottom-4 right-4 z-50 pointer-events-auto">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowBubblePositionTool((b) => !b)}
+              className="rounded-xl font-hand text-xs bg-white/90 shadow"
+            >
+              {showBubblePositionTool ? "Hide bubble position tool" : "Bubble position adjustment"}
+            </Button>
+            {showBubblePositionTool && (
+              <div className="mt-2 rounded-xl border border-purple-200 bg-white/95 p-3 space-y-2 text-xs shadow-lg">
+                <p className="font-hand font-semibold text-purple-800">Trigger (bear position) %</p>
+                <div className="flex gap-2 items-center">
+                  <label className="font-hand">x</label>
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    step={1}
+                    value={cagentTriggerPosition.x}
+                    onChange={(e) => setCagentTriggerPosition((p) => ({ ...p, x: Number(e.target.value) }))}
+                    className="w-16 rounded border border-purple-200 px-1 py-0.5"
+                  />
+                  <label className="font-hand">y</label>
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    step={1}
+                    value={cagentTriggerPosition.y}
+                    onChange={(e) => setCagentTriggerPosition((p) => ({ ...p, y: Number(e.target.value) }))}
+                    className="w-16 rounded border border-purple-200 px-1 py-0.5"
+                  />
+                </div>
+                <p className="font-hand font-semibold text-purple-800 mt-2">Bubble position %</p>
+                <div className="flex gap-2 items-center">
+                  <label className="font-hand">x</label>
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    step={1}
+                    value={cagentBubblePosition.x}
+                    onChange={(e) => setCagentBubblePosition((p) => ({ ...p, x: Number(e.target.value) }))}
+                    className="w-16 rounded border border-purple-200 px-1 py-0.5"
+                  />
+                  <label className="font-hand">y</label>
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    step={1}
+                    value={cagentBubblePosition.y}
+                    onChange={(e) => setCagentBubblePosition((p) => ({ ...p, y: Number(e.target.value) }))}
+                    className="w-16 rounded border border-purple-200 px-1 py-0.5"
+                  />
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Modal: selected review + work content（暫時用不到，但保留代碼） */}
+        {/* Modal: selected review + work content */}
         {false && selectedReview && (
           <div
             className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
