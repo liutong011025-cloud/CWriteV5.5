@@ -47,12 +47,20 @@ interface UserProfilePageProps {
   recentGrowthDimension?: "vocab" | "detail" | "logic" | null
 }
 
-type FarmElementId = "farmbacktomap" | "farmsetting" | "farmwrittingboard" | "vistothersfarm" | "farmfile"
+type FarmElementId = "farmbacktomap" | "farmsetting" | "farmwrittingboard" | "vistothersfarm"
 
 interface FarmElementConfig {
   id: FarmElementId
   label: string
   imageSrc: string
+}
+
+/** 背景圖在容器內實際顯示的區域（object-contain 後的矩形），用於鎖定元素與背景的相對位置 */
+interface ImageOverlayRect {
+  left: number
+  top: number
+  width: number
+  height: number
 }
 
 interface FarmElementState {
@@ -88,26 +96,79 @@ export default function UserProfilePage({
     { id: "farmsetting", label: "Settings", imageSrc: "/farmsetting.png" },
     { id: "farmwrittingboard", label: "Writing Board", imageSrc: "/farmwritingboard.png" },
     { id: "vistothersfarm", label: "Visit Others' Farms", imageSrc: "/visitothersfarm.png" },
-    { id: "farmfile", label: "Work File", imageSrc: "/farmfile.png" },
   ]
 
   const [farmElementStates, setFarmElementStates] = useState<Record<FarmElementId, FarmElementState>>({
-    farmbacktomap: { x: 10, y: 10, scale: 1.5 },
-    farmsetting: { x: 22.1, y: 47.4, scale: 1.55 },
-    farmwrittingboard: { x: 50, y: 50, scale: 1 },
-    vistothersfarm: { x: 15, y: 80, scale: 1 },
-    farmfile: { x: 85, y: 80, scale: 1 },
+    farmbacktomap: { x: 73.2, y: 42.2, scale: 1.35 },
+    farmsetting: { x: 33.8, y: 47.1, scale: 1.55 },
+    farmwrittingboard: { x: 60.9, y: 45.5, scale: 2.1 },
+    vistothersfarm: { x: 72.1, y: 35.1, scale: 1.4 },
   })
+
+  const farmImageRef = useRef<HTMLImageElement | null>(null)
+  const [imageOverlayRect, setImageOverlayRect] = useState<ImageOverlayRect | null>(null)
+  const imageOverlayRectRef = useRef<ImageOverlayRect | null>(null)
+  imageOverlayRectRef.current = imageOverlayRect
+
+  const updateImageOverlayRect = () => {
+    const container = farmContainerRef.current
+    const img = farmImageRef.current
+    if (!container || !img) return
+    const cr = container.getBoundingClientRect()
+    const ir = img.getBoundingClientRect()
+    setImageOverlayRect({
+      left: ir.left - cr.left,
+      top: ir.top - cr.top,
+      width: ir.width,
+      height: ir.height,
+    })
+  }
+
+  useEffect(() => {
+    const container = farmContainerRef.current
+    const img = farmImageRef.current
+    if (!img || !container) return
+    if (img.complete) updateImageOverlayRect()
+    img.addEventListener("load", updateImageOverlayRect)
+    window.addEventListener("resize", updateImageOverlayRect)
+    const vv = typeof window !== "undefined" ? window.visualViewport : null
+    if (vv) {
+      vv.addEventListener("resize", updateImageOverlayRect)
+      vv.addEventListener("scroll", updateImageOverlayRect)
+    }
+    const ro = new ResizeObserver(updateImageOverlayRect)
+    ro.observe(container)
+    return () => {
+      img.removeEventListener("load", updateImageOverlayRect)
+      window.removeEventListener("resize", updateImageOverlayRect)
+      if (vv) {
+        vv.removeEventListener("resize", updateImageOverlayRect)
+        vv.removeEventListener("scroll", updateImageOverlayRect)
+      }
+      ro.disconnect()
+    }
+  }, [])
+
 
   useEffect(() => {
     if (!draggingFarmElement) return
 
     const handleMouseMove = (event: MouseEvent) => {
-      if (!farmContainerRef.current) return
-      const rect = farmContainerRef.current.getBoundingClientRect()
-      if (rect.width === 0 || rect.height === 0) return
-      const xPercent = ((event.clientX - rect.left) / rect.width) * 100
-      const yPercent = ((event.clientY - rect.top) / rect.height) * 100
+      const container = farmContainerRef.current
+      const overlay = imageOverlayRectRef.current
+      if (!container) return
+      const cr = container.getBoundingClientRect()
+      let xPercent: number
+      let yPercent: number
+      if (overlay && overlay.width > 0 && overlay.height > 0) {
+        const imgLeft = cr.left + overlay.left
+        const imgTop = cr.top + overlay.top
+        xPercent = ((event.clientX - imgLeft) / overlay.width) * 100
+        yPercent = ((event.clientY - imgTop) / overlay.height) * 100
+      } else {
+        xPercent = ((event.clientX - cr.left) / cr.width) * 100
+        yPercent = ((event.clientY - cr.top) / cr.height) * 100
+      }
       const clampedX = Math.min(100, Math.max(0, xPercent))
       const clampedY = Math.min(100, Math.max(0, yPercent))
       setFarmElementStates((prev) => ({
@@ -231,48 +292,69 @@ export default function UserProfilePage({
         {/* My Farm - 全屏農場圖片 + 可拖拽元素 */}
         <div ref={farmContainerRef} className="relative w-full h-full overflow-hidden">
           <img
+            ref={farmImageRef}
             src="/farm.png"
             alt="My Farm Background"
             className="absolute inset-0 h-full w-full object-contain"
             draggable={false}
           />
 
-          {farmElements.map((element) => {
-            const state = farmElementStates[element.id]
-            if (!state) return null
-            const isHovered = hoveredFarmElement === element.id
-            const scale = state.scale * (isHovered ? 1.08 : 1)
-            return (
-              <button
-                key={element.id}
-                type="button"
-                className="absolute -translate-x-1/2 -translate-y-1/2 focus:outline-none"
-                style={{
-                  left: `${state.x}%`,
-                  top: `${state.y}%`,
-                  transform: `translate(-50%, -50%) scale(${scale})`,
-                  transition: draggingFarmElement === element.id ? "none" : "transform 150ms ease-out",
-                }}
-                onMouseDown={(e) => {
-                  e.preventDefault()
-                  e.stopPropagation()
-                  setDraggingFarmElement(element.id)
-                }}
-                onMouseEnter={() => setHoveredFarmElement(element.id)}
-                onMouseLeave={() => setHoveredFarmElement((prev) => (prev === element.id ? null : prev))}
-                onClick={() => {
-                  console.log("[MyFarm click]", element.id, farmElementStates[element.id])
-                }}
-              >
-                <img
-                  src={element.imageSrc}
-                  alt={element.label}
-                  className="h-16 w-16 md:h-20 md:w-20 object-contain select-none"
-                  draggable={false}
-                />
-              </button>
-            )
-          })}
+          {/* 疊在背景圖實際顯示區域上，使元素座標與大小都相對背景圖，瀏覽器縮放時一齊變化 */}
+          <div
+            className="absolute pointer-events-none"
+            style={
+              imageOverlayRect
+                ? {
+                    left: imageOverlayRect.left,
+                    top: imageOverlayRect.top,
+                    width: imageOverlayRect.width,
+                    height: imageOverlayRect.height,
+                    pointerEvents: "auto",
+                  }
+                : { left: 0, top: 0, right: 0, bottom: 0, width: "100%", height: "100%", pointerEvents: "auto" }
+            }
+          >
+            {farmElements.map((element) => {
+              const state = farmElementStates[element.id]
+              if (!state) return null
+              const isHovered = hoveredFarmElement === element.id
+              const scale = state.scale * (isHovered ? 1.08 : 1)
+              const sizePercent = Math.min(25, 8 * scale)
+              return (
+                <button
+                  key={element.id}
+                  type="button"
+                  className="absolute -translate-x-1/2 -translate-y-1/2 focus:outline-none"
+                  style={{
+                    left: `${state.x}%`,
+                    top: `${state.y}%`,
+                    width: `${sizePercent}%`,
+                    height: "auto",
+                    aspectRatio: "1",
+                    transform: `translate(-50%, -50%)`,
+                    transition: draggingFarmElement === element.id ? "none" : "transform 150ms ease-out",
+                  }}
+                  onMouseDown={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    setDraggingFarmElement(element.id)
+                  }}
+                  onMouseEnter={() => setHoveredFarmElement(element.id)}
+                  onMouseLeave={() => setHoveredFarmElement((prev) => (prev === element.id ? null : prev))}
+                  onClick={() => {
+                    console.log("[MyFarm click]", element.id, farmElementStates[element.id])
+                  }}
+                >
+                  <img
+                    src={element.imageSrc}
+                    alt={element.label}
+                    className="w-full h-full object-contain select-none"
+                    draggable={false}
+                  />
+                </button>
+              )
+            })}
+          </div>
 
           {/* 測試用：右下角座標與縮放調整面板 */}
           <div className="pointer-events-auto fixed bottom-4 right-4 z-50 w-80 max-w-[90vw] rounded-2xl bg-white/90 p-3 shadow-lg">
