@@ -161,6 +161,8 @@ export default function Home() {
   const [lastMetrics, setLastMetrics] = useState<WritingMetricsSnapshot | null>(null)
   // 最近一次长高的树 + 对应维度，供 Profile 页面做施法特效
   const [lastGrownTree, setLastGrownTree] = useState<{ treeId: number; dimension: TreeGrowthDimension } | null>(null)
+  const [mapOverlayTitle, setMapOverlayTitle] = useState<string | null>(null)
+  const [hideMapPins, setHideMapPins] = useState(false)
 
   // Hydration safety: only use store-derived progress after mount
   const [isReady, setIsReady] = useState(false)
@@ -749,6 +751,8 @@ export default function Home() {
               level: result.level,
               mapImageStatus: "idle",
             })
+            setMapOverlayTitle(null)
+            setHideMapPins(false)
             setStage("journeyTicket")
           }}
         />
@@ -763,12 +767,16 @@ export default function Home() {
           onBack={() => {
             setJourneyActive(false)
             setJourneySelection(null)
+            setMapOverlayTitle(null)
+            setHideMapPins(false)
             setStage("home")
           }}
           onStart={({ type, difficulty }) => {
             setJourneySelection({ type, difficulty })
             setJourneyActive(true)
             setCurrentPin(null)
+            setMapOverlayTitle(null)
+            setHideMapPins(false)
             if (type === "story") {
               setStoryState({ character: null, plot: null, structure: null, story: "" })
             } else if (type === "bookReview") {
@@ -809,6 +817,8 @@ export default function Home() {
           dramaProgress={journeySelection.type === "drama" ? dramaProgress : undefined}
           poetryProgress={journeySelection.type === "poetry" ? poetryProgress : undefined}
           noAi={user.noAi}
+          overlayTitle={mapOverlayTitle}
+          hidePins={hideMapPins}
           onBack={() => setStage("journeyTicket")}
           onNavigate={(targetStage) => {
             setStage(targetStage as any)
@@ -1540,6 +1550,14 @@ export default function Home() {
               } catch (error) {
                 console.error("Error updating map after story completion:", error)
               }
+            }
+
+            if (journeyActive) {
+              const name = storyState.character?.name?.trim() || "My"
+              const setting = storyState.plot?.setting?.trim()
+              const settingText = setting && setting.toLowerCase() !== "unknown" ? setting : "adventure"
+              setMapOverlayTitle(`${name}'s ${settingText} adventure`)
+              setHideMapPins(true)
             }
 
             setStoryState({ character: null, plot: null, structure: null, story: "" })
