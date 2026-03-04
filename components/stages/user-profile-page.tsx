@@ -223,50 +223,13 @@ export default function UserProfilePage({
 
   return (
     <div
-      className="min-h-screen bg-gradient-to-b from-amber-50/90 via-white to-purple-50/80"
-      style={{ paddingTop: "128px", paddingBottom: "120px" }}
+      className="min-h-screen bg-transparent"
+      style={{ paddingTop: "128px", paddingBottom: "0px" }}
       data-stage="userProfile"
     >
-            <div className="mx-auto max-w-6xl px-4 py-6">
-        {/* Top bar */}
-        <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onBack}
-            className="gap-1.5 rounded-xl font-hand text-sm"
-          >
-            <ChevronLeft className="h-4 w-4" />
-            Back
-          </Button>
-          <div className="flex items-center gap-3">
-            <Avatar className="h-12 w-12 rounded-2xl border-2 border-primary/20 shadow-lg">
-              <AvatarImage src={avatarUrl || undefined} alt={userId} />
-              <AvatarFallback className="rounded-2xl bg-primary/10 text-lg text-primary">
-                {avatarEmoji || userId.slice(0, 2).toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
-            <div>
-              <p className="font-hand text-lg font-bold text-foreground">{userId}</p>
-              <p className="font-hand text-xs text-muted-foreground">My writings & reviews</p>
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onOpenSettings}
-              className="gap-1.5 rounded-xl font-hand border-primary/30"
-            >
-              <Settings className="h-4 w-4" />
-              Settings
-            </Button>
-          </div>
-        </div>
-
-        {/* My Farm - 測試版：全屏農場圖片 + 可拖拽元素 */}
-        <div
-          ref={farmContainerRef}
-          className="relative w-full h-[calc(100vh-200px)] rounded-2xl overflow-hidden border-2 border-emerald-300 bg-emerald-100/60 shadow-inner"
-        >
+      <div className="w-full h-[calc(100vh-128px)]">
+        {/* My Farm - 全屏農場圖片 + 可拖拽元素 */}
+        <div ref={farmContainerRef} className="relative w-full h-full overflow-hidden">
           <img
             src="/farm.png"
             alt="My Farm Background"
@@ -301,7 +264,7 @@ export default function UserProfilePage({
                   console.log("[MyFarm click]", element.id, farmElementStates[element.id])
                 }}
               >
-                <div className="rounded-xl bg-white/0 shadow-lg">
+                <div>
                   <img
                     src={element.imageSrc}
                     alt={element.label}
