@@ -14,6 +14,11 @@ type MapUpdateRequestBody = {
    * 首次生成時可以傳入一張預設的空白地圖 URL。
    */
   previousMapImageUrl: string
+  storySummary?: {
+    characterName?: string | null
+    species?: string | null
+    setting?: string | null
+  } | null
 }
 
 export async function POST(request: NextRequest) {
@@ -27,7 +32,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = (await request.json()) as MapUpdateRequestBody
-    const { userId, title, topic, mapX, mapY, previousMapImageUrl } = body
+    const { userId, title, topic, mapX, mapY, previousMapImageUrl, storySummary } = body
 
     if (!userId || !topic || !previousMapImageUrl) {
       return NextResponse.json(
@@ -51,6 +56,10 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    const characterName = storySummary?.characterName || null
+    const species = storySummary?.species || null
+    const detailedSetting = storySummary?.setting || null
+
     const prompt = `
 You are updating a student's personal writing adventure map using image editing.
 
@@ -59,17 +68,22 @@ Base image:
 
 Student's new writing step:
 - Title: "${title || "Untitled"}"
+- Character: "${characterName || "Unknown hero"}" (species: "${species || "unknown creature"}")
 - Topic / Setting: "${topic}"
-- Virtual map coordinate for this step: (${mapX}, ${mapY})
+- Virtual map coordinate for this step (normalized 0–100): (${mapX}, ${mapY})
+
+Story details (for inspiration only, do not render text):
+- Setting detail: "${detailedSetting || topic || "unspecified"}"
 
 Task:
-- Focus your main changes on a **small local patch** around that virtual coordinate (roughly a circle with radius about 5–8% of the map width).
-- Inside this small area, add or modify terrain, paths, rivers, buildings, plants, or other objects that clearly reflect this new topic.
-- You may also sprinkle a few very small, subtle details related to this topic elsewhere on the map (for example, tiny props, hints of color, or distant shapes), but they should feel naturally integrated and not dominate the image.
+- Focus your main new visual content on a **small local patch** centered near that virtual coordinate (roughly a circle with radius about 5–8% of the map width). The main focal point of the update should feel close to this location.
+- Inside this small area, add or modify terrain, paths, rivers, buildings, plants, or other objects that clearly reflect this new topic and the character's journey.
+- You may also sprinkle a few very small, subtle details related to this topic elsewhere on the map (for example, tiny props, hints of color, or distant shapes), but they should feel naturally integrated and must not dominate the image.
 - Outside the local patch, the map should remain almost completely unchanged at a glance.
 
 Very important:
 - This MUST look like a natural evolution of the previous map, not a brand‑new style.
+- Keep the same overall palette, camera angle, and rendering style as the base image.
 - Do NOT add UI, text labels, or logos. Leave space so the interface can overlay flags or titles later.
 `.trim()
 
