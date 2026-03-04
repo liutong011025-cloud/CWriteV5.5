@@ -1524,6 +1524,7 @@ export default function Home() {
       {stage === "userSettings" && user && (
         <UserSettingsPage
           userId={user.username}
+          backLabel="返回農場"
           onBack={() => setStage("userProfile")}
           onProfileUpdated={(profile) => {
             setHeaderUserInfo((prev) => (prev ? { ...prev, ...profile } : null))
