@@ -14,12 +14,15 @@ interface UserSettingsPageProps {
   userId: string
   onBack: () => void
   onProfileUpdated?: (profile: { avatarUrl?: string | null; avatarEmoji?: string | null }) => void
+  /** 返回按鈕文字，例如「返回農場」 */
+  backLabel?: string
 }
 
 export default function UserSettingsPage({
   userId,
   onBack,
   onProfileUpdated,
+  backLabel = "Back",
 }: UserSettingsPageProps) {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
   const [avatarEmoji, setAvatarEmoji] = useState<string | null>(null)
@@ -142,7 +145,7 @@ export default function UserSettingsPage({
       <div className="mx-auto max-w-2xl px-4 py-8">
         <Button variant="ghost" size="sm" onClick={onBack} className="mb-6 gap-1.5 rounded-xl font-hand">
           <ChevronLeft className="h-4 w-4" />
-          Back
+          {backLabel}
         </Button>
 
         <div className="space-y-8 rounded-2xl border-2 border-amber-200/60 bg-white/90 p-6 shadow-lg">
