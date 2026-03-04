@@ -1,0 +1,108 @@
+import { NextRequest, NextResponse } from "next/server"
+import { fal } from "@fal-ai/client"
+
+const FAL_NANO_BANANA_EDIT_MODEL = "fal-ai/nano-banana-2/edit"
+
+type MapUpdateRequestBody = {
+  userId: string
+  title: string
+  topic: string
+  mapX: number
+  mapY: number
+  /**
+   * 上一張地圖圖片的 URL。
+   * 首次生成時可以傳入一張預設的空白地圖 URL。
+   */
+  previousMapImageUrl: string
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    if (!process.env.FAL_KEY) {
+      console.error("[map-update] FAL_KEY not configured")
+      return NextResponse.json(
+        { error: "map_unavailable", message: "Map is resting. Try again later." },
+        { status: 200 }
+      )
+    }
+
+    const body = (await request.json()) as MapUpdateRequestBody
+    const { userId, title, topic, mapX, mapY, previousMapImageUrl } = body
+
+    if (!userId || !topic || !previousMapImageUrl) {
+      return NextResponse.json(
+        { error: "bad_request", message: "Missing userId, topic, or previousMapImageUrl." },
+        { status: 400 }
+      )
+    }
+
+    const prompt = `
+You are updating a student's personal writing adventure map using image editing.
+
+Base image:
+- Use the provided previous map image strictly as the base. Preserve its overall style, camera angle and layout.
+
+Student's new writing step:
+- Title: "${title || "Untitled"}"
+- Topic / Setting: "${topic}"
+- Virtual map coordinate for this step: (${mapX}, ${mapY})
+
+Task:
+- At the region around that virtual coordinate, add or modify a local scene so that it clearly reflects this new topic.
+- Use terrain, paths, rivers, buildings, plants, or other objects that match the story, but keep them consistent with the existing art style.
+- Slightly expand and enrich the surrounding area around this point, as if this part of the world has grown with the story.
+
+Very important:
+- This MUST look like a natural evolution of the previous map, not a brand‑new style.
+- Do NOT add UI, text labels, or logos. Leave space so the interface can overlay flags or titles later.
+`.trim()
+
+    const result = await fal.subscribe(FAL_NANO_BANANA_EDIT_MODEL, {
+      input: {
+        prompt,
+        image_urls: [previousMapImageUrl],
+        // 可按需調整解析度與輸出格式
+        resolution: "1K",
+        output_format: "png",
+        num_images: 1,
+        limit_generations: true,
+        safety_tolerance: "4",
+      },
+      logs: false,
+    })
+
+    const data: any = result.data
+    const firstImage = data?.images?.[0]
+
+    if (!firstImage?.url) {
+      console.error("[map-update] Fal response missing image URL", data)
+      return NextResponse.json(
+        { error: "map_unavailable", message: "Could not update map image." },
+        { status: 200 }
+      )
+    }
+
+    return NextResponse.json({
+      imageUrl: firstImage.url as string,
+      description: (data?.description as string) || "",
+      // 前端可用來更新本地狀態
+      scores: {
+        vocabRichness: vocabRichness ?? 0,
+        descriptiveAccuracy: descriptiveAccuracy ?? 0,
+        logicalCoherence: logicalCoherence ?? 0,
+      },
+      topic,
+      title,
+      mapX,
+      mapY,
+      userId,
+    })
+  } catch (error) {
+    console.error("[map-update] Error:", error)
+    return NextResponse.json(
+      { error: "map_unavailable", message: "Something went wrong updating the map." },
+      { status: 200 }
+    )
+  }
+}
+
