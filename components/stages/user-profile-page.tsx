@@ -100,7 +100,7 @@ export default function UserProfilePage({
   const [cagentSending, setCagentSending] = useState(false)
   const [cagentTriggerPosition, setCagentTriggerPosition] = useState({ x: 50, y: 42 })
   const [cagentBubblePosition, setCagentBubblePosition] = useState({ x: 56, y: 30 })
-  const [cagentHelloBubblePosition, setCagentHelloBubblePosition] = useState({ x: 48, y: 30 })
+  const [cagentHelloBubblePosition, setCagentHelloBubblePosition] = useState({ x: 50, y: 32 })
   const [showBubblePositionTool, setShowBubblePositionTool] = useState(false)
   const [cagentHoverTrigger, setCagentHoverTrigger] = useState(false)
 
