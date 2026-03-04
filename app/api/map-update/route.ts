@@ -66,18 +66,21 @@ You are updating a student's personal writing adventure map using image editing.
 Base image:
 - Use the provided previous map image strictly as the base. Preserve its overall style, camera angle and layout.
 
+Coordinate system (very important for placement):
+- Treat the map as a 2D canvas where (0, 0) is the TOP‑LEFT corner and (100, 100) is the BOTTOM‑RIGHT corner.
+- The student's new step is centered near (${mapX}, ${mapY}) in this normalized coordinate system. Place the MAIN new visual focus close to this point.
+
 Student's new writing step:
 - Title: "${title || "Untitled"}"
 - Character: "${characterName || "Unknown hero"}" (species: "${species || "unknown creature"}")
 - Topic / Setting: "${topic}"
-- Virtual map coordinate for this step (normalized 0–100): (${mapX}, ${mapY})
 
 Story details (for inspiration only, do not render text):
 - Setting detail: "${detailedSetting || topic || "unspecified"}"
 
 Task:
-- Focus your main new visual content on a **small local patch** centered near that virtual coordinate (roughly a circle with radius about 5–8% of the map width). The main focal point of the update should feel close to this location.
-- Inside this small area, add or modify terrain, paths, rivers, buildings, plants, or other objects that clearly reflect this new topic and the character's journey.
+- Focus your main new visual content on a **small local patch** centered very close to (${mapX}, ${mapY}), roughly a circle with radius about 3–5% of the map width. The strongest new shapes and colors should sit in this patch.
+- Inside this small area, add or modify terrain, paths, rivers, buildings, plants, or other objects that clearly reflect this new topic and the character's journey, but keep these additions relatively small in scale compared to the whole map.
 - You may also sprinkle a few very small, subtle details related to this topic elsewhere on the map (for example, tiny props, hints of color, or distant shapes), but they should feel naturally integrated and must not dominate the image.
 - Outside the local patch, the map should remain almost completely unchanged at a glance.
 
