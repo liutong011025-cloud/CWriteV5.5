@@ -102,6 +102,8 @@ export default function UserProfilePage({
   const [cagentBubblePosition, setCagentBubblePosition] = useState({ x: 56, y: 30 })
   const [cagentHelloBubblePosition, setCagentHelloBubblePosition] = useState({ x: 50, y: 32 })
   const [cagentHoverTrigger, setCagentHoverTrigger] = useState(false)
+  const [bearLogoPosition, setBearLogoPosition] = useState({ x: 50, y: 48 })
+  const [showBearLogoTool, setShowBearLogoTool] = useState(false)
 
   const farmElements: FarmElementConfig[] = [
     { id: "farmbacktomap", label: "Back to Map", imageSrc: "/farmbacktomap.png" },
@@ -626,7 +628,63 @@ export default function UserProfilePage({
                 )}
               </div>
             ) : null}
+
+            {/* Bear sweater logo overlay (whitelogo.png) */}
+            <div
+              className="pointer-events-none absolute z-40"
+              style={{
+                left: `${bearLogoPosition.x}%`,
+                top: `${bearLogoPosition.y}%`,
+                transform: "translate(-50%, -50%)",
+              }}
+            >
+              <img
+                src="/whitelogo.png"
+                alt="Sweater logo"
+                className="w-10 h-10 object-contain select-none"
+                draggable={false}
+              />
+            </div>
           </div>
+        </div>
+
+        {/* Bear logo position tool */}
+        <div className="fixed bottom-4 right-4 z-50 pointer-events-auto">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowBearLogoTool((b) => !b)}
+            className="rounded-xl font-hand text-xs bg-white/90 shadow"
+          >
+            {showBearLogoTool ? "Hide logo position tool" : "Logo position tool"}
+          </Button>
+          {showBearLogoTool && (
+            <div className="mt-2 rounded-xl border border-purple-200 bg-white/95 p-3 space-y-2 text-xs shadow-lg">
+              <p className="font-hand font-semibold text-purple-800">Sweater logo position %</p>
+              <div className="flex gap-2 items-center">
+                <label className="font-hand">x</label>
+                <input
+                  type="number"
+                  min={0}
+                  max={100}
+                  step={0.5}
+                  value={bearLogoPosition.x}
+                  onChange={(e) => setBearLogoPosition((p) => ({ ...p, x: Number(e.target.value) }))}
+                  className="w-16 rounded border border-purple-200 px-1 py-0.5"
+                />
+                <label className="font-hand">y</label>
+                <input
+                  type="number"
+                  min={0}
+                  max={100}
+                  step={0.5}
+                  value={bearLogoPosition.y}
+                  onChange={(e) => setBearLogoPosition((p) => ({ ...p, y: Number(e.target.value) }))}
+                  className="w-16 rounded border border-purple-200 px-1 py-0.5"
+                />
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Modal: selected review + work content */}
