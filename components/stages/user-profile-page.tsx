@@ -86,14 +86,14 @@ export default function UserProfilePage({
   const farmElements: FarmElementConfig[] = [
     { id: "farmbacktomap", label: "Back to Map", imageSrc: "/farmbacktomap.png" },
     { id: "farmsetting", label: "Settings", imageSrc: "/farmsetting.png" },
-    { id: "farmwrittingboard", label: "Writing Board", imageSrc: "/farmwrittingboard.png" },
-    { id: "vistothersfarm", label: "Visit Others' Farms", imageSrc: "/vistothersfarm.png" },
+    { id: "farmwrittingboard", label: "Writing Board", imageSrc: "/farmwritingboard.png" },
+    { id: "vistothersfarm", label: "Visit Others' Farms", imageSrc: "/visitothersfarm.png" },
     { id: "farmfile", label: "Work File", imageSrc: "/farmfile.png" },
   ]
 
   const [farmElementStates, setFarmElementStates] = useState<Record<FarmElementId, FarmElementState>>({
-    farmbacktomap: { x: 10, y: 10, scale: 1 },
-    farmsetting: { x: 90, y: 10, scale: 1 },
+    farmbacktomap: { x: 10, y: 10, scale: 1.5 },
+    farmsetting: { x: 22.1, y: 47.4, scale: 1.55 },
     farmwrittingboard: { x: 50, y: 50, scale: 1 },
     vistothersfarm: { x: 15, y: 80, scale: 1 },
     farmfile: { x: 85, y: 80, scale: 1 },
@@ -227,7 +227,7 @@ export default function UserProfilePage({
       style={{ paddingTop: "128px", paddingBottom: "120px" }}
       data-stage="userProfile"
     >
-      <div className="mx-auto max-w-6xl px-4 py-6">
+            <div className="mx-auto max-w-6xl px-4 py-6">
         {/* Top bar */}
         <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
           <Button
@@ -262,213 +262,60 @@ export default function UserProfilePage({
           </div>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-3">
-          {/* My Farm - 測試版：在 farm.png 上拖動互動元素 */}
-          <div className="lg:col-span-3 mb-4">
-            <div className="rounded-2xl border-2 border-emerald-200/60 bg-gradient-to-b from-emerald-50/90 via-sky-50/80 to-emerald-100/70 p-6 shadow-lg backdrop-blur-sm">
-              <div className="mb-3 flex items-center gap-2">
-                <Sparkles className="h-5 w-5 text-emerald-600" />
-                <h2 className="font-hand text-xl font-bold text-foreground">My Farm (測試工具)</h2>
-              </div>
-              <p className="mb-4 font-hand text-xs text-muted-foreground">
-                在下面的農場圖片上拖動圖標到正確位置，懸浮時會微微放大。座標和放大倍數會暫時保存在前端狀態，方便你先調試。
-              </p>
-              <div
-                ref={farmContainerRef}
-                className="relative w-full aspect-[16/9] rounded-2xl overflow-hidden border border-emerald-300 bg-emerald-100/60 shadow-inner"
+        {/* My Farm - 測試版：全屏農場圖片 + 可拖拽元素 */}
+        <div
+          ref={farmContainerRef}
+          className="relative w-full h-[calc(100vh-200px)] rounded-2xl overflow-hidden border-2 border-emerald-300 bg-emerald-100/60 shadow-inner"
+        >
+          <img
+            src="/farm.png"
+            alt="My Farm Background"
+            className="absolute inset-0 h-full w-full object-contain"
+            draggable={false}
+          />
+
+          {farmElements.map((element) => {
+            const state = farmElementStates[element.id]
+            if (!state) return null
+            const isHovered = hoveredFarmElement === element.id
+            const scale = state.scale * (isHovered ? 1.08 : 1)
+            return (
+              <button
+                key={element.id}
+                type="button"
+                className="absolute -translate-x-1/2 -translate-y-1/2 focus:outline-none"
+                style={{
+                  left: `${state.x}%`,
+                  top: `${state.y}%`,
+                  transform: `translate(-50%, -50%) scale(${scale})`,
+                  transition: draggingFarmElement === element.id ? "none" : "transform 150ms ease-out",
+                }}
+                onMouseDown={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  setDraggingFarmElement(element.id)
+                }}
+                onMouseEnter={() => setHoveredFarmElement(element.id)}
+                onMouseLeave={() => setHoveredFarmElement((prev) => (prev === element.id ? null : prev))}
+                onClick={() => {
+                  console.log("[MyFarm click]", element.id, farmElementStates[element.id])
+                }}
               >
-                <img
-                  src="/farm.png"
-                  alt="My Farm Background"
-                  className="absolute inset-0 h-full w-full object-contain"
-                  draggable={false}
-                />
-
-                {farmElements.map((element) => {
-                  const state = farmElementStates[element.id]
-                  if (!state) return null
-                  const isHovered = hoveredFarmElement === element.id
-                  const scale = state.scale * (isHovered ? 1.08 : 1)
-                  return (
-                    <button
-                      key={element.id}
-                      type="button"
-                      className="absolute -translate-x-1/2 -translate-y-1/2 focus:outline-none"
-                      style={{
-                        left: `${state.x}%`,
-                        top: `${state.y}%`,
-                        transform: `translate(-50%, -50%) scale(${scale})`,
-                        transition: draggingFarmElement === element.id ? "none" : "transform 150ms ease-out",
-                      }}
-                      onMouseDown={(e) => {
-                        e.preventDefault()
-                        e.stopPropagation()
-                        setDraggingFarmElement(element.id)
-                      }}
-                      onMouseEnter={() => setHoveredFarmElement(element.id)}
-                      onMouseLeave={() => setHoveredFarmElement((prev) => (prev === element.id ? null : prev))}
-                      onClick={() => {
-                        // 目前只是測試：真正跳轉行為之後再接到 stage / 路由
-                        console.log("[MyFarm click]", element.id, farmElementStates[element.id])
-                      }}
-                    >
-                      <div className="rounded-xl bg-white/0 shadow-lg">
-                        <img
-                          src={element.imageSrc}
-                          alt={element.label}
-                          className="h-16 w-16 md:h-20 md:w-20 object-contain select-none"
-                          draggable={false}
-                        />
-                      </div>
-                    </button>
-                  )
-                })}
-              </div>
-
-              {/* 右側簡單控制面板：顯示座標與縮放倍數，可微調 scale */}
-              <div className="mt-4 grid gap-3 md:grid-cols-2">
-                {farmElements.map((element) => {
-                  const state = farmElementStates[element.id]
-                  if (!state) return null
-                  return (
-                    <div
-                      key={element.id}
-                      className="rounded-xl border border-emerald-200/80 bg-white/80 p-3 shadow-sm flex flex-col gap-2"
-                    >
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="font-hand text-xs font-bold text-emerald-800">{element.label}</span>
-                        <span className="font-hand text-[10px] text-emerald-700">
-                          x: {state.x.toFixed(1)}%, y: {state.y.toFixed(1)}%
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-hand text-[10px] text-muted-foreground">scale</span>
-                        <input
-                          type="range"
-                          min={0.5}
-                          max={1.8}
-                          step={0.05}
-                          value={state.scale}
-                          onChange={(e) => {
-                            const nextScale = Number(e.target.value)
-                            setFarmElementStates((prev) => ({
-                              ...prev,
-                              [element.id]: {
-                                ...prev[element.id],
-                                scale: nextScale,
-                              },
-                            }))
-                          }}
-                          className="flex-1"
-                        />
-                        <span className="font-hand text-[10px] w-10 text-right text-emerald-800">
-                          {state.scale.toFixed(2)}
-                        </span>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-          </div>
-
-          {/* My works - main column */}
-          <div className="lg:col-span-2">
-            <div className="rounded-2xl border-2 border-amber-200/60 bg-white/80 p-6 shadow-lg backdrop-blur-sm">
-              <div className="mb-4 flex items-center gap-2">
-                <BookOpen className="h-6 w-6 text-amber-600" />
-                <h2 className="font-hand text-xl font-bold text-foreground">My Writings</h2>
-              </div>
-              {loading ? (
-                <p className="font-hand text-sm text-muted-foreground">Loading...</p>
-              ) : works.length === 0 ? (
-                <p className="font-hand text-sm text-muted-foreground">
-                  No writings yet. Start writing from the map!
-                </p>
-              ) : (
-                <ul className="space-y-3">
-                  {works.map((w) => (
-                    <li
-                      key={w.id}
-                      className="flex items-center gap-3 rounded-xl border border-amber-100 bg-amber-50/50 px-4 py-3 font-hand"
-                    >
-                      {w.type === "story" && <BookOpen className="h-5 w-5 text-amber-600" />}
-                      {w.type === "review" && <FileText className="h-5 w-5 text-blue-600" />}
-                      {w.type === "letter" && <Mail className="h-5 w-5 text-green-600" />}
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate font-bold text-foreground">{w.title}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {new Date(w.timestamp).toLocaleDateString("en-US")}
-                        </p>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          </div>
-
-          {/* Teacher reviews & Peer reviews - side column */}
-          <div className="space-y-6">
-            <div className="rounded-2xl border-2 border-blue-200/60 bg-white/80 p-5 shadow-lg backdrop-blur-sm">
-              <div className="mb-3 flex items-center gap-2">
-                <UserIcon className="h-5 w-5 text-blue-600" />
-                <h3 className="font-hand font-bold text-foreground">Teacher Reviews</h3>
-              </div>
-              {teacherReviews.length === 0 ? (
-                <p className="font-hand text-xs text-muted-foreground">
-                  No teacher reviews yet.
-                </p>
-              ) : (
-                <ul className="space-y-2">
-                  {teacherReviews.slice(0, 5).map((r) => (
-                    <li key={r.id}>
-                      <button
-                        type="button"
-                        onClick={() => handleReviewClick(r)}
-                        className={`w-full rounded-xl border px-3 py-2 text-left font-hand text-sm transition hover:border-blue-300 ${
-                          !r.readAt ? "border-blue-300 bg-blue-50/50 font-semibold" : "border-blue-100 bg-white"
-                        }`}
-                      >
-                        <span className="block truncate text-foreground">{r.workTitle || "Review"}</span>
-                        <span className="text-xs text-muted-foreground">by {r.reviewerUsername}</span>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-            <div className="rounded-2xl border-2 border-green-200/60 bg-white/80 p-5 shadow-lg backdrop-blur-sm">
-              <div className="mb-3 flex items-center gap-2">
-                <MessageCircle className="h-5 w-5 text-green-600" />
-                <h3 className="font-hand font-bold text-foreground">Peer Reviews</h3>
-              </div>
-              {peerReviews.length === 0 ? (
-                <p className="font-hand text-xs text-muted-foreground">No peer reviews yet.</p>
-              ) : (
-                <ul className="space-y-2">
-                  {peerReviews.slice(0, 5).map((r) => (
-                    <li key={r.id}>
-                      <button
-                        type="button"
-                        onClick={() => handleReviewClick(r)}
-                        className={`w-full rounded-xl border px-3 py-2 text-left font-hand text-sm transition hover:border-green-300 ${
-                          !r.readAt ? "border-green-300 bg-green-50/50 font-semibold" : "border-green-100 bg-white"
-                        }`}
-                      >
-                        <span className="block truncate text-foreground">{r.workTitle || "Review"}</span>
-                        <span className="text-xs text-muted-foreground">by {r.reviewerUsername}</span>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          </div>
+                <div className="rounded-xl bg-white/0 shadow-lg">
+                  <img
+                    src={element.imageSrc}
+                    alt={element.label}
+                    className="h-16 w-16 md:h-20 md:w-20 object-contain select-none"
+                    draggable={false}
+                  />
+                </div>
+              </button>
+            )
+          })}
         </div>
 
-        {/* Modal: selected review + work content */}
-        {selectedReview && (
+        {/* Modal: selected review + work content（暫時用不到，但保留代碼） */}
+        {false && selectedReview && (
           <div
             className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
             onClick={() => setSelectedReview(null)}
