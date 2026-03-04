@@ -599,7 +599,10 @@ export default function Home() {
   return (
     <main className="min-h-screen" data-stage={stage}>
       <RedFlashOverlay active={redFlashActive} duration={2000} />
-      {user && stage !== "login" && !["writing", "bookReviewWriting", "bookReviewWritingNoAi", "letterGame"].includes(stage) && (
+      {user &&
+        stage !== "login" &&
+        stage !== "userProfile" &&
+        !["writing", "bookReviewWriting", "bookReviewWritingNoAi", "letterGame"].includes(stage) && (
         <Cagent
           stage={stage}
           contextSummary={cagentContextSummary}
