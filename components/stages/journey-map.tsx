@@ -205,9 +205,17 @@ export default function JourneyMap({
           )}
 
           {/* 右下角：圖釘盒 box，點擊後拿起圖釘 */}
-          <div className="absolute right-6 bottom-6 z-20 flex flex-col items-center gap-1">
-            <p className="mb-1 text-sm md:text-base font-hand text-purple-900 text-center drop-shadow-[0_1px_1px_rgba(255,255,255,0.95)]">
-              Drop a pin on the map to start a new adventure!
+          <div className="absolute right-6 bottom-6 z-20 flex flex-col items-center gap-1 motion-safe:animate-bounce">
+            <p className="mb-1 text-lg md:text-xl font-hand font-extrabold text-center drop-shadow-[0_1px_1px_rgba(255,255,255,0.98)]">
+              {Array.from("Drop a pin on the map to start a new adventure!").map((ch, idx) => {
+                const palette = ["#ec4899", "#8b5cf6", "#22c55e", "#f97316", "#0ea5e9", "#eab308"]
+                const color = ch === " " ? "#4c1d95" : palette[idx % palette.length]
+                return (
+                  <span key={idx} style={{ color }}>
+                    {ch}
+                  </span>
+                )
+              })}
             </p>
             <button
               type="button"
