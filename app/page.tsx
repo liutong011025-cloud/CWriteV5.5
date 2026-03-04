@@ -1278,8 +1278,85 @@ export default function Home() {
           <PlotBrainstorm
             language={language}
             character={storyState.character}
-            onPlotCreate={(plot) => {
-              setStoryState(prev => ({ ...prev, plot }))
+            onPlotCreate={async (plot) => {
+              setStoryState((prev) => ({ ...prev, plot }))
+
+              // 如果處於 Journey 模式，Plot 完成時就直接更新地圖（給 Fal / nanobanana2edit），讓之後回到地圖時不用再等待
+              if (journeyActive && user && currentPin) {
+                try {
+                  const species = storyState.character?.species
+                  const setting = plot.setting
+                  const conflict = plot.conflict
+                  const goal = plot.goal
+
+                  const topic = setting && setting.trim().length > 0 ? setting : "fantasy adventure"
+
+                  const storySummaryForMap = [
+                    species ? `Species: ${species}` : null,
+                    setting ? `Setting: ${setting}` : null,
+                    conflict ? `Conflict: ${conflict}` : null,
+                    goal ? `Goal: ${goal}` : null,
+                  ]
+                    .filter(Boolean)
+                    .join(" | ")
+
+                  const title =
+                    storyState.character?.name && storyState.character.name.trim().length > 0
+                      ? `${storyState.character.name}'s Journey`
+                      : "My Journey"
+
+                  const isFirstMap = !mapImageUrl
+                  const previousMapImageUrl = isFirstMap ? "/firstmap.png" : mapImageUrl
+                  const endpoint = isFirstMap ? "/api/map-generate" : "/api/map-update"
+
+                  const payload: any = {
+                    userId: user.username,
+                    title,
+                    topic,
+                    mapX: currentPin.x,
+                    mapY: currentPin.y,
+                    storySummary: {
+                      species: species ?? null,
+                      setting: setting ?? null,
+                      conflict: conflict ?? null,
+                      goal: goal ?? null,
+                    },
+                    previousMapImageUrl,
+                    mapPrompt: `Use the previous map image as a reference. At the student's starting position (x=${currentPin.x.toFixed(
+                      1,
+                    )}%, y=${currentPin.y.toFixed(
+                      1,
+                    )}%), add design elements that match this plot summary: ${storySummaryForMap ||
+                      "no details provided"}. Radially update and enrich the area around this point so the map reflects the new story journey.`,
+                  }
+
+                  const mapRes = await fetch(endpoint, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload),
+                  })
+
+                  const mapJson = await mapRes.json()
+                  if (mapRes.ok && mapJson.imageUrl) {
+                    setMapImageUrl(mapJson.imageUrl as string)
+                    setMapFlags((prev) => [
+                      ...prev,
+                      {
+                        id:
+                          mapJson.userId && mapJson.title
+                            ? `${mapJson.userId}-${mapJson.title}-${Date.now()}`
+                            : `${Date.now()}`,
+                        x: mapJson.mapX ?? currentPin.x,
+                        y: mapJson.mapY ?? currentPin.y,
+                        title: mapJson.title || title,
+                      },
+                    ])
+                  }
+                } catch (error) {
+                  console.error("Error updating map after plot brainstorm:", error)
+                }
+              }
+
               setStage(journeyActive ? "structure" : "journeyMap")
             }}
             onBack={() => setStage(journeyActive ? "journeyMap" : "character")}
