@@ -290,8 +290,8 @@ export default function JourneyMap({
                   <div
                     className={`rounded-2xl bg-gradient-to-r ${colorClass} px-4 py-2 shadow-xl flex items-center gap-2 group-hover:brightness-110 transition`}
                   >
-                    <Flag className="w-4 h-4 text-white drop-shadow" />
-                    <span className="font-hand text-sm font-bold text-white whitespace-nowrap drop-shadow">
+                    <Flag className="w-4 h-4 text-slate-800 drop-shadow" />
+                    <span className="font-hand text-sm font-extrabold text-slate-900 whitespace-nowrap drop-shadow-[0_1px_1px_rgba(255,255,255,0.9)]">
                       {flag.title}
                     </span>
                   </div>
