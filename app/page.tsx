@@ -1283,6 +1283,7 @@ export default function Home() {
               if (journeyActive && user && currentPin) {
                 try {
                   const species = storyState.character?.species
+                  const characterName = storyState.character?.name
                   const setting = plot.setting
                   const conflict = plot.conflict
                   const goal = plot.goal
@@ -1290,6 +1291,7 @@ export default function Home() {
                   const topic = setting && setting.trim().length > 0 ? setting : "fantasy adventure"
 
                   const storySummaryForMap = [
+                    characterName ? `Character: ${characterName}` : null,
                     species ? `Species: ${species}` : null,
                     setting ? `Setting: ${setting}` : null,
                     conflict ? `Conflict: ${conflict}` : null,
@@ -1313,6 +1315,7 @@ export default function Home() {
                     mapX: currentPin.x,
                     mapY: currentPin.y,
                     storySummary: {
+                      characterName: characterName ?? null,
                       species: species ?? null,
                       setting: setting ?? null,
                       conflict: conflict ?? null,
@@ -1323,7 +1326,9 @@ export default function Home() {
                       1,
                     )}%, y=${currentPin.y.toFixed(
                       1,
-                    )}%), add design elements that match this plot summary: ${storySummaryForMap ||
+                    )}%), add design elements that match this plot summary and the main character ${
+                      characterName ? `"${characterName}"` : "of the story"
+                    } (species: ${species || "unknown"}): ${storySummaryForMap ||
                       "no details provided"}. Radially update and enrich the area around this point so the map reflects the new story journey.`,
                   }
 
@@ -1446,7 +1451,8 @@ export default function Home() {
           onReset={async () => {
             const backToStage = journeyActive ? "journeyMap" : "home"
 
-            if (journeyActive && user && currentPin && storyState.story.trim().length > 0) {
+            // Journey 模式下，地圖已在 Plot 步驟更新，這裡不再重複調 Fal，只是清理狀態並返回地圖
+            if (!journeyActive && user && currentPin && storyState.story.trim().length > 0) {
               try {
                 // 1. 調用 Dify 寫作指標 API
                 const metricsRes = await fetch("/api/writing-metrics", {
