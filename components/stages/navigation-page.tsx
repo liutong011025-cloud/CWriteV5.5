@@ -49,6 +49,7 @@ export default function NavigationPage({ onBack }: NavigationPageProps) {
   const rectTop = 32.0 // 百分比，0-100
   const rectWidth = 38.5 // 百分比，0-100
   const [listOffset, setListOffset] = useState(12) // 文本下方展開列表的間距（px）
+  const [listWidthPercent, setListWidthPercent] = useState(90) // 列表寬度相對於外層容器（百分比）
 
   // 隨機決定哪些好友可訪問，避免固定規律；每次刷新頁面會重新隨機
   const friends: FriendFarm[] = useMemo(() => {
@@ -86,7 +87,7 @@ export default function NavigationPage({ onBack }: NavigationPageProps) {
           </button>
         )}
 
-        {/* 列表間距調整面板（右下角） */}
+        {/* 列表間距 / 寬度調整面板（右下角） */}
         <div className="absolute right-4 bottom-4 z-30 w-64 max-w-[70vw] rounded-2xl bg-white/85 p-3 text-xs text-slate-800 shadow-lg border border-slate-200 backdrop-blur">
           <div className="mb-1 font-semibold">List Offset Panel</div>
           <div className="space-y-2">
@@ -102,6 +103,21 @@ export default function NavigationPage({ onBack }: NavigationPageProps) {
                 step={1}
                 value={listOffset}
                 onChange={(e) => setListOffset(Number(e.target.value))}
+                className="w-full"
+              />
+            </div>
+            <div>
+              <div className="flex justify-between">
+                <span>List width (%)</span>
+                <span>{listWidthPercent.toFixed(0)}</span>
+              </div>
+              <input
+                type="range"
+                min={40}
+                max={100}
+                step={1}
+                value={listWidthPercent}
+                onChange={(e) => setListWidthPercent(Number(e.target.value))}
                 className="w-full"
               />
             </div>
@@ -121,7 +137,7 @@ export default function NavigationPage({ onBack }: NavigationPageProps) {
         >
           {/* 點擊文字（不再有圓角矩形框） */}
           <p
-            className="w-full cursor-pointer text-center text-base sm:text-lg font-extrabold text-slate-600 drop-shadow-[0_1px_0_rgba(255,255,255,0.95)] tracking-wide transition-transform hover:scale-105"
+            className="w-full cursor-pointer text-center text-base sm:text-lg font-black text-slate-500 drop-shadow-[0_1px_0_rgba(255,255,255,0.98)] tracking-wide transition-transform hover:scale-105"
             onClick={() => setListOpen((prev) => !prev)}
           >
             Click to select a friend's farm
@@ -130,8 +146,8 @@ export default function NavigationPage({ onBack }: NavigationPageProps) {
           {/* 展開的好友列表 */}
           {listOpen && (
             <div
-              className="max-h-[320px] w-full overflow-y-auto rounded-3xl bg-white/60 p-4 shadow-xl border border-slate-200 backdrop-blur-sm"
-              style={{ marginTop: `${listOffset}px` }}
+              className="max-h-[320px] mx-auto overflow-y-auto rounded-3xl bg-white/60 p-4 shadow-xl border border-slate-200 backdrop-blur-sm"
+              style={{ marginTop: `${listOffset}px`, width: `${listWidthPercent}%` }}
             >
               <ul className="space-y-2 text-sm sm:text-base">
                 {friends.map((friend) => (
