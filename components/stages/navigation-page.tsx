@@ -44,10 +44,11 @@ const FRIEND_NAMES = [
 
 export default function NavigationPage({ onBack }: NavigationPageProps) {
   const [listOpen, setListOpen] = useState(false)
-  const [rectLeft, setRectLeft] = useState(70) // 百分比，0-100
-  const [rectTop, setRectTop] = useState(30) // 百分比，0-100
-  const [rectWidth, setRectWidth] = useState(26) // 百分比，0-100
-  const [rectHeight, setRectHeight] = useState(8) // 百分比，0-100
+  // 默認為你提供的測試數據
+  const [rectLeft, setRectLeft] = useState(74.5) // 百分比，0-100
+  const [rectTop, setRectTop] = useState(33.5) // 百分比，0-100
+  const [rectWidth, setRectWidth] = useState(38.5) // 百分比，0-100
+  const [rectHeight, setRectHeight] = useState(4) // 百分比，0-100
   const [listOffset, setListOffset] = useState(12) // 文本下方展開列表的間距（px）
 
   // 隨機決定哪些好友可訪問，避免固定規律；每次刷新頁面會重新隨機
@@ -170,7 +171,7 @@ export default function NavigationPage({ onBack }: NavigationPageProps) {
               <input
                 type="range"
                 min={4}
-                max={80}
+                max={200}
                 step={1}
                 value={listOffset}
                 onChange={(e) => setListOffset(Number(e.target.value))}
@@ -187,7 +188,8 @@ export default function NavigationPage({ onBack }: NavigationPageProps) {
             left: `${rectLeft}%`,
             top: `${rectTop}%`,
             width: `${rectWidth}%`,
-            transform: "translate(-50%, -50%)",
+            // 僅水平居中，垂直位置完全由 top 控制，避免展開列表時把文字頂上去
+            transform: "translateX(-50%)",
           }}
         >
           {/* 點擊文字（不再有圓角矩形框） */}
@@ -201,7 +203,7 @@ export default function NavigationPage({ onBack }: NavigationPageProps) {
           {/* 展開的好友列表 */}
           {listOpen && (
             <div
-              className="max-h-[320px] w-full overflow-y-auto rounded-3xl bg-white/90 p-4 shadow-xl border border-slate-200 backdrop-blur-sm"
+              className="max-h-[320px] w-full overflow-y-auto rounded-3xl bg-white/60 p-4 shadow-xl border border-slate-200 backdrop-blur-sm"
               style={{ marginTop: `${listOffset}px` }}
             >
               <ul className="space-y-2 text-sm sm:text-base">
