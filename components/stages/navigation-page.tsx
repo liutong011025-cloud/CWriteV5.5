@@ -48,8 +48,8 @@ export default function NavigationPage({ onBack }: NavigationPageProps) {
   const rectLeft = 74.5 // 百分比，0-100
   const rectTop = 32.0 // 百分比，0-100
   const rectWidth = 38.5 // 百分比，0-100
-  const [listOffset, setListOffset] = useState(12) // 文本下方展開列表的間距（px）
-  const [listWidthPercent, setListWidthPercent] = useState(90) // 列表寬度相對於外層容器（百分比）
+  const listOffset = 4 // 文本下方展開列表的間距（px）
+  const listWidthPercent = 41 // 列表寬度相對於外層容器（百分比）
 
   // 隨機決定哪些好友可訪問，避免固定規律；每次刷新頁面會重新隨機
   const friends: FriendFarm[] = useMemo(() => {
@@ -87,43 +87,6 @@ export default function NavigationPage({ onBack }: NavigationPageProps) {
           </button>
         )}
 
-        {/* 列表間距 / 寬度調整面板（右下角） */}
-        <div className="absolute right-4 bottom-4 z-30 w-64 max-w-[70vw] rounded-2xl bg-white/85 p-3 text-xs text-slate-800 shadow-lg border border-slate-200 backdrop-blur">
-          <div className="mb-1 font-semibold">List Offset Panel</div>
-          <div className="space-y-2">
-            <div>
-              <div className="flex justify-between">
-                <span>Offset from title (px)</span>
-                <span>{listOffset.toFixed(0)}</span>
-              </div>
-              <input
-                type="range"
-                min={4}
-                max={200}
-                step={1}
-                value={listOffset}
-                onChange={(e) => setListOffset(Number(e.target.value))}
-                className="w-full"
-              />
-            </div>
-            <div>
-              <div className="flex justify-between">
-                <span>List width (%)</span>
-                <span>{listWidthPercent.toFixed(0)}</span>
-              </div>
-              <input
-                type="range"
-                min={40}
-                max={100}
-                step={1}
-                value={listWidthPercent}
-                onChange={(e) => setListWidthPercent(Number(e.target.value))}
-                className="w-full"
-              />
-            </div>
-          </div>
-        </div>
-
         {/* 右側標題文字 + 列表（根據測試參數定位） */}
         <div
           className="absolute z-10 space-y-3"
@@ -146,7 +109,7 @@ export default function NavigationPage({ onBack }: NavigationPageProps) {
           {/* 展開的好友列表 */}
           {listOpen && (
             <div
-              className="max-h-[320px] mx-auto overflow-y-auto rounded-3xl bg-white/60 p-4 shadow-xl border border-slate-200 backdrop-blur-sm"
+              className="max-h-[320px] mx-auto overflow-y-auto rounded-b-3xl bg-white/60 p-4 shadow-xl border border-slate-200 border-t border-t-slate-200 rounded-t-none"
               style={{ marginTop: `${listOffset}px`, width: `${listWidthPercent}%` }}
             >
               <ul className="space-y-2 text-sm sm:text-base">
