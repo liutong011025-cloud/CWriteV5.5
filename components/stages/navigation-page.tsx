@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useMemo, useState } from "react"
 
 interface FriendFarm {
   name: string
@@ -11,36 +11,35 @@ interface NavigationPageProps {
   onBack?: () => void
 }
 
-const ALL_FRIENDS: FriendFarm[] = [
-  { name: "Stark", available: true },
-  { name: "Banner", available: false },
-  { name: "Rogers", available: true },
-  { name: "Parker", available: false },
-  { name: "Romanoff", available: true },
-  { name: "Barton", available: false },
-  { name: "Odinson", available: true },
-  { name: "Maximoff", available: false },
-  { name: "Lang", available: true },
-  { name: "Strange", available: false },
-  { name: "Fury", available: true },
-  { name: "Groot", available: false },
-  { name: "Rocket", available: true },
-  { name: "Quill", available: false },
-  { name: "Drax", available: true },
-  { name: "Gamora", available: false },
-  { name: "Thanos", available: true },
-  { name: "Loki", available: false },
-  { name: "halk", available: true },
-  { name: "Wayne", available: false },
-  { name: "Kent", available: true },
-  { name: "Queen", available: false },
-  { name: "Allen", available: true },
-  { name: "Barbara", available: false },
-  { name: "Diana", available: true },
-  { name: "Selina", available: false },
-  { name: "Lex", available: true },
-  { name: "Luthor", available: false },
-  // 可以根據需要再添加
+const FRIEND_NAMES = [
+  "Stark",
+  "Banner",
+  "Rogers",
+  "Parker",
+  "Romanoff",
+  "Barton",
+  "Odinson",
+  "Maximoff",
+  "Lang",
+  "Strange",
+  "Fury",
+  "Groot",
+  "Rocket",
+  "Quill",
+  "Drax",
+  "Gamora",
+  "Thanos",
+  "Loki",
+  "halk",
+  "Wayne",
+  "Kent",
+  "Queen",
+  "Allen",
+  "Barbara",
+  "Diana",
+  "Selina",
+  "Lex",
+  "Luthor",
 ]
 
 export default function NavigationPage({ onBack }: NavigationPageProps) {
@@ -50,13 +49,31 @@ export default function NavigationPage({ onBack }: NavigationPageProps) {
   const [rectWidth, setRectWidth] = useState(26) // 百分比，0-100
   const [rectHeight, setRectHeight] = useState(8) // 百分比，0-100
 
+  // 隨機決定哪些好友可訪問，避免固定規律；每次刷新頁面會重新隨機
+  const friends: FriendFarm[] = useMemo(() => {
+    const result: FriendFarm[] = FRIEND_NAMES.map((name) => ({
+      name,
+      available: Math.random() > 0.4,
+    }))
+    // 確保不是全部都可訪問或全部都不可訪問
+    const anyAvailable = result.some((f) => f.available)
+    const anyUnavailable = result.some((f) => !f.available)
+    if (!anyAvailable) {
+      result[0].available = true
+    } else if (!anyUnavailable && result.length > 1) {
+      result[result.length - 1].available = false
+    }
+    return result
+  }, [])
+
   return (
     <div
       className="min-h-screen w-full flex items-center justify-center bg-cover bg-center bg-no-repeat"
       style={{ backgroundImage: "url(/navigation.png)" }}
       data-stage="navigation"
     >
-      <div className="relative h-full w-full">
+      {/* 這個容器必須有具體高度，top 的百分比才會生效 */}
+      <div className="relative w-full min-h-screen">
         {/* 可選：左上角返回按鈕 */}
         {onBack && (
           <button
@@ -140,7 +157,7 @@ export default function NavigationPage({ onBack }: NavigationPageProps) {
           </div>
         </div>
 
-        {/* 右側圓角矩形 + 列表（根據測試參數定位） */}
+        {/* 右側標題文字 + 列表（根據測試參數定位） */}
         <div
           className="absolute z-10 space-y-3"
           style={{
@@ -150,24 +167,19 @@ export default function NavigationPage({ onBack }: NavigationPageProps) {
             transform: "translate(-50%, -50%)",
           }}
         >
-          {/* 點擊區域 */}
-          <button
-            type="button"
+          {/* 點擊文字（不再有圓角矩形框） */}
+          <p
+            className="w-full cursor-pointer text-center text-sm sm:text-base font-semibold text-slate-700 drop-shadow-[0_1px_0_rgba(255,255,255,0.9)] transition-transform hover:scale-105"
             onClick={() => setListOpen((prev) => !prev)}
-            className="w-full rounded-full bg-white/85 px-6 py-3 text-center shadow-lg border border-slate-200 font-semibold text-slate-600 text-sm sm:text-base transform transition-all duration-200 hover:scale-105 hover:bg-white"
-            style={{
-              height: `${rectHeight}%`,
-              minHeight: "40px",
-            }}
           >
             Click to select a friend's farm
-          </button>
+          </p>
 
           {/* 展開的好友列表 */}
           {listOpen && (
             <div className="max-h-[320px] w-full overflow-y-auto rounded-3xl bg-white/90 p-4 shadow-xl border border-slate-200 backdrop-blur-sm">
               <ul className="space-y-2 text-sm sm:text-base">
-                {ALL_FRIENDS.map((friend) => (
+                {friends.map((friend) => (
                   <li key={friend.name}>
                     <button
                       type="button"
@@ -176,7 +188,9 @@ export default function NavigationPage({ onBack }: NavigationPageProps) {
                       <span className="font-semibold text-slate-800">{friend.name}</span>
                       <span
                         className={`ml-3 rounded-full px-2.5 py-0.5 text-xs font-bold ${
-                          friend.available ? "bg-emerald-100 text-emerald-700" : "bg-slate-200 text-slate-600"
+                          friend.available
+                            ? "bg-emerald-100 text-emerald-700"
+                            : "bg-red-100 text-red-700"
                         }`}
                       >
                         {friend.available ? "Available" : "Unavailable"}
