@@ -44,11 +44,10 @@ const FRIEND_NAMES = [
 
 export default function NavigationPage({ onBack }: NavigationPageProps) {
   const [listOpen, setListOpen] = useState(false)
-  // 默認為你提供的測試數據
-  const [rectLeft, setRectLeft] = useState(74.5) // 百分比，0-100
-  const [rectTop, setRectTop] = useState(33.5) // 百分比，0-100
-  const [rectWidth, setRectWidth] = useState(38.5) // 百分比，0-100
-  const [rectHeight, setRectHeight] = useState(4) // 百分比，0-100
+  // 固定為你提供的最終位置
+  const rectLeft = 74.5 // 百分比，0-100
+  const rectTop = 32.0 // 百分比，0-100
+  const rectWidth = 38.5 // 百分比，0-100
   const [listOffset, setListOffset] = useState(12) // 文本下方展開列表的間距（px）
 
   // 隨機決定哪些好友可訪問，避免固定規律；每次刷新頁面會重新隨機
@@ -87,78 +86,6 @@ export default function NavigationPage({ onBack }: NavigationPageProps) {
           </button>
         )}
 
-        {/* 文字位置測試控制面板（左下角，避免被 Header 蓋住） */}
-        <div className="absolute left-4 bottom-4 z-30 w-64 max-w-[70vw] rounded-2xl bg-white/85 p-3 text-xs text-slate-800 shadow-lg border border-slate-200 backdrop-blur">
-          <div className="mb-1 font-semibold">Title Position Panel</div>
-          <div className="space-y-2">
-            <div>
-              <div className="flex justify-between">
-                <span>Left (%)</span>
-                <span>{rectLeft.toFixed(1)}</span>
-              </div>
-              <input
-                type="range"
-                min={0}
-                max={100}
-                step={0.5}
-                value={rectLeft}
-                onChange={(e) => setRectLeft(Number(e.target.value))}
-                className="w-full"
-              />
-            </div>
-            <div>
-              <div className="flex justify-between">
-                <span>Top (%)</span>
-                <span>{rectTop.toFixed(1)}</span>
-              </div>
-              <input
-                type="range"
-                min={0}
-                max={100}
-                step={0.5}
-                value={rectTop}
-                onChange={(e) => setRectTop(Number(e.target.value))}
-                className="w-full"
-              />
-            </div>
-            <div>
-              <div className="flex justify-between">
-                <span>Width (%)</span>
-                <span>{rectWidth.toFixed(1)}</span>
-              </div>
-              <input
-                type="range"
-                min={5}
-                max={60}
-                step={0.5}
-                value={rectWidth}
-                onChange={(e) => setRectWidth(Number(e.target.value))}
-                className="w-full"
-              />
-            </div>
-            <div>
-              <div className="flex justify-between">
-                <span>Height (%)</span>
-                <span>{rectHeight.toFixed(1)}</span>
-              </div>
-              <input
-                type="range"
-                min={4}
-                max={20}
-                step={0.5}
-                value={rectHeight}
-                onChange={(e) => setRectHeight(Number(e.target.value))}
-                className="w-full"
-              />
-            </div>
-            <div className="mt-1 rounded bg-slate-100 px-2 py-1 font-mono text-[10px] leading-snug">
-              {`left: ${rectLeft.toFixed(1)}%, top: ${rectTop.toFixed(1)}%, width: ${rectWidth.toFixed(
-                1,
-              )}%, height: ${rectHeight.toFixed(1)}%`}
-            </div>
-          </div>
-        </div>
-
         {/* 列表間距調整面板（右下角） */}
         <div className="absolute right-4 bottom-4 z-30 w-64 max-w-[70vw] rounded-2xl bg-white/85 p-3 text-xs text-slate-800 shadow-lg border border-slate-200 backdrop-blur">
           <div className="mb-1 font-semibold">List Offset Panel</div>
@@ -194,7 +121,7 @@ export default function NavigationPage({ onBack }: NavigationPageProps) {
         >
           {/* 點擊文字（不再有圓角矩形框） */}
           <p
-            className="w-full cursor-pointer text-center text-sm sm:text-base font-semibold text-slate-700 drop-shadow-[0_1px_0_rgba(255,255,255,0.9)] transition-transform hover:scale-105"
+            className="w-full cursor-pointer text-center text-base sm:text-lg font-extrabold text-slate-600 drop-shadow-[0_1px_0_rgba(255,255,255,0.95)] tracking-wide transition-transform hover:scale-105"
             onClick={() => setListOpen((prev) => !prev)}
           >
             Click to select a friend's farm
