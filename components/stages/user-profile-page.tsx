@@ -45,6 +45,7 @@ interface UserProfilePageProps {
   trees?: { id: number; stage: number }[] | null
   recentGrowthTreeId?: number | null
   recentGrowthDimension?: "vocab" | "detail" | "logic" | null
+  onVisitOthersFarm?: () => void
 }
 
 type FarmElementId = "farmbacktomap" | "farmsetting" | "farmwrittingboard" | "vistothersfarm"
@@ -551,6 +552,11 @@ export default function UserProfilePage({
                     if (element.id === "farmbacktomap") onBack()
                     else if (element.id === "farmsetting") onOpenSettings()
                     else if (element.id === "farmwrittingboard") setViewMode("writings")
+                    else if (element.id === "vistothersfarm" && typeof window !== "undefined") {
+                      if (typeof onVisitOthersFarm === "function") {
+                        onVisitOthersFarm()
+                      }
+                    }
                   }}
                 >
                   <img
