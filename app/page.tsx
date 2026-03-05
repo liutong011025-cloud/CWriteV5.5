@@ -43,6 +43,7 @@ import LetterEdit from "@/components/stages/letter-edit"
 import DramaWriting from "@/components/stages/drama-writing"
 import PoetryWriting from "@/components/stages/poetry-writing"
 import ResearchRoom from "@/components/stages/research-room"
+import NavigationPage from "@/components/stages/navigation-page"
 import { useDramaStore } from "@/lib/drama-store"
 import { usePoetryStore } from "@/lib/poetry-store"
 import Cagent, { type CagentMood } from "@/components/cagent/Cagent"
@@ -115,7 +116,7 @@ interface WritingAssessment {
 
 export default function Home() {
   const [user, setUser] = useState<{ username: string; role: 'teacher' | 'student'; noAi?: boolean } | null>(null)
-  const [stage, setStage] = useState<"login" | "home" | "planTest" | "journeyTicket" | "journeyMap" | "writeTypeSelection" | "bookReviewWelcome" | "bookReviewTypeSelection" | "bookSelection" | "bookReviewLoading" | "bookReviewWriting" | "bookReviewComplete" | "bookReviewWritingNoAi" | "bookReviewCompleteNoAi" | "letterAdventure" | "letterGame" | "letterPuzzle" | "letterComplete" | "welcome" | "character" | "plot" | "structure" | "writing" | "review" | "dashboard" | "about" | "gallery" | "userProfile" | "userSettings" | "storyEdit" | "bookReviewEdit" | "letterEdit" | "dramaWriting" | "dramaBook" | "poetryWriting" | "poetryForm" | "poetryTopic" | "poetryEditor" | "poetryReview" | "research">("login")
+  const [stage, setStage] = useState<"login" | "home" | "planTest" | "journeyTicket" | "journeyMap" | "writeTypeSelection" | "bookReviewWelcome" | "bookReviewTypeSelection" | "bookSelection" | "bookReviewLoading" | "bookReviewWriting" | "bookReviewComplete" | "bookReviewWritingNoAi" | "bookReviewCompleteNoAi" | "letterAdventure" | "letterGame" | "letterPuzzle" | "letterComplete" | "welcome" | "character" | "plot" | "structure" | "writing" | "review" | "dashboard" | "about" | "gallery" | "userProfile" | "userSettings" | "storyEdit" | "bookReviewEdit" | "letterEdit" | "dramaWriting" | "dramaBook" | "poetryWriting" | "poetryForm" | "poetryTopic" | "poetryEditor" | "poetryReview" | "research" | "navigation">("login")
   const [language, setLanguage] = useState<Language>("en")
   const [writingAssessment, setWritingAssessment] = useState<WritingAssessment | null>(null)
   const [journeySelection, setJourneySelection] = useState<{ type: JourneyType; difficulty: number } | null>(null)
@@ -602,6 +603,7 @@ export default function Home() {
       {user &&
         stage !== "login" &&
         stage !== "userProfile" &&
+        stage !== "navigation" &&
         !["writing", "bookReviewWriting", "bookReviewWritingNoAi", "letterGame"].includes(stage) && (
         <Cagent
           stage={stage}
@@ -1611,6 +1613,7 @@ export default function Home() {
           trees={trees ?? undefined}
           recentGrowthTreeId={lastGrownTree?.treeId ?? null}
           recentGrowthDimension={lastGrownTree?.dimension ?? null}
+          onVisitOthersFarm={() => setStage("navigation")}
         />
       )}
 
@@ -1947,6 +1950,12 @@ export default function Home() {
       {stage === "research" && user && (
         <ResearchRoom
           onBack={() => setStage("home")}
+        />
+      )}
+
+      {stage === "navigation" && user && (
+        <NavigationPage
+          onBack={() => setStage("userProfile")}
         />
       )}
     </main>
