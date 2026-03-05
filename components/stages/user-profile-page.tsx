@@ -80,6 +80,7 @@ export default function UserProfilePage({
   trees,
   recentGrowthTreeId,
   recentGrowthDimension,
+  onVisitOthersFarm,
 }: UserProfilePageProps) {
   const [works, setWorks] = useState<WorkItem[]>([])
   const [reviews, setReviews] = useState<ReviewItem[]>([])
@@ -89,7 +90,6 @@ export default function UserProfilePage({
   const [forest, setForest] = useState<{ id: number; stage: number }[]>([])
   const [highlightTreeId, setHighlightTreeId] = useState<number | null>(null)
   const farmContainerRef = useRef<HTMLDivElement | null>(null)
-  const [draggingFarmElement, setDraggingFarmElement] = useState<FarmElementId | null>(null)
   const [hoveredFarmElement, setHoveredFarmElement] = useState<FarmElementId | null>(null)
   const [viewMode, setViewMode] = useState<"farm" | "writings">("farm")
 
@@ -164,49 +164,7 @@ export default function UserProfilePage({
   }, [])
 
 
-  useEffect(() => {
-    if (!draggingFarmElement) return
-
-    const handleMouseMove = (event: MouseEvent) => {
-      const container = farmContainerRef.current
-      const overlay = imageOverlayRectRef.current
-      if (!container) return
-      const cr = container.getBoundingClientRect()
-      let xPercent: number
-      let yPercent: number
-      if (overlay && overlay.width > 0 && overlay.height > 0) {
-        const imgLeft = cr.left + overlay.left
-        const imgTop = cr.top + overlay.top
-        xPercent = ((event.clientX - imgLeft) / overlay.width) * 100
-        yPercent = ((event.clientY - imgTop) / overlay.height) * 100
-      } else {
-        xPercent = ((event.clientX - cr.left) / cr.width) * 100
-        yPercent = ((event.clientY - cr.top) / cr.height) * 100
-      }
-      const clampedX = Math.min(100, Math.max(0, xPercent))
-      const clampedY = Math.min(100, Math.max(0, yPercent))
-      setFarmElementStates((prev) => ({
-        ...prev,
-        [draggingFarmElement]: {
-          ...prev[draggingFarmElement],
-          x: clampedX,
-          y: clampedY,
-        },
-      }))
-    }
-
-    const handleMouseUp = () => {
-      setDraggingFarmElement(null)
-    }
-
-    window.addEventListener("mousemove", handleMouseMove)
-    window.addEventListener("mouseup", handleMouseUp)
-
-    return () => {
-      window.removeEventListener("mousemove", handleMouseMove)
-      window.removeEventListener("mouseup", handleMouseUp)
-    }
-  }, [draggingFarmElement])
+  // 农场按钮锁定位置，不再支持拖动
 
   useEffect(() => {
     Promise.all([
@@ -539,12 +497,7 @@ export default function UserProfilePage({
                     aspectRatio: "1",
                     transform: `translate(-50%, -50%) scale(${isHovered ? 1.08 : 1})`,
                     transformOrigin: "center center",
-                    transition: draggingFarmElement === element.id ? "none" : "transform 0.25s ease-in-out",
-                  }}
-                  onMouseDown={(e) => {
-                    e.preventDefault()
-                    e.stopPropagation()
-                    setDraggingFarmElement(element.id)
+                    transition: "transform 0.25s ease-in-out",
                   }}
                   onMouseEnter={() => setHoveredFarmElement(element.id)}
                   onMouseLeave={() => setHoveredFarmElement((prev) => (prev === element.id ? null : prev))}
@@ -552,11 +505,7 @@ export default function UserProfilePage({
                     if (element.id === "farmbacktomap") onBack()
                     else if (element.id === "farmsetting") onOpenSettings()
                     else if (element.id === "farmwrittingboard") setViewMode("writings")
-                    else if (element.id === "vistothersfarm" && typeof window !== "undefined") {
-                      if (typeof onVisitOthersFarm === "function") {
-                        onVisitOthersFarm()
-                      }
-                    }
+                    else if (element.id === "vistothersfarm" && typeof onVisitOthersFarm === "function") onVisitOthersFarm()
                   }}
                 >
                   <img
