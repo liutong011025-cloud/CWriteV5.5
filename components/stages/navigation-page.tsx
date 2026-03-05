@@ -48,6 +48,7 @@ export default function NavigationPage({ onBack }: NavigationPageProps) {
   const [rectTop, setRectTop] = useState(30) // 百分比，0-100
   const [rectWidth, setRectWidth] = useState(26) // 百分比，0-100
   const [rectHeight, setRectHeight] = useState(8) // 百分比，0-100
+  const [listOffset, setListOffset] = useState(12) // 文本下方展開列表的間距（px）
 
   // 隨機決定哪些好友可訪問，避免固定規律；每次刷新頁面會重新隨機
   const friends: FriendFarm[] = useMemo(() => {
@@ -85,9 +86,9 @@ export default function NavigationPage({ onBack }: NavigationPageProps) {
           </button>
         )}
 
-        {/* 測試控制面板（左上角） */}
-        <div className="absolute left-4 top-16 z-30 w-64 max-w-[70vw] rounded-2xl bg-white/85 p-3 text-xs text-slate-800 shadow-lg border border-slate-200 backdrop-blur">
-          <div className="mb-1 font-semibold">Rectangle Test Panel</div>
+        {/* 文字位置測試控制面板（左下角，避免被 Header 蓋住） */}
+        <div className="absolute left-4 bottom-4 z-30 w-64 max-w-[70vw] rounded-2xl bg-white/85 p-3 text-xs text-slate-800 shadow-lg border border-slate-200 backdrop-blur">
+          <div className="mb-1 font-semibold">Title Position Panel</div>
           <div className="space-y-2">
             <div>
               <div className="flex justify-between">
@@ -157,6 +158,28 @@ export default function NavigationPage({ onBack }: NavigationPageProps) {
           </div>
         </div>
 
+        {/* 列表間距調整面板（右下角） */}
+        <div className="absolute right-4 bottom-4 z-30 w-64 max-w-[70vw] rounded-2xl bg-white/85 p-3 text-xs text-slate-800 shadow-lg border border-slate-200 backdrop-blur">
+          <div className="mb-1 font-semibold">List Offset Panel</div>
+          <div className="space-y-2">
+            <div>
+              <div className="flex justify-between">
+                <span>Offset from title (px)</span>
+                <span>{listOffset.toFixed(0)}</span>
+              </div>
+              <input
+                type="range"
+                min={4}
+                max={80}
+                step={1}
+                value={listOffset}
+                onChange={(e) => setListOffset(Number(e.target.value))}
+                className="w-full"
+              />
+            </div>
+          </div>
+        </div>
+
         {/* 右側標題文字 + 列表（根據測試參數定位） */}
         <div
           className="absolute z-10 space-y-3"
@@ -177,7 +200,10 @@ export default function NavigationPage({ onBack }: NavigationPageProps) {
 
           {/* 展開的好友列表 */}
           {listOpen && (
-            <div className="max-h-[320px] w-full overflow-y-auto rounded-3xl bg-white/90 p-4 shadow-xl border border-slate-200 backdrop-blur-sm">
+            <div
+              className="max-h-[320px] w-full overflow-y-auto rounded-3xl bg-white/90 p-4 shadow-xl border border-slate-200 backdrop-blur-sm"
+              style={{ marginTop: `${listOffset}px` }}
+            >
               <ul className="space-y-2 text-sm sm:text-base">
                 {friends.map((friend) => (
                   <li key={friend.name}>
@@ -185,7 +211,12 @@ export default function NavigationPage({ onBack }: NavigationPageProps) {
                       type="button"
                       className="flex w-full items-center justify-between rounded-2xl px-3 py-2 text-left hover:bg-slate-50 transition-colors"
                     >
-                      <span className="font-semibold text-slate-800">{friend.name}</span>
+                      <span className="flex items-center gap-2">
+                        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-amber-100 text-xs font-bold text-amber-700 border border-amber-200">
+                          {friend.name.charAt(0)}
+                        </span>
+                        <span className="font-semibold text-slate-800">{friend.name}</span>
+                      </span>
                       <span
                         className={`ml-3 rounded-full px-2.5 py-0.5 text-xs font-bold ${
                           friend.available
