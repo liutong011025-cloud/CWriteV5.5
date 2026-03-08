@@ -209,7 +209,7 @@ export default function JourneyMap({
                 />
               </button>
               {isHoveringBox && (
-                <div className="absolute right-full mr-3 bottom-1/2 translate-y-1/2 rounded-xl border border-purple-200 bg-white/95 px-5 py-3 text-lg font-hand text-purple-800 shadow-lg max-w-[860px]">
+                <div className="absolute bottom-full left-1/2 z-30 mb-3 w-[min(88vw,760px)] -translate-x-1/2 rounded-xl border border-purple-200 bg-white/95 px-6 py-3 text-center text-lg font-hand leading-relaxed text-purple-800 shadow-lg">
                   Click the pin box to pick up a pin, then click the area on the map where you want to start exploring and writing.
                 </div>
               )}
