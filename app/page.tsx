@@ -2091,8 +2091,8 @@ export default function Home() {
           userRole="student"
           currentUsername={user.username}
           currentUserRole={user.role}
-          onBack={() => setStage("navigation")}
-          onOpenSettings={() => setStage("navigation")}
+          onBack={() => setStage("journeyMap")}
+          onOpenSettings={() => setStage("journeyMap")}
           isOtherFarm
         />
       )}
