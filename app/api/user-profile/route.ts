@@ -54,8 +54,9 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  let body: Record<string, any> = {}
   try {
-    const body = await request.json()
+    body = await request.json()
     const userId = body.user_id ?? body.userId
     if (!userId) {
       return NextResponse.json({ error: "user_id required" }, { status: 400 })
@@ -113,10 +114,18 @@ export async function POST(request: NextRequest) {
     const message = e instanceof Error ? e.message : String(e)
     console.error("[user-profile] POST", e)
     if (isMissingTableError(e)) {
-      return NextResponse.json(
-        { error: "Profile not available. Please run: npx prisma migrate deploy" },
-        { status: 503 }
-      )
+      // Graceful fallback: keep student flow working even if profile tables are not ready yet.
+      return NextResponse.json({
+        avatarUrl: body?.avatarUrl ?? null,
+        avatarEmoji: body?.avatarEmoji ?? null,
+        birthday: body?.birthday ?? null,
+        email: body?.email ?? null,
+        grade: body?.grade ?? null,
+        gender: body?.gender ?? null,
+        trees: body?.trees ?? null,
+        lastMetrics: body?.lastMetrics ?? null,
+        degraded: true,
+      })
     }
     return NextResponse.json(
       { error: process.env.NODE_ENV === "development" ? message : "Internal error" },
