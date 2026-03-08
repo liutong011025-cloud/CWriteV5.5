@@ -11,20 +11,49 @@ function isMissingTableError(e: unknown): boolean {
   )
 }
 
+function isMissingColumnError(e: unknown): boolean {
+  const msg = e instanceof Error ? e.message : String(e)
+  const code = e && typeof e === "object" && "code" in e ? (e as { code: string }).code : ""
+  return (
+    code === "P2022" ||
+    /column .*user_profiles\..* does not exist/i.test(msg) ||
+    /user_profiles\..*does not exist/i.test(msg)
+  )
+}
+
+function isProfileSchemaError(e: unknown): boolean {
+  return isMissingTableError(e) || isMissingColumnError(e)
+}
+
+async function getUserProfileColumns(): Promise<Set<string> | null> {
+  try {
+    const rows = await prisma.$queryRawUnsafe<Array<{ column_name: string }>>(
+      `SELECT column_name
+       FROM information_schema.columns
+       WHERE table_schema = current_schema()
+         AND table_name = 'user_profiles'`
+    )
+    return new Set(rows.map((r: { column_name: string }) => r.column_name))
+  } catch {
+    return null
+  }
+}
+
 export async function GET(request: NextRequest) {
   try {
     const userId = request.nextUrl.searchParams.get("user_id")
     if (!userId) {
       return NextResponse.json({ error: "user_id required" }, { status: 400 })
     }
-    const user = await prisma.user.findUnique({
-      where: { username: userId },
-      include: { profile: true },
-    })
+    const user = await prisma.user.findUnique({ where: { username: userId } })
     if (!user) {
       return NextResponse.json({ error: "User not found" }, { status: 404 })
     }
-    const profile = user.profile
+    const profileRows = await prisma.$queryRawUnsafe<Array<Record<string, any>>>(
+      `SELECT * FROM user_profiles WHERE "userId" = $1 LIMIT 1`,
+      user.id
+    )
+    const profile = profileRows[0] ?? null
     return NextResponse.json({
       avatarUrl: profile?.avatarUrl ?? null,
       avatarEmoji: profile?.avatarEmoji ?? null,
@@ -39,7 +68,7 @@ export async function GET(request: NextRequest) {
     })
   } catch (e) {
     console.error("[user-profile] GET", e)
-    if (isMissingTableError(e)) {
+    if (isProfileSchemaError(e)) {
       return NextResponse.json({
         avatarUrl: null,
         avatarEmoji: null,
@@ -61,13 +90,14 @@ export async function POST(request: NextRequest) {
     if (!userId) {
       return NextResponse.json({ error: "user_id required" }, { status: 400 })
     }
-    const user = await prisma.user.findUnique({
-      where: { username: userId },
-      include: { profile: true },
-    })
+    const user = await prisma.user.findUnique({ where: { username: userId } })
     if (!user) {
       return NextResponse.json({ error: "User not found" }, { status: 404 })
     }
+    const profileColumns = await getUserProfileColumns()
+    const supportsTrees = !!profileColumns?.has("trees")
+    const supportsLastMetrics = !!profileColumns?.has("lastMetrics")
+
     const updates: Record<string, any> = {
       avatarUrl: body.avatarUrl !== undefined ? body.avatarUrl : undefined,
       avatarEmoji: body.avatarEmoji !== undefined ? body.avatarEmoji : undefined,
@@ -76,44 +106,57 @@ export async function POST(request: NextRequest) {
       grade: body.grade !== undefined ? body.grade : undefined,
       gender: body.gender !== undefined ? body.gender : undefined,
       // trees: Array<{ id: number; stage: number }>
-      trees: body.trees !== undefined ? body.trees : undefined,
+      trees: supportsTrees && body.trees !== undefined ? body.trees : undefined,
       // lastMetrics: { vocabRichness: number; descriptiveAccuracy: number; logicalCoherence: number }
-      lastMetrics: body.lastMetrics !== undefined ? body.lastMetrics : undefined,
+      lastMetrics: supportsLastMetrics && body.lastMetrics !== undefined ? body.lastMetrics : undefined,
     }
     const data = Object.fromEntries(
       Object.entries(updates).filter(([, v]) => v !== undefined)
     ) as Record<string, any>
 
-    let profile = user.profile
-    if (user.profile) {
+    const existingProfile = await prisma.userProfile.findUnique({
+      where: { userId: user.id },
+      select: { userId: true },
+    })
+
+    if (existingProfile) {
       if (Object.keys(data).length > 0) {
-        profile = await prisma.userProfile.update({
+        await prisma.userProfile.update({
           where: { userId: user.id },
           data,
+          select: { userId: true },
         })
       }
     } else {
-      profile = await prisma.userProfile.create({
+      await prisma.userProfile.create({
         data: {
           userId: user.id,
           ...data,
         },
+        select: { userId: true },
       })
     }
+
+    const profileRows = await prisma.$queryRawUnsafe<Array<Record<string, any>>>(
+      `SELECT * FROM user_profiles WHERE "userId" = $1 LIMIT 1`,
+      user.id
+    )
+    const profile = profileRows[0] ?? {}
     return NextResponse.json({
-      avatarUrl: profile.avatarUrl,
-      avatarEmoji: profile.avatarEmoji,
-      birthday: profile.birthday,
-      email: profile.email,
-      grade: profile.grade,
-      gender: profile.gender,
-      trees: profile.trees ?? null,
-      lastMetrics: profile.lastMetrics ?? null,
+      avatarUrl: profile.avatarUrl ?? null,
+      avatarEmoji: profile.avatarEmoji ?? null,
+      birthday: profile.birthday ?? null,
+      email: profile.email ?? null,
+      grade: profile.grade ?? null,
+      gender: profile.gender ?? null,
+      trees: supportsTrees ? (profile.trees ?? null) : null,
+      lastMetrics: supportsLastMetrics ? (profile.lastMetrics ?? null) : null,
+      degraded: !supportsTrees || !supportsLastMetrics,
     })
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e)
     console.error("[user-profile] POST", e)
-    if (isMissingTableError(e)) {
+    if (isProfileSchemaError(e)) {
       // Graceful fallback: keep student flow working even if profile tables are not ready yet.
       return NextResponse.json({
         avatarUrl: body?.avatarUrl ?? null,
@@ -122,8 +165,8 @@ export async function POST(request: NextRequest) {
         email: body?.email ?? null,
         grade: body?.grade ?? null,
         gender: body?.gender ?? null,
-        trees: body?.trees ?? null,
-        lastMetrics: body?.lastMetrics ?? null,
+        trees: null,
+        lastMetrics: null,
         degraded: true,
       })
     }
