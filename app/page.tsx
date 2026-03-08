@@ -124,6 +124,7 @@ interface PersistedMapState {
 }
 
 const getMapStateKey = (username: string) => `cwriteMapState:${username}`
+const getPlanTestResultKey = (username: string) => `cwritePlanTestResult:${username}`
 
 export default function Home() {
   const [user, setUser] = useState<{ username: string; role: 'teacher' | 'student'; noAi?: boolean } | null>(null)
@@ -160,6 +161,7 @@ export default function Home() {
   const [editingWorkId, setEditingWorkId] = useState<string | null>(null)
   const [galleryFromEdit, setGalleryFromEdit] = useState<{ type: 'story' | 'review' | 'letter' } | null>(null)
   const [selectedOtherFarmUser, setSelectedOtherFarmUser] = useState<string | null>(null)
+  const [planTestResult, setPlanTestResult] = useState<{ score: number; level: number } | null>(null)
   const [cagentMood, setCagentMood] = useState<CagentMood>("normal")
   const [valuesMessage, setValuesMessage] = useState<string | null>(null)
   const [valuesSuggestion, setValuesSuggestion] = useState<string | null>(null)
@@ -479,6 +481,95 @@ export default function Home() {
 
   useEffect(() => {
     if (!user?.username || typeof window === "undefined") return
+    try {
+      const raw = localStorage.getItem(getPlanTestResultKey(user.username))
+      if (!raw) {
+        setPlanTestResult(null)
+        return
+      }
+      const parsed = JSON.parse(raw) as { score?: number; level?: number }
+      if (typeof parsed.score === "number" && typeof parsed.level === "number") {
+        setPlanTestResult({ score: parsed.score, level: parsed.level })
+      } else {
+        setPlanTestResult(null)
+      }
+    } catch {
+      setPlanTestResult(null)
+    }
+  }, [user?.username])
+
+  useEffect(() => {
+    if (stage !== "planTest") return
+    if (!planTestResult) return
+    setWritingAssessment({
+      score: planTestResult.score,
+      level: planTestResult.level,
+      mapImageStatus: "idle",
+    })
+    setStage("journeyTicket")
+  }, [stage, planTestResult])
+
+  const queueJourneyMapUpdate = useCallback(
+    (params: {
+      title: string
+      topic: string
+      mapPrompt?: string
+      summaryKey?: string
+      summaryValue?: Record<string, unknown>
+      source: string
+    }) => {
+      if (!journeyActive || !user || !currentPin) return
+      const pinSnapshot = { x: currentPin.x, y: currentPin.y }
+      const previousMapImageUrl = mapImageUrl || "/firstmap.png"
+
+      void (async () => {
+        try {
+          const payload: any = {
+            userId: user.username,
+            title: params.title,
+            topic: params.topic,
+            mapX: pinSnapshot.x,
+            mapY: pinSnapshot.y,
+            previousMapImageUrl,
+          }
+          if (params.mapPrompt) payload.mapPrompt = params.mapPrompt
+          if (params.summaryKey && params.summaryValue) payload[params.summaryKey] = params.summaryValue
+
+          const mapRes = await fetch("/api/map-update", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          })
+          const mapJson = await mapRes.json()
+
+          if (mapRes.ok && !mapJson?.error && mapJson?.imageUrl) {
+            setMapImageUrl(mapJson.imageUrl as string)
+            setMapFlags((prev) => [
+              ...prev,
+              {
+                id: mapJson.userId && mapJson.title ? `${mapJson.userId}-${mapJson.title}-${Date.now()}` : `${Date.now()}`,
+                x: mapJson.mapX ?? pinSnapshot.x,
+                y: mapJson.mapY ?? pinSnapshot.y,
+                title: mapJson.title || params.title,
+              },
+            ])
+            setCurrentPin(null)
+            return
+          }
+          console.error(`[map-update] ${params.source} failed:`, {
+            status: mapRes.status,
+            body: mapJson,
+          })
+        } catch (error) {
+          console.error(`[map-update] ${params.source} error:`, error)
+        }
+      })()
+    },
+    [journeyActive, user, currentPin, mapImageUrl],
+  )
+
+  useEffect(() => {
+    if (!user?.username || typeof window === "undefined") return
     if (!mapStateHydratedRef.current) return
     const payload: PersistedMapState = {
       mapImageUrl,
@@ -708,6 +799,7 @@ export default function Home() {
       {user &&
         stage !== "login" &&
         stage !== "userProfile" &&
+        stage !== "otherFarm" &&
         stage !== "navigation" &&
         !["writing", "bookReviewWriting", "bookReviewWritingNoAi", "letterGame"].includes(stage) && (
         <Cagent
@@ -808,36 +900,19 @@ export default function Home() {
           language={language}
           user={user}
           onStartPlan={() => {
-            // V2 设计：从首页直接进入地图，而不是先做测评问卷
-            // 初始化一次简单的写作旅程配置（默认 story + level 1），让地图可以渲染
-            setJourneyActive(true)
-            setJourneySelection({ type: "story", difficulty: 1 })
+            setJourneyActive(false)
+            setJourneySelection(null)
             setLevelBadgeUnlocked(false)
-            setWritingAssessment({
-              score: 0,
-              level: 1,
-              mapImageStatus: "idle",
-            })
-            // 清空当前 pin 和故事状态，进入一张空白地图
-            setCurrentPin(null)
-            setStoryState({ character: null, plot: null, structure: null, story: "" })
-            setBookReviewState({
-              reviewType: null,
-              bookTitle: null,
-              structure: null,
-              review: "",
-              bookCoverUrl: undefined,
-              bookSummary: undefined,
-            })
-            setLetterState({
-              recipient: null,
-              occasion: null,
-              guidance: null,
-              readerImageUrl: null,
-              sections: [],
-              letter: "",
-            })
-            setStage("journeyMap")
+            if (planTestResult) {
+              setWritingAssessment({
+                score: planTestResult.score,
+                level: planTestResult.level,
+                mapImageStatus: "idle",
+              })
+              setStage("journeyTicket")
+              return
+            }
+            setStage("planTest")
           }}
           onStartWrite={() => {
             setJourneyActive(false)
@@ -858,6 +933,13 @@ export default function Home() {
               level: result.level,
               mapImageStatus: "idle",
             })
+            if (typeof window !== "undefined" && user?.username) {
+              localStorage.setItem(
+                getPlanTestResultKey(user.username),
+                JSON.stringify({ score: result.score, level: result.level }),
+              )
+            }
+            setPlanTestResult({ score: result.score, level: result.level })
             setStage("journeyTicket")
           }}
         />
@@ -1040,39 +1122,12 @@ export default function Home() {
           language={language}
           onBookSelected={(title) => {
             setBookReviewState(prev => ({ ...prev, bookTitle: title }))
-            if (journeyActive && user && currentPin) {
-              const selectedTitle = title || "My Book Review"
-              fetch("/api/map-update", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  userId: user.username,
-                  title: selectedTitle,
-                  topic: selectedTitle,
-                  mapX: currentPin.x,
-                  mapY: currentPin.y,
-                  previousMapImageUrl: mapImageUrl || "/firstmap.png",
-                }),
-              })
-                .then((res) => res.json())
-                .then((mapJson) => {
-                  if (mapJson?.imageUrl) {
-                    setMapImageUrl(mapJson.imageUrl as string)
-                    setMapFlags((prev) => [
-                      ...prev,
-                      {
-                        id: mapJson.userId && mapJson.title ? `${mapJson.userId}-${mapJson.title}-${Date.now()}` : `${Date.now()}`,
-                        x: mapJson.mapX ?? currentPin.x,
-                        y: mapJson.mapY ?? currentPin.y,
-                        title: mapJson.title || selectedTitle,
-                      },
-                    ])
-                  }
-                })
-                .catch((error) => {
-                  console.error("Error updating map after choose this book:", error)
-                })
-            }
+            const selectedTitle = title || "My Book Review"
+            queueJourneyMapUpdate({
+              title: selectedTitle,
+              topic: selectedTitle,
+              source: "book-selection",
+            })
             // 選完書後，讓 AI 推薦適合的書評類型
             setStage("bookReviewTypeSelection")
           }}
@@ -1122,6 +1177,12 @@ export default function Home() {
             }
             const structure = getStructureForReviewType(bookReviewState.reviewType)
             setBookReviewState(prev => ({ ...prev, bookTitle: title, structure }))
+            const selectedTitle = title || "My Book Review"
+            queueJourneyMapUpdate({
+              title: selectedTitle,
+              topic: selectedTitle,
+              source: "book-selection-no-ai",
+            })
             if (user.noAi) {
               setStage("bookReviewWritingNoAi")
             } else {
@@ -1200,7 +1261,7 @@ export default function Home() {
           onReset={async () => {
             const backToStage = journeyActive ? "journeyMap" : "home"
 
-            if (journeyActive && user && currentPin && bookReviewState.review.trim().length > 0) {
+            if (!journeyActive && user && currentPin && bookReviewState.review.trim().length > 0) {
               try {
                 const title = bookReviewState.bookTitle || "My Book Review"
                 const topic = bookReviewState.bookTitle || "book world"
@@ -1303,7 +1364,7 @@ export default function Home() {
           onReset={async () => {
             const backToStage = journeyActive ? "journeyMap" : "home"
 
-            if (journeyActive && user && currentPin && bookReviewState.review.trim().length > 0) {
+            if (!journeyActive && user && currentPin && bookReviewState.review.trim().length > 0) {
               try {
                 const title = bookReviewState.bookTitle || "My Book Review"
                 const topic = bookReviewState.bookTitle || "book world"
@@ -1415,6 +1476,16 @@ export default function Home() {
             onPlotCreate={(plot) => {
               setStoryState(prev => ({ ...prev, plot }))
               setStage(journeyActive ? "structure" : "journeyMap")
+              const setting = plot?.setting?.trim() || "fantasy adventure"
+              const title = storyState.character?.name?.trim()
+                ? `${storyState.character.name}'s Journey`
+                : "My Journey"
+              queueJourneyMapUpdate({
+                title,
+                topic: setting,
+                mapPrompt: `Use the previous map image as a reference. At the student's starting position, add map elements based on this story setting: ${setting}.`,
+                source: "plot-brainstorm-no-ai",
+              })
             }}
             onBack={() => setStage(journeyActive ? "journeyMap" : "character")}
             userId={user.username}
@@ -1423,110 +1494,38 @@ export default function Home() {
           <PlotBrainstorm
             language={language}
             character={storyState.character}
-            onPlotCreate={async (plot) => {
+            onPlotCreate={(plot) => {
               setStoryState((prev) => ({ ...prev, plot }))
-
-              // 如果處於 Journey 模式，Plot 完成時就直接更新地圖（給 Fal / nanobanana2edit），讓之後回到地圖時不用再等待
-              if (journeyActive && user && currentPin) {
-                try {
-                  const species = storyState.character?.species
-                  const characterName = storyState.character?.name
-                  const setting = plot.setting
-
-                  const topic = setting && setting.trim().length > 0 ? setting : "fantasy adventure"
-
-                  const storySummaryForMap = [
-                    characterName ? `Character: ${characterName}` : null,
-                    species ? `Species: ${species}` : null,
-                    setting ? `Setting: ${setting}` : null,
-                  ]
-                    .filter(Boolean)
-                    .join(" | ")
-
-                  const title =
-                    storyState.character?.name && storyState.character.name.trim().length > 0
-                      ? `${storyState.character.name}'s Journey`
-                      : "My Journey"
-
-                  const previousMapImageUrl = mapImageUrl || "/firstmap.png"
-                  const endpoint = "/api/map-update"
-
-                  const payload: any = {
-                    userId: user.username,
-                    title,
-                    topic,
-                    mapX: currentPin.x,
-                    mapY: currentPin.y,
-                    storySummary: {
-                      characterName: characterName ?? null,
-                      species: species ?? null,
-                      setting: setting ?? null,
-                    },
-                    previousMapImageUrl,
-                    mapPrompt: `Use the previous map image as a reference. At the student's starting position (x=${currentPin.x.toFixed(
-                      1,
-                    )}%, y=${currentPin.y.toFixed(
-                      1,
-                    )}%), add design elements that match this plot summary and the main character ${
-                      characterName ? `"${characterName}"` : "of the story"
-                    } (species: ${species || "unknown"}): ${storySummaryForMap ||
-                      "no details provided"}. Radially update and enrich the area around this point so the map reflects the new story journey.`,
-                  }
-
-                  const mapRes = await fetch(endpoint, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(payload),
-                  })
-
-                  const mapJson = await mapRes.json()
-                  // 明確檢查是否真正調到 Fal 並拿到圖片
-                  if (mapRes.ok && !mapJson.error && mapJson.imageUrl) {
-                    setMapImageUrl(mapJson.imageUrl as string)
-                    setMapFlags((prev) => [
-                      ...prev,
-                      {
-                        id:
-                          mapJson.userId && mapJson.title
-                            ? `${mapJson.userId}-${mapJson.title}-${Date.now()}`
-                            : `${Date.now()}`,
-                        x: mapJson.mapX ?? currentPin.x,
-                        y: mapJson.mapY ?? currentPin.y,
-                        title:
-                          characterName && setting
-                            ? `${characterName}'s ${setting} adventure`
-                            : mapJson.title || title,
-                      },
-                    ])
-                    // 清除當前圖釘，方便之後在地圖上重新放置新的圖釘開始下一次寫作
-                    setCurrentPin(null)
-                  } else {
-                    console.error("Map update after plot brainstorm failed:", {
-                      status: mapRes.status,
-                      body: mapJson,
-                    })
-                    if (typeof window !== "undefined") {
-                      const message =
-                        mapJson?.message ||
-                        mapJson?.error ||
-                        `Map service failed with status ${mapRes.status}.`
-                      // 如果後端因為 FAL_KEY 缺失等原因根本沒調到 Fal，mapJson.error 會是 map_unavailable
-                      window.alert(
-                        `Map image was NOT updated on Fal.\n\nReason: ${message}\n\nPlease check FAL_KEY / Fal dashboard.`
-                      )
-                    }
-                  }
-                } catch (error) {
-                  console.error("Error updating map after plot brainstorm:", error)
-                  if (typeof window !== "undefined") {
-                    window.alert(
-                      "Map image was NOT updated on Fal due to a network or server error.\n\n請查看瀏覽器 Console 以獲取詳細錯誤日誌。"
-                    )
-                  }
-                }
-              }
-
               setStage(journeyActive ? "structure" : "journeyMap")
+
+              // 先跳轉下一頁，地圖更新在後台異步進行，不阻塞前端流程
+              const species = storyState.character?.species
+              const characterName = storyState.character?.name
+              const setting = plot?.setting
+              const topic = setting && setting.trim().length > 0 ? setting : "fantasy adventure"
+              const title =
+                storyState.character?.name && storyState.character.name.trim().length > 0
+                  ? `${storyState.character.name}'s Journey`
+                  : "My Journey"
+              const storySummaryForMap = [
+                characterName ? `Character: ${characterName}` : null,
+                species ? `Species: ${species}` : null,
+                setting ? `Setting: ${setting}` : null,
+              ]
+                .filter(Boolean)
+                .join(" | ")
+              queueJourneyMapUpdate({
+                title,
+                topic,
+                summaryKey: "storySummary",
+                summaryValue: {
+                  characterName: characterName ?? null,
+                  species: species ?? null,
+                  setting: setting ?? null,
+                },
+                mapPrompt: `Use the previous map image as a reference. Add design elements that match this plot summary and character ${characterName ? `"${characterName}"` : "of the story"} (species: ${species || "unknown"}): ${storySummaryForMap || "no details provided"}.`,
+                source: "plot-brainstorm",
+              })
             }}
             onBack={() => setStage(journeyActive ? "journeyMap" : "character")}
             userId={user.username}
@@ -1751,6 +1750,8 @@ export default function Home() {
         <UserProfilePage
           userId={user.username}
           userRole={user.role}
+          currentUsername={user.username}
+          currentUserRole={user.role}
           avatarUrl={headerUserInfo?.avatarUrl}
           avatarEmoji={headerUserInfo?.avatarEmoji}
           onBack={() => setStage("home")}
@@ -1789,6 +1790,17 @@ export default function Home() {
               readerImageUrl,
               sections: [],
               letter: "",
+            })
+            queueJourneyMapUpdate({
+              title: `Letter to ${recipient}`,
+              topic: recipient || "letter",
+              summaryKey: "letterSummary",
+              summaryValue: {
+                recipient,
+                occasion,
+              },
+              mapPrompt: `Use the previous map image as a reference. Add visual elements related to the recipient (${recipient}) and occasion (${occasion}).`,
+              source: "letter-recipient-selected",
             })
             setStage("letterGame")
           }}
@@ -1863,59 +1875,7 @@ export default function Home() {
           readerImageUrl={letterState.readerImageUrl}
           sections={letterState.sections}
           onReset={async () => {
-            const backToStage = journeyActive ? "journeyMap" : "home"
-
-            if (journeyActive && user && currentPin && letterState.letter.trim().length > 0) {
-              try {
-                const title = `Letter to ${letterState.recipient}`
-                const topic = letterState.recipient || `letter to ${letterState.recipient}`
-
-                const previousMapImageUrl = mapImageUrl || "/firstmap.png"
-                const endpoint = "/api/map-update"
-                const payload: any = {
-                  userId: user.username,
-                  title,
-                  topic,
-                  mapX: currentPin.x,
-                  mapY: currentPin.y,
-                  letterSummary: {
-                    recipient: letterState.recipient,
-                    occasion: letterState.occasion,
-                  },
-                  previousMapImageUrl,
-                  mapPrompt: `Use the previous map image as a reference. At the student's starting position (x=${currentPin.x.toFixed(
-                    1,
-                  )}%, y=${currentPin.y.toFixed(
-                    1,
-                  )}%), add visual elements that match this letter (recipient: ${
-                    letterState.recipient
-                  }, occasion: ${letterState.occasion}). Update the surrounding area so the map reflects this letter journey.`,
-                }
-
-                const mapRes = await fetch(endpoint, {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify(payload),
-                })
-
-                const mapJson = await mapRes.json()
-
-                if (mapRes.ok && mapJson.imageUrl) {
-                  setMapImageUrl(mapJson.imageUrl as string)
-                  setMapFlags((prev) => [
-                    ...prev,
-                    {
-                      id: mapJson.userId && mapJson.title ? `${mapJson.userId}-${mapJson.title}-${Date.now()}` : `${Date.now()}`,
-                      x: mapJson.mapX ?? currentPin.x,
-                      y: mapJson.mapY ?? currentPin.y,
-                      title: mapJson.title || title,
-                    },
-                  ])
-                }
-              } catch (error) {
-                console.error("Error updating map after letter completion:", error)
-              }
-            }
+            const backToStage = "journeyMap"
 
             setLetterState({
               recipient: null,
@@ -2037,37 +1997,11 @@ export default function Home() {
           onBack={() => setStage(journeyActive ? "journeyMap" : "writeTypeSelection")}
           onBackToMap={journeyActive ? () => setStage("journeyMap") : undefined}
           onDramaGenerated={({ title, topic }) => {
-            if (!journeyActive || !currentPin) return
-            fetch("/api/map-update", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                userId: user.username,
-                title,
-                topic,
-                mapX: currentPin.x,
-                mapY: currentPin.y,
-                previousMapImageUrl: mapImageUrl || "/firstmap.png",
-              }),
+            queueJourneyMapUpdate({
+              title,
+              topic,
+              source: "drama-generated",
             })
-              .then((res) => res.json())
-              .then((mapJson) => {
-                if (mapJson?.imageUrl) {
-                  setMapImageUrl(mapJson.imageUrl as string)
-                  setMapFlags((prev) => [
-                    ...prev,
-                    {
-                      id: mapJson.userId && mapJson.title ? `${mapJson.userId}-${mapJson.title}-${Date.now()}` : `${Date.now()}`,
-                      x: mapJson.mapX ?? currentPin.x,
-                      y: mapJson.mapY ?? currentPin.y,
-                      title: mapJson.title || title,
-                    },
-                  ])
-                }
-              })
-              .catch((error) => {
-                console.error("Error updating map after drama generation:", error)
-              })
           }}
         />
       )}
@@ -2089,37 +2023,12 @@ export default function Home() {
           backLabel={journeyActive ? "Back to Map" : undefined}
           onBack={() => setStage(journeyActive ? "journeyMap" : "writeTypeSelection")}
           onComplete={() => {
-            if (journeyActive && currentPin && poetryTopicValue) {
-              fetch("/api/map-update", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  userId: user.username,
-                  title: `Poetry: ${poetryTopicValue}`,
-                  topic: poetryTopicValue,
-                  mapX: currentPin.x,
-                  mapY: currentPin.y,
-                  previousMapImageUrl: mapImageUrl || "/firstmap.png",
-                }),
+            if (poetryTopicValue) {
+              queueJourneyMapUpdate({
+                title: `Poetry: ${poetryTopicValue}`,
+                topic: poetryTopicValue,
+                source: "poetry-complete",
               })
-                .then((res) => res.json())
-                .then((mapJson) => {
-                  if (mapJson?.imageUrl) {
-                    setMapImageUrl(mapJson.imageUrl as string)
-                    setMapFlags((prev) => [
-                      ...prev,
-                      {
-                        id: mapJson.userId && mapJson.title ? `${mapJson.userId}-${mapJson.title}-${Date.now()}` : `${Date.now()}`,
-                        x: mapJson.mapX ?? currentPin.x,
-                        y: mapJson.mapY ?? currentPin.y,
-                        title: mapJson.title || `Poetry: ${poetryTopicValue}`,
-                      },
-                    ])
-                  }
-                })
-                .catch((error) => {
-                  console.error("Error updating map after poetry completion:", error)
-                })
             }
             setStage(journeyActive ? "journeyMap" : "home")
           }}
@@ -2180,6 +2089,8 @@ export default function Home() {
         <UserProfilePage
           userId={selectedOtherFarmUser}
           userRole="student"
+          currentUsername={user.username}
+          currentUserRole={user.role}
           onBack={() => setStage("navigation")}
           onOpenSettings={() => setStage("navigation")}
           isOtherFarm
