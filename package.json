@@ -7,7 +7,7 @@
     "build": "prisma generate && node scripts/baseline-and-migrate.js && next build",
     "dev": "next dev",
     "lint": "eslint .",
-    "start": "next start",
+    "start": "node scripts/baseline-and-migrate.js && next start",
     "postinstall": "prisma generate",
     "db:generate": "npx prisma generate",
     "db:push": "npx prisma db push",
