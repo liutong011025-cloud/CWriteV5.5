@@ -120,6 +120,7 @@ interface PersistedMapState {
   currentPin: { x: number; y: number } | null
   journeySelection: { type: JourneyType; difficulty: number } | null
   journeyActive: boolean
+  levelBadgeUnlocked: boolean
 }
 
 const getMapStateKey = (username: string) => `cwriteMapState:${username}`
@@ -167,6 +168,7 @@ export default function Home() {
   const [currentPin, setCurrentPin] = useState<{ x: number; y: number } | null>(null)
   const [mapFlags, setMapFlags] = useState<{ id: string; x: number; y: number; title: string }[]>([])
   const [mapImageUrl, setMapImageUrl] = useState<string | undefined>(undefined)
+  const [levelBadgeUnlocked, setLevelBadgeUnlocked] = useState(false)
   const mapStateHydratedRef = useRef(false)
   // 小树森林：最多 12 棵，每棵 { id, stage: 1-6 }
   const [trees, setTrees] = useState<{ id: number; stage: number }[] | null>(null)
@@ -352,6 +354,7 @@ export default function Home() {
       if (user) {
         setJourneyActive(true)
         setJourneySelection({ type: "story", difficulty: 1 })
+        setLevelBadgeUnlocked(false)
         if (!writingAssessment) {
           setWritingAssessment({
             score: 0,
@@ -367,6 +370,7 @@ export default function Home() {
       setStage("home")
       setJourneyActive(false)
       setJourneySelection(null)
+      setLevelBadgeUnlocked(false)
     }
     
     const handleNavigateToAbout = () => {
@@ -463,6 +467,9 @@ export default function Home() {
       if (typeof parsed.journeyActive === "boolean") {
         setJourneyActive(parsed.journeyActive)
       }
+      if (typeof parsed.levelBadgeUnlocked === "boolean") {
+        setLevelBadgeUnlocked(parsed.levelBadgeUnlocked)
+      }
     } catch {
       // ignore parse/storage errors
     } finally {
@@ -479,13 +486,14 @@ export default function Home() {
       currentPin,
       journeySelection,
       journeyActive,
+      levelBadgeUnlocked,
     }
     try {
       localStorage.setItem(getMapStateKey(user.username), JSON.stringify(payload))
     } catch {
       // ignore storage errors
     }
-  }, [user?.username, mapImageUrl, mapFlags, currentPin, journeySelection, journeyActive])
+  }, [user?.username, mapImageUrl, mapFlags, currentPin, journeySelection, journeyActive, levelBadgeUnlocked])
 
   // Notify header of current user + profile + unread reviews count
   const [headerUserInfo, setHeaderUserInfo] = useState<{ username: string; avatarUrl?: string | null; avatarEmoji?: string | null; unreadCount: number } | null>(null)
@@ -689,9 +697,10 @@ export default function Home() {
     !!user &&
     !!writingAssessment &&
     !!journeySelection &&
+    levelBadgeUnlocked &&
     writingAssessment.level >= 1 &&
     writingAssessment.level <= 5 &&
-    !["login", "home", "planTest"].includes(stage)
+    !["login", "home", "planTest", "journeyTicket", "journeyMap"].includes(stage)
 
   return (
     <main className="min-h-screen" data-stage={stage}>
@@ -803,6 +812,7 @@ export default function Home() {
             // 初始化一次简单的写作旅程配置（默认 story + level 1），让地图可以渲染
             setJourneyActive(true)
             setJourneySelection({ type: "story", difficulty: 1 })
+            setLevelBadgeUnlocked(false)
             setWritingAssessment({
               score: 0,
               level: 1,
@@ -832,6 +842,7 @@ export default function Home() {
           onStartWrite={() => {
             setJourneyActive(false)
             setJourneySelection(null)
+            setLevelBadgeUnlocked(false)
             setStage("writeTypeSelection")
           }}
           onViewAbout={() => setStage("about")}
@@ -857,15 +868,16 @@ export default function Home() {
           userName={user.username}
           level={writingAssessment.level}
           score={writingAssessment.score}
-          mapImageStatus={writingAssessment.mapImageStatus}
           onBack={() => {
             setJourneyActive(false)
             setJourneySelection(null)
+            setLevelBadgeUnlocked(false)
             setStage("home")
           }}
           onStart={({ type, difficulty }) => {
             setJourneySelection({ type, difficulty })
             setJourneyActive(true)
+            setLevelBadgeUnlocked(true)
             setCurrentPin(null)
             if (type === "story") {
               setStoryState({ character: null, plot: null, structure: null, story: "" })
