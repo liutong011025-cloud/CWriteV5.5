@@ -2002,10 +2002,11 @@ export default function Home() {
           backLabel={journeyActive ? "Back to Map" : undefined}
           onBack={() => setStage(journeyActive ? "journeyMap" : "writeTypeSelection")}
           onBackToMap={journeyActive ? () => setStage("journeyMap") : undefined}
-          onDramaGenerated={({ title, topic }) => {
+          onDramaGenerated={({ topic }) => {
+            const dramaTopic = (topic || "").split(",")[0]?.trim() || topic || "mysterious place"
             queueJourneyMapUpdate({
-              title,
-              topic,
+              title: `A Drama in ${dramaTopic}`,
+              topic: dramaTopic,
               source: "drama-generated",
             })
           }}
@@ -2028,10 +2029,19 @@ export default function Home() {
           userId={user.username}
           backLabel={journeyActive ? "Back to Map" : undefined}
           onBack={() => setStage(journeyActive ? "journeyMap" : "writeTypeSelection")}
+          onTopicSelected={(topic) => {
+            const cleaned = (topic || "").trim()
+            if (!cleaned) return
+            queueJourneyMapUpdate({
+              title: `A Poetry about ${cleaned}`,
+              topic: cleaned,
+              source: "poetry-topic-selected",
+            })
+          }}
           onComplete={() => {
             if (poetryTopicValue) {
               queueJourneyMapUpdate({
-                title: `Poetry: ${poetryTopicValue}`,
+                title: `A Poetry about ${poetryTopicValue}`,
                 topic: poetryTopicValue,
                 source: "poetry-complete",
               })
@@ -2055,6 +2065,15 @@ export default function Home() {
           initialPhase="setup-topic"
           backLabel={journeyActive ? "Back to Map" : undefined}
           onBack={() => setStage(journeyActive ? "journeyMap" : "writeTypeSelection")}
+          onTopicSelected={(topic) => {
+            const cleaned = (topic || "").trim()
+            if (!cleaned) return
+            queueJourneyMapUpdate({
+              title: `A Poetry about ${cleaned}`,
+              topic: cleaned,
+              source: "poetry-topic-selected",
+            })
+          }}
           onComplete={() => setStage(journeyActive ? "journeyMap" : "home")}
         />
       )}
