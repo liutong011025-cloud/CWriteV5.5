@@ -65,7 +65,11 @@ export default function UserSettingsPage({
       if (updates.avatarUrl !== undefined || updates.avatarEmoji !== undefined) {
         onProfileUpdated?.({ avatarUrl: data.avatarUrl ?? undefined, avatarEmoji: data.avatarEmoji ?? undefined })
       }
-      toast.success("Settings saved!")
+      if (data?.degraded) {
+        toast.warning("Settings saved partially. Database migration is still in progress.")
+      } else {
+        toast.success("Settings saved!")
+      }
     } catch (e: any) {
       toast.error(e.message || "Failed to save")
     } finally {
