@@ -878,9 +878,9 @@ export default function Home() {
             setJourneySelection({ type, difficulty })
             setJourneyActive(true)
             setLevelBadgeUnlocked(true)
-            setCurrentPin(null)
             if (type === "story") {
               setStoryState({ character: null, plot: null, structure: null, story: "" })
+              setStage("welcome")
             } else if (type === "bookReview") {
               setBookReviewState({
                 reviewType: null,
@@ -890,6 +890,7 @@ export default function Home() {
                 bookCoverUrl: undefined,
                 bookSummary: undefined,
               })
+              setStage("bookReviewWelcome")
             } else if (type === "letter") {
               setLetterState({
                 recipient: null,
@@ -899,9 +900,12 @@ export default function Home() {
                 sections: [],
                 letter: "",
               })
+              setStage("letterAdventure")
+            } else if (type === "drama") {
+              setStage("dramaWriting")
+            } else if (type === "poetry") {
+              setStage("poetryWriting")
             }
-            // 直接跳转到地图页面（背景图已在planTest完成后生成）
-            setStage("journeyMap")
           }}
         />
       )}
