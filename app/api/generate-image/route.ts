@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
     // 如果是角色图片，增强prompt确保无背景
     let finalPrompt = prompt.trim()
     if (stage === 'dramaCharacter') {
-      finalPrompt = `${finalPrompt}, character only, no background, transparent background, isolated character, white background, clean cutout, PNG with transparency, no people in background`
+      finalPrompt = `${finalPrompt}, full-body character sprite only, isolated subject, no background, transparent alpha background, clean cutout edges, sticker style, no shadow, no scenery, no props, png with transparency`
     } else if (stage === 'dramaBackground') {
       finalPrompt = `${finalPrompt}, background only, no people, no characters, no persons, landscape or setting only, empty scene background`
     }
