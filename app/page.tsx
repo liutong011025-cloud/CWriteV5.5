@@ -900,19 +900,25 @@ export default function Home() {
           language={language}
           user={user}
           onStartPlan={() => {
-            setJourneyActive(false)
-            setJourneySelection(null)
+            setJourneyActive(true)
             setLevelBadgeUnlocked(false)
-            if (planTestResult) {
+            if (!journeySelection) {
+              setJourneySelection({ type: "story", difficulty: 1 })
+            }
+            if (!writingAssessment && planTestResult) {
               setWritingAssessment({
                 score: planTestResult.score,
                 level: planTestResult.level,
                 mapImageStatus: "idle",
               })
-              setStage("journeyTicket")
-              return
+            } else if (!writingAssessment) {
+              setWritingAssessment({
+                score: 0,
+                level: 1,
+                mapImageStatus: "idle",
+              })
             }
-            setStage("planTest")
+            setStage("journeyMap")
           }}
           onStartWrite={() => {
             setJourneyActive(false)
