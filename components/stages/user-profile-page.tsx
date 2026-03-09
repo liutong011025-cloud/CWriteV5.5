@@ -654,7 +654,10 @@ export default function UserProfilePage({
             {!isOtherFarm &&
               Array.from({ length: treeCount }).map((_, index) => {
                 const treeState = farmTreeStates[index] || DEFAULT_TREE_LAYOUT[index]
-                const isHighlightedTree = forest[index] && highlightTreeId === forest[index].id
+                const treeData = forest[index]
+                const isHighlightedTree = treeData && highlightTreeId === treeData.id
+                const treeStage = Math.max(2, Math.min(4, Number(treeData?.stage ?? 2)))
+                const treeImageSrc = treeStage >= 4 ? "/tree4.png" : treeStage >= 3 ? "/tree3.png" : "/tree2.png"
                 const treeBaseSizePercent = 8
                 return (
                   <div
@@ -673,7 +676,7 @@ export default function UserProfilePage({
                     }}
                   >
                     <img
-                      src="/tree2.png"
+                      src={treeImageSrc}
                       alt={`Farm tree ${index + 1}`}
                       className="h-full w-full object-contain select-none pointer-events-none"
                       draggable={false}
