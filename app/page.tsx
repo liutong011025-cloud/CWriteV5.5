@@ -1583,10 +1583,9 @@ export default function Home() {
           onReset={async () => {
             const backToStage = journeyActive ? "journeyMap" : "home"
 
-            // Journey 模式下，地圖已在 Plot 步驟更新，這裡不再重複調 Fal，只是清理狀態並返回地圖
-            if (!journeyActive && user && currentPin && storyState.story.trim().length > 0) {
+            // 完成作文后都进行 12 维度评估并更新小树（Journey/非Journey都执行）
+            if (user && storyState.story.trim().length > 0) {
               try {
-                // 1. 调用 12 维度价值观评估，命中维度对应小树成长
                 const valuesRes = await fetch("/api/writing-values-growth", {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
@@ -1601,7 +1600,14 @@ export default function Home() {
                   ? valuesJson.matchedDimensions
                   : []
                 await applyTreeGrowthFromMetrics(matchedDimensions)
+              } catch (error) {
+                console.error("Error updating tree growth after story completion:", error)
+              }
+            }
 
+            // Journey 模式下，地圖已在 Plot 步驟更新，這裡不再重複調 Fal，只是清理狀態並返回地圖
+            if (!journeyActive && user && currentPin && storyState.story.trim().length > 0) {
+              try {
                 const title =
                   storyState.character?.name && storyState.character.name.trim().length > 0
                     ? `${storyState.character.name}'s Story`
