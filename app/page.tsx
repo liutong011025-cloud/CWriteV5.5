@@ -125,6 +125,29 @@ interface PersistedMapState {
 
 const getMapStateKey = (username: string) => `cwriteMapState:${username}`
 const getPlanTestResultKey = (username: string) => `cwritePlanTestResult:${username}`
+const VALUES_DIMENSION_COUNT = 12
+
+const normalizeTreeStage = (stage: number) => {
+  if (stage >= 4) return 4
+  if (stage >= 3) return 3
+  return 2
+}
+
+const createDefaultValuesTrees = () =>
+  Array.from({ length: VALUES_DIMENSION_COUNT }, (_, i) => ({ id: i + 1, stage: 2 }))
+
+const normalizeValuesTrees = (rawTrees: { id: number; stage: number }[] | null | undefined) => {
+  if (!rawTrees || rawTrees.length === 0) return createDefaultValuesTrees()
+  const byId = new Map<number, { id: number; stage: number }>()
+  rawTrees.forEach((tree, idx) => {
+    const id = Number(tree?.id) || idx + 1
+    byId.set(id, { id, stage: normalizeTreeStage(Number(tree?.stage) || 2) })
+  })
+  return Array.from({ length: VALUES_DIMENSION_COUNT }, (_, i) => {
+    const id = i + 1
+    return byId.get(id) || { id, stage: 2 }
+  })
+}
 
 export default function Home() {
   const [user, setUser] = useState<{ username: string; role: 'teacher' | 'student'; noAi?: boolean } | null>(null)
@@ -172,7 +195,7 @@ export default function Home() {
   const [mapImageUrl, setMapImageUrl] = useState<string | undefined>(undefined)
   const [levelBadgeUnlocked, setLevelBadgeUnlocked] = useState(false)
   const mapStateHydratedRef = useRef(false)
-  // 小树森林：最多 12 棵，每棵 { id, stage: 1-6 }
+  // 12 价值观维度小树：每棵 stage 2->3->4（最多成长两次）
   const [trees, setTrees] = useState<{ id: number; stage: number }[] | null>(null)
   // 上一次写作三指标，用于判断哪一项提升最大
   const [lastMetrics, setLastMetrics] = useState<WritingMetricsSnapshot | null>(null)
@@ -616,21 +639,21 @@ export default function Home() {
       if (typeof window !== "undefined") {
         window.dispatchEvent(new CustomEvent("headerUserInfo", { detail: info }))
       }
-      // 初始化小树和上一次指标（若后端已有则使用，否则创建一棵 stage=1 的树）
+      // 初始化 12 维度小树（若后端已有则做标准化，否则创建 12 棵 stage=2）
       if (!profileRes.error) {
         const rawTrees = Array.isArray(profileRes.trees) ? profileRes.trees as { id: number; stage: number }[] : null
-        let initialTrees = rawTrees && rawTrees.length > 0 ? rawTrees : [{ id: 1, stage: 1 }]
-        // 只保留前 12 棵
-        if (initialTrees.length > 12) {
-          initialTrees = initialTrees.slice(0, 12)
-        }
+        const initialTrees = normalizeValuesTrees(rawTrees)
         setTrees(initialTrees)
         const lm = profileRes.lastMetrics as WritingMetricsSnapshot | undefined
         if (lm && typeof lm.vocabRichness === "number") {
           setLastMetrics(lm)
         }
-        // 如果后端还没有 trees 字段，写回一次默认森林
-        if (!rawTrees || rawTrees.length === 0) {
+        // 若后端还没有 12 维度数据（或旧格式），写回一次标准化森林
+        const shouldBackfillTrees =
+          !rawTrees ||
+          rawTrees.length !== VALUES_DIMENSION_COUNT ||
+          rawTrees.some((tree, idx) => Number(tree?.id) !== idx + 1 || normalizeTreeStage(Number(tree?.stage) || 2) !== Number(tree?.stage))
+        if (shouldBackfillTrees) {
           fetch("/api/user-profile", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -671,9 +694,7 @@ export default function Home() {
         }
         if (!profileRes.error) {
           const rawTrees = Array.isArray(profileRes.trees) ? profileRes.trees as { id: number; stage: number }[] : null
-          if (rawTrees) {
-            setTrees(rawTrees.slice(0, 12))
-          }
+          setTrees(normalizeValuesTrees(rawTrees))
           const lm = profileRes.lastMetrics as WritingMetricsSnapshot | undefined
           if (lm && typeof lm.vocabRichness === "number") {
             setLastMetrics(lm)
@@ -696,71 +717,32 @@ export default function Home() {
     }
   }, [currentLevel])
 
-  // 基于 Dify 指标，决定本次成长主要维度（词汇 / 描写 / 逻辑）
-  const chooseGrowthDimension = (metrics: WritingMetricsSnapshot, previous: WritingMetricsSnapshot | null): TreeGrowthDimension => {
-    if (!previous) {
-      // 首次没有对比，就选分数最高的维度
-      const triples: [TreeGrowthDimension, number][] = [
-        ["vocab", metrics.vocabRichness],
-        ["detail", metrics.descriptiveAccuracy],
-        ["logic", metrics.logicalCoherence],
-      ]
-      triples.sort((a, b) => b[1] - a[1])
-      return triples[0][0]
-    }
-    const deltas: [TreeGrowthDimension, number][] = [
-      ["vocab", metrics.vocabRichness - previous.vocabRichness],
-      ["detail", metrics.descriptiveAccuracy - previous.descriptiveAccuracy],
-      ["logic", metrics.logicalCoherence - previous.logicalCoherence],
-    ]
-    deltas.sort((a, b) => b[1] - a[1])
-    // 如果所有提升都 <= 0，则仍然选择当前得分最高的维度，表示整体巩固
-    if (deltas[0][1] <= 0) {
-      const triples: [TreeGrowthDimension, number][] = [
-        ["vocab", metrics.vocabRichness],
-        ["detail", metrics.descriptiveAccuracy],
-        ["logic", metrics.logicalCoherence],
-      ]
-      triples.sort((a, b) => b[1] - a[1])
-      return triples[0][0]
-    }
-    return deltas[0][0]
-  }
-
-  // 根据三指标更新森林：某一棵树 stage+1，满 6 后若不足 12 棵则种新树
+  // 根据 12 价值观命中维度更新森林：命中的树 stage +1（上限 4）
   const applyTreeGrowthFromMetrics = useCallback(
-    async (metrics: WritingMetricsSnapshot) => {
+    async (matchedDimensions: number[]) => {
       if (!user) return
-      let grownTreeId = 1
-      const dimension = chooseGrowthDimension(metrics, lastMetrics)
+      const currentTrees = normalizeValuesTrees(trees)
+      const growthCounter = new Map<number, number>()
+      matchedDimensions
+        .map((n) => Number(n))
+        .filter((n) => Number.isFinite(n) && n >= 1 && n <= VALUES_DIMENSION_COUNT)
+        .map((n) => Math.round(n))
+        .forEach((id) => {
+          const current = growthCounter.get(id) || 0
+          growthCounter.set(id, Math.min(2, current + 1))
+        })
 
-      const nextTrees = (() => {
-        if (!trees || trees.length === 0) {
-          grownTreeId = 1
-          return [{ id: 1, stage: 1 }]
-        }
-        const cloned = [...trees]
-        const lastIndex = cloned.length - 1
-        const current = cloned[lastIndex]
-        if (current.stage < 6) {
-          const updated = { ...current, stage: current.stage + 1 }
-          cloned[lastIndex] = updated
-          grownTreeId = updated.id
-          return cloned
-        }
-        // 当前最后一棵已经满级
-        grownTreeId = current.id
-        if (cloned.length < 12) {
-          const nextId = cloned[cloned.length - 1].id + 1
-          cloned.push({ id: nextId, stage: 1 })
-          grownTreeId = nextId
-        }
-        return cloned
-      })()
+      const matchedIds = Array.from(growthCounter.keys())
+      let grownTreeId = matchedIds[0] || 1
+      const nextTrees = currentTrees.map((tree) => {
+        const growthLevel = growthCounter.get(tree.id) || 0
+        if (growthLevel <= 0) return tree
+        grownTreeId = tree.id
+        return { ...tree, stage: Math.min(4, tree.stage + growthLevel) }
+      })
 
       setTrees(nextTrees)
-      setLastMetrics(metrics)
-      setLastGrownTree({ treeId: grownTreeId, dimension })
+      setLastGrownTree({ treeId: grownTreeId, dimension: "vocab" })
 
       // 同步到后端 profile
       try {
@@ -770,14 +752,13 @@ export default function Home() {
           body: JSON.stringify({
             user_id: user.username,
             trees: nextTrees,
-            lastMetrics: metrics,
           }),
         })
       } catch {
         // 后端失败不阻塞前端体验
       }
     },
-    [trees, user, lastMetrics]
+    [trees, user]
   )
 
   if (!isReady) {
@@ -1605,8 +1586,8 @@ export default function Home() {
             // Journey 模式下，地圖已在 Plot 步驟更新，這裡不再重複調 Fal，只是清理狀態並返回地圖
             if (!journeyActive && user && currentPin && storyState.story.trim().length > 0) {
               try {
-                // 1. 調用 Dify 寫作指標 API
-                const metricsRes = await fetch("/api/writing-metrics", {
+                // 1. 调用 12 维度价值观评估，命中维度对应小树成长
+                const valuesRes = await fetch("/api/writing-values-growth", {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({
@@ -1615,13 +1596,11 @@ export default function Home() {
                     user_id: user.username,
                   }),
                 })
-                const metricsJson = await metricsRes.json()
-                const metrics = metricsJson.metrics || {
-                  vocabRichness: 40,
-                  descriptiveAccuracy: 40,
-                  logicalCoherence: 40,
-                }
-                await applyTreeGrowthFromMetrics(metrics)
+                const valuesJson = await valuesRes.json()
+                const matchedDimensions = Array.isArray(valuesJson?.matchedDimensions)
+                  ? valuesJson.matchedDimensions
+                  : []
+                await applyTreeGrowthFromMetrics(matchedDimensions)
 
                 const title =
                   storyState.character?.name && storyState.character.name.trim().length > 0
