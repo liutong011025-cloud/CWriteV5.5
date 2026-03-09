@@ -8,7 +8,7 @@ import type { Language, StoryState, BookReviewState, LetterState } from "@/app/p
 import type { JourneyType } from "@/components/stages/journey-ticket"
 import Antigravity from "@/components/effects/antigravity"
 import ShapeBlur from "@/components/effects/shape-blur"
-import FluidGlass from "@/components/effects/FluidGlass"
+import Particles from "@/components/effects/Particles"
 
 export interface DramaProgress {
   hasDramaBook: boolean
@@ -112,7 +112,7 @@ export default function JourneyMap({
       style={{
         cursor: isHoldingPin
           ? 'url("/pin.png") 16 32, pointer'
-          : "none",
+          : "default",
       }}
     >
       <img
@@ -140,6 +140,19 @@ export default function JourneyMap({
           pulseSpeed={3}
           particleShape="capsule"
           fieldStrength={10}
+        />
+      </div>
+      <div className="absolute inset-0 opacity-65 pointer-events-none">
+        <Particles
+          particleColors={["#d3c673"]}
+          particleCount={200}
+          particleSpread={10}
+          speed={0.1}
+          particleBaseSize={100}
+          moveParticlesOnHover
+          alphaParticles={false}
+          disableRotation={false}
+          pixelRatio={1}
         />
       </div>
 
@@ -292,27 +305,6 @@ export default function JourneyMap({
           {/* 右側原說明面板已移除，保留空間以後可放其它內容 */}
         </div>
       </div>
-      {!isHoldingPin && (
-        <div className="fixed inset-0 z-[120]" style={{ pointerEvents: "none" }}>
-          <FluidGlass
-            mode="lens"
-            lensProps={{
-              scale: 0.25,
-              ior: 1.15,
-              thickness: 5,
-              chromaticAberration: 0.1,
-              anisotropy: 0.01,
-            }}
-            scale={0.25}
-            ior={1.15}
-            thickness={2}
-            transmission={1}
-            roughness={0}
-            chromaticAberration={0.05}
-            anisotropy={0.01}
-          />
-        </div>
-      )}
       <style jsx global>{`
         @keyframes atlas-jitter-sm {
           0%, 100% { transform: translate3d(0, 0, 0) rotate(0deg); }
