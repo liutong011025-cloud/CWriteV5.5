@@ -36,7 +36,15 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${comicNeue.variable} ${patrickHand.variable} ${geist.variable} ${geistMono.variable} font-sans antialiased flex flex-col min-h-screen`}>
+      <body
+        className={`${comicNeue.variable} ${patrickHand.variable} ${geist.variable} ${geistMono.variable} font-sans antialiased flex flex-col min-h-screen bg-cover bg-center bg-no-repeat`}
+        style={{
+          backgroundImage: "url('/firstmap.png')",
+          backgroundSize: "cover",
+          backgroundPosition: "center center",
+          backgroundRepeat: "no-repeat",
+        }}
+      >
         <HeaderWrapper />
         <main className="flex-1">
           {children}
