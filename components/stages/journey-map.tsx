@@ -8,6 +8,7 @@ import type { Language, StoryState, BookReviewState, LetterState } from "@/app/p
 import type { JourneyType } from "@/components/stages/journey-ticket"
 import Antigravity from "@/components/effects/antigravity"
 import ShapeBlur from "@/components/effects/shape-blur"
+import FluidGlass from "@/components/effects/FluidGlass"
 
 export interface DramaProgress {
   hasDramaBook: boolean
@@ -106,7 +107,10 @@ export default function JourneyMap({
   }
 
   return (
-    <div className="min-h-screen relative overflow-hidden pt-0">
+    <div
+      className="min-h-screen relative overflow-hidden pt-0"
+      style={{ cursor: isHoldingPin ? 'url("/pin.png") 16 32, pointer' : "none" }}
+    >
       <img
         src={effectiveMapImageUrl}
         alt="Journey Map"
@@ -217,11 +221,8 @@ export default function JourneyMap({
           )}
 
           <div
-            className="relative flex-1 h-full cursor-crosshair"
+            className="relative flex-1 h-full"
             onClick={handleMapClick}
-            style={{
-              cursor: isHoldingPin ? 'url("/pin.png") 16 32, pointer' : "default",
-            }}
           >
             {pinPosition && (
               <button
@@ -287,6 +288,27 @@ export default function JourneyMap({
           {/* 右側原說明面板已移除，保留空間以後可放其它內容 */}
         </div>
       </div>
+      {!isHoldingPin && (
+        <div className="pointer-events-none fixed inset-0 z-[120]">
+          <FluidGlass
+            mode="lens"
+            lensProps={{
+              scale: 0.25,
+              ior: 1.15,
+              thickness: 5,
+              chromaticAberration: 0.1,
+              anisotropy: 0.01,
+            }}
+            scale={0.25}
+            ior={1.15}
+            thickness={2}
+            transmission={1}
+            roughness={0}
+            chromaticAberration={0.05}
+            anisotropy={0.01}
+          />
+        </div>
+      )}
       <style jsx global>{`
         @keyframes atlas-jitter-sm {
           0%, 100% { transform: translate3d(0, 0, 0) rotate(0deg); }
