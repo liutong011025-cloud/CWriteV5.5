@@ -761,6 +761,31 @@ export default function Home() {
     [trees, user]
   )
 
+  const evaluateValuesGrowth = useCallback(
+    async (text: string, type: "story" | "review" | "letter") => {
+      if (!user || !text.trim()) return
+      try {
+        const valuesRes = await fetch("/api/writing-values-growth", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            text,
+            type,
+            user_id: user.username,
+          }),
+        })
+        const valuesJson = await valuesRes.json()
+        const matchedDimensions = Array.isArray(valuesJson?.matchedDimensions)
+          ? valuesJson.matchedDimensions
+          : []
+        await applyTreeGrowthFromMetrics(matchedDimensions)
+      } catch (error) {
+        console.error("Error evaluating values growth:", error)
+      }
+    },
+    [user, applyTreeGrowthFromMetrics]
+  )
+
   if (!isReady) {
     return null
   }
@@ -992,7 +1017,7 @@ export default function Home() {
           dramaProgress={journeySelection.type === "drama" ? dramaProgress : undefined}
           poetryProgress={journeySelection.type === "poetry" ? poetryProgress : undefined}
           noAi={user.noAi}
-          onBack={() => setStage("journeyTicket")}
+          onBack={() => setStage("userProfile")}
           onNavigate={(targetStage) => {
             setStage(targetStage as any)
           }}
@@ -1245,8 +1270,9 @@ export default function Home() {
           bookCoverUrl={bookReviewState.bookCoverUrl}
           bookSummary={bookReviewState.bookSummary}
           structure={bookReviewState.structure}
-          onReset={async () => {
-            const backToStage = journeyActive ? "journeyMap" : "home"
+          onReset={async (finalReview) => {
+            const backToStage = "journeyMap"
+            await evaluateValuesGrowth(finalReview, "review")
 
             if (!journeyActive && user && currentPin && bookReviewState.review.trim().length > 0) {
               try {
@@ -1348,8 +1374,9 @@ export default function Home() {
           reviewType={bookReviewState.reviewType!}
           bookTitle={bookReviewState.bookTitle}
           review={bookReviewState.review}
-          onReset={async () => {
-            const backToStage = journeyActive ? "journeyMap" : "home"
+          onReset={async (finalReview) => {
+            const backToStage = "journeyMap"
+            await evaluateValuesGrowth(finalReview, "review")
 
             if (!journeyActive && user && currentPin && bookReviewState.review.trim().length > 0) {
               try {
@@ -1580,33 +1607,12 @@ export default function Home() {
         <StoryReview
           language={language}
           storyState={storyState}
-          onReset={async () => {
-            const backToStage = journeyActive ? "journeyMap" : "home"
-
-            // 完成作文后都进行 12 维度评估并更新小树（Journey/非Journey都执行）
-            if (user && storyState.story.trim().length > 0) {
-              try {
-                const valuesRes = await fetch("/api/writing-values-growth", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({
-                    text: storyState.story,
-                    type: "story",
-                    user_id: user.username,
-                  }),
-                })
-                const valuesJson = await valuesRes.json()
-                const matchedDimensions = Array.isArray(valuesJson?.matchedDimensions)
-                  ? valuesJson.matchedDimensions
-                  : []
-                await applyTreeGrowthFromMetrics(matchedDimensions)
-              } catch (error) {
-                console.error("Error updating tree growth after story completion:", error)
-              }
-            }
+          onReset={async (finalStory) => {
+            const backToStage = "journeyMap"
+            await evaluateValuesGrowth(finalStory, "story")
 
             // Journey 模式下，地圖已在 Plot 步驟更新，這裡不再重複調 Fal，只是清理狀態並返回地圖
-            if (!journeyActive && user && currentPin && storyState.story.trim().length > 0) {
+            if (!journeyActive && user && currentPin && finalStory.trim().length > 0) {
               try {
                 const title =
                   storyState.character?.name && storyState.character.name.trim().length > 0
@@ -1745,7 +1751,7 @@ export default function Home() {
           currentUserRole={user.role}
           avatarUrl={headerUserInfo?.avatarUrl}
           avatarEmoji={headerUserInfo?.avatarEmoji}
-          onBack={() => setStage("home")}
+          onBack={() => setStage("journeyMap")}
           onOpenSettings={() => setStage("userSettings")}
           trees={trees ?? undefined}
           recentGrowthTreeId={lastGrownTree?.treeId ?? null}
@@ -1865,8 +1871,9 @@ export default function Home() {
           guidance={letterState.guidance}
           readerImageUrl={letterState.readerImageUrl}
           sections={letterState.sections}
-          onReset={async () => {
+          onReset={async (finalLetter) => {
             const backToStage = "journeyMap"
+            await evaluateValuesGrowth(finalLetter, "letter")
 
             setLetterState({
               recipient: null,
@@ -1985,7 +1992,12 @@ export default function Home() {
           userId={user.username}
           initialView="builder"
           backLabel={journeyActive ? "Back to Map" : undefined}
-          onBack={() => setStage(journeyActive ? "journeyMap" : "writeTypeSelection")}
+          onBack={async () => {
+            if (journeyActive && dramaBook) {
+              await evaluateValuesGrowth(JSON.stringify(dramaBook), "story")
+            }
+            setStage(journeyActive ? "journeyMap" : "writeTypeSelection")
+          }}
           onBackToMap={journeyActive ? () => setStage("journeyMap") : undefined}
           onDramaGenerated={({ topic }) => {
             const dramaTopic = (topic || "").split(",")[0]?.trim() || topic || "mysterious place"
@@ -2003,7 +2015,12 @@ export default function Home() {
           userId={user.username}
           initialView="book"
           backLabel={journeyActive ? "Back to Map" : undefined}
-          onBack={() => setStage(journeyActive ? "journeyMap" : "writeTypeSelection")}
+          onBack={async () => {
+            if (journeyActive && dramaBook) {
+              await evaluateValuesGrowth(JSON.stringify(dramaBook), "story")
+            }
+            setStage(journeyActive ? "journeyMap" : "writeTypeSelection")
+          }}
           onBackToMap={journeyActive ? () => setStage("journeyMap") : undefined}
         />
       )}
@@ -2024,6 +2041,7 @@ export default function Home() {
             })
           }}
           onComplete={() => {
+            evaluateValuesGrowth(poetryLinesText, "story")
             if (poetryTopicValue) {
               queueJourneyMapUpdate({
                 title: `A Poetry about ${poetryTopicValue}`,
@@ -2041,7 +2059,10 @@ export default function Home() {
           initialPhase="choose-form"
           backLabel={journeyActive ? "Back to Map" : undefined}
           onBack={() => setStage(journeyActive ? "journeyMap" : "writeTypeSelection")}
-          onComplete={() => setStage(journeyActive ? "journeyMap" : "home")}
+          onComplete={() => {
+            evaluateValuesGrowth(poetryLinesText, "story")
+            setStage(journeyActive ? "journeyMap" : "home")
+          }}
         />
       )}
       {stage === "poetryTopic" && user && (
@@ -2059,7 +2080,10 @@ export default function Home() {
               source: "poetry-topic-selected",
             })
           }}
-          onComplete={() => setStage(journeyActive ? "journeyMap" : "home")}
+          onComplete={() => {
+            evaluateValuesGrowth(poetryLinesText, "story")
+            setStage(journeyActive ? "journeyMap" : "home")
+          }}
         />
       )}
       {stage === "poetryEditor" && user && (
@@ -2068,7 +2092,10 @@ export default function Home() {
           initialPhase="editor"
           backLabel={journeyActive ? "Back to Map" : undefined}
           onBack={() => setStage(journeyActive ? "journeyMap" : "writeTypeSelection")}
-          onComplete={() => setStage(journeyActive ? "journeyMap" : "home")}
+          onComplete={() => {
+            evaluateValuesGrowth(poetryLinesText, "story")
+            setStage(journeyActive ? "journeyMap" : "home")
+          }}
         />
       )}
       {stage === "poetryReview" && user && (
@@ -2077,7 +2104,10 @@ export default function Home() {
           initialPhase="review"
           backLabel={journeyActive ? "Back to Map" : undefined}
           onBack={() => setStage(journeyActive ? "journeyMap" : "writeTypeSelection")}
-          onComplete={() => setStage(journeyActive ? "journeyMap" : "home")}
+          onComplete={() => {
+            evaluateValuesGrowth(poetryLinesText, "story")
+            setStage(journeyActive ? "journeyMap" : "home")
+          }}
         />
       )}
       {stage === "research" && user && (
