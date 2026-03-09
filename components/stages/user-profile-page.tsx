@@ -74,10 +74,10 @@ interface FarmElementState {
 }
 
 const getDefaultFarmButtonStates = (otherFarm: boolean): Record<FarmElementId, FarmElementState> => ({
-  farmbacktomap: otherFarm ? { x: 74.0, y: 43.9, scale: 0.71 } : { x: 74.1, y: 43.7, scale: 0.7 },
-  farmsetting: otherFarm ? { x: 34.7, y: 49.6, scale: 0.8 } : { x: 34.8, y: 50.0, scale: 0.8 },
-  farmwrittingboard: otherFarm ? { x: 63.2, y: 50.6, scale: 1.1 } : { x: 63.2, y: 50.6, scale: 1.1 },
-  vistothersfarm: otherFarm ? { x: 73.1, y: 37.0, scale: 0.0 } : { x: 73.1, y: 37.0, scale: 0.75 },
+  farmbacktomap: otherFarm ? { x: 74.0, y: 43.9, scale: 0.71 } : { x: 74.1, y: 44.0, scale: 0.78 },
+  farmsetting: otherFarm ? { x: 34.7, y: 49.6, scale: 0.8 } : { x: 34.3, y: 49.5, scale: 0.8 },
+  farmwrittingboard: otherFarm ? { x: 63.2, y: 50.6, scale: 1.1 } : { x: 62.6, y: 50.4, scale: 1.12 },
+  vistothersfarm: otherFarm ? { x: 73.1, y: 37.0, scale: 0.0 } : { x: 73.2, y: 37.3, scale: 0.81 },
 })
 
 const DEFAULT_TREE_LAYOUT: FarmElementState[] = [
@@ -95,7 +95,7 @@ const DEFAULT_TREE_LAYOUT: FarmElementState[] = [
   { x: 64.5, y: 71.2, scale: 0.9 },
 ]
 
-const FARM_LAYOUT_STORAGE_KEY = "cwriteFarmLayoutV1"
+const FARM_LAYOUT_STORAGE_KEY = "cwriteFarmLayoutV2"
 
 export default function UserProfilePage({
   userId,
@@ -760,7 +760,7 @@ export default function UserProfilePage({
               Array.from({ length: treeCount }).map((_, index) => {
                 const treeState = farmTreeStates[index] || DEFAULT_TREE_LAYOUT[index]
                 const isHighlightedTree = forest[index] && highlightTreeId === forest[index].id
-                const treeSizePercent = Math.min(24, Math.max(8, 8 * treeState.scale))
+                const treeBaseSizePercent = 8
                 return (
                   <div
                     key={`farm-tree-${index}`}
@@ -768,11 +768,12 @@ export default function UserProfilePage({
                     style={{
                       left: `${treeState.x}%`,
                       top: `${treeState.y}%`,
-                      width: `${treeSizePercent}%`,
+                      width: `${treeBaseSizePercent}%`,
                       aspectRatio: "698 / 850",
                       zIndex: 5,
                       filter: isHighlightedTree ? "drop-shadow(0 0 14px rgba(250, 204, 21, 0.95))" : "none",
-                      transform: `translate(-50%, -50%) ${isHighlightedTree ? "scale(1.06)" : "scale(1)"}`,
+                      transform: `translate(-50%, -50%) scale(${treeState.scale * (isHighlightedTree ? 1.06 : 1)})`,
+                      transformOrigin: "center center",
                       transition: "transform 0.25s ease, filter 0.25s ease",
                     }}
                   >
