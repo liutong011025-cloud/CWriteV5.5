@@ -48,9 +48,34 @@ export default function LetterGame({
   const [completedSections, setCompletedSections] = useState<Set<number>>(new Set())
   const [readerImageUrl, setReaderImageUrl] = useState<string | null>(readerImageUrlProp)
   const [writingMood, setWritingMood] = useState<"sit" | "like" | "angry" | "hang">("sit")
-  const bearPosition = { x: 82, y: 19, scale: 1 }
+  const [bearPosition, setBearPosition] = useState({ x: 82, y: 19, scale: 1 })
+  const [showBearTool, setShowBearTool] = useState(false)
 
   const currentSectionText = sectionTexts[currentSection] || ""
+  const allTextLower = Object.values(sectionTexts).join(" ").toLowerCase()
+  const hasDangerKeyword = ["fuck", "shit", "asshole"].some((w) => allTextLower.includes(w))
+  const hasLoveKeyword = ["love", "peace", "like"].some((w) => allTextLower.includes(w))
+
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    try {
+      const raw = localStorage.getItem("cwriteLetterGameCagentPosV1")
+      if (!raw) return
+      const parsed = JSON.parse(raw) as { x?: number; y?: number; scale?: number }
+      setBearPosition((prev) => ({
+        x: typeof parsed.x === "number" ? parsed.x : prev.x,
+        y: typeof parsed.y === "number" ? parsed.y : prev.y,
+        scale: typeof parsed.scale === "number" ? parsed.scale : prev.scale,
+      }))
+    } catch {
+      // ignore
+    }
+  }, [])
+
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    localStorage.setItem("cwriteLetterGameCagentPosV1", JSON.stringify(bearPosition))
+  }, [bearPosition])
 
   // 如果照片还没有加载，尝试生成（只生成一次）
   const hasGeneratedImageRef = useRef(false)
@@ -118,7 +143,8 @@ export default function LetterGame({
                            messageLower === "done"
             
             setCanMoveNext(canMove)
-            if (canMove) setWritingMood("like")
+            if (hasDangerKeyword) setWritingMood("angry")
+            else if (hasLoveKeyword || canMove) setWritingMood("like")
             else if (messageLower.includes("please")) setWritingMood("sit")
             else setWritingMood("hang")
             
@@ -143,7 +169,7 @@ export default function LetterGame({
         clearTimeout(debounceTimerRef.current)
       }
     }
-  }, [currentSectionText, currentSection, recipient, occasion, userId])
+  }, [currentSectionText, currentSection, recipient, occasion, userId, hasDangerKeyword, hasLoveKeyword])
 
   const handleTextChange = (text: string) => {
     setSectionTexts(prev => ({ ...prev, [currentSection]: text }))
@@ -296,6 +322,23 @@ export default function LetterGame({
           {/* 左侧：写作区 */}
           <div className="lg:col-span-2 space-y-6">
             <div className="bg-white/90 backdrop-blur-lg rounded-2xl p-6 border-4 border-pink-300 shadow-xl relative">
+              <button
+                type="button"
+                onClick={() => setShowBearTool((prev) => !prev)}
+                className="absolute right-3 top-3 z-30 rounded-lg border border-purple-200 bg-white/90 px-2 py-1 text-xs text-purple-700"
+              >
+                Cagent位置
+              </button>
+              {showBearTool && (
+                <div className="absolute right-3 top-11 z-30 w-52 rounded-xl border border-purple-200 bg-white/95 p-2 text-xs shadow-lg">
+                  <label className="mb-1 block">X: {bearPosition.x.toFixed(1)}%</label>
+                  <input type="range" min={60} max={95} step={0.1} value={bearPosition.x} onChange={(e) => setBearPosition((p) => ({ ...p, x: Number(e.target.value) }))} className="w-full" />
+                  <label className="mb-1 mt-2 block">Y: {bearPosition.y.toFixed(1)}%</label>
+                  <input type="range" min={8} max={35} step={0.1} value={bearPosition.y} onChange={(e) => setBearPosition((p) => ({ ...p, y: Number(e.target.value) }))} className="w-full" />
+                  <label className="mb-1 mt-2 block">缩放: {bearPosition.scale.toFixed(2)}</label>
+                  <input type="range" min={0.6} max={1.6} step={0.01} value={bearPosition.scale} onChange={(e) => setBearPosition((p) => ({ ...p, scale: Number(e.target.value) }))} className="w-full" />
+                </div>
+              )}
               <div
                 className="absolute z-20"
                 style={{
@@ -323,6 +366,11 @@ export default function LetterGame({
                       ? "Cagent is reading your letter..."
                       : aiEvaluation || "Your feedback will appear here in the bear bubble."}
                   </div>
+                  {writingMood === "angry" && (
+                    <div className="absolute left-1/2 top-full mt-20 w-[300px] -translate-x-1/2 rounded-2xl border border-red-300 bg-white/95 px-3 py-2 text-xs text-red-700 shadow-xl">
+                      This text contains offensive words. Please rewrite politely.
+                    </div>
+                  )}
                 </div>
               </div>
               <div className="flex items-center gap-3 mb-4">
@@ -336,7 +384,11 @@ export default function LetterGame({
                 value={currentSectionText}
                 onChange={(e) => handleTextChange(e.target.value)}
                 placeholder={LETTER_SECTIONS[currentSection].placeholder.replace('[name]', recipient)}
-                className="w-full min-h-[300px] p-4 border-2 border-pink-200 rounded-xl focus:border-pink-400 focus:ring-2 focus:ring-pink-300 focus:outline-none resize-y text-base"
+                className={`w-full min-h-[300px] p-4 border-2 rounded-xl focus:outline-none resize-y text-base ${
+                  writingMood === "angry"
+                    ? "border-red-400 bg-pink-50 focus:border-red-500 focus:ring-2 focus:ring-red-200"
+                    : "border-pink-200 focus:border-pink-400 focus:ring-2 focus:ring-pink-300"
+                }`}
                 style={{ fontFamily: 'var(--font-comic-neue)' }}
               />
               
