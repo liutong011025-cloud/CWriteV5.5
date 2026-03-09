@@ -3,10 +3,11 @@
 import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
-import { Loader2, Sparkles, Mail, CheckCircle2, Star, Lock } from "lucide-react"
+import { Sparkles, Mail, CheckCircle2, Lock } from "lucide-react"
 import { toast } from "sonner"
 import StageHeader from "@/components/stage-header"
 import Image from "next/image"
+import { getCurrentLevel } from "@/lib/current-level"
 
 interface LetterGameProps {
   recipient: string
@@ -16,6 +17,7 @@ interface LetterGameProps {
   onComplete: (sections: string[]) => void
   onBack: () => void
   userId?: string
+  onDraftChange?: (text: string) => void
 }
 
 // 默认的信件结构
@@ -27,6 +29,9 @@ const LETTER_SECTIONS = [
   { name: "Signature", emoji: "✍️", placeholder: "Love, [Your name]" }
 ]
 
+const LETTER_BEAR_POSITION = { x: 79.7, y: 20.1, scale: 1.0 }
+const DEFAULT_LETTER_HANG_POSITION = { x: 79.7, y: 34.0, scale: 1.0 }
+
 export default function LetterGame({
   recipient,
   occasion,
@@ -34,7 +39,8 @@ export default function LetterGame({
   readerImageUrl: readerImageUrlProp,
   onComplete,
   onBack,
-  userId
+  userId,
+  onDraftChange,
 }: LetterGameProps) {
   const [currentSection, setCurrentSection] = useState(0)
   const [sectionTexts, setSectionTexts] = useState<Record<number, string>>({})
@@ -44,8 +50,79 @@ export default function LetterGame({
   const [canMoveNext, setCanMoveNext] = useState(false) // 只有 AI 说可以继续才能继续
   const [completedSections, setCompletedSections] = useState<Set<number>>(new Set())
   const [readerImageUrl, setReaderImageUrl] = useState<string | null>(readerImageUrlProp)
+  const [writingMood, setWritingMood] = useState<"sit" | "like" | "angry" | "hang">("sit")
+  const [hangBearPosition, setHangBearPosition] = useState(DEFAULT_LETTER_HANG_POSITION)
+  const [showHangBearTool, setShowHangBearTool] = useState(false)
+  const [previewHang, setPreviewHang] = useState(false)
+  const [isHoveringHang, setIsHoveringHang] = useState(false)
+  const hangTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   const currentSectionText = sectionTexts[currentSection] || ""
+  const allTextLower = Object.values(sectionTexts).join(" ").toLowerCase()
+  const hasDangerKeyword = ["fuck", "shit", "asshole"].some((w) => allTextLower.includes(w))
+  const hasLoveKeyword = ["love", "peace", "like"].some((w) => allTextLower.includes(w))
+  const activeBearPosition = writingMood === "hang" || previewHang ? hangBearPosition : LETTER_BEAR_POSITION
+
+  const shortEvaluation = (() => {
+    const content = aiEvaluation.trim().replace(/\s+/g, " ")
+    if (!content) return ""
+    const firstSentence = content.match(/^[^.!?。！？]{1,120}[.!?。！？]?/)?.[0] ?? content
+    return firstSentence.length > 120 ? `${firstSentence.slice(0, 120)}...` : firstSentence
+  })()
+
+  const updateWritingMoodFromText = (text: string) => {
+    if (writingMood === "hang") {
+      setWritingMood("sit")
+    }
+    const lower = text.toLowerCase()
+    const dangerWords = ["kill", "murder", "fuck", "shit", "asshole"]
+    const loveWords = ["love", "admire", "peace", "like"]
+    if (dangerWords.some((w) => lower.includes(w))) {
+      setWritingMood("angry")
+    } else if (loveWords.some((w) => lower.includes(w))) {
+      setWritingMood("like")
+    } else {
+      setWritingMood("sit")
+    }
+  }
+
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    try {
+      const raw = localStorage.getItem("cwriteLetterGameCagentHangPosV1")
+      if (!raw) return
+      const parsed = JSON.parse(raw) as { x?: number; y?: number; scale?: number }
+      setHangBearPosition((prev) => ({
+        x: typeof parsed.x === "number" ? parsed.x : prev.x,
+        y: typeof parsed.y === "number" ? parsed.y : prev.y,
+        scale: typeof parsed.scale === "number" ? parsed.scale : prev.scale,
+      }))
+    } catch {
+      // ignore
+    }
+  }, [])
+
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    localStorage.setItem("cwriteLetterGameCagentHangPosV1", JSON.stringify(hangBearPosition))
+  }, [hangBearPosition])
+
+  useEffect(() => {
+    if (hangTimeoutRef.current) {
+      clearTimeout(hangTimeoutRef.current)
+      hangTimeoutRef.current = null
+    }
+    if (writingMood !== "sit") return
+    hangTimeoutRef.current = setTimeout(() => {
+      setWritingMood("hang")
+    }, 30000)
+    return () => {
+      if (hangTimeoutRef.current) {
+        clearTimeout(hangTimeoutRef.current)
+        hangTimeoutRef.current = null
+      }
+    }
+  }, [writingMood])
 
   // 如果照片还没有加载，尝试生成（只生成一次）
   const hasGeneratedImageRef = useRef(false)
@@ -70,6 +147,13 @@ export default function LetterGame({
       .catch(err => console.error("Error loading reader image:", err))
   }, [readerImageUrl, recipient, occasion])
 
+  // 每次草稿變化時，通知上層給 Cagent 做價值觀檢查
+  useEffect(() => {
+    if (!onDraftChange) return
+    const allText = Object.values(sectionTexts).join(" ")
+    onDraftChange(allText)
+  }, [sectionTexts, onDraftChange])
+
   // 获取 AI 评价（真实的 Luna）
   useEffect(() => {
     if (debounceTimerRef.current) {
@@ -89,6 +173,7 @@ export default function LetterGame({
               currentSection: LETTER_SECTIONS[currentSection].name,
               currentText: currentSectionText,
               user_id: userId || "student",
+              level: getCurrentLevel(),
             }),
           })
 
@@ -105,6 +190,10 @@ export default function LetterGame({
                            messageLower === "done"
             
             setCanMoveNext(canMove)
+            if (hasDangerKeyword) setWritingMood("angry")
+            else if (hasLoveKeyword || canMove) setWritingMood("like")
+            else if (messageLower.includes("please")) setWritingMood("sit")
+            else setWritingMood("hang")
             
             if (canMove) {
               setCompletedSections(prev => new Set([...prev, currentSection]))
@@ -127,10 +216,11 @@ export default function LetterGame({
         clearTimeout(debounceTimerRef.current)
       }
     }
-  }, [currentSectionText, currentSection, recipient, occasion, userId])
+  }, [currentSectionText, currentSection, recipient, occasion, userId, hasDangerKeyword, hasLoveKeyword])
 
   const handleTextChange = (text: string) => {
     setSectionTexts(prev => ({ ...prev, [currentSection]: text }))
+    updateWritingMoodFromText(text)
     // 重置 canMoveNext，需要重新评估
     setCanMoveNext(false)
     
@@ -279,7 +369,87 @@ export default function LetterGame({
         <div className="grid lg:grid-cols-3 gap-6 mb-6">
           {/* 左侧：写作区 */}
           <div className="lg:col-span-2 space-y-6">
-            <div className="bg-white/90 backdrop-blur-lg rounded-2xl p-6 border-4 border-pink-300 shadow-xl">
+            <div className="bg-white/90 backdrop-blur-lg rounded-2xl p-6 border-4 border-pink-300 shadow-xl relative">
+              <button
+                type="button"
+                onClick={() => setShowHangBearTool((prev) => !prev)}
+                className="absolute right-3 top-3 z-30 rounded-lg border border-purple-200 bg-white/90 px-2 py-1 text-xs text-purple-700"
+              >
+                Hanging位置工具
+              </button>
+              {showHangBearTool && (
+                <div className="absolute right-3 top-11 z-30 w-52 rounded-xl border border-purple-200 bg-white/95 p-2 text-xs shadow-lg">
+                  <button
+                    type="button"
+                    onClick={() => setPreviewHang((v) => !v)}
+                    className={`w-full rounded-md border px-2 py-1 text-[11px] ${
+                      previewHang ? "border-purple-400 bg-purple-100 text-purple-800" : "border-gray-300 bg-white text-gray-700"
+                    }`}
+                  >
+                    {previewHang ? "已开启 hanging 预览" : "开启 hanging 预览"}
+                  </button>
+                  <label className="mb-1 block">X: {hangBearPosition.x.toFixed(1)}%</label>
+                  <input type="range" min={10} max={98} step={0.1} value={hangBearPosition.x} onChange={(e) => setHangBearPosition((p) => ({ ...p, x: Number(e.target.value) }))} className="w-full" />
+                  <label className="mb-1 mt-2 block">Y: {hangBearPosition.y.toFixed(1)}%</label>
+                  <input type="range" min={-20} max={90} step={0.1} value={hangBearPosition.y} onChange={(e) => setHangBearPosition((p) => ({ ...p, y: Number(e.target.value) }))} className="w-full" />
+                  <label className="mb-1 mt-2 block">缩放: {hangBearPosition.scale.toFixed(2)}</label>
+                  <input type="range" min={0.4} max={2.2} step={0.01} value={hangBearPosition.scale} onChange={(e) => setHangBearPosition((p) => ({ ...p, scale: Number(e.target.value) }))} className="w-full" />
+                  <button
+                    type="button"
+                    onClick={() => setHangBearPosition(DEFAULT_LETTER_HANG_POSITION)}
+                    className="mt-2 w-full rounded-md border border-gray-300 bg-white px-2 py-1 text-[11px] text-gray-700"
+                  >
+                    重置 hanging 默认值
+                  </button>
+                </div>
+              )}
+              <div
+                className="absolute z-20"
+                style={{
+                  left: `${activeBearPosition.x}%`,
+                  top: `${activeBearPosition.y}%`,
+                  transform: `translate(-50%, -100%) scale(${activeBearPosition.scale})`,
+                }}
+              >
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setWritingMood("sit")}
+                    onMouseEnter={() => setIsHoveringHang(true)}
+                    onMouseLeave={() => setIsHoveringHang(false)}
+                    className="focus:outline-none"
+                  >
+                    <img
+                      src={
+                        writingMood === "angry"
+                          ? "/Cagentangry.png"
+                          : writingMood === "like"
+                          ? "/Cagentlike.png"
+                        : writingMood === "hang" || previewHang
+                          ? "/Cagenthang.png"
+                          : "/Cagentsit.png"
+                      }
+                      alt="Cagent Bear"
+                      className="h-24 w-24 object-contain drop-shadow-lg"
+                    />
+                  </button>
+                  {(writingMood === "hang" || previewHang) && isHoveringHang && (
+                    <div className="absolute left-1/2 top-full mt-1 -translate-x-1/2 rounded-full bg-black/70 px-3 py-1 text-[11px] text-white shadow-lg">
+                      Save me!
+                    </div>
+                  )}
+                  {(isLoadingEvaluation || shortEvaluation) && (
+                    <div className="absolute left-1/2 top-full mt-1 w-[300px] -translate-x-1/2 rounded-2xl border border-purple-300 bg-white/95 px-3 py-2 text-xs text-purple-800 shadow-xl">
+                      {isLoadingEvaluation ? "Cagent is reading your letter..." : shortEvaluation}
+                    </div>
+                  )}
+                  {writingMood === "angry" && (
+                    <div className="absolute left-1/2 top-full mt-20 w-[300px] -translate-x-1/2 rounded-2xl border border-red-300 bg-white/95 px-3 py-2 text-xs text-red-700 shadow-xl">
+                      This text contains offensive words. Please rewrite politely.
+                    </div>
+                  )}
+                </div>
+              </div>
               <div className="flex items-center gap-3 mb-4">
                 <span className="text-4xl">{LETTER_SECTIONS[currentSection].emoji}</span>
                 <h2 className="text-2xl font-bold text-pink-700">
@@ -291,7 +461,11 @@ export default function LetterGame({
                 value={currentSectionText}
                 onChange={(e) => handleTextChange(e.target.value)}
                 placeholder={LETTER_SECTIONS[currentSection].placeholder.replace('[name]', recipient)}
-                className="w-full min-h-[300px] p-4 border-2 border-pink-200 rounded-xl focus:border-pink-400 focus:ring-2 focus:ring-pink-300 focus:outline-none resize-y text-base"
+                className={`w-full min-h-[300px] p-4 border-2 rounded-xl focus:outline-none resize-y text-base ${
+                  writingMood === "angry"
+                    ? "border-red-400 bg-pink-50 focus:border-red-500 focus:ring-2 focus:ring-red-200"
+                    : "border-pink-200 focus:border-pink-400 focus:ring-2 focus:ring-pink-300"
+                }`}
                 style={{ fontFamily: 'var(--font-comic-neue)' }}
               />
               
@@ -331,37 +505,6 @@ export default function LetterGame({
               </div>
             </div>
 
-            {/* AI 评价卡片 */}
-            <div className="bg-gradient-to-br from-purple-100 via-pink-100 to-blue-100 rounded-2xl p-6 border-4 border-purple-300 shadow-xl">
-              <div className="flex items-center gap-2 mb-4">
-                <Sparkles className="w-6 h-6 text-purple-600 animate-pulse" />
-                <h3 className="text-xl font-bold text-purple-700">✨ <span className="bg-gradient-to-r from-purple-600 via-pink-600 to-orange-600 bg-clip-text text-transparent">C</span><span>agent</span>'s Feedback</h3>
-              </div>
-              
-              {isLoadingEvaluation ? (
-                <div className="flex items-center gap-3 text-purple-600">
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                  <span><span className="font-semibold"><span className="bg-gradient-to-r from-purple-600 via-pink-600 to-orange-600 bg-clip-text text-transparent">C</span><span className="text-purple-700">agent</span></span> is reading your writing...</span>
-                </div>
-              ) : aiEvaluation ? (
-                <div className="bg-white/80 rounded-xl p-4 border-2 border-purple-200">
-                  <p className="text-sm text-gray-800 leading-relaxed whitespace-pre-wrap">
-                    {aiEvaluation}
-                  </p>
-                  {canMoveNext && (
-                    <div className="mt-3 flex items-center gap-2 text-green-600 font-bold">
-                      <CheckCircle2 className="w-5 h-5" />
-                      <span>You can move to the next part！🎉</span>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="text-center text-gray-500 py-8">
-                  <Star className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                  <p className="text-sm">Start writing and <span className="font-semibold"><span className="bg-gradient-to-r from-purple-600 via-pink-600 to-orange-600 bg-clip-text text-transparent">C</span><span className="text-purple-700">agent</span></span> will help you! ✨</p>
-                </div>
-              )}
-            </div>
           </div>
 
           {/* 右侧：提示和照片 */}
