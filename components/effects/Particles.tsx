@@ -90,14 +90,14 @@ const fragment = /* glsl */ `
     float d = length(uv - vec2(0.5));
 
     // Transparent snowball look: soft edge, per-particle opacity variation.
-    float softCircle = smoothstep(0.52, 0.0, d);
-    float coreGlow = smoothstep(0.22, 0.0, d) * 0.35;
-    float opacity = mix(0.22, 0.9, vRandom.x) * softCircle;
+    float softCircle = 1.0 - smoothstep(0.0, 0.5, d);
+    float coreGlow = (1.0 - smoothstep(0.0, 0.22, d)) * 0.32;
+    float opacity = mix(0.35, 0.95, vRandom.x) * softCircle;
     opacity *= mix(1.0, 0.9, uAlphaParticles);
     vec3 twinkle = 0.16 * sin(uv.yxx * 2.0 + uTime + vRandom.y * 6.28);
     vec3 finalColor = vColor + twinkle + coreGlow;
 
-    if (opacity < 0.01) discard;
+    if (opacity < 0.003) discard;
     gl_FragColor = vec4(finalColor, opacity);
   }
 `
