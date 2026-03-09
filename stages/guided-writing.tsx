@@ -4,8 +4,8 @@ import { useState, useEffect, useMemo, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import type { Language, StoryState } from "@/app/page"
 import StageHeader from "@/components/stage-header"
-import { Loader2 } from "lucide-react"
 import { toast } from "sonner"
+import { getCurrentLevel } from "@/lib/current-level"
 
 interface GuidedWritingProps {
   language: Language
@@ -13,6 +13,8 @@ interface GuidedWritingProps {
   onStoryWrite: (story: string) => void
   onBack: () => void
   userId?: string
+  // 寫作草稿變化時回傳給上層（供 Cagent 做價值觀檢查）
+  onDraftChange?: (text: string) => void
 }
 
 // Enhanced word count function that handles both English and Chinese
@@ -30,7 +32,10 @@ const countWords = (text: string): number => {
   return chineseChars + englishWords
 }
 
-export default function GuidedWriting({ language, storyState, onStoryWrite, onBack, userId }: GuidedWritingProps) {
+const STORY_BEAR_POSITION = { x: 83.2, y: 3.0, scale: 0.92 }
+const DEFAULT_STORY_HANG_POSITION = { x: 83.2, y: 18.0, scale: 0.92 }
+
+export default function GuidedWriting({ language, storyState, onStoryWrite, onBack, userId, onDraftChange }: GuidedWritingProps) {
   const [currentSection, setCurrentSection] = useState(0)
   const [sectionTexts, setSectionTexts] = useState<Record<number, string>>({}) // 存储每个结构块的文本
   const [aiEvaluation, setAiEvaluation] = useState("")
@@ -38,6 +43,12 @@ export default function GuidedWriting({ language, storyState, onStoryWrite, onBa
   const [sectionDone, setSectionDone] = useState<Record<number, boolean>>({}) // 每个结构块是否完成
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null)
   const textareaRefs = useRef<Record<number, HTMLTextAreaElement | null>>({})
+  const [writingMood, setWritingMood] = useState<"sit" | "like" | "angry" | "hang">("sit")
+  const [hangBearPosition, setHangBearPosition] = useState(DEFAULT_STORY_HANG_POSITION)
+  const [showHangBearTool, setShowHangBearTool] = useState(false)
+  const [previewHang, setPreviewHang] = useState(false)
+  const [isHoveringHang, setIsHoveringHang] = useState(false)
+  const hangTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   const sections = storyState.structure?.outline || []
   
@@ -55,12 +66,86 @@ export default function GuidedWriting({ language, storyState, onStoryWrite, onBa
     return countWords(currentSectionText)
   }, [currentSectionText])
 
+  const shortEvaluation = useMemo(() => {
+    const content = aiEvaluation.trim().replace(/\s+/g, " ")
+    if (!content) return ""
+    const firstSentence = content.match(/^[^.!?。！？]{1,120}[.!?。！？]?/)?.[0] ?? content
+    return firstSentence.length > 120 ? `${firstSentence.slice(0, 120)}...` : firstSentence
+  }, [aiEvaluation])
+
+  const activeBearPosition = writingMood === "hang" || previewHang ? hangBearPosition : STORY_BEAR_POSITION
+
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    try {
+      const raw = localStorage.getItem("cwriteGuidedWritingCagentHangPosV1")
+      if (raw) {
+        const parsed = JSON.parse(raw) as { x?: number; y?: number; scale?: number }
+        setHangBearPosition((prev) => ({
+          x: typeof parsed.x === "number" ? parsed.x : prev.x,
+          y: typeof parsed.y === "number" ? parsed.y : prev.y,
+          scale: typeof parsed.scale === "number" ? parsed.scale : prev.scale,
+        }))
+      }
+    } catch {
+      // ignore
+    }
+  }, [])
+
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    localStorage.setItem("cwriteGuidedWritingCagentHangPosV1", JSON.stringify(hangBearPosition))
+  }, [hangBearPosition])
+
+  // 將當前所有段落文字回傳給上層，實時給 Cagent 作價值觀檢查
+  useEffect(() => {
+    if (!onDraftChange) return
+    const allText = Object.values(sectionTexts).join(" ")
+    onDraftChange(allText)
+  }, [sectionTexts, onDraftChange])
+
+  const updateWritingMoodFromText = (text: string) => {
+    if (writingMood === "hang") {
+      setWritingMood("sit")
+    }
+    const lower = text.toLowerCase()
+    const dangerWords = ["kill", "murder", "fuck", "shit", "asshole"]
+    const loveWords = ["love", "admire", "peace", "like"]
+    if (dangerWords.some((w) => lower.includes(w))) {
+      setWritingMood("angry")
+    } else if (loveWords.some((w) => lower.includes(w))) {
+      setWritingMood("like")
+    } else {
+      setWritingMood("sit")
+    }
+  }
+
+  useEffect(() => {
+    if (hangTimeoutRef.current) {
+      clearTimeout(hangTimeoutRef.current)
+      hangTimeoutRef.current = null
+    }
+    if (writingMood !== "sit") return
+    hangTimeoutRef.current = setTimeout(() => {
+      setWritingMood("hang")
+    }, 30000)
+    return () => {
+      if (hangTimeoutRef.current) {
+        clearTimeout(hangTimeoutRef.current)
+        hangTimeoutRef.current = null
+      }
+    }
+  }, [writingMood])
+
   // 处理当前结构块文本变化
   const handleSectionTextChange = (sectionIndex: number, text: string) => {
     setSectionTexts(prev => ({
       ...prev,
       [sectionIndex]: text
     }))
+    if (sectionIndex === currentSection) {
+      updateWritingMoodFromText(text)
+    }
     
     // 测试功能：如果输入 "test"，自动标记当前 section 为完成
     if (text.trim().toLowerCase() === "test") {
@@ -95,6 +180,7 @@ export default function GuidedWriting({ language, storyState, onStoryWrite, onBa
               structure: storyState.structure,
               current_section: currentSection,
               user_id: userId || "default-user",
+              level: getCurrentLevel(),
             }),
           })
 
@@ -246,8 +332,94 @@ export default function GuidedWriting({ language, storyState, onStoryWrite, onBa
               </div>
 
                 <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setShowHangBearTool((prev) => !prev)}
+                    className="absolute right-2 top-2 z-30 rounded-lg border border-purple-200 bg-white/90 px-2 py-1 text-xs text-purple-700"
+                  >
+                    Hanging位置工具
+                  </button>
+                  {showHangBearTool && (
+                    <div className="absolute right-2 top-10 z-30 w-52 rounded-xl border border-purple-200 bg-white/95 p-2 text-xs shadow-lg">
+                      <button
+                        type="button"
+                        onClick={() => setPreviewHang((v) => !v)}
+                        className={`w-full rounded-md border px-2 py-1 text-[11px] ${
+                          previewHang ? "border-purple-400 bg-purple-100 text-purple-800" : "border-gray-300 bg-white text-gray-700"
+                        }`}
+                      >
+                        {previewHang ? "已开启 hanging 预览" : "开启 hanging 预览"}
+                      </button>
+                      <label className="mb-1 block">X: {hangBearPosition.x.toFixed(1)}%</label>
+                      <input type="range" min={10} max={98} step={0.1} value={hangBearPosition.x} onChange={(e) => setHangBearPosition((p) => ({ ...p, x: Number(e.target.value) }))} className="w-full" />
+                      <label className="mb-1 mt-2 block">Y: {hangBearPosition.y.toFixed(1)}%</label>
+                      <input type="range" min={-20} max={90} step={0.1} value={hangBearPosition.y} onChange={(e) => setHangBearPosition((p) => ({ ...p, y: Number(e.target.value) }))} className="w-full" />
+                      <label className="mb-1 mt-2 block">缩放: {hangBearPosition.scale.toFixed(2)}</label>
+                      <input type="range" min={0.4} max={2.2} step={0.01} value={hangBearPosition.scale} onChange={(e) => setHangBearPosition((p) => ({ ...p, scale: Number(e.target.value) }))} className="w-full" />
+                      <button
+                        type="button"
+                        onClick={() => setHangBearPosition(DEFAULT_STORY_HANG_POSITION)}
+                        className="mt-2 w-full rounded-md border border-gray-300 bg-white px-2 py-1 text-[11px] text-gray-700"
+                      >
+                        重置 hanging 默认值
+                      </button>
+                    </div>
+                  )}
+                  <div
+                    className="absolute z-20"
+                    style={{
+                      left: `${activeBearPosition.x}%`,
+                      top: `${activeBearPosition.y}%`,
+                      transform: `translate(-50%, -100%) scale(${activeBearPosition.scale})`,
+                    }}
+                  >
+                    <div className="relative">
+                      <button
+                        type="button"
+                        onClick={() => setWritingMood("sit")}
+                        onMouseEnter={() => setIsHoveringHang(true)}
+                        onMouseLeave={() => setIsHoveringHang(false)}
+                        className="focus:outline-none"
+                      >
+                        <img
+                          src={
+                            writingMood === "angry"
+                              ? "/Cagentangry.png"
+                              : writingMood === "like"
+                              ? "/Cagentlike.png"
+                            : writingMood === "hang" || previewHang
+                              ? "/Cagenthang.png"
+                              : "/Cagentsit.png"
+                          }
+                          alt="Cagent Bear"
+                          className="h-24 w-24 object-contain drop-shadow-lg"
+                        />
+                      </button>
+                      {(writingMood === "hang" || previewHang) && isHoveringHang && (
+                        <div className="absolute left-1/2 top-full mt-1 -translate-x-1/2 rounded-full bg-black/70 px-3 py-1 text-[11px] text-white shadow-lg">
+                          Save me!
+                        </div>
+                      )}
+                      {(isLoadingEvaluation || shortEvaluation) && (
+                        <div className="absolute left-1/2 top-full mt-1 w-[320px] -translate-x-1/2 rounded-2xl border border-purple-300 bg-white/95 px-3 py-2 text-xs text-purple-800 shadow-xl">
+                          {isLoadingEvaluation ? "Cagent is thinking..." : shortEvaluation}
+                        </div>
+                      )}
+                      {writingMood === "angry" && (
+                        <div className="absolute left-1/2 top-full mt-20 w-[320px] -translate-x-1/2 rounded-2xl border border-red-300 bg-white/95 px-3 py-2 text-xs text-red-700 shadow-xl">
+                          This text contains offensive words. Please revise with respectful language.
+                        </div>
+                      )}
+                    </div>
+                  </div>
                   {/* 文本框装饰边框 */}
-                  <div className="absolute -inset-1 bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 rounded-xl opacity-20 blur-sm"></div>
+                  <div
+                    className={`absolute -inset-1 rounded-xl blur-sm ${
+                      writingMood === "angry"
+                        ? "bg-gradient-to-r from-red-400 via-pink-400 to-red-300 opacity-60 animate-pulse"
+                        : "bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 opacity-20"
+                    }`}
+                  ></div>
               <textarea
                     key={currentSection}
                     ref={(el) => {
@@ -256,7 +428,11 @@ export default function GuidedWriting({ language, storyState, onStoryWrite, onBa
                     placeholder={`Start writing the "${sections[currentSection]}" section here... Let your imagination flow! 💭`}
                     value={currentSectionText}
                     onChange={(e) => handleSectionTextChange(currentSection, e.target.value)}
-                    className="relative w-full h-[500px] p-6 rounded-xl border-4 border-blue-300 focus:border-purple-400 bg-white/90 text-foreground placeholder-gray-400 font-serif text-base leading-relaxed shadow-inner focus:shadow-lg transition-all duration-300 focus:ring-4 focus:ring-purple-200"
+                    className={`relative w-full h-[500px] p-6 rounded-xl border-4 bg-white/90 text-foreground placeholder-gray-400 font-serif text-base leading-relaxed shadow-inner focus:shadow-lg transition-all duration-300 ${
+                      writingMood === "angry"
+                        ? "border-red-400 bg-pink-50 focus:border-red-500 focus:ring-4 focus:ring-red-200"
+                        : "border-blue-300 focus:border-purple-400 focus:ring-4 focus:ring-purple-200"
+                    }`}
                     style={{ fontFamily: 'var(--font-comic-neue)' }}
                   />
                   
@@ -332,55 +508,6 @@ export default function GuidedWriting({ language, storyState, onStoryWrite, onBa
           </div>
 
           <div className="lg:col-span-4 space-y-4">
-            {/* Luna 评价卡片 */}
-            <div className="bg-gradient-to-br from-purple-50 via-pink-50 to-rose-50 rounded-3xl p-6 border-4 border-purple-300 shadow-2xl backdrop-blur-sm relative overflow-hidden">
-              {/* 装饰背景 */}
-              <div className="absolute top-0 right-0 w-32 h-32 bg-purple-200 rounded-full mix-blend-multiply filter blur-2xl opacity-30"></div>
-              <div className="absolute bottom-0 left-0 w-24 h-24 bg-pink-200 rounded-full mix-blend-multiply filter blur-2xl opacity-30"></div>
-              
-              <div className="relative z-10">
-                <h3 className="text-xl font-bold mb-4 text-purple-700 flex items-center gap-2">
-                  <span className="text-3xl animate-pulse">✨</span>
-                  <span>
-                    <span className="bg-gradient-to-r from-purple-600 via-pink-600 to-orange-600 bg-clip-text text-transparent">C</span>
-                    <span className="text-purple-700">agent</span>
-                  </span>
-                </h3>
-                {isLoadingEvaluation ? (
-                  <div className="flex flex-col items-center justify-center py-8">
-                    <Loader2 className="h-8 w-8 animate-spin text-purple-600 mb-3" />
-                    <span className="text-sm text-gray-600 font-medium">Evaluating your writing...</span>
-                    <div className="mt-4 flex gap-1">
-                      <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '0s' }}></div>
-                      <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                      <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
-                    </div>
-                  </div>
-                ) : aiEvaluation ? (
-                  <div className="bg-white/90 rounded-xl p-5 border-3 border-purple-200 shadow-lg backdrop-blur-sm">
-                    <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap" style={{ fontFamily: 'var(--font-comic-neue)' }}>
-                      {aiEvaluation}
-                    </p>
-                    {sectionDone[currentSection] && (
-                      <div className="mt-4 p-3 bg-gradient-to-r from-green-100 to-emerald-100 border-3 border-green-400 rounded-lg animate-pulse">
-                        <p className="text-sm font-bold text-green-700 flex items-center gap-2">
-                          <span className="text-lg">✓</span>
-                          Great! You can move to the next section!
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div className="bg-white/60 rounded-xl p-5 border-2 border-purple-200">
-                    <p className="text-sm text-gray-600 italic leading-relaxed flex items-start gap-2">
-                      <span className="text-lg">💡</span>
-                      <span>Start writing the current section and <span className="font-semibold"><span className="bg-gradient-to-r from-purple-600 via-pink-600 to-orange-600 bg-clip-text text-transparent">C</span><span className="text-purple-700">agent</span></span> will evaluate your work based on your character, plot, and story structure!</span>
-                    </p>
-                  </div>
-                )}
-              </div>
-            </div>
-
             {/* 故事上下文卡片 */}
             <div className="bg-gradient-to-br from-indigo-50 via-blue-50 to-cyan-50 rounded-3xl p-6 border-4 border-indigo-300 shadow-2xl backdrop-blur-sm relative overflow-hidden">
               {/* 装饰背景 */}
