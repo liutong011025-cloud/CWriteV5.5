@@ -64,7 +64,6 @@ export default function JourneyMap({
   const [isHoldingPin, setIsHoldingPin] = useState(false)
   const [isHoveringBox, setIsHoveringBox] = useState(false)
   const [pinBoxHidden, setPinBoxHidden] = useState(false)
-  const [fluidGlassEnabled, setFluidGlassEnabled] = useState(false)
   const [flags] = useState<MapFlag[]>(mapFlags ?? [])
 
   const pinPosition = pin ?? internalPin
@@ -82,24 +81,6 @@ export default function JourneyMap({
         container.removeAttribute('data-no-header')
         container.removeAttribute('data-stage')
       }
-    }
-  }, [])
-
-  useEffect(() => {
-    let cancelled = false
-    const controller = new AbortController()
-    fetch("/assets/3d/lens.glb", { method: "HEAD", signal: controller.signal })
-      .then((res) => {
-        if (cancelled) return
-        setFluidGlassEnabled(res.ok)
-      })
-      .catch(() => {
-        if (cancelled) return
-        setFluidGlassEnabled(false)
-      })
-    return () => {
-      cancelled = true
-      controller.abort()
     }
   }, [])
 
@@ -131,9 +112,7 @@ export default function JourneyMap({
       style={{
         cursor: isHoldingPin
           ? 'url("/pin.png") 16 32, pointer'
-          : fluidGlassEnabled
-          ? "none"
-          : "default",
+          : "none",
       }}
     >
       <img
@@ -313,7 +292,7 @@ export default function JourneyMap({
           {/* 右側原說明面板已移除，保留空間以後可放其它內容 */}
         </div>
       </div>
-      {!isHoldingPin && fluidGlassEnabled && (
+      {!isHoldingPin && (
         <div className="pointer-events-none fixed inset-0 z-[120]">
           <FluidGlass
             mode="lens"
