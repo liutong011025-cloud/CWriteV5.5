@@ -40,6 +40,44 @@ interface ModeWrapperProps extends MeshProps {
   modeProps?: ModeProps
 }
 
+function LensSimple({ modeProps = {}, ...props }: { modeProps?: ModeProps } & MeshProps) {
+  const ref = useRef<THREE.Mesh>(null!)
+  const { viewport, pointer, camera } = useThree()
+  const { scale, ior, thickness, anisotropy, chromaticAberration, transmission, roughness, ...extraMat } =
+    modeProps as {
+      scale?: number
+      ior?: number
+      thickness?: number
+      anisotropy?: number
+      chromaticAberration?: number
+      transmission?: number
+      roughness?: number
+      [key: string]: unknown
+    }
+
+  useFrame((state, delta) => {
+    const v = viewport.getCurrentViewport(camera, [0, 0, 15])
+    const destX = (pointer.x * v.width) / 2
+    const destY = (pointer.y * v.height) / 2
+    easing.damp3(ref.current.position, [destX, destY, 15], 0.15, delta)
+  })
+
+  return (
+    <mesh ref={ref} scale={scale ?? 0.25} rotation-x={Math.PI / 2} {...props}>
+      <cylinderGeometry args={[0.42, 0.42, 0.2, 96]} />
+      <MeshTransmissionMaterial
+        ior={ior ?? 1.15}
+        thickness={thickness ?? 2}
+        anisotropy={anisotropy ?? 0.01}
+        chromaticAberration={chromaticAberration ?? 0.05}
+        transmission={transmission ?? 1}
+        roughness={roughness ?? 0}
+        {...(typeof extraMat === "object" && extraMat !== null ? extraMat : {})}
+      />
+    </mesh>
+  )
+}
+
 const ModeWrapper = memo(function ModeWrapper({
   children,
   glb,
@@ -119,7 +157,7 @@ const ModeWrapper = memo(function ModeWrapper({
 })
 
 function Lens({ modeProps, ...p }: { modeProps?: ModeProps } & MeshProps) {
-  return <ModeWrapper glb="/assets/3d/lens.glb" geometryKey="Cylinder" followPointer modeProps={modeProps} {...p} />
+  return <LensSimple modeProps={modeProps} {...p} />
 }
 
 function Cube({ modeProps, ...p }: { modeProps?: ModeProps } & MeshProps) {
