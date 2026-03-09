@@ -81,7 +81,6 @@ const fragment = /* glsl */ `
   precision highp float;
   
   uniform float uTime;
-  uniform float uAlphaParticles;
   varying vec4 vRandom;
   varying vec3 vColor;
   
@@ -89,16 +88,11 @@ const fragment = /* glsl */ `
     vec2 uv = gl_PointCoord.xy;
     float d = length(uv - vec2(0.5));
 
-    // Transparent snowball look: soft edge, per-particle opacity variation.
-    float softCircle = 1.0 - smoothstep(0.0, 0.5, d);
-    float coreGlow = (1.0 - smoothstep(0.0, 0.22, d)) * 0.32;
-    float opacity = mix(0.35, 0.95, vRandom.x) * softCircle;
-    opacity *= mix(1.0, 0.9, uAlphaParticles);
-    vec3 twinkle = 0.16 * sin(uv.yxx * 2.0 + uTime + vRandom.y * 6.28);
-    vec3 finalColor = vColor + twinkle + coreGlow;
-
-    if (opacity < 0.003) discard;
-    gl_FragColor = vec4(finalColor, opacity);
+    // Solid round particles: no transparency gradient.
+    if (d > 0.5) discard;
+    vec3 twinkle = 0.12 * sin(uv.yxx * 2.0 + uTime + vRandom.y * 6.28);
+    vec3 finalColor = vColor + twinkle;
+    gl_FragColor = vec4(finalColor, 1.0);
   }
 `
 
@@ -188,7 +182,6 @@ const Particles: React.FC<ParticlesProps> = ({
         uSpread: { value: particleSpread },
         uBaseSize: { value: particleBaseSize * pixelRatio },
         uSizeRandomness: { value: sizeRandomness },
-        uAlphaParticles: { value: alphaParticles ? 1 : 0 },
       },
       transparent: true,
       depthTest: false,
