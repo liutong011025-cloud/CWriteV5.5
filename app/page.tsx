@@ -125,6 +125,7 @@ interface PersistedMapState {
 
 const getMapStateKey = (username: string) => `cwriteMapState:${username}`
 const getPlanTestResultKey = (username: string) => `cwritePlanTestResult:${username}`
+const getTreesStateKey = (username: string) => `cwriteTreesState:${username}`
 const VALUES_DIMENSION_COUNT = 12
 
 const normalizeTreeStage = (stage: number) => {
@@ -147,6 +148,27 @@ const normalizeValuesTrees = (rawTrees: { id: number; stage: number }[] | null |
     const id = i + 1
     return byId.get(id) || { id, stage: 2 }
   })
+}
+
+const readLocalTrees = (username: string) => {
+  if (typeof window === "undefined") return null
+  try {
+    const raw = localStorage.getItem(getTreesStateKey(username))
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as { id: number; stage: number }[] | null
+    return Array.isArray(parsed) ? normalizeValuesTrees(parsed) : null
+  } catch {
+    return null
+  }
+}
+
+const writeLocalTrees = (username: string, trees: { id: number; stage: number }[]) => {
+  if (typeof window === "undefined") return
+  try {
+    localStorage.setItem(getTreesStateKey(username), JSON.stringify(normalizeValuesTrees(trees)))
+  } catch {
+    // ignore storage errors
+  }
 }
 
 export default function Home() {
@@ -642,8 +664,10 @@ export default function Home() {
       // 初始化 12 维度小树（若后端已有则做标准化，否则创建 12 棵 stage=2）
       if (!profileRes.error) {
         const rawTrees = Array.isArray(profileRes.trees) ? profileRes.trees as { id: number; stage: number }[] : null
-        const initialTrees = normalizeValuesTrees(rawTrees)
+        const localTrees = readLocalTrees(user.username)
+        const initialTrees = normalizeValuesTrees(rawTrees && rawTrees.length > 0 ? rawTrees : localTrees)
         setTrees(initialTrees)
+        writeLocalTrees(user.username, initialTrees)
         const lm = profileRes.lastMetrics as WritingMetricsSnapshot | undefined
         if (lm && typeof lm.vocabRichness === "number") {
           setLastMetrics(lm)
@@ -653,7 +677,7 @@ export default function Home() {
           !rawTrees ||
           rawTrees.length !== VALUES_DIMENSION_COUNT ||
           rawTrees.some((tree, idx) => Number(tree?.id) !== idx + 1 || normalizeTreeStage(Number(tree?.stage) || 2) !== Number(tree?.stage))
-        if (shouldBackfillTrees) {
+        if (shouldBackfillTrees && !profileRes.degraded) {
           fetch("/api/user-profile", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -694,7 +718,10 @@ export default function Home() {
         }
         if (!profileRes.error) {
           const rawTrees = Array.isArray(profileRes.trees) ? profileRes.trees as { id: number; stage: number }[] : null
-          setTrees(normalizeValuesTrees(rawTrees))
+          const localTrees = readLocalTrees(user.username)
+          const nextTrees = normalizeValuesTrees(rawTrees && rawTrees.length > 0 ? rawTrees : localTrees)
+          setTrees(nextTrees)
+          writeLocalTrees(user.username, nextTrees)
           const lm = profileRes.lastMetrics as WritingMetricsSnapshot | undefined
           if (lm && typeof lm.vocabRichness === "number") {
             setLastMetrics(lm)
@@ -742,6 +769,7 @@ export default function Home() {
       })
 
       setTrees(nextTrees)
+      writeLocalTrees(user.username, nextTrees)
       setLastGrownTree({ treeId: grownTreeId, dimension: "vocab" })
 
       // 同步到后端 profile
