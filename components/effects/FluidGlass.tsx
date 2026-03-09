@@ -42,7 +42,9 @@ interface ModeWrapperProps extends MeshProps {
 
 function LensSimple({ modeProps = {}, ...props }: { modeProps?: ModeProps } & MeshProps) {
   const ref = useRef<THREE.Mesh>(null!)
-  const { viewport, pointer, camera } = useThree()
+  const ringRef = useRef<THREE.Mesh>(null!)
+  const mouseRef = useRef({ x: 0, y: 0 })
+  const { viewport, camera } = useThree()
   const { scale, ior, thickness, anisotropy, chromaticAberration, transmission, roughness, ...extraMat } =
     modeProps as {
       scale?: number
@@ -55,26 +57,53 @@ function LensSimple({ modeProps = {}, ...props }: { modeProps?: ModeProps } & Me
       [key: string]: unknown
     }
 
+  useEffect(() => {
+    const onMove = (e: MouseEvent) => {
+      mouseRef.current = { x: e.clientX, y: e.clientY }
+    }
+    window.addEventListener("mousemove", onMove)
+    return () => window.removeEventListener("mousemove", onMove)
+  }, [])
+
   useFrame((state, delta) => {
     const v = viewport.getCurrentViewport(camera, [0, 0, 15])
-    const destX = (pointer.x * v.width) / 2
-    const destY = (pointer.y * v.height) / 2
+    const nx = (mouseRef.current.x / window.innerWidth) * 2 - 1
+    const ny = -((mouseRef.current.y / window.innerHeight) * 2 - 1)
+    const destX = (nx * v.width) / 2
+    const destY = (ny * v.height) / 2
     easing.damp3(ref.current.position, [destX, destY, 15], 0.15, delta)
+    if (ringRef.current) {
+      ringRef.current.position.x = ref.current.position.x
+      ringRef.current.position.y = ref.current.position.y
+      ringRef.current.position.z = 15.03
+    }
   })
 
   return (
-    <mesh ref={ref} scale={scale ?? 0.25} rotation-x={Math.PI / 2} {...props}>
-      <cylinderGeometry args={[0.42, 0.42, 0.2, 96]} />
-      <MeshTransmissionMaterial
-        ior={ior ?? 1.15}
-        thickness={thickness ?? 2}
-        anisotropy={anisotropy ?? 0.01}
-        chromaticAberration={chromaticAberration ?? 0.05}
-        transmission={transmission ?? 1}
-        roughness={roughness ?? 0}
-        {...(typeof extraMat === "object" && extraMat !== null ? extraMat : {})}
-      />
-    </mesh>
+    <group {...props}>
+      <mesh ref={ref} scale={scale ?? 0.25} rotation-x={Math.PI / 2}>
+        <cylinderGeometry args={[0.42, 0.42, 0.2, 96]} />
+        <meshPhysicalMaterial
+          transparent
+          opacity={0.45}
+          transmission={transmission ?? 1}
+          roughness={roughness ?? 0.03}
+          thickness={thickness ?? 1.8}
+          ior={ior ?? 1.15}
+          reflectivity={1}
+          clearcoat={1}
+          clearcoatRoughness={0}
+          color="#dff3ff"
+          attenuationColor="#ffffff"
+          attenuationDistance={0.35}
+          {...(typeof extraMat === "object" && extraMat !== null ? extraMat : {})}
+        />
+      </mesh>
+      <mesh ref={ringRef}>
+        <ringGeometry args={[0.44, 0.5, 96]} />
+        <meshBasicMaterial color="#ffffff" transparent opacity={0.28} />
+      </mesh>
+    </group>
   )
 }
 
@@ -229,7 +258,14 @@ export default function FluidGlass({
   void navItems
 
   return (
-    <Canvas camera={{ position: [0, 0, 20], fov: 15 }} gl={{ alpha: true }}>
+    <Canvas
+      camera={{ position: [0, 0, 20], fov: 15 }}
+      gl={{ alpha: true, antialias: true }}
+      style={{ pointerEvents: "none" }}
+    >
+      <ambientLight intensity={0.85} />
+      <directionalLight position={[2, 3, 8]} intensity={0.8} />
+      <pointLight position={[-3, -2, 10]} intensity={0.6} />
       <ScrollControls damping={0.2} pages={1} distance={0.2}>
         <Wrapper modeProps={mergedModeProps}>
           <Scroll>
