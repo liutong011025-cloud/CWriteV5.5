@@ -199,7 +199,7 @@ export default function JourneyMap({
 
           {/* 右下角：圖釘盒 box，點擊後拿起圖釘 */}
           {!pinBoxHidden && (
-            <div className="absolute right-5 bottom-6 z-20 flex flex-col items-center gap-2">
+            <div className="absolute right-5 bottom-12 z-20 flex flex-col items-center gap-2">
               <p className="mb-2 max-w-[980px] text-[20px] md:text-2xl leading-tight font-hand font-extrabold text-center drop-shadow-[0_1px_1px_rgba(255,255,255,0.98)] atlas-jitter-sm">
                 {Array.from("Drop a pin on the map to start your writing adventure!").map((ch, idx) => {
                   const palette = ["#ec4899", "#8b5cf6", "#22c55e", "#f97316", "#0ea5e9", "#eab308"]
