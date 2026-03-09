@@ -144,13 +144,13 @@ export default function JourneyMap({
       </div>
       <div className="absolute inset-0 opacity-100 pointer-events-none">
         <Particles
-          particleColors={["#fffef2", "#fff9d6", "#fff4bd"]}
-          particleCount={520}
-          particleSpread={8}
-          speed={0.14}
-          particleBaseSize={120}
+          particleColors={["#fff7bd", "#ffe78a", "#ffd8a8", "#ffc7d8", "#ffb7cf", "#ffd1f0"]}
+          particleCount={360}
+          particleSpread={9.5}
+          speed={0.12}
+          particleBaseSize={105}
           moveParticlesOnHover
-          alphaParticles={false}
+          alphaParticles={true}
           disableRotation={false}
           pixelRatio={1}
         />
