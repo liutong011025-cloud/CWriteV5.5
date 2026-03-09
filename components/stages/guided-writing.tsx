@@ -33,8 +33,7 @@ const countWords = (text: string): number => {
 }
 
 const STORY_BEAR_POSITION = { x: 83.2, y: 3.0, scale: 0.92 }
-const DEFAULT_STORY_HANG_POSITION = { x: 83.2, y: 16.3, scale: 0.92 }
-const STORY_HANG_STORAGE_KEY = "cwriteGuidedWritingCagentHangPosV2"
+const STORY_HANG_POSITION = { x: 83.2, y: 16.3, scale: 0.92 }
 
 export default function GuidedWriting({ language, storyState, onStoryWrite, onBack, userId, onDraftChange }: GuidedWritingProps) {
   const [currentSection, setCurrentSection] = useState(0)
@@ -45,9 +44,6 @@ export default function GuidedWriting({ language, storyState, onStoryWrite, onBa
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null)
   const textareaRefs = useRef<Record<number, HTMLTextAreaElement | null>>({})
   const [writingMood, setWritingMood] = useState<"sit" | "like" | "angry" | "hang">("sit")
-  const [hangBearPosition, setHangBearPosition] = useState(DEFAULT_STORY_HANG_POSITION)
-  const [showHangBearTool, setShowHangBearTool] = useState(false)
-  const [previewHang, setPreviewHang] = useState(false)
   const [isHoveringHang, setIsHoveringHang] = useState(false)
   const hangTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
@@ -74,7 +70,7 @@ export default function GuidedWriting({ language, storyState, onStoryWrite, onBa
     return firstSentence.length > 120 ? `${firstSentence.slice(0, 120)}...` : firstSentence
   }, [aiEvaluation])
 
-  const activeBearPosition = writingMood === "hang" || previewHang ? hangBearPosition : STORY_BEAR_POSITION
+  const activeBearPosition = writingMood === "hang" ? STORY_HANG_POSITION : STORY_BEAR_POSITION
 
   useEffect(() => {
     if (typeof window === "undefined") return
@@ -84,28 +80,6 @@ export default function GuidedWriting({ language, storyState, onStoryWrite, onBa
       img.src = src
     })
   }, [])
-
-  useEffect(() => {
-    if (typeof window === "undefined") return
-    try {
-      const raw = localStorage.getItem(STORY_HANG_STORAGE_KEY)
-      if (raw) {
-        const parsed = JSON.parse(raw) as { x?: number; y?: number; scale?: number }
-        setHangBearPosition((prev) => ({
-          x: typeof parsed.x === "number" ? parsed.x : prev.x,
-          y: typeof parsed.y === "number" ? parsed.y : prev.y,
-          scale: typeof parsed.scale === "number" ? parsed.scale : prev.scale,
-        }))
-      }
-    } catch {
-      // ignore
-    }
-  }, [])
-
-  useEffect(() => {
-    if (typeof window === "undefined") return
-    localStorage.setItem(STORY_HANG_STORAGE_KEY, JSON.stringify(hangBearPosition))
-  }, [hangBearPosition])
 
   // 將當前所有段落文字回傳給上層，實時給 Cagent 作價值觀檢查
   useEffect(() => {
@@ -342,39 +316,6 @@ export default function GuidedWriting({ language, storyState, onStoryWrite, onBa
               </div>
 
                 <div className="relative">
-                  <button
-                    type="button"
-                    onClick={() => setShowHangBearTool((prev) => !prev)}
-                    className="absolute right-2 top-2 z-30 rounded-lg border border-purple-200 bg-white/90 px-2 py-1 text-xs text-purple-700"
-                  >
-                    Hanging位置工具
-                  </button>
-                  {showHangBearTool && (
-                    <div className="absolute right-2 top-10 z-30 w-52 rounded-xl border border-purple-200 bg-white/95 p-2 text-xs shadow-lg">
-                      <button
-                        type="button"
-                        onClick={() => setPreviewHang((v) => !v)}
-                        className={`w-full rounded-md border px-2 py-1 text-[11px] ${
-                          previewHang ? "border-purple-400 bg-purple-100 text-purple-800" : "border-gray-300 bg-white text-gray-700"
-                        }`}
-                      >
-                        {previewHang ? "已开启 hanging 预览" : "开启 hanging 预览"}
-                      </button>
-                      <label className="mb-1 block">X: {hangBearPosition.x.toFixed(1)}%</label>
-                      <input type="range" min={10} max={98} step={0.1} value={hangBearPosition.x} onChange={(e) => setHangBearPosition((p) => ({ ...p, x: Number(e.target.value) }))} className="w-full" />
-                      <label className="mb-1 mt-2 block">Y: {hangBearPosition.y.toFixed(1)}%</label>
-                      <input type="range" min={-20} max={90} step={0.1} value={hangBearPosition.y} onChange={(e) => setHangBearPosition((p) => ({ ...p, y: Number(e.target.value) }))} className="w-full" />
-                      <label className="mb-1 mt-2 block">缩放: {hangBearPosition.scale.toFixed(2)}</label>
-                      <input type="range" min={0.4} max={2.2} step={0.01} value={hangBearPosition.scale} onChange={(e) => setHangBearPosition((p) => ({ ...p, scale: Number(e.target.value) }))} className="w-full" />
-                      <button
-                        type="button"
-                        onClick={() => setHangBearPosition(DEFAULT_STORY_HANG_POSITION)}
-                        className="mt-2 w-full rounded-md border border-gray-300 bg-white px-2 py-1 text-[11px] text-gray-700"
-                      >
-                        重置 hanging 默认值
-                      </button>
-                    </div>
-                  )}
                   <div
                     className="absolute z-20"
                     style={{
@@ -386,10 +327,7 @@ export default function GuidedWriting({ language, storyState, onStoryWrite, onBa
                     <div className="relative">
                       <button
                         type="button"
-                        onClick={() => {
-                          setWritingMood("sit")
-                          setPreviewHang(false)
-                        }}
+                        onClick={() => setWritingMood("sit")}
                         onMouseEnter={() => setIsHoveringHang(true)}
                         onMouseLeave={() => setIsHoveringHang(false)}
                         className="focus:outline-none"
@@ -400,7 +338,7 @@ export default function GuidedWriting({ language, storyState, onStoryWrite, onBa
                               ? "/Cagentangry.png"
                               : writingMood === "like"
                               ? "/Cagentlike.png"
-                            : writingMood === "hang" || previewHang
+                            : writingMood === "hang"
                               ? "/Cagenthang.png"
                               : "/Cagentsit.png"
                           }
@@ -408,7 +346,7 @@ export default function GuidedWriting({ language, storyState, onStoryWrite, onBa
                           className="h-24 w-24 object-contain drop-shadow-lg"
                         />
                       </button>
-                      {(writingMood === "hang" || previewHang) && isHoveringHang && (
+                      {writingMood === "hang" && isHoveringHang && (
                         <div className="absolute left-1/2 top-full mt-1 -translate-x-1/2 rounded-full bg-black/70 px-3 py-1 text-[11px] text-white shadow-lg">
                           Save me!
                         </div>
