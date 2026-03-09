@@ -41,7 +41,8 @@ export default function GuidedWriting({ language, storyState, onStoryWrite, onBa
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null)
   const textareaRefs = useRef<Record<number, HTMLTextAreaElement | null>>({})
   const [writingMood, setWritingMood] = useState<"sit" | "like" | "angry" | "hang">("sit")
-  const bearPosition = { x: 83, y: 17, scale: 0.95 }
+  const [bearPosition, setBearPosition] = useState({ x: 83, y: 17, scale: 0.95 })
+  const [showBearTool, setShowBearTool] = useState(false)
 
   const sections = storyState.structure?.outline || []
   
@@ -58,6 +59,37 @@ export default function GuidedWriting({ language, storyState, onStoryWrite, onBa
   const currentSectionWordCount = useMemo(() => {
     return countWords(currentSectionText)
   }, [currentSectionText])
+  const allTextLower = useMemo(() => Object.values(sectionTexts).join(" ").toLowerCase(), [sectionTexts])
+  const hasDangerKeyword = useMemo(
+    () => ["fuck", "shit", "asshole"].some((w) => allTextLower.includes(w)),
+    [allTextLower]
+  )
+  const hasLoveKeyword = useMemo(
+    () => ["love", "peace", "like"].some((w) => allTextLower.includes(w)),
+    [allTextLower]
+  )
+
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    try {
+      const raw = localStorage.getItem("cwriteGuidedWritingCagentPosV1")
+      if (raw) {
+        const parsed = JSON.parse(raw) as { x?: number; y?: number; scale?: number }
+        setBearPosition((prev) => ({
+          x: typeof parsed.x === "number" ? parsed.x : prev.x,
+          y: typeof parsed.y === "number" ? parsed.y : prev.y,
+          scale: typeof parsed.scale === "number" ? parsed.scale : prev.scale,
+        }))
+      }
+    } catch {
+      // ignore
+    }
+  }, [])
+
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    localStorage.setItem("cwriteGuidedWritingCagentPosV1", JSON.stringify(bearPosition))
+  }, [bearPosition])
 
   // 將當前所有段落文字回傳給上層，實時給 Cagent 作價值觀檢查
   useEffect(() => {
@@ -67,6 +99,14 @@ export default function GuidedWriting({ language, storyState, onStoryWrite, onBa
   }, [sectionTexts, onDraftChange])
 
   useEffect(() => {
+    if (hasDangerKeyword) {
+      setWritingMood("angry")
+      return
+    }
+    if (hasLoveKeyword) {
+      setWritingMood("like")
+      return
+    }
     if (!aiEvaluation) return
     const lower = aiEvaluation.toLowerCase()
     if (lower.includes("great") || lower.includes("move to the next")) {
@@ -76,7 +116,7 @@ export default function GuidedWriting({ language, storyState, onStoryWrite, onBa
     } else {
       setWritingMood("hang")
     }
-  }, [aiEvaluation])
+  }, [aiEvaluation, hasDangerKeyword, hasLoveKeyword])
 
   // 处理当前结构块文本变化
   const handleSectionTextChange = (sectionIndex: number, text: string) => {
@@ -270,6 +310,23 @@ export default function GuidedWriting({ language, storyState, onStoryWrite, onBa
               </div>
 
                 <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setShowBearTool((prev) => !prev)}
+                    className="absolute right-2 top-2 z-30 rounded-lg border border-purple-200 bg-white/90 px-2 py-1 text-xs text-purple-700"
+                  >
+                    Cagent位置
+                  </button>
+                  {showBearTool && (
+                    <div className="absolute right-2 top-10 z-30 w-52 rounded-xl border border-purple-200 bg-white/95 p-2 text-xs shadow-lg">
+                      <label className="mb-1 block">X: {bearPosition.x.toFixed(1)}%</label>
+                      <input type="range" min={60} max={95} step={0.1} value={bearPosition.x} onChange={(e) => setBearPosition((p) => ({ ...p, x: Number(e.target.value) }))} className="w-full" />
+                      <label className="mb-1 mt-2 block">Y: {bearPosition.y.toFixed(1)}%</label>
+                      <input type="range" min={8} max={35} step={0.1} value={bearPosition.y} onChange={(e) => setBearPosition((p) => ({ ...p, y: Number(e.target.value) }))} className="w-full" />
+                      <label className="mb-1 mt-2 block">缩放: {bearPosition.scale.toFixed(2)}</label>
+                      <input type="range" min={0.6} max={1.6} step={0.01} value={bearPosition.scale} onChange={(e) => setBearPosition((p) => ({ ...p, scale: Number(e.target.value) }))} className="w-full" />
+                    </div>
+                  )}
                   <div
                     className="absolute z-20"
                     style={{
@@ -297,10 +354,21 @@ export default function GuidedWriting({ language, storyState, onStoryWrite, onBa
                           ? "Cagent is thinking..."
                           : aiEvaluation || "Write a little more and I will give you feedback here."}
                       </div>
+                      {writingMood === "angry" && (
+                        <div className="absolute left-1/2 top-full mt-20 w-[320px] -translate-x-1/2 rounded-2xl border border-red-300 bg-white/95 px-3 py-2 text-xs text-red-700 shadow-xl">
+                          This text contains offensive words. Please revise with respectful language.
+                        </div>
+                      )}
                     </div>
                   </div>
                   {/* 文本框装饰边框 */}
-                  <div className="absolute -inset-1 bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 rounded-xl opacity-20 blur-sm"></div>
+                  <div
+                    className={`absolute -inset-1 rounded-xl blur-sm ${
+                      writingMood === "angry"
+                        ? "bg-gradient-to-r from-red-400 via-pink-400 to-red-300 opacity-60 animate-pulse"
+                        : "bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 opacity-20"
+                    }`}
+                  ></div>
               <textarea
                     key={currentSection}
                     ref={(el) => {
@@ -309,7 +377,11 @@ export default function GuidedWriting({ language, storyState, onStoryWrite, onBa
                     placeholder={`Start writing the "${sections[currentSection]}" section here... Let your imagination flow! 💭`}
                     value={currentSectionText}
                     onChange={(e) => handleSectionTextChange(currentSection, e.target.value)}
-                    className="relative w-full h-[500px] p-6 rounded-xl border-4 border-blue-300 focus:border-purple-400 bg-white/90 text-foreground placeholder-gray-400 font-serif text-base leading-relaxed shadow-inner focus:shadow-lg transition-all duration-300 focus:ring-4 focus:ring-purple-200"
+                    className={`relative w-full h-[500px] p-6 rounded-xl border-4 bg-white/90 text-foreground placeholder-gray-400 font-serif text-base leading-relaxed shadow-inner focus:shadow-lg transition-all duration-300 ${
+                      writingMood === "angry"
+                        ? "border-red-400 bg-pink-50 focus:border-red-500 focus:ring-4 focus:ring-red-200"
+                        : "border-blue-300 focus:border-purple-400 focus:ring-4 focus:ring-purple-200"
+                    }`}
                     style={{ fontFamily: 'var(--font-comic-neue)' }}
                   />
                   
