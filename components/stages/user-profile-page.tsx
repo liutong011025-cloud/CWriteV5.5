@@ -663,14 +663,15 @@ export default function UserProfilePage({
                 const isHighlightedTree = treeData && highlightTreeId === treeData.id
                 const treeStage = Math.max(2, Math.min(4, Number(treeData?.stage ?? 2)))
                 const treeImageSrc = treeStage >= 4 ? "/tree4.png" : treeStage >= 3 ? "/tree3.png" : "/tree2.png"
-                const treeBaseSizePercent = 8
+                const treeBaseSizePercent = treeStage >= 4 ? 10.5 : 8
+                const treeTop = treeStage >= 4 ? treeState.y + 2.4 : treeState.y
                 return (
                   <div
                     key={`farm-tree-${index}`}
                     className="absolute -translate-x-1/2 -translate-y-1/2"
                     style={{
                       left: `${treeState.x}%`,
-                      top: `${treeState.y}%`,
+                      top: `${treeTop}%`,
                       width: `${treeBaseSizePercent}%`,
                       aspectRatio: "698 / 850",
                       zIndex: 5,
