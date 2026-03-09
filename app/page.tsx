@@ -1272,12 +1272,26 @@ export default function Home() {
           structure={bookReviewState.structure}
           onReset={async (finalReview) => {
             const backToStage = "journeyMap"
-            await evaluateValuesGrowth(finalReview, "review")
+            void evaluateValuesGrowth(finalReview, "review")
 
-            if (!journeyActive && user && currentPin && bookReviewState.review.trim().length > 0) {
-              try {
-                const title = bookReviewState.bookTitle || "My Book Review"
-                const topic = bookReviewState.bookTitle || "book world"
+            const reviewSnapshot = {
+              bookTitle: bookReviewState.bookTitle,
+              reviewType: bookReviewState.reviewType,
+            }
+            setBookReviewState({
+              reviewType: null,
+              bookTitle: null,
+              structure: null,
+              review: "",
+              bookCoverUrl: undefined,
+              bookSummary: undefined,
+            })
+            setStage(backToStage)
+
+            if (!journeyActive && user && currentPin && finalReview.trim().length > 0) {
+              void (async () => {
+                const title = reviewSnapshot.bookTitle || "My Book Review"
+                const topic = reviewSnapshot.bookTitle || "book world"
                 const previousMapImageUrl = mapImageUrl || "/firstmap.png"
                 const endpoint = "/api/map-update"
                 const payload: any = {
@@ -1287,8 +1301,8 @@ export default function Home() {
                   mapX: currentPin.x,
                   mapY: currentPin.y,
                   reviewSummary: {
-                    bookTitle: bookReviewState.bookTitle,
-                    reviewType: bookReviewState.reviewType,
+                    bookTitle: reviewSnapshot.bookTitle,
+                    reviewType: reviewSnapshot.reviewType,
                   },
                   previousMapImageUrl,
                   mapPrompt: `Use the previous map image as a reference. At the student's starting position (x=${currentPin.x.toFixed(
@@ -1296,8 +1310,8 @@ export default function Home() {
                   )}%, y=${currentPin.y.toFixed(
                     1,
                   )}%), add visual elements related to this book review (title: ${
-                    bookReviewState.bookTitle
-                  }, type: ${bookReviewState.reviewType}). Update the surrounding area so the map reflects this reading journey.`,
+                    reviewSnapshot.bookTitle
+                  }, type: ${reviewSnapshot.reviewType}). Update the surrounding area so the map reflects this reading journey.`,
                 }
 
                 const mapRes = await fetch(endpoint, {
@@ -1320,20 +1334,10 @@ export default function Home() {
                     },
                   ])
                 }
-              } catch (error) {
+              })().catch((error) => {
                 console.error("Error updating map after review completion:", error)
-              }
+              })
             }
-
-            setBookReviewState({
-              reviewType: null,
-              bookTitle: null,
-              structure: null,
-              review: "",
-              bookCoverUrl: undefined,
-              bookSummary: undefined,
-            })
-            setStage(backToStage)
           }}
           onBack={async () => {
             if (journeyActive) {
@@ -1376,12 +1380,26 @@ export default function Home() {
           review={bookReviewState.review}
           onReset={async (finalReview) => {
             const backToStage = "journeyMap"
-            await evaluateValuesGrowth(finalReview, "review")
+            void evaluateValuesGrowth(finalReview, "review")
 
-            if (!journeyActive && user && currentPin && bookReviewState.review.trim().length > 0) {
-              try {
-                const title = bookReviewState.bookTitle || "My Book Review"
-                const topic = bookReviewState.bookTitle || "book world"
+            const reviewSnapshot = {
+              bookTitle: bookReviewState.bookTitle,
+              reviewType: bookReviewState.reviewType,
+            }
+            setBookReviewState({
+              reviewType: null,
+              bookTitle: null,
+              structure: null,
+              review: "",
+              bookCoverUrl: undefined,
+              bookSummary: undefined,
+            })
+            setStage(backToStage)
+
+            if (!journeyActive && user && currentPin && finalReview.trim().length > 0) {
+              void (async () => {
+                const title = reviewSnapshot.bookTitle || "My Book Review"
+                const topic = reviewSnapshot.bookTitle || "book world"
                 const previousMapImageUrl = mapImageUrl || "/firstmap.png"
                 const endpoint = "/api/map-update"
                 const payload: any = {
@@ -1391,8 +1409,8 @@ export default function Home() {
                   mapX: currentPin.x,
                   mapY: currentPin.y,
                   reviewSummary: {
-                    bookTitle: bookReviewState.bookTitle,
-                    reviewType: bookReviewState.reviewType,
+                    bookTitle: reviewSnapshot.bookTitle,
+                    reviewType: reviewSnapshot.reviewType,
                   },
                   previousMapImageUrl,
                   mapPrompt: `Use the previous map image as a reference. At the student's starting position (x=${currentPin.x.toFixed(
@@ -1400,8 +1418,8 @@ export default function Home() {
                   )}%, y=${currentPin.y.toFixed(
                     1,
                   )}%), add visual elements related to this book review (title: ${
-                    bookReviewState.bookTitle
-                  }, type: ${bookReviewState.reviewType}). Update the surrounding area so the map reflects this reading journey.`,
+                    reviewSnapshot.bookTitle
+                  }, type: ${reviewSnapshot.reviewType}). Update the surrounding area so the map reflects this reading journey.`,
                 }
 
                 const mapRes = await fetch(endpoint, {
@@ -1424,20 +1442,10 @@ export default function Home() {
                     },
                   ])
                 }
-              } catch (error) {
+              })().catch((error) => {
                 console.error("Error updating map after review completion (no AI):", error)
-              }
+              })
             }
-
-            setBookReviewState({
-              reviewType: null,
-              bookTitle: null,
-              structure: null,
-              review: "",
-              bookCoverUrl: undefined,
-              bookSummary: undefined,
-            })
-            setStage(backToStage)
           }}
           onBack={() => setStage(journeyActive ? "journeyMap" : "bookReviewWritingNoAi")}
           userId={user.username}
@@ -1609,19 +1617,25 @@ export default function Home() {
           storyState={storyState}
           onReset={async (finalStory) => {
             const backToStage = "journeyMap"
-            await evaluateValuesGrowth(finalStory, "story")
+            void evaluateValuesGrowth(finalStory, "story")
+
+            const characterSnapshot = storyState.character
+            const plotSnapshot = storyState.plot
+            const structureSnapshot = storyState.structure
+            setStoryState({ character: null, plot: null, structure: null, story: "" })
+            setStage(backToStage)
 
             // Journey 模式下，地圖已在 Plot 步驟更新，這裡不再重複調 Fal，只是清理狀態並返回地圖
             if (!journeyActive && user && currentPin && finalStory.trim().length > 0) {
-              try {
+              void (async () => {
                 const title =
-                  storyState.character?.name && storyState.character.name.trim().length > 0
-                    ? `${storyState.character.name}'s Story`
+                  characterSnapshot?.name && characterSnapshot.name.trim().length > 0
+                    ? `${characterSnapshot.name}'s Story`
                     : "My Story"
 
-                const species = storyState.character?.species
-                const setting = storyState.plot?.setting
-                const structureType = storyState.structure?.type
+                const species = characterSnapshot?.species
+                const setting = plotSnapshot?.setting
+                const structureType = structureSnapshot?.type
 
                 const topic = setting && setting.trim().length > 0 ? setting : "fantasy adventure"
 
@@ -1679,13 +1693,10 @@ export default function Home() {
                     },
                   ])
                 }
-              } catch (error) {
+              })().catch((error) => {
                 console.error("Error updating map after story completion:", error)
-              }
+              })
             }
-
-            setStoryState({ character: null, plot: null, structure: null, story: "" })
-            setStage(backToStage)
           }}
           onEdit={async (editStage) => {
             // 如果正在编辑已保存的作品，加载之前的内容
@@ -1873,7 +1884,7 @@ export default function Home() {
           sections={letterState.sections}
           onReset={async (finalLetter) => {
             const backToStage = "journeyMap"
-            await evaluateValuesGrowth(finalLetter, "letter")
+            void evaluateValuesGrowth(finalLetter, "letter")
 
             setLetterState({
               recipient: null,
@@ -1992,9 +2003,9 @@ export default function Home() {
           userId={user.username}
           initialView="builder"
           backLabel={journeyActive ? "Back to Map" : undefined}
-          onBack={async () => {
+          onBack={() => {
             if (journeyActive && dramaBook) {
-              await evaluateValuesGrowth(JSON.stringify(dramaBook), "story")
+              void evaluateValuesGrowth(JSON.stringify(dramaBook), "story")
             }
             setStage(journeyActive ? "journeyMap" : "writeTypeSelection")
           }}
@@ -2015,9 +2026,9 @@ export default function Home() {
           userId={user.username}
           initialView="book"
           backLabel={journeyActive ? "Back to Map" : undefined}
-          onBack={async () => {
+          onBack={() => {
             if (journeyActive && dramaBook) {
-              await evaluateValuesGrowth(JSON.stringify(dramaBook), "story")
+              void evaluateValuesGrowth(JSON.stringify(dramaBook), "story")
             }
             setStage(journeyActive ? "journeyMap" : "writeTypeSelection")
           }}
