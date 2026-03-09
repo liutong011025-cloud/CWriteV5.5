@@ -73,6 +73,30 @@ interface FarmElementState {
   scale: number
 }
 
+const getDefaultFarmButtonStates = (otherFarm: boolean): Record<FarmElementId, FarmElementState> => ({
+  farmbacktomap: otherFarm ? { x: 74.0, y: 43.9, scale: 0.71 } : { x: 74.1, y: 43.7, scale: 0.7 },
+  farmsetting: otherFarm ? { x: 34.7, y: 49.6, scale: 0.8 } : { x: 34.8, y: 50.0, scale: 0.8 },
+  farmwrittingboard: otherFarm ? { x: 63.2, y: 50.6, scale: 1.1 } : { x: 63.2, y: 50.6, scale: 1.1 },
+  vistothersfarm: otherFarm ? { x: 73.1, y: 37.0, scale: 0.0 } : { x: 73.1, y: 37.0, scale: 0.75 },
+})
+
+const DEFAULT_TREE_LAYOUT: FarmElementState[] = [
+  { x: 22.0, y: 54.0, scale: 1.0 },
+  { x: 29.5, y: 59.0, scale: 0.95 },
+  { x: 37.0, y: 55.5, scale: 1.05 },
+  { x: 44.2, y: 60.2, scale: 0.9 },
+  { x: 51.3, y: 56.8, scale: 1.0 },
+  { x: 58.6, y: 60.0, scale: 0.92 },
+  { x: 65.8, y: 56.4, scale: 1.02 },
+  { x: 73.0, y: 60.5, scale: 0.9 },
+  { x: 27.0, y: 69.0, scale: 0.9 },
+  { x: 39.5, y: 71.0, scale: 0.95 },
+  { x: 52.0, y: 69.3, scale: 0.92 },
+  { x: 64.5, y: 71.2, scale: 0.9 },
+]
+
+const FARM_LAYOUT_STORAGE_KEY = "cwriteFarmLayoutV1"
+
 export default function UserProfilePage({
   userId,
   userRole,
@@ -131,11 +155,11 @@ export default function UserProfilePage({
   ]
 
   const [farmElementStates, setFarmElementStates] = useState<Record<FarmElementId, FarmElementState>>({
-    farmbacktomap: isOtherFarm ? { x: 74.0, y: 43.9, scale: 0.71 } : { x: 74.1, y: 43.7, scale: 0.7 },
-    farmsetting: isOtherFarm ? { x: 34.7, y: 49.6, scale: 0.8 } : { x: 34.8, y: 50.0, scale: 0.8 },
-    farmwrittingboard: isOtherFarm ? { x: 63.2, y: 50.6, scale: 1.1 } : { x: 63.2, y: 50.6, scale: 1.1 },
-    vistothersfarm: isOtherFarm ? { x: 73.1, y: 37.0, scale: 0.0 } : { x: 73.1, y: 37.0, scale: 0.75 },
+    ...getDefaultFarmButtonStates(isOtherFarm),
   })
+  const [farmTreeStates, setFarmTreeStates] = useState<FarmElementState[]>(DEFAULT_TREE_LAYOUT)
+  const [layoutToolOpen, setLayoutToolOpen] = useState(false)
+  const [layoutTarget, setLayoutTarget] = useState<string>("button:farmsetting")
 
   const farmImageRef = useRef<HTMLImageElement | null>(null)
   const [imageOverlayRect, setImageOverlayRect] = useState<ImageOverlayRect | null>(null)
@@ -182,7 +206,52 @@ export default function UserProfilePage({
   }, [])
 
 
-  // 农场按钮锁定位置，不再支持拖动
+  const farmBackgroundSrc = isOtherFarm ? "/farm2.png" : "/farm.png"
+  const farmBackgroundAlt = isOtherFarm ? "Other Student Farm Background" : "My Farm Background"
+  const treeCount = 12
+
+  const selectedLayoutState = (() => {
+    if (layoutTarget.startsWith("button:")) {
+      const id = layoutTarget.replace("button:", "") as FarmElementId
+      return farmElementStates[id]
+    }
+    const index = Number(layoutTarget.replace("tree:", ""))
+    return Number.isNaN(index) ? null : farmTreeStates[index] || null
+  })()
+
+  const updateSelectedLayoutState = (field: keyof FarmElementState, value: number) => {
+    if (layoutTarget.startsWith("button:")) {
+      const id = layoutTarget.replace("button:", "") as FarmElementId
+      setFarmElementStates((prev) => ({
+        ...prev,
+        [id]: { ...prev[id], [field]: value },
+      }))
+      return
+    }
+    const index = Number(layoutTarget.replace("tree:", ""))
+    if (Number.isNaN(index)) return
+    setFarmTreeStates((prev) => prev.map((item, i) => (i === index ? { ...item, [field]: value } : item)))
+  }
+
+  const resetSelectedLayoutState = () => {
+    if (layoutTarget.startsWith("button:")) {
+      const id = layoutTarget.replace("button:", "") as FarmElementId
+      const defaults = getDefaultFarmButtonStates(false)
+      setFarmElementStates((prev) => ({
+        ...prev,
+        [id]: defaults[id],
+      }))
+      return
+    }
+    const index = Number(layoutTarget.replace("tree:", ""))
+    if (Number.isNaN(index)) return
+    setFarmTreeStates((prev) => prev.map((item, i) => (i === index ? { ...DEFAULT_TREE_LAYOUT[i] } : item)))
+  }
+
+  const resetAllLayoutState = () => {
+    setFarmElementStates(getDefaultFarmButtonStates(false))
+    setFarmTreeStates(DEFAULT_TREE_LAYOUT.map((item) => ({ ...item })))
+  }
 
   useEffect(() => {
     if (!isOtherFarm || typeof window === "undefined") return
@@ -198,6 +267,62 @@ export default function UserProfilePage({
       // ignore
     }
   }, [isOtherFarm, userId])
+
+  useEffect(() => {
+    setFarmElementStates(getDefaultFarmButtonStates(isOtherFarm))
+    if (!isOtherFarm) setFarmTreeStates(DEFAULT_TREE_LAYOUT.map((item) => ({ ...item })))
+  }, [isOtherFarm])
+
+  useEffect(() => {
+    if (isOtherFarm || typeof window === "undefined") return
+    try {
+      const raw = localStorage.getItem(`${FARM_LAYOUT_STORAGE_KEY}:${userId}`)
+      if (!raw) return
+      const parsed = JSON.parse(raw) as {
+        buttons?: Partial<Record<FarmElementId, Partial<FarmElementState>>>
+        trees?: Partial<FarmElementState>[]
+      }
+      if (parsed.buttons) {
+        const defaults = getDefaultFarmButtonStates(false)
+        const nextButtons = { ...defaults }
+        ;(Object.keys(defaults) as FarmElementId[]).forEach((id) => {
+          const cfg = parsed.buttons?.[id]
+          if (!cfg) return
+          nextButtons[id] = {
+            x: typeof cfg.x === "number" ? cfg.x : defaults[id].x,
+            y: typeof cfg.y === "number" ? cfg.y : defaults[id].y,
+            scale: typeof cfg.scale === "number" ? cfg.scale : defaults[id].scale,
+          }
+        })
+        setFarmElementStates(nextButtons)
+      }
+      if (Array.isArray(parsed.trees)) {
+        const nextTrees = DEFAULT_TREE_LAYOUT.map((item, index) => {
+          const cfg = parsed.trees?.[index]
+          if (!cfg) return { ...item }
+          return {
+            x: typeof cfg.x === "number" ? cfg.x : item.x,
+            y: typeof cfg.y === "number" ? cfg.y : item.y,
+            scale: typeof cfg.scale === "number" ? cfg.scale : item.scale,
+          }
+        })
+        setFarmTreeStates(nextTrees)
+      }
+    } catch {
+      // ignore
+    }
+  }, [isOtherFarm, userId])
+
+  useEffect(() => {
+    if (isOtherFarm || typeof window === "undefined") return
+    localStorage.setItem(
+      `${FARM_LAYOUT_STORAGE_KEY}:${userId}`,
+      JSON.stringify({
+        buttons: farmElementStates,
+        trees: farmTreeStates,
+      })
+    )
+  }, [isOtherFarm, userId, farmElementStates, farmTreeStates])
 
   useEffect(() => {
     if (!isOtherFarm) return
@@ -610,8 +735,8 @@ export default function UserProfilePage({
         <div ref={farmContainerRef} className="relative w-full h-full overflow-hidden">
           <img
             ref={farmImageRef}
-            src="/farm.png"
-            alt="My Farm Background"
+            src={farmBackgroundSrc}
+            alt={farmBackgroundAlt}
             className="absolute inset-0 h-full w-full object-contain"
             draggable={false}
           />
@@ -631,6 +756,36 @@ export default function UserProfilePage({
                 : { left: 0, top: 0, right: 0, bottom: 0, width: "100%", height: "100%", pointerEvents: "auto" }
             }
           >
+            {!isOtherFarm &&
+              Array.from({ length: treeCount }).map((_, index) => {
+                const treeState = farmTreeStates[index] || DEFAULT_TREE_LAYOUT[index]
+                const isHighlightedTree = forest[index] && highlightTreeId === forest[index].id
+                const treeSizePercent = Math.min(24, Math.max(8, 8 * treeState.scale))
+                return (
+                  <div
+                    key={`farm-tree-${index}`}
+                    className="absolute -translate-x-1/2 -translate-y-1/2"
+                    style={{
+                      left: `${treeState.x}%`,
+                      top: `${treeState.y}%`,
+                      width: `${treeSizePercent}%`,
+                      aspectRatio: "698 / 850",
+                      zIndex: 5,
+                      filter: isHighlightedTree ? "drop-shadow(0 0 14px rgba(250, 204, 21, 0.95))" : "none",
+                      transform: `translate(-50%, -50%) ${isHighlightedTree ? "scale(1.06)" : "scale(1)"}`,
+                      transition: "transform 0.25s ease, filter 0.25s ease",
+                    }}
+                  >
+                    <img
+                      src="/tree2.png"
+                      alt={`Farm tree ${index + 1}`}
+                      className="h-full w-full object-contain select-none pointer-events-none"
+                      draggable={false}
+                    />
+                  </div>
+                )
+              })}
+
             {farmElements.map((element) => {
               const state = farmElementStates[element.id]
               if (!state) return null
@@ -650,6 +805,7 @@ export default function UserProfilePage({
                     transform: `translate(-50%, -50%) scale(${isHovered ? 1.08 : 1})`,
                     transformOrigin: "center center",
                     transition: "transform 0.25s ease-in-out",
+                    zIndex: 20,
                   }}
                   onMouseEnter={() => setHoveredFarmElement(element.id)}
                   onMouseLeave={() => setHoveredFarmElement((prev) => (prev === element.id ? null : prev))}
@@ -775,6 +931,97 @@ export default function UserProfilePage({
               />
             </div>
           </div>
+
+          {!isOtherFarm && (
+            <>
+              <button
+                type="button"
+                onClick={() => setLayoutToolOpen((prev) => !prev)}
+                className="absolute right-4 top-4 z-[70] rounded-xl border border-purple-200 bg-white/90 px-3 py-2 text-xs font-semibold text-purple-700 shadow-md hover:bg-white"
+              >
+                {layoutToolOpen ? "关闭布局工具" : "打开布局工具"}
+              </button>
+              {layoutToolOpen && (
+                <div className="absolute right-4 top-16 z-[70] w-72 rounded-2xl border border-purple-200 bg-white/95 p-3 text-xs shadow-xl backdrop-blur-sm">
+                  <p className="mb-2 font-semibold text-foreground">农场布局调整</p>
+                  <label className="mb-1 block text-muted-foreground">目标元素</label>
+                  <select
+                    value={layoutTarget}
+                    onChange={(e) => setLayoutTarget(e.target.value)}
+                    className="mb-3 w-full rounded-lg border border-purple-200 bg-white px-2 py-1 text-xs"
+                  >
+                    <option value="button:farmbacktomap">按钮：Back to Map</option>
+                    <option value="button:farmsetting">按钮：Settings</option>
+                    <option value="button:farmwrittingboard">按钮：Writing Board</option>
+                    <option value="button:vistothersfarm">按钮：Visit Others' Farms</option>
+                    {Array.from({ length: treeCount }).map((_, index) => (
+                      <option key={`layout-tree-option-${index}`} value={`tree:${index}`}>
+                        {`树：tree${index + 1}`}
+                      </option>
+                    ))}
+                  </select>
+                  {selectedLayoutState && (
+                    <div className="space-y-2">
+                      <div>
+                        <div className="mb-1 flex items-center justify-between">
+                          <span>X 位置</span>
+                          <span>{selectedLayoutState.x.toFixed(1)}%</span>
+                        </div>
+                        <input
+                          type="range"
+                          min={0}
+                          max={100}
+                          step={0.1}
+                          value={selectedLayoutState.x}
+                          onChange={(e) => updateSelectedLayoutState("x", Number(e.target.value))}
+                          className="w-full"
+                        />
+                      </div>
+                      <div>
+                        <div className="mb-1 flex items-center justify-between">
+                          <span>Y 位置</span>
+                          <span>{selectedLayoutState.y.toFixed(1)}%</span>
+                        </div>
+                        <input
+                          type="range"
+                          min={0}
+                          max={100}
+                          step={0.1}
+                          value={selectedLayoutState.y}
+                          onChange={(e) => updateSelectedLayoutState("y", Number(e.target.value))}
+                          className="w-full"
+                        />
+                      </div>
+                      <div>
+                        <div className="mb-1 flex items-center justify-between">
+                          <span>缩放</span>
+                          <span>{selectedLayoutState.scale.toFixed(2)}</span>
+                        </div>
+                        <input
+                          type="range"
+                          min={0.3}
+                          max={2.2}
+                          step={0.01}
+                          value={selectedLayoutState.scale}
+                          onChange={(e) => updateSelectedLayoutState("scale", Number(e.target.value))}
+                          className="w-full"
+                        />
+                      </div>
+                    </div>
+                  )}
+                  <div className="mt-3 flex items-center gap-2">
+                    <Button type="button" variant="outline" size="sm" onClick={resetSelectedLayoutState} className="h-8 px-2 text-xs">
+                      重置当前
+                    </Button>
+                    <Button type="button" variant="outline" size="sm" onClick={resetAllLayoutState} className="h-8 px-2 text-xs">
+                      重置全部
+                    </Button>
+                  </div>
+                  <p className="mt-2 text-[11px] text-muted-foreground">布局会自动保存到当前浏览器。</p>
+                </div>
+              )}
+            </>
+          )}
 
           {isOtherFarm && showOtherMapDialog && (
             <div
