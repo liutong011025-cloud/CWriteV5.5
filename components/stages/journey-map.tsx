@@ -293,7 +293,7 @@ export default function JourneyMap({
         </div>
       </div>
       {!isHoldingPin && (
-        <div className="pointer-events-none fixed inset-0 z-[120]">
+        <div className="fixed inset-0 z-[120]" style={{ pointerEvents: "none" }}>
           <FluidGlass
             mode="lens"
             lensProps={{
