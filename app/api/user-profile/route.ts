@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 
+const TREES_BACKUP_STAGE = "forest_trees_sync"
+
 function isMissingTableError(e: unknown): boolean {
   const msg = e instanceof Error ? e.message : String(e)
   const code = e && typeof e === "object" && "code" in e ? (e as { code: string }).code : ""
@@ -23,6 +25,52 @@ function isMissingColumnError(e: unknown): boolean {
 
 function isProfileSchemaError(e: unknown): boolean {
   return isMissingTableError(e) || isMissingColumnError(e)
+}
+
+function normalizeTreesPayload(raw: unknown): { id: number; stage: number }[] | null {
+  if (!Array.isArray(raw)) return null
+  return raw
+    .map((item, idx) => {
+      const id = Number((item as { id?: unknown })?.id) || idx + 1
+      const stageRaw = Number((item as { stage?: unknown })?.stage) || 2
+      const stage = stageRaw >= 4 ? 4 : stageRaw >= 3 ? 3 : 2
+      return { id, stage }
+    })
+    .filter((tree) => Number.isFinite(tree.id) && tree.id >= 1 && tree.id <= 12)
+}
+
+async function readTreesBackupByUserId(userId: string): Promise<{ id: number; stage: number }[] | null> {
+  try {
+    const latest = await prisma.interaction.findFirst({
+      where: { userId, stage: TREES_BACKUP_STAGE },
+      orderBy: { timestamp: "desc" },
+      select: { output: true },
+    })
+    const output = latest?.output as { trees?: unknown } | null | undefined
+    return normalizeTreesPayload(output?.trees)
+  } catch {
+    return null
+  }
+}
+
+async function writeTreesBackupByUserId(userId: string, trees: unknown): Promise<void> {
+  const normalizedTrees = normalizeTreesPayload(trees)
+  if (!normalizedTrees) return
+  try {
+    await prisma.interaction.create({
+      data: {
+        userId,
+        stage: TREES_BACKUP_STAGE,
+        output: {
+          trees: normalizedTrees,
+          source: "user-profile-fallback",
+          at: new Date().toISOString(),
+        },
+      },
+    })
+  } catch {
+    // ignore backup failure
+  }
 }
 
 async function getUserProfileColumns(): Promise<Set<string> | null> {
@@ -54,6 +102,8 @@ export async function GET(request: NextRequest) {
       user.id
     )
     const profile = profileRows[0] ?? null
+    const treesFromProfile = normalizeTreesPayload(profile?.trees)
+    const treesFromBackup = !treesFromProfile ? await readTreesBackupByUserId(user.id) : null
     return NextResponse.json({
       avatarUrl: profile?.avatarUrl ?? null,
       avatarEmoji: profile?.avatarEmoji ?? null,
@@ -62,13 +112,25 @@ export async function GET(request: NextRequest) {
       grade: profile?.grade ?? null,
       gender: profile?.gender ?? null,
       // 小树森林：最多 12 棵树，每棵 { id: number, stage: 1-6 }
-      trees: profile?.trees ?? null,
+      trees: treesFromProfile ?? treesFromBackup ?? null,
       // 上一次写作三指标：{ vocabRichness, descriptiveAccuracy, logicalCoherence }
       lastMetrics: profile?.lastMetrics ?? null,
     })
   } catch (e) {
     console.error("[user-profile] GET", e)
     if (isProfileSchemaError(e)) {
+      const userId = request.nextUrl.searchParams.get("user_id")
+      let treesFromBackup: { id: number; stage: number }[] | null = null
+      if (userId) {
+        try {
+          const user = await prisma.user.findUnique({ where: { username: userId } })
+          if (user) {
+            treesFromBackup = await readTreesBackupByUserId(user.id)
+          }
+        } catch {
+          // ignore
+        }
+      }
       return NextResponse.json({
         avatarUrl: null,
         avatarEmoji: null,
@@ -76,6 +138,8 @@ export async function GET(request: NextRequest) {
         email: null,
         grade: null,
         gender: null,
+        trees: treesFromBackup,
+        degraded: true,
       })
     }
     return NextResponse.json({ error: "Internal error" }, { status: 500 })
@@ -142,6 +206,8 @@ export async function POST(request: NextRequest) {
       user.id
     )
     const profile = profileRows[0] ?? {}
+    const normalizedTrees = normalizeTreesPayload(profile.trees ?? body.trees)
+    await writeTreesBackupByUserId(user.id, normalizedTrees)
     return NextResponse.json({
       avatarUrl: profile.avatarUrl ?? null,
       avatarEmoji: profile.avatarEmoji ?? null,
@@ -149,7 +215,7 @@ export async function POST(request: NextRequest) {
       email: profile.email ?? null,
       grade: profile.grade ?? null,
       gender: profile.gender ?? null,
-      trees: supportsTrees ? (profile.trees ?? null) : null,
+      trees: supportsTrees ? (normalizedTrees ?? null) : normalizedTrees,
       lastMetrics: supportsLastMetrics ? (profile.lastMetrics ?? null) : null,
       degraded: !supportsTrees || !supportsLastMetrics,
     })
@@ -157,6 +223,17 @@ export async function POST(request: NextRequest) {
     const message = e instanceof Error ? e.message : String(e)
     console.error("[user-profile] POST", e)
     if (isProfileSchemaError(e)) {
+      const userId = body.user_id ?? body.userId
+      if (userId && body?.trees !== undefined) {
+        try {
+          const user = await prisma.user.findUnique({ where: { username: userId } })
+          if (user) {
+            await writeTreesBackupByUserId(user.id, body.trees)
+          }
+        } catch {
+          // ignore
+        }
+      }
       // Graceful fallback: keep student flow working even if profile tables are not ready yet.
       return NextResponse.json({
         avatarUrl: body?.avatarUrl ?? null,
@@ -165,7 +242,7 @@ export async function POST(request: NextRequest) {
         email: body?.email ?? null,
         grade: body?.grade ?? null,
         gender: body?.gender ?? null,
-        trees: null,
+        trees: normalizeTreesPayload(body?.trees),
         lastMetrics: null,
         degraded: true,
       })
