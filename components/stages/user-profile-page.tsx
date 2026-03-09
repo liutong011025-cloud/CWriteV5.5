@@ -665,7 +665,7 @@ export default function UserProfilePage({
                 const treeImageSrc = treeStage >= 4 ? "/tree4.png" : treeStage >= 3 ? "/tree3.png" : "/tree2.png"
                 const treeBaseSizePercent = treeStage >= 4 ? 11.2 : 8
                 const treeTop = treeStage >= 4 ? treeState.y + 3.6 : treeState.y
-                const treeLeft = treeStage >= 4 ? treeState.x + 0.8 : treeState.x
+                const treeLeft = treeStage >= 4 ? treeState.x + 1.2 : treeState.x
                 return (
                   <div
                     key={`farm-tree-${index}`}
