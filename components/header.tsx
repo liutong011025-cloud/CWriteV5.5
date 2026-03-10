@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { usePathname, useRouter } from "next/navigation"
+import { usePathname } from "next/navigation"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -17,14 +17,10 @@ type HeaderUserInfo = {
 } | null
 
 export default function Header() {
-  const [isScrolled, setIsScrolled] = useState(false)
-  const [isAtTop, setIsAtTop] = useState(true)
-  const [isHovering, setIsHovering] = useState(false)
   const [currentStage, setCurrentStage] = useState<string | null>(null)
   const [language, setLanguage] = useState<HeaderLanguage>("en") // 默认英语
   const [userInfo, setUserInfo] = useState<HeaderUserInfo>(null)
   const pathname = usePathname()
-  const router = useRouter()
 
   useEffect(() => {
     const onUserInfo = (e: Event) => {
@@ -109,23 +105,6 @@ export default function Header() {
     return () => observer.disconnect()
   }, [pathname])
 
-
-  useEffect(() => {
-    const handleScroll = () => {
-      const scrollTop = window.scrollY || document.documentElement.scrollTop
-      // 更早折叠：降低阈值，让header在更早的滚动位置就变成窄的
-      setIsScrolled(scrollTop > 15)
-      setIsAtTop(scrollTop < 5)
-    }
-
-    window.addEventListener('scroll', handleScroll, { passive: true })
-    handleScroll() // Initial check
-
-    return () => {
-      window.removeEventListener('scroll', handleScroll)
-    }
-  }, [])
-
   const navItems = [
     { label: "Home", href: "/", action: () => {
       // 触发自定义事件来通知主页面切换到home
@@ -192,15 +171,11 @@ export default function Header() {
   }, [])
 
 
-  // 逻辑：
-  // 1. 如果在顶部（isAtTop = true），背景始终透明，不显示背景色
-  // 2. 如果向下滚动（isScrolled = true），显示背景和窄窄的header
-  // 3. 顶部时，文字为黑色；滚动后，文字根据背景调整
+  // Page detection for navigation highlighting
   const isHomePage = currentStage === 'home' || pathname === '/'
   const isAboutPage = currentStage === 'about' || pathname === '/#about'
   const isGalleryPage = currentStage === 'gallery' || pathname === '/gallery' || pathname?.includes('gallery')
-  const showBackground = isScrolled || isAboutPage || isGalleryPage // About 和 Gallery 页面始终显示背景
-  const showLogo = isHomePage && isAtTop && !isHovering && !isAboutPage && !isGalleryPage // 只在首页顶部且未悬停时显示logo
+  // Note: showBackground and showLogo removed - neo-brutalist header is always visible with cream background
 
   // 处理导航点击
   const handleNavClick = (item: typeof navItems[0], e: React.MouseEvent) => {
@@ -210,25 +185,12 @@ export default function Header() {
 
   return (
     <header
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        isAboutPage || isGalleryPage
-          ? 'h-16 shadow-xl' // About 和 Gallery 页面使用中等高度的header
-          : isHomePage 
-          ? (isScrolled ? 'h-14 shadow-xl' : 'h-32')
-          : 'h-12 shadow-lg' // 非首页始终保持窄的header
-      }`}
-      onMouseEnter={() => setIsHovering(true)}
-      onMouseLeave={() => setIsHovering(false)}
+      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 h-16`}
       style={{
         overflow: 'visible',
-        background: showBackground
-          ? 'linear-gradient(135deg, rgba(15, 23, 42, 0.98) 0%, rgba(30, 58, 138, 0.95) 50%, rgba(15, 23, 42, 0.98) 100%)'
-          : 'transparent',
-        backdropFilter: showBackground ? 'blur(12px) saturate(180%)' : 'none',
-        borderBottom: showBackground ? '1px solid rgba(59, 130, 246, 0.3)' : 'none',
-        boxShadow: showBackground 
-          ? '0 4px 20px rgba(15, 23, 42, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1)' 
-          : 'none',
+        background: '#fffbeb', /* Warm cream/yellow background like reference */
+        borderBottom: '3px solid #1a1a1a',
+        boxShadow: '0 4px 0 0 rgba(0,0,0,0.1)',
       }}
     >
       <div className="max-w-7xl mx-auto h-full px-6 flex items-center justify-between">
@@ -245,70 +207,22 @@ export default function Header() {
             }}
             className="transition-all duration-200 flex items-center h-full"
           >
-            {isHomePage && showLogo ? (
-              // 首页顶部显示 logosmall
-              <Image
-                src="/logosmall.png"
-                alt="CWrite"
-                width={96}
-                height={96}
-                className="object-contain w-auto"
-                priority
-                unoptimized
-                style={{ maxHeight: '100%', height: '100%', objectFit: 'contain', width: 'auto' }}
-              />
-             ) : isHomePage ? (
-               // 首页：在顶部悬停时显示 logobig，滚动压缩后显示白色 logo
-               isAtTop ? (
-                 <Image
-                   src="/logobig.png"
-                   alt="CWrite"
-                   width={120}
-                   height={40}
-                   className="object-contain h-full w-auto"
-                   unoptimized
-                   style={{ maxHeight: '100%', height: '100%', objectFit: 'contain', width: 'auto' }}
-                 />
-               ) : (
-                 <Image
-                   src="/logo 白.png"
-                   alt="CWrite"
-                   width={120}
-                   height={40}
-                   className="object-contain h-full w-auto"
-                   unoptimized
-                   style={{ maxHeight: '100%', height: '100%', objectFit: 'contain', width: 'auto' }}
-                 />
-               )
-             ) : isGalleryPage ? (
-               // Gallery 页面使用白色 logo
-               <Image
-                 src="/logo 白.png"
-                 alt="CWrite"
-                 width={120}
-                 height={40}
-                 className="object-contain h-full w-auto"
-                 unoptimized
-                 style={{ maxHeight: '100%', height: '100%', objectFit: 'contain', width: 'auto' }}
-               />
-             ) : (
-               // 其他非首页压缩状态使用白色 logo
-               <Image
-                 src="/logo 白.png"
-                 alt="CWrite"
-                 width={120}
-                 height={40}
-                 className="object-contain h-full w-auto"
-                 unoptimized
-                 style={{ maxHeight: '100%', height: '100%', objectFit: 'contain', width: 'auto' }}
-               />
-             )}
+            {/* Always use the color logo on the cream background */}
+            <Image
+              src="/logobig.png"
+              alt="CWrite"
+              width={120}
+              height={48}
+              className="object-contain h-10 w-auto"
+              priority
+              unoptimized
+            />
           </Link>
         </div>
 
-               {/* Navigation Links + 用户头像 + 语言 */}
+               {/* Navigation Links + 用户头像 + 语言 - Neo-brutalist pill style */}
                <nav className="flex items-center gap-2 sm:gap-3 flex-shrink-0 min-w-0">
-                 <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-wrap justify-end">
+                 <div className="flex items-center gap-2 min-w-0 flex-wrap justify-end">
                  {navItems.map((item) => {
                    // 检查是否激活
                   const isHomePageActive = (currentStage === 'home' || pathname === '/') && item.href === "/"
@@ -321,18 +235,10 @@ export default function Header() {
                        key={item.href}
                        href={item.href}
                        onClick={(e) => handleNavClick(item, e)}
-                       className={`px-6 py-3 rounded-lg font-semibold text-lg transition-all duration-200 whitespace-nowrap ${
-                         isGalleryPage
-                           ? isActive
-                             ? 'text-yellow-200 hover:text-yellow-100' // Gallery 页面激活时显示黄色
-                             : 'text-white hover:text-yellow-200' // Gallery 页面未激活按钮显示白色，hover 时变黄色
-                           : isActive
-                           ? showBackground
-                             ? 'text-yellow-200' // 其他页面在滚动后显示低饱和度黄色，不显示按钮背景
-                             : 'text-black' // 顶部时不显示背景，只显示文字
-                           : showBackground
-                           ? 'text-blue-100 hover:text-white' // 其他页面未激活按钮
-                           : 'text-black drop-shadow-sm hover:text-gray-700' // 顶部时显示黑色文字
+                       className={`px-4 py-2 rounded-full font-bold text-sm transition-all duration-150 whitespace-nowrap border-2 ${
+                         isActive
+                           ? 'bg-[#ec4899] text-white border-[#1a1a1a] shadow-[2px_2px_0_0_#1a1a1a]'
+                           : 'bg-white text-[#1a1a1a] border-[#1a1a1a] hover:bg-[#fef3c7] hover:shadow-[2px_2px_0_0_#1a1a1a]'
                        }`}
                      >
                        {item.label}
@@ -346,43 +252,33 @@ export default function Header() {
                    <button
                      type="button"
                      onClick={() => window.dispatchEvent(new CustomEvent("navigateToUserProfile"))}
-                     className="relative flex-shrink-0 ml-1 rounded-full ring-2 ring-transparent hover:ring-yellow-400/50 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                     className="relative flex-shrink-0 ml-1 rounded-full ring-2 ring-transparent hover:ring-[#ec4899] focus:outline-none focus:ring-2 focus:ring-[#ec4899]"
                      aria-label="Open profile"
                    >
-                     <Avatar className={`h-9 w-9 rounded-full border-2 flex-shrink-0 ${
-                       showBackground ? 'border-white/20' : 'border-slate-300/80 bg-white/95'
-                     }`}>
+                     <Avatar className="h-9 w-9 rounded-full border-2 border-[#1a1a1a] flex-shrink-0 bg-white">
                        <AvatarImage src={userInfo.avatarUrl || undefined} alt={userInfo.username} />
-                       <AvatarFallback className={`rounded-full text-sm font-bold ${
-                         showBackground
-                           ? 'bg-primary/20 text-yellow-200'
-                           : 'bg-slate-200 text-slate-700'
-                       }`}>
+                       <AvatarFallback className="rounded-full text-sm font-bold bg-[#facc15] text-[#1a1a1a]">
                          {userInfo.avatarEmoji || (userInfo.username || "?").slice(0, 2).toUpperCase()}
                        </AvatarFallback>
                      </Avatar>
                      {userInfo.unreadCount > 0 && (
-                       <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
+                       <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-[#ef4444] text-[10px] font-bold text-white border border-[#1a1a1a]">
                          {userInfo.unreadCount > 99 ? "99+" : userInfo.unreadCount}
                        </span>
                      )}
                    </button>
                  )}
 
-                 {/* Language Selector - 所有页面都显示 */}
-                 <div className="flex gap-2 ml-2 flex-shrink-0">
+                 {/* Language Selector - Neo-brutalist style */}
+                 <div className="flex gap-1 ml-2 flex-shrink-0">
                    <Button
                      onClick={() => handleLanguageChange("en")}
                      variant={language === "en" ? "default" : "outline"}
                      size="sm"
-                     className={`px-3 py-2 rounded-lg font-semibold text-sm transition-all ${
+                     className={`px-3 py-1.5 rounded-full font-bold text-xs transition-all border-2 ${
                        language === "en"
-                         ? "bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg border-0"
-                         : showBackground
-                         ? isGalleryPage
-                           ? "bg-transparent border-2 border-blue-300 text-white hover:bg-blue-700/60"
-                           : "bg-transparent border-2 border-blue-300 text-blue-100 hover:bg-blue-700/60"
-                         : "bg-white/80 border-2 border-purple-200 text-purple-700 hover:bg-purple-50"
+                         ? "bg-[#3b82f6] text-white border-[#1a1a1a] shadow-[2px_2px_0_0_#1a1a1a]"
+                         : "bg-white text-[#1a1a1a] border-[#1a1a1a] hover:bg-[#fef3c7]"
                      }`}
                    >
                      ENG
@@ -391,14 +287,10 @@ export default function Header() {
                      onClick={() => handleLanguageChange("zh")}
                      variant={language === "zh" ? "default" : "outline"}
                      size="sm"
-                     className={`px-3 py-2 rounded-lg font-semibold text-sm transition-all ${
+                     className={`px-3 py-1.5 rounded-full font-bold text-xs transition-all border-2 ${
                        language === "zh"
-                         ? "bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg border-0"
-                         : showBackground
-                         ? isGalleryPage
-                           ? "bg-transparent border-2 border-blue-300 text-white hover:bg-blue-700/60"
-                           : "bg-transparent border-2 border-blue-300 text-blue-100 hover:bg-blue-700/60"
-                         : "bg-white/80 border-2 border-purple-200 text-purple-700 hover:bg-purple-50"
+                         ? "bg-[#3b82f6] text-white border-[#1a1a1a] shadow-[2px_2px_0_0_#1a1a1a]"
+                         : "bg-white text-[#1a1a1a] border-[#1a1a1a] hover:bg-[#fef3c7]"
                      }`}
                    >
                      中文

@@ -7,9 +7,8 @@ export default function Footer() {
     <footer
       className="w-full mt-auto"
       style={{
-        background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.98) 0%, rgba(30, 58, 138, 0.95) 50%, rgba(15, 23, 42, 0.98) 100%)',
-        backdropFilter: 'blur(12px) saturate(180%)',
-        borderTop: '1px solid rgba(59, 130, 246, 0.3)',
+        background: '#3b82f6',
+        borderTop: '3px solid #1a1a1a',
       }}
     >
       <div className="max-w-7xl mx-auto px-8 lg:px-12 py-8">
@@ -41,15 +40,19 @@ export default function Footer() {
             </div>
           </div>
           
-          {/* 文本信息 */}
+          {/* 文本信息 - Neo-brutalist style */}
           <div className="flex-1 text-center lg:text-right space-y-3 max-w-md lg:max-w-none">
-            <p className="text-blue-100 text-base leading-relaxed">
+            <p className="text-white text-base leading-relaxed font-medium">
               Strategic Plan Start-up Support @EdUHK
             </p>
-            <p className="text-blue-100 text-base leading-relaxed">
+            <p className="text-white/90 text-base leading-relaxed">
               Department of Mathematics and Information Technology
             </p>
-            <p className="text-blue-200 text-base font-semibold mt-3">
+            <p className="text-white text-base font-bold mt-3 inline-block px-3 py-1 rounded-full" style={{
+              background: '#facc15',
+              color: '#1a1a1a',
+              border: '2px solid #1a1a1a'
+            }}>
               © EdUHK
             </p>
           </div>

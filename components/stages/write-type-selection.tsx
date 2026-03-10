@@ -208,103 +208,112 @@ export default function WriteTypeSelection({
   }
 
   return (
-    <div className="min-h-screen relative overflow-hidden bg-gradient-to-br from-purple-50 via-pink-50 via-orange-50 to-yellow-50">
-      {/* 装饰性背景元素 */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
-        <div className="absolute top-10 right-20 w-96 h-96 bg-purple-200 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse"></div>
-        <div className="absolute top-40 left-20 w-80 h-80 bg-pink-200 rounded-full mix-blend-multiply filter blur-3xl opacity-15 animate-pulse" style={{ animationDelay: '2s' }}></div>
-        <div className="absolute bottom-20 right-1/3 w-72 h-72 bg-orange-200 rounded-full mix-blend-multiply filter blur-3xl opacity-15 animate-pulse" style={{ animationDelay: '4s' }}></div>
-        <div className="absolute bottom-40 left-1/4 w-64 h-64 bg-yellow-200 rounded-full mix-blend-multiply filter blur-2xl opacity-10 animate-pulse" style={{ animationDelay: '1s' }}></div>
-      </div>
+    <div className="min-h-screen relative overflow-hidden" style={{ background: '#fffbeb' }}>
+      {/* Neo-brutalist subtle pattern background */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none z-0" style={{
+        backgroundImage: 'radial-gradient(circle, #1a1a1a 1px, transparent 1px)',
+        backgroundSize: '24px 24px',
+        opacity: 0.03
+      }}></div>
 
       {/* 主要内容 */}
       <div className="relative z-10 min-h-screen px-6 lg:px-12 py-12 lg:py-20" style={{ paddingTop: '128px', paddingBottom: '120px' }}>
-        {/* 返回按钮 */}
+        {/* 返回按钮 - Neo-brutalist */}
         {onBack && (
           <div className="mb-6">
             <Button
               onClick={onBack}
               variant="outline"
-              className="bg-white/80 backdrop-blur-lg border-2 border-gray-300 hover:bg-gray-50 text-gray-700 shadow-lg font-bold"
+              className="border-2 border-[#1a1a1a] bg-white hover:bg-[#fef3c7] text-[#1a1a1a] font-bold rounded-full px-6 py-2 transition-all hover:shadow-[3px_3px_0_0_#1a1a1a]"
             >
               {t.back}
             </Button>
           </div>
         )}
 
-        {/* 标题 */}
+        {/* 标题 - Neo-brutalist hero */}
         <div className="text-center mb-12">
-          <h1 className="text-5xl md:text-6xl lg:text-7xl font-black mb-4 bg-gradient-to-r from-purple-600 via-pink-600 to-orange-600 bg-clip-text text-transparent">
-            {t.title}
-          </h1>
-          <p className="text-lg md:text-xl text-gray-600">
+          <div className="inline-block px-8 py-6 rounded-2xl mb-4" style={{
+            background: '#3b82f6',
+            border: '3px solid #1a1a1a',
+            boxShadow: '6px 6px 0 0 #1a1a1a'
+          }}>
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-black text-white">
+              {t.title}
+            </h1>
+          </div>
+          <p className="text-lg md:text-xl text-[#1a1a1a] font-medium mt-4">
             {t.subtitle}
           </p>
         </div>
 
-        {/* 五种写作类型卡片 */}
+        {/* 五种写作类型卡片 - Neo-brutalist style */}
         <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-12">
           {writingTypes.map((type, index) => {
             const isHovered = hoveredCard === type.id
+            // Neo-brutalist color mapping
+            const cardColors = {
+              story: { bg: '#ec4899', text: 'white' },
+              bookReview: { bg: '#3b82f6', text: 'white' },
+              letter: { bg: '#22c55e', text: 'white' },
+              drama: { bg: '#8b5cf6', text: 'white' },
+              poetry: { bg: '#f97316', text: 'white' }
+            }
+            const colors = cardColors[type.id as keyof typeof cardColors] || { bg: '#3b82f6', text: 'white' }
+            
             return (
               <div
                 key={type.id}
                 onMouseEnter={() => setHoveredCard(type.id)}
                 onMouseLeave={() => setHoveredCard(null)}
                 onClick={() => handleSelect(type.id)}
-                className="relative bg-white/95 backdrop-blur-md rounded-3xl p-8 border-2 border-gray-200 shadow-xl transition-all duration-500 cursor-pointer animate-fade-in"
+                className="relative bg-white rounded-2xl p-6 transition-all duration-150 cursor-pointer animate-fade-in"
                 style={{ 
-                  animationDelay: `${index * 0.15}s`,
-                  transform: isHovered ? 'scale(1.05) translateY(-0.5rem)' : 'scale(1)',
+                  animationDelay: `${index * 0.1}s`,
+                  border: '3px solid #1a1a1a',
+                  boxShadow: isHovered ? '6px 6px 0 0 #1a1a1a' : '4px 4px 0 0 #1a1a1a',
+                  transform: isHovered ? 'translate(-2px, -2px)' : 'translate(0, 0)',
                 }}
               >
-                {/* 卡片装饰性边框 */}
-                <div className={`absolute inset-0 rounded-3xl border-2 border-transparent bg-gradient-to-r ${type.gradient} opacity-0 transition-opacity duration-500 ${
-                  isHovered ? "opacity-30" : ""
-                }`} style={{ padding: '2px', borderRadius: '1.5rem' }}>
-                  <div className="w-full h-full bg-white/95 backdrop-blur-md rounded-3xl"></div>
-                </div>
-                
                 <div className="relative z-10 text-center">
                   {/* 图标 */}
                   <div 
-                    className={`text-8xl mb-6 transition-all duration-500 ${
-                      isHovered
-                        ? "scale-125 rotate-6" 
-                        : ""
+                    className={`text-6xl mb-4 transition-all duration-300 ${
+                      isHovered ? "scale-110" : ""
                     }`}
                   >
                     {type.icon}
                   </div>
                   
                   {/* 标题 */}
-                  <h2 className={`text-3xl font-bold mb-4 bg-gradient-to-r ${type.gradient} bg-clip-text text-transparent transition-all duration-300 ${
-                    isHovered ? "scale-110" : ""
-                  }`}>
+                  <h2 className="text-xl font-bold mb-3 text-[#1a1a1a]">
                     {type.title}
                   </h2>
                   
                   {/* 描述 */}
-                  <p className="text-base text-gray-700 leading-relaxed mb-6">
+                  <p className="text-sm text-[#525252] leading-relaxed mb-4">
                     {type.description}
                   </p>
                   
                   {/* 特性列表 */}
-                  <div className="space-y-2 mb-6">
-                    {type.features.map((feature, i) => (
+                  <div className="space-y-1.5 mb-4">
+                    {type.features.slice(0, 3).map((feature, i) => (
                       <div 
                         key={i}
-                        className="flex items-center justify-center gap-2 text-sm text-gray-600"
+                        className="flex items-center justify-center gap-1.5 text-xs text-[#525252]"
                       >
-                        <span className="text-purple-500">✨</span>
+                        <span className="w-1.5 h-1.5 rounded-full" style={{ background: colors.bg }}></span>
                         <span>{feature}</span>
                       </div>
                     ))}
                   </div>
                   
-                  {/* 提示句 */}
-                  <div className="bg-gradient-to-r from-purple-50 via-pink-50 to-orange-50 rounded-xl p-4 border border-purple-200">
-                    <p className="text-sm text-gray-600 italic">
+                  {/* 提示句 - Neo-brutalist highlight */}
+                  <div className="rounded-lg p-3" style={{
+                    background: '#facc15',
+                    border: '2px solid #1a1a1a'
+                  }}>
+                    <p className="text-xs text-[#1a1a1a] font-medium">
                       "{type.prompt}"
                     </p>
                   </div>
@@ -314,11 +323,17 @@ export default function WriteTypeSelection({
           })}
         </div>
 
-        {/* 底部提示 */}
+        {/* 底部提示 - Neo-brutalist info box */}
         <div className="text-center max-w-3xl mx-auto">
-          <p className="text-lg text-gray-600 leading-relaxed">
-            {t.bottomTip}
-          </p>
+          <div className="inline-block px-6 py-4 rounded-xl" style={{
+            background: '#ec4899',
+            border: '3px solid #1a1a1a',
+            boxShadow: '4px 4px 0 0 #1a1a1a'
+          }}>
+            <p className="text-base text-white font-medium leading-relaxed">
+              {t.bottomTip}
+            </p>
+          </div>
         </div>
       </div>
     </div>

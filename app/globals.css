@@ -5,42 +5,42 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  /* Child-friendly vibrant colors */
-  --background: oklch(0.98 0 0);
-  --foreground: oklch(0.15 0 0);
+  /* Neo-brutalist vibrant colors - inspired by Color Palette Generator style */
+  --background: #fffbeb; /* Warm cream/yellow background */
+  --foreground: #1a1a1a;
   --font-comic-neue: var(--font-comic-neue);
   --font-patrick-hand: var(--font-patrick-hand);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.15 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.15 0 0);
-  --primary: oklch(0.48 0.3 264);
-  --primary-foreground: oklch(1 0 0);
-  --secondary: oklch(0.62 0.25 46);
-  --secondary-foreground: oklch(1 0 0);
-  --muted: oklch(0.92 0.02 0);
-  --muted-foreground: oklch(0.55 0 0);
-  --accent: oklch(0.55 0.28 142);
-  --accent-foreground: oklch(1 0 0);
-  --destructive: oklch(0.58 0.25 27);
-  --destructive-foreground: oklch(1 0 0);
-  --border: oklch(0.9 0.01 0);
-  --input: oklch(0.95 0 0);
-  --ring: oklch(0.48 0.3 264);
-  --chart-1: oklch(0.48 0.3 264);
-  --chart-2: oklch(0.55 0.28 142);
-  --chart-3: oklch(0.62 0.25 46);
-  --chart-4: oklch(0.65 0.25 307);
-  --chart-5: oklch(0.52 0.28 53);
-  --radius: 0.875rem;
-  --sidebar: oklch(0.98 0 0);
-  --sidebar-foreground: oklch(0.15 0 0);
-  --sidebar-primary: oklch(0.48 0.3 264);
-  --sidebar-primary-foreground: oklch(1 0 0);
-  --sidebar-accent: oklch(0.55 0.28 142);
-  --sidebar-accent-foreground: oklch(1 0 0);
-  --sidebar-border: oklch(0.9 0.01 0);
-  --sidebar-ring: oklch(0.48 0.3 264);
+  --card: #ffffff;
+  --card-foreground: #1a1a1a;
+  --popover: #ffffff;
+  --popover-foreground: #1a1a1a;
+  --primary: #3b82f6; /* Bright blue */
+  --primary-foreground: #ffffff;
+  --secondary: #facc15; /* Vibrant yellow */
+  --secondary-foreground: #1a1a1a;
+  --muted: #f5f5f4;
+  --muted-foreground: #525252;
+  --accent: #ec4899; /* Pink/Magenta */
+  --accent-foreground: #ffffff;
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+  --border: #1a1a1a; /* Bold black border for neo-brutalist style */
+  --input: #ffffff;
+  --ring: #3b82f6;
+  --chart-1: #3b82f6;
+  --chart-2: #ec4899;
+  --chart-3: #facc15;
+  --chart-4: #22c55e;
+  --chart-5: #f97316;
+  --radius: 1rem;
+  --sidebar: #fffbeb;
+  --sidebar-foreground: #1a1a1a;
+  --sidebar-primary: #3b82f6;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #ec4899;
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: #1a1a1a;
+  --sidebar-ring: #3b82f6;
   --font-sans: var(--font-comic-neue), "Comic Neue", "Comic Sans MS", cursive;
   --font-mono: "Geist Mono", "Geist Mono Fallback";
 }
@@ -139,6 +139,90 @@
 @layer utilities {
   .font-hand {
     font-family: var(--font-patrick-hand), "Patrick Hand", "Kalam", cursive;
+  }
+
+  /* Neo-brutalist card style */
+  .neo-card {
+    background: var(--card);
+    border: 3px solid var(--border);
+    border-radius: 1rem;
+    box-shadow: 4px 4px 0 0 var(--border);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+  
+  .neo-card:hover {
+    transform: translate(-2px, -2px);
+    box-shadow: 6px 6px 0 0 var(--border);
+  }
+
+  /* Neo-brutalist button styles */
+  .neo-btn {
+    border: 2px solid var(--border);
+    border-radius: 9999px;
+    font-weight: 600;
+    transition: transform 0.1s ease, box-shadow 0.1s ease;
+  }
+  
+  .neo-btn:hover {
+    transform: translate(-1px, -1px);
+    box-shadow: 3px 3px 0 0 var(--border);
+  }
+  
+  .neo-btn:active {
+    transform: translate(0, 0);
+    box-shadow: none;
+  }
+
+  /* Pill navigation button */
+  .pill-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1.25rem;
+    border-radius: 9999px;
+    font-weight: 600;
+    transition: all 0.15s ease;
+  }
+
+  /* Active pill (filled) */
+  .pill-btn-active {
+    background: #ec4899;
+    color: white;
+    border: 2px solid #1a1a1a;
+  }
+  
+  /* Inactive pill (outlined) */
+  .pill-btn-outline {
+    background: white;
+    color: #1a1a1a;
+    border: 2px solid #1a1a1a;
+  }
+  
+  .pill-btn-outline:hover {
+    background: #fef3c7;
+  }
+
+  /* Hero section style */
+  .neo-hero {
+    background: #3b82f6;
+    border: 3px solid #1a1a1a;
+    border-radius: 1.5rem;
+    color: white;
+  }
+
+  /* Info box style (pink) */
+  .neo-info {
+    background: #ec4899;
+    border: 3px solid #1a1a1a;
+    border-radius: 1rem;
+    color: white;
+  }
+
+  /* Yellow highlight for selected items */
+  .neo-highlight {
+    background: #facc15;
+    border: 2px solid #1a1a1a;
+    border-left: 4px solid #3b82f6;
   }
 }
 

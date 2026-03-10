@@ -19,6 +19,11 @@ const buttonVariants = cva(
         ghost:
           'hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50',
         link: 'text-primary underline-offset-4 hover:underline',
+        // Neo-brutalist button variants
+        neo: 'bg-[#3b82f6] text-white border-2 border-[#1a1a1a] rounded-full shadow-[3px_3px_0_0_#1a1a1a] hover:shadow-[4px_4px_0_0_#1a1a1a] hover:translate-x-[-1px] hover:translate-y-[-1px] active:shadow-none active:translate-x-0 active:translate-y-0',
+        'neo-pink': 'bg-[#ec4899] text-white border-2 border-[#1a1a1a] rounded-full shadow-[3px_3px_0_0_#1a1a1a] hover:shadow-[4px_4px_0_0_#1a1a1a] hover:translate-x-[-1px] hover:translate-y-[-1px] active:shadow-none active:translate-x-0 active:translate-y-0',
+        'neo-yellow': 'bg-[#facc15] text-[#1a1a1a] border-2 border-[#1a1a1a] rounded-full shadow-[3px_3px_0_0_#1a1a1a] hover:shadow-[4px_4px_0_0_#1a1a1a] hover:translate-x-[-1px] hover:translate-y-[-1px] active:shadow-none active:translate-x-0 active:translate-y-0',
+        'neo-outline': 'bg-white text-[#1a1a1a] border-2 border-[#1a1a1a] rounded-full hover:bg-[#fef3c7] hover:shadow-[2px_2px_0_0_#1a1a1a]',
       },
       size: {
         default: 'h-9 px-4 py-2 has-[>svg]:px-3',

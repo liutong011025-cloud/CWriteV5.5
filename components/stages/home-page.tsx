@@ -284,69 +284,71 @@ export default function HomePage({
   }, [])
 
   return (
-    <div className="min-h-screen relative overflow-hidden bg-gradient-to-br from-purple-50 via-pink-50 via-orange-50 to-yellow-50">
-      {/* 装饰性背景元素 */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
-        <div className="absolute top-10 right-20 w-96 h-96 bg-purple-200 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse"></div>
-        <div className="absolute top-40 left-20 w-80 h-80 bg-pink-200 rounded-full mix-blend-multiply filter blur-3xl opacity-15 animate-pulse" style={{ animationDelay: '2s' }}></div>
-        <div className="absolute bottom-20 right-1/3 w-72 h-72 bg-orange-200 rounded-full mix-blend-multiply filter blur-3xl opacity-15 animate-pulse" style={{ animationDelay: '4s' }}></div>
-        <div className="absolute bottom-40 left-1/4 w-64 h-64 bg-yellow-200 rounded-full mix-blend-multiply filter blur-2xl opacity-10 animate-pulse" style={{ animationDelay: '1s' }}></div>
-      </div>
+    <div className="min-h-screen relative overflow-hidden" style={{ background: '#fffbeb' }}>
+      {/* Neo-brutalist subtle pattern background */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none z-0" style={{
+        backgroundImage: 'radial-gradient(circle, #1a1a1a 1px, transparent 1px)',
+        backgroundSize: '24px 24px',
+        opacity: 0.03
+      }}></div>
       {/* Aurora特效叠加 */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
         <Aurora 
-          colorStops={['#FFD700', '#FF69B4', '#FFD700']}
-          amplitude={1.0}
-          blend={0.5}
+          colorStops={['#3b82f6', '#ec4899', '#facc15']}
+          amplitude={0.8}
+          blend={0.3}
         />
       </div>
 
       {/* 主要内容容器 - 从 header 下方开始，添加顶部 padding 避免被 header 遮挡 */}
       <div className="relative z-10 min-h-screen px-6 lg:px-12 pb-12 lg:pb-20" style={{ paddingTop: '128px', paddingBottom: '120px' }}>
-        {/* 顶部标题区域 - 大号艺术字体 */}
-        <div className="text-center mb-12 lg:mb-16 mt-16 lg:mt-24 animate-fade-in-up" style={{ animationDelay: '0s' }}>
-          <h1 
-            className="text-7xl md:text-8xl lg:text-9xl font-black mb-4 bg-gradient-to-r from-purple-600 via-pink-600 to-orange-600 bg-clip-text text-transparent"
-            style={{
-              letterSpacing: '-0.03em',
-              lineHeight: '0.9',
-              fontFamily: 'serif',
-            }}
-          >
-            {t.welcome}
-          </h1>
-          <h1 
-            className="text-8xl md:text-9xl lg:text-[12rem] font-black bg-gradient-to-r from-purple-600 via-pink-600 to-orange-600 bg-clip-text text-transparent italic"
-            style={{
-              letterSpacing: '-0.02em',
-              lineHeight: '0.9',
-              fontFamily: 'serif',
-            }}
-          >
-            {t.museAIWrite}
-          </h1>
-          <div className="w-40 h-1 bg-gradient-to-r from-purple-400 via-pink-400 to-orange-400 mx-auto mt-6 rounded-full"></div>
+        {/* 顶部标题区域 - Neo-brutalist hero style */}
+        <div className="text-center mb-12 lg:mb-16 mt-8 lg:mt-16 animate-fade-in-up" style={{ animationDelay: '0s' }}>
+          {/* Hero banner with blue background */}
+          <div className="max-w-4xl mx-auto mb-8 p-8 md:p-12 rounded-2xl border-3" style={{
+            background: '#3b82f6',
+            border: '3px solid #1a1a1a',
+            boxShadow: '6px 6px 0 0 #1a1a1a'
+          }}>
+            <h1 
+              className="text-5xl md:text-7xl lg:text-8xl font-black mb-4 text-white"
+              style={{
+                letterSpacing: '-0.02em',
+                lineHeight: '1',
+              }}
+            >
+              {t.welcome}
+            </h1>
+            <h1 
+              className="text-6xl md:text-8xl lg:text-9xl font-black text-white"
+              style={{
+                letterSpacing: '-0.02em',
+                lineHeight: '1',
+              }}
+            >
+              {t.museAIWrite}
+            </h1>
+          </div>
+          <div className="w-32 h-1.5 bg-[#1a1a1a] mx-auto rounded-full"></div>
         </div>
 
-        {/* 副标题 - 不同字体大小 */}
+        {/* 副标题 - Neo-brutalist card style */}
         <div className="text-center mb-8 animate-fade-in" style={{ animationDelay: '0.2s' }}>
-          <p className="text-2xl md:text-3xl lg:text-4xl font-bold text-gray-800 mb-2">
-            {t.futureTitle}
-          </p>
-          <p className="text-xl md:text-2xl text-gray-600 font-medium">
-            {t.inAIEra}
-          </p>
+          <div className="inline-block px-6 py-3 rounded-full border-2 mb-4" style={{
+            background: '#facc15',
+            borderColor: '#1a1a1a',
+            boxShadow: '3px 3px 0 0 #1a1a1a'
+          }}>
+            <p className="text-xl md:text-2xl lg:text-3xl font-bold text-[#1a1a1a]">
+              {t.futureTitle} {t.inAIEra}
+            </p>
+          </div>
         </div>
 
-        {/* 核心标语 - 大号 */}
+        {/* 核心标语 - Neo-brutalist style */}
         <div className="text-center mb-12 animate-fade-in" style={{ animationDelay: '0.3s' }}>
-          <p className="text-3xl md:text-4xl lg:text-5xl font-bold leading-tight">
-            <span className="bg-gradient-to-r from-purple-600 via-pink-600 to-orange-600 bg-clip-text text-transparent">
-              {t.unleashCreativity}
-            </span>
-            <span className="bg-gradient-to-r from-purple-600 via-pink-600 to-orange-600 bg-clip-text text-transparent">
-              {' '}{t.empowerExpression}
-            </span>
+          <p className="text-3xl md:text-4xl lg:text-5xl font-bold leading-tight text-[#1a1a1a]">
+            {t.unleashCreativity} {t.empowerExpression}
           </p>
         </div>
 
@@ -398,39 +400,32 @@ export default function HomePage({
           />
         </div>
 
-        {/* 文章类型介绍区（使用 VariableProximity 字体特效） */}
+        {/* 文章类型介绍区 - Neo-brutalist card style */}
         {activeType && (
           <div className="max-w-5xl mx-auto mb-20 animate-fade-in" style={{ animationDelay: "0.6s" }}>
-            {/* 外层容器：专门放边框特效（参考 ReactBits ShapeBlur 用法） */}
-            <div className="relative rounded-3xl overflow-hidden">
-              {/* ShapeBlur 边框特效：作为绝对定位背景层 */}
-              <ShapeBlur
-                className="pointer-events-none absolute inset-0 z-0"
-                variation={0}
-                shapeSize={1}
-                roundness={0.5}
-                borderSize={0.08}
-                circleSize={0.25}
-                circleEdge={1}
-              />
-
-              {/* 内层实际卡片：用半透明背景，让边框和光感更明显 */}
+            {/* Neo-brutalist card */}
+            <div className="relative rounded-2xl overflow-hidden" style={{
+              background: '#ffffff',
+              border: '3px solid #1a1a1a',
+              boxShadow: '8px 8px 0 0 #1a1a1a'
+            }}>
+              {/* 内层实际卡片 */}
               <div
                 ref={introContainerRef}
-                className="relative z-10 m-[10px] rounded-3xl bg-white/92 backdrop-blur-xl shadow-[0_25px_60px_rgba(148,27,153,0.25)] px-6 py-8 md:px-10 md:py-10"
+                className="relative z-10 px-6 py-8 md:px-10 md:py-10"
               >
                 <div className="space-y-6">
-                {/* 返回按钮 */}
+                {/* 返回按钮 - Neo-brutalist */}
                 <div className="flex justify-between items-center mb-4">
                   <Button
                     variant="outline"
-                    className="bg-white/80 backdrop-blur-md border-2 border-gray-200 hover:bg-gray-50 text-gray-700 shadow-md"
+                    className="border-2 border-[#1a1a1a] bg-white hover:bg-[#fef3c7] text-[#1a1a1a] font-bold rounded-full px-4 py-2 transition-all hover:shadow-[2px_2px_0_0_#1a1a1a]"
                     onClick={() => setActiveType(null)}
                   >
                     ← Back
                   </Button>
-                  <span className="text-sm uppercase tracking-[0.2em] text-purple-500 font-semibold">
-                    Writing Genre Overview
+                  <span className="text-sm uppercase tracking-[0.15em] text-[#3b82f6] font-bold px-3 py-1 rounded-full border-2 border-[#3b82f6] bg-blue-50">
+                    Writing Genre
                   </span>
                 </div>
 
@@ -522,11 +517,15 @@ export default function HomePage({
                     )}
                   </div>
 
-                  <div className="space-y-3 rounded-2xl bg-white/85 border border-purple-100 shadow-inner px-5 py-4">
-                    <p className="text-xs uppercase tracking-[0.2em] text-purple-500 font-semibold">
+                  <div className="space-y-3 rounded-xl px-5 py-4" style={{
+                    background: '#facc15',
+                    border: '2px solid #1a1a1a',
+                    borderLeft: '4px solid #3b82f6'
+                  }}>
+                    <p className="text-xs uppercase tracking-[0.15em] text-[#1a1a1a] font-bold">
                       In this genre you will practise
                     </p>
-                    <ul className="space-y-1.5 text-sm md:text-base text-slate-800">
+                    <ul className="space-y-1.5 text-sm md:text-base text-[#1a1a1a] font-medium">
                       {activeType === "story" && (
                         <>
                           <li>• Designing characters, settings, and conflicts</li>
@@ -571,7 +570,7 @@ export default function HomePage({
           </div>
         )}
 
-        {/* Start Your Journey 按钮 */}
+        {/* Start Your Journey 按钮 - Neo-brutalist style */}
         <div className="text-center mb-12 mt-20 animate-fade-in" style={{ animationDelay: '0.7s' }}>
           <div className="mb-8">
             <span className="text-8xl md:text-9xl lg:text-[10rem] animate-wiggle" style={{ display: 'inline-block' }}>
@@ -584,10 +583,14 @@ export default function HomePage({
               onStartPlan?.()
             }}
             size="lg"
-            className="bg-gradient-to-r from-purple-600 via-pink-600 to-orange-600 hover:from-purple-700 hover:via-pink-700 hover:to-orange-700 text-white border-0 shadow-2xl py-8 px-16 text-2xl md:text-3xl lg:text-4xl font-bold hover:scale-105 transition-all duration-300 rounded-full relative overflow-hidden group animate-gentle-bounce"
+            className="text-white border-3 py-8 px-16 text-2xl md:text-3xl lg:text-4xl font-bold hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all duration-150 rounded-full relative overflow-hidden animate-gentle-bounce"
+            style={{
+              background: '#ec4899',
+              border: '3px solid #1a1a1a',
+              boxShadow: '6px 6px 0 0 #1a1a1a'
+            }}
           >
             <span className="relative z-10">{t.startButton}</span>
-            <div className="absolute inset-0 bg-gradient-to-r from-purple-700 via-pink-700 to-orange-700 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-full"></div>
           </Button>
         </div>
       </div>
