@@ -480,6 +480,13 @@ export default function Home() {
   useEffect(() => {
     mapStateHydratedRef.current = false
     if (!user?.username || typeof window === "undefined") return
+    // 切换用户时先重置为默认地图状态，避免沿用上一位用户的内存数据。
+    setMapImageUrl(undefined)
+    setMapFlags([])
+    setCurrentPin(null)
+    setJourneySelection(null)
+    setJourneyActive(false)
+    setLevelBadgeUnlocked(false)
     try {
       const raw = localStorage.getItem(getMapStateKey(user.username))
       if (!raw) {
