@@ -832,6 +832,7 @@ export default function Home() {
       <RedFlashOverlay active={redFlashActive} duration={2000} />
       {user &&
         stage !== "login" &&
+        stage !== "home" &&
         stage !== "userProfile" &&
         stage !== "otherFarm" &&
         stage !== "navigation" &&
