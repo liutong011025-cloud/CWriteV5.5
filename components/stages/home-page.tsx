@@ -36,7 +36,6 @@ const translations = {
     subtitleBottom: "in the AI Era",
     tagline: "Unleash Creativity, Empower Expression",
     startButton: "Start Your Journey",
-    footerHint: "Powered by AI-assisted creative writing",
   },
   zh: {
     welcome: "歡迎來到",
@@ -44,7 +43,6 @@ const translations = {
     subtitleBottom: "在 AI 時代",
     tagline: "釋放創意，賦能表達",
     startButton: "開始你的旅程",
-    footerHint: "由 AI 輔助創意寫作驅動",
   },
 }
 
@@ -141,7 +139,7 @@ export default function HomePage({ language = "en", onStartPlan }: HomePageProps
               className="mb-6"
             >
               <p className="font-sans text-5xl font-light tracking-tight text-foreground md:text-6xl lg:text-7xl">{t.welcome}</p>
-              <h1 className="bg-gradient-to-r from-primary via-accent to-primary bg-clip-text font-baloo text-8xl font-bold leading-none tracking-tight text-transparent md:text-9xl lg:text-[16rem]">
+              <h1 className="bg-gradient-to-r from-pink-400 via-yellow-400 to-pink-400 bg-clip-text font-baloo text-8xl font-bold leading-none tracking-tight text-transparent md:text-9xl lg:text-[16rem]">
                 CWrite
               </h1>
             </motion.div>
@@ -210,14 +208,6 @@ export default function HomePage({ language = "en", onStartPlan }: HomePageProps
           </div>
         </section>
 
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.8, delay: 1.2 }}
-          className="pb-8 text-center"
-        >
-          <p className="font-mono text-xs text-foreground/50">{t.footerHint}</p>
-        </motion.div>
       </div>
     </main>
   )
