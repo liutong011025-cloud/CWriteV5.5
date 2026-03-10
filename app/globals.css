@@ -82,6 +82,8 @@
 
 @theme inline {
   /* optional: --font-sans, --font-serif, --font-mono if they are applied in the layout.tsx */
+  --font-caveat: var(--font-caveat), "Caveat", cursive;
+  --font-baloo: var(--font-baloo), "Baloo 2", sans-serif;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
