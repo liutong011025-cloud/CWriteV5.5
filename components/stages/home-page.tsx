@@ -129,7 +129,7 @@ export default function HomePage({ language = "en", onStartPlan }: HomePageProps
         <div className="absolute inset-0 bg-black/30" />
       </div>
 
-      <div className={`relative z-10 flex min-h-screen flex-col pt-28 pb-16 md:pb-24 transition-opacity duration-700 ${isLoaded ? "opacity-100" : "opacity-0"}`}>
+      <div className={`relative z-10 flex min-h-screen flex-col pt-32 md:pt-36 pb-16 md:pb-24 transition-opacity duration-700 ${isLoaded ? "opacity-100" : "opacity-0"}`}>
         <section className="flex flex-1 flex-col items-center justify-center gap-8 px-6 py-12 md:px-12 lg:flex-row lg:gap-12 lg:px-16">
           <div className="flex flex-col items-center text-center lg:w-1/2 lg:items-start lg:text-left">
             <motion.div
