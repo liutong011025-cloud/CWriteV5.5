@@ -8,6 +8,7 @@ import StageHeader from "@/components/stage-header"
 import { Sparkles, Save, ArrowLeft } from "lucide-react"
 import Image from "next/image"
 import type { Language, StoryState } from "@/app/page"
+import { getCurrentLevel } from "@/lib/current-level"
 
 interface StoryEditProps {
   language: Language
@@ -74,6 +75,7 @@ export default function StoryEdit({
           original_content: originalStory,
           modified_content: editedStory,
           user_id: userId || "default-user",
+          level: getCurrentLevel(),
         }),
       })
 

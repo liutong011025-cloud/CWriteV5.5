@@ -8,6 +8,7 @@ import StageHeader from "@/components/stage-header"
 import { Sparkles, Save, ArrowLeft } from "lucide-react"
 import Image from "next/image"
 import type { Language } from "@/app/page"
+import { getCurrentLevel } from "@/lib/current-level"
 
 interface LetterEditProps {
   language: Language
@@ -84,6 +85,7 @@ export default function LetterEdit({
           original_content: originalLetter,
           modified_content: editedLetter,
           user_id: userId || "default-user",
+          level: getCurrentLevel(),
         }),
       })
 

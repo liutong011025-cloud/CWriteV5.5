@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import Image from "next/image"
@@ -42,6 +42,7 @@ interface BookReviewWritingNoAiProps {
   onReviewWrite: (review: string, bookCoverUrl?: string) => void
   onBack: () => void
   userId?: string
+  onDraftChange?: (text: string) => void
 }
 
 // Enhanced word count function that handles both English and Chinese
@@ -60,7 +61,8 @@ export default function BookReviewWritingNoAi({
   initialCoverUrl = undefined,
   onReviewWrite, 
   onBack, 
-  userId 
+  userId,
+  onDraftChange,
 }: BookReviewWritingNoAiProps) {
   const [currentSection, setCurrentSection] = useState(0)
   const [sectionTexts, setSectionTexts] = useState<Record<number, string>>({})
@@ -73,6 +75,13 @@ export default function BookReviewWritingNoAi({
     const allText = Object.values(sectionTexts).join(' ')
     return countWords(allText)
   }, [sectionTexts])
+
+  // 將草稿內容回傳給上層，供 Cagent 做價值觀檢查
+  useEffect(() => {
+    if (!onDraftChange) return
+    const allText = Object.values(sectionTexts).join(" ")
+    onDraftChange(allText)
+  }, [sectionTexts, onDraftChange])
 
   // 检测test模式
   const isTestMode = useMemo(() => {

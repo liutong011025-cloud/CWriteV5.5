@@ -5,10 +5,10 @@ import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
 import Image from "next/image"
 import type { Language } from "@/app/page"
+import { getCurrentLevel } from "@/lib/current-level"
 
 interface BookSelectionProps {
   language?: Language
-  reviewType: "recommendation" | "critical" | "literary"
   onBookSelected?: (bookTitle: string) => void
   onBack?: () => void
 }
@@ -19,26 +19,16 @@ const translations = {
     enterTitle: "Please enter a book title",
     enterTitleFirst: "Please enter a book title first",
     chooseButton: "Choose This Book",
-    reviewTypeNames: {
-      recommendation: "Recommendation Review",
-      critical: "Critical Review",
-      literary: "Literary Review"
-    },
   },
   zh: {
     back: "← 返回",
     enterTitle: "請輸入書名",
     enterTitleFirst: "請先輸入書名",
     chooseButton: "選擇這本書",
-    reviewTypeNames: {
-      recommendation: "推薦書評",
-      critical: "批判書評",
-      literary: "文學書評"
-    },
   },
 }
 
-export default function BookSelection({ language = "en", reviewType, onBookSelected, onBack }: BookSelectionProps) {
+export default function BookSelection({ language = "en", onBookSelected, onBack }: BookSelectionProps) {
   const t = translations[language] || translations.en
   const [bookTitle, setBookTitle] = useState("")
   const [isLoading, setIsLoading] = useState(false)
@@ -133,14 +123,9 @@ export default function BookSelection({ language = "en", reviewType, onBookSelec
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          reviewType,
           bookTitle: userMessage,
-          conversation: updatedConversation.map(msg => ({
-            role: msg.role,
-            content: msg.content
-          })),
-          conversation_id: null, // 强制使用null，让后端创建新对话
           user_id: 'student',
+          level: getCurrentLevel(),
         }),
       })
 
@@ -283,8 +268,8 @@ export default function BookSelection({ language = "en", reviewType, onBookSelec
                     <p className="text-base md:text-lg text-amber-900 leading-relaxed whitespace-pre-wrap">
                       {conversation.length === 0 
                         ? (language === "zh" 
-                          ? `請選擇一本你想寫${t.reviewTypeNames[reviewType]}的書。`
-                          : `Please choose a book you would like to write a ${t.reviewTypeNames[reviewType]} about.`)
+                          ? "請選擇一本你想寫書評的書。"
+                          : "Please choose a book you would like to review.")
                         : conversation.filter(msg => msg.role === "assistant").slice(-1)[0]?.content
                       }
                     </p>

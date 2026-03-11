@@ -22,7 +22,7 @@ interface LetterCompleteProps {
   guidance?: string | null
   readerImageUrl?: string | null
   sections?: string[]
-  onReset: () => void
+  onReset: (finalLetter: string) => void
   onBack: () => void
   onEdit?: () => void
   userId?: string
@@ -353,7 +353,7 @@ Created with CWrite
       return currentLetter.split('\n').map((line, lineIndex) => {
         const previousChars = currentLetter.split('\n').slice(0, lineIndex).join('\n').length + lineIndex
         return (
-          <div key={lineIndex} className="relative">
+          <div key={lineIndex} className="relative" style={{ overflowWrap: 'break-word' }}>
             {line.split('').map((char, charIndex) => {
               const totalCharIndex = previousChars + charIndex
               return (
@@ -536,7 +536,7 @@ Created with CWrite
       })
     })
 
-    return <div className="relative">{result}</div>
+    return <div className="relative" style={{ overflowWrap: 'break-word' }}>{result}</div>
   }
 
   return (
@@ -627,7 +627,7 @@ Created with CWrite
                 <h2 className="text-3xl font-bold text-pink-700">Your Letter</h2>
               </div>
               
-              <div className="bg-gradient-to-br from-amber-50 via-yellow-50 to-orange-50 rounded-xl p-8 border-2 border-amber-200 shadow-inner relative overflow-hidden">
+              <div className="bg-gradient-to-br from-amber-50 via-yellow-50 to-orange-50 rounded-xl p-8 border-2 border-amber-200 shadow-inner relative overflow-hidden" style={{ overflowWrap: 'break-word' }}>
                 {isReviewing ? (
                     <div className="flex flex-col items-center justify-center py-12">
                       <div className="relative mx-auto mb-6 w-16 h-16">
@@ -755,11 +755,11 @@ Created with CWrite
 
             {/* 重置按钮 */}
             <Button
-              onClick={onReset}
+              onClick={() => onReset(currentLetter)}
               variant="outline"
               className="w-full bg-white/80 backdrop-blur-lg border-2 border-gray-300 hover:bg-gray-50 text-gray-700 shadow-lg font-bold py-3 text-lg rounded-xl hover:scale-105 transition-all"
             >
-              ✨ Write Another Letter
+              Back to Map
             </Button>
           </div>
         </div>

@@ -1,13 +1,18 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
-import { Button } from "@/components/ui/button"
-import Image from "next/image"
+import { useEffect, useRef, useState } from "react"
+import { motion, AnimatePresence } from "framer-motion"
+import { Shader, ChromaFlow, Swirl } from "shaders/react"
 import type { Language } from "@/app/page"
+import { CustomCursor } from "@/components/custom-cursor"
+import { GrainOverlay } from "@/components/grain-overlay"
+import { MagneticCards } from "@/components/magnetic-card"
+import { GenreDetails } from "@/components/genre-details"
+import GlassSurface from "@/components/glass-surface"
 
 interface HomePageProps {
   language?: Language
-  user?: { username: string; role: 'teacher' | 'student'; noAi?: boolean }
+  user?: { username: string; role: "teacher" | "student"; noAi?: boolean }
   onStartStory?: () => void
   onStartBookReview?: () => void
   onStartLetter?: () => void
@@ -16,636 +21,194 @@ interface HomePageProps {
   onViewAbout?: () => void
 }
 
+const genreCards = [
+  { id: "story", title: "Story", color: "#FFD54F" },
+  { id: "review", title: "Book Review", color: "#F8BBD9" },
+  { id: "letter", title: "Letter", color: "#FFECB3" },
+  { id: "drama", title: "Drama", color: "#F48FB1" },
+  { id: "poetry", title: "Poetry", color: "#FCE4EC" },
+]
+
 const translations = {
   en: {
     welcome: "Welcome to",
-    museAIWrite: "CWrite",
-    futureTitle: "The Future of Creative Writing",
-    inAIEra: "in the AI Era",
-    unleashCreativity: "Unleash Creativity,",
-    empowerExpression: "Empower Expression",
-    aboutTitle: "About CWrite",
-    aboutText1: "An AI-powered writing platform grounded in self-regulated learning and learning sciences",
-    aboutText2: "",
-    aboutText3: "",
-    enhanceTitle: "How We Enhance Creative Writing",
-    philosophyTitle: "The Philosophy behind LuminiAI",
-    philosophyText1: "Derived from the Latin lumen—meaning light—<strong>LuminAI</strong> represents <strong>illumination rather than domination</strong>. We believe that AI is not an all-knowing authority. LuminAI is grounded in the belief that intelligence should <strong>guide, reveal, and amplify</strong>, not replace human agency.",
-    philosophyText2: "<strong>LuminAI</strong> aligns with humanistic and constructivist traditions in education, where knowledge is actively constructed through reflection, dialogue, and experience. Intelligence is understood not as a static output, but as a <strong>dynamic process of meaning-making</strong>.",
-    visionTitle: "Our Vision",
-    visionItems: [
-      "Reshape creative writing education for the digital age.",
-      "Become a global innovator in creative writing education.",
-      "Cultivate the next generation of creative leaders."
-    ],
-    startButton: "Start with a Plan",
-    question: "How can AI enhance creative writing for ESL learners while safeguarding originality, agency, and human imagination?",
-    storyTitle: "Story Writing",
-    storyDesc: "Create magical stories with help from your AI mentor",
-    bookTitle: "Book Review",
-    bookDesc: "Write thoughtful book reviews with AI assistance",
-    letterTitle: "Letter Writing",
-    letterDesc: "Compose letters with creative writing support",
-    aiPartnerTitle: "AI as a Writing Partner",
-    aiPartnerItems: [
-      "Thought-provoking prompts that stimulate imagination",
-      "Context-aware revision and language support",
-      "Keep personal voice"
-    ],
-    selfLearningTitle: "Self-Regulated Learning at the Core",
-    selfLearningItems: [
-      "Plan, monitor, and evaluate",
-      "Develop independence, metacognition, and writing confidence",
-      "Build reflective thinking"
-    ],
-    collaborationTitle: "Learning Through Collaboration",
-    collaborationItems: [
-      "Share writing in the Luminai Library",
-      "Peer review and feedback",
-      "Learn through comparison, dialogue, and revision"
-    ],
+    subtitleTop: "The Future of Creative Writing",
+    subtitleBottom: "in the AI Era",
+    tagline: "Unleash Creativity, Empower Expression",
+    startButton: "Start Your Journey",
   },
   zh: {
     welcome: "歡迎來到",
-    museAIWrite: "CWrite",
-    futureTitle: "創意寫作的未來",
-    inAIEra: "在AI時代",
-    unleashCreativity: "釋放創意，",
-    empowerExpression: "賦能表達",
-    aboutTitle: "關於CWrite",
-    aboutText1: "一個為高年級小學生設計的AI驅動平台。",
-    aboutText2: "結合人工智能與自主學習原則。",
-    aboutText3: "創造個人化、互動的寫作體驗。",
-    enhanceTitle: "我們如何增強創意寫作",
-    philosophyTitle: "LuminiAI背後的哲學",
-    philosophyText1: "LuminAI源自拉丁語lumen（光），代表<strong>啟發而非支配</strong>。我們相信AI不是全知權威。<strong>LuminAI</strong>基於這樣的信念：智能應該<strong>引導、揭示和放大</strong>，而非取代人類的主動性。",
-    philosophyText2: "<strong>LuminAI</strong>與教育中的人本主義和建構主義傳統一致，知識通過反思、對話和經驗積極建構。智能被理解為<strong>動態的意義建構過程</strong>，而非靜態輸出。",
-    visionTitle: "我們的願景",
-    visionItems: [
-      "重塑數碼時代的創意寫作教育。",
-      "成為創意寫作教育的全球創新者。",
-      "培養下一代創意領袖。"
-    ],
-    startButton: "開始制定計劃",
-    question: "AI如何可以令創意寫作對ESL學習者更有吸引力，同時保持原創性？",
-    storyTitle: "故事寫作",
-    storyDesc: "在AI導師的幫助下創造魔法故事",
-    bookTitle: "書評",
-    bookDesc: "在AI協助下寫出深思熟慮的書評",
-    letterTitle: "書信寫作",
-    letterDesc: "在創意寫作支援下撰寫書信",
-    aiPartnerTitle: "AI夥伴",
-    aiPartnerItems: [
-      "啟發性問題與提示",
-      "針對性修改建議",
-      "保持你的個人風格"
-    ],
-    selfLearningTitle: "自主學習",
-    selfLearningItems: [
-      "計劃、監控、評估",
-      "發展獨立技能",
-      "建立反思思維"
-    ],
-    collaborationTitle: "協作",
-    collaborationItems: [
-      "在圖書館分享",
-      "同儕評審與反饋",
-      "持續改進"
-    ],
+    subtitleTop: "創意寫作的未來",
+    subtitleBottom: "在 AI 時代",
+    tagline: "釋放創意，賦能表達",
+    startButton: "開始你的旅程",
   },
 }
 
-export default function HomePage({ 
-  language = "en",
-  user,
-  onStartStory, 
-  onStartBookReview, 
-  onStartLetter,
-  onStartPlan,
-  onStartWrite,
-  onViewAbout
-}: HomePageProps) {
-  const [hoveredCard, setHoveredCard] = useState<number | null>(null)
-  const [expandProgress, setExpandProgress] = useState(0) // 0 = 完全重叠, 1 = 完全展开
-  const featuresRef = useRef<HTMLDivElement>(null)
-
+export default function HomePage({ language = "en", onStartPlan }: HomePageProps) {
+  const [isLoaded, setIsLoaded] = useState(false)
+  const [activeGenre, setActiveGenre] = useState<string | null>(null)
+  const shaderContainerRef = useRef<HTMLDivElement>(null)
   const t = translations[language] || translations.en
 
-  const cards = [
-    {
-      id: 1,
-      title: t.storyTitle,
-      description: t.storyDesc,
-      icon: "📖",
-      gradient: "from-purple-600 via-pink-600 to-orange-600",
-      hoverGradient: "from-purple-700 via-pink-700 to-orange-700",
-      onClick: onStartStory,
-    },
-    {
-      id: 2,
-      title: t.bookTitle,
-      description: t.bookDesc,
-      icon: "📝",
-      gradient: "from-blue-600 to-cyan-600",
-      hoverGradient: "from-blue-700 to-cyan-700",
-      onClick: onStartBookReview,
-    },
-    {
-      id: 3,
-      title: t.letterTitle,
-      description: t.letterDesc,
-      icon: "✉️",
-      gradient: "from-green-600 to-emerald-600",
-      hoverGradient: "from-green-700 to-emerald-700",
-      onClick: onStartLetter,
-    },
-  ]
-
-  const features = [
-    {
-      id: 1,
-      icon: "🤖",
-      title: t.aiPartnerTitle,
-      items: t.aiPartnerItems,
-      borderColor: "border-purple-200",
-      textColor: "text-purple-700",
-      gradient: "from-purple-600/20"
-    },
-    {
-      id: 2,
-      icon: "📚",
-      title: t.selfLearningTitle,
-      items: t.selfLearningItems,
-      borderColor: "border-blue-200",
-      textColor: "text-blue-700",
-      gradient: "from-blue-600/20"
-    },
-    {
-      id: 3,
-      icon: "🌟",
-      title: t.collaborationTitle,
-      items: t.collaborationItems,
-      borderColor: "border-pink-200",
-      textColor: "text-pink-700",
-      gradient: "from-pink-600/20"
-    },
-  ]
-
-  // 根据滚动位置计算展开进度（0-1之间的连续值）
   useEffect(() => {
-    if (!featuresRef.current) return
-
-    const handleScroll = () => {
-      if (!featuresRef.current) return
-      
-      const rect = featuresRef.current.getBoundingClientRect()
-      const viewportHeight = window.innerHeight
-      const viewportCenter = viewportHeight / 2
-      
-      // 计算元素中心点相对于视口的位置
-      const elementCenter = rect.top + rect.height / 2
-      const distanceFromCenter = elementCenter - viewportCenter
-      
-      // 重新设计展开逻辑：展开时间维持的短一些
-      // 当元素在视口中心时，progress = 1
-      // 当元素距离视口中心越远，progress 越小
-      const maxDistance = 800 // 最大展开距离（像素）
-      const centerZone = 20 // 中心区域，在此区域内 progress = 1（进一步减小中心区域，让展开时间更短）
-      const absDistance = Math.abs(distanceFromCenter)
-      
-      let progress = 0
-      
-      // 计算基础进度（0-1），使用反向线性插值
-      // 当 distanceFromCenter = 0 时，progress = 1
-      // 当 absDistance = maxDistance 时，progress = 0
-      if (absDistance <= centerZone) {
-        // 在中心区域内，直接设置为1，但中心区域很小，所以展开时间短
-        progress = 1
-      } else if (absDistance < maxDistance) {
-        // 使用线性插值，从 centerZone 到 maxDistance 平滑过渡
-        const transitionRange = maxDistance - centerZone
-        const distanceFromCenterZone = absDistance - centerZone
-        progress = 1 - (distanceFromCenterZone / transitionRange)
-        
-        // 确保 progress 不会小于 0
-        progress = Math.max(0, progress)
-      } else {
-        // 元素在展开区域外，完全重叠
-        progress = 0
+    const checkShaderReady = () => {
+      if (!shaderContainerRef.current) return false
+      const canvas = shaderContainerRef.current.querySelector("canvas")
+      if (canvas && canvas.width > 0 && canvas.height > 0) {
+        setIsLoaded(true)
+        return true
       }
-      
-      // 确保 progress 在 0-1 之间
-      progress = Math.max(0, Math.min(1, progress))
-      
-      setExpandProgress(progress)
+      return false
     }
 
-    // 初始检查
-    handleScroll()
+    if (checkShaderReady()) return
 
-    // 使用 requestAnimationFrame 优化滚动性能，确保每帧都更新
-    let rafId: number | null = null
-    const onScroll = () => {
-      if (rafId === null) {
-        rafId = requestAnimationFrame(() => {
-          handleScroll()
-          rafId = null
-        })
+    const intervalId = setInterval(() => {
+      if (checkShaderReady()) {
+        clearInterval(intervalId)
       }
-    }
+    }, 100)
 
-    // 监听滚动事件 - 使用节流优化性能
-    let ticking = false
-    const throttledScroll = () => {
-      if (!ticking) {
-        window.requestAnimationFrame(() => {
-          handleScroll()
-          ticking = false
-        })
-        ticking = true
-      }
-    }
-
-    window.addEventListener('scroll', throttledScroll, { passive: true })
-    window.addEventListener('resize', handleScroll, { passive: true })
+    const fallbackTimer = setTimeout(() => {
+      setIsLoaded(true)
+    }, 1500)
 
     return () => {
-      window.removeEventListener('scroll', throttledScroll)
-      window.removeEventListener('resize', handleScroll)
-      if (rafId !== null) {
-        cancelAnimationFrame(rafId)
-      }
+      clearInterval(intervalId)
+      clearTimeout(fallbackTimer)
     }
   }, [])
 
+  const handleCardClick = (id: string) => {
+    setActiveGenre(activeGenre === id ? null : id)
+  }
+
+  const handleBack = () => {
+    setActiveGenre(null)
+  }
+
   return (
-    <div className="min-h-screen relative overflow-hidden bg-gradient-to-br from-purple-50 via-pink-50 via-orange-50 to-yellow-50">
-      {/* 装饰性背景元素 */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
-        <div className="absolute top-10 right-20 w-96 h-96 bg-purple-200 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse"></div>
-        <div className="absolute top-40 left-20 w-80 h-80 bg-pink-200 rounded-full mix-blend-multiply filter blur-3xl opacity-15 animate-pulse" style={{ animationDelay: '2s' }}></div>
-        <div className="absolute bottom-20 right-1/3 w-72 h-72 bg-orange-200 rounded-full mix-blend-multiply filter blur-3xl opacity-15 animate-pulse" style={{ animationDelay: '4s' }}></div>
-        <div className="absolute bottom-40 left-1/4 w-64 h-64 bg-yellow-200 rounded-full mix-blend-multiply filter blur-2xl opacity-10 animate-pulse" style={{ animationDelay: '1s' }}></div>
+    <main className="relative min-h-screen w-full overflow-x-hidden bg-background cursor-none">
+      <CustomCursor />
+      <GrainOverlay />
+
+      <div
+        ref={shaderContainerRef}
+        className={`fixed inset-0 z-0 transition-opacity duration-700 ${isLoaded ? "opacity-100" : "opacity-0"}`}
+        style={{ contain: "strict" }}
+      >
+        <Shader className="h-full w-full">
+          <Swirl
+            colorA="#F48FB1"
+            colorB="#64B5F6"
+            speed={0.9}
+            detail={0.7}
+            blend={60}
+            coarseX={35}
+            coarseY={35}
+            mediumX={45}
+            mediumY={45}
+            fineX={35}
+            fineY={35}
+          />
+          <ChromaFlow
+            baseColor="#F8BBD9"
+            upColor="#64B5F6"
+            downColor="#FFAB91"
+            leftColor="#F48FB1"
+            rightColor="#90CAF9"
+            intensity={0.9}
+            radius={2.0}
+            momentum={30}
+            maskType="alpha"
+            opacity={0.95}
+          />
+        </Shader>
+        <div className="absolute inset-0 bg-black/30" />
       </div>
 
-      {/* 主要内容容器 - 从 header 下方开始，添加顶部 padding 避免被 header 遮挡 */}
-      <div className="relative z-10 min-h-screen px-6 lg:px-12 pb-12 lg:pb-20" style={{ paddingTop: '128px', paddingBottom: '120px' }}>
-        {/* 顶部标题区域 - 大号艺术字体 */}
-        <div className="text-center mb-12 lg:mb-16 mt-16 lg:mt-24 animate-fade-in-up" style={{ animationDelay: '0s' }}>
-          <h1 
-            className="text-7xl md:text-8xl lg:text-9xl font-black mb-4 bg-gradient-to-r from-purple-600 via-pink-600 to-orange-600 bg-clip-text text-transparent"
-            style={{
-              letterSpacing: '-0.03em',
-              lineHeight: '0.9',
-              fontFamily: 'serif',
-            }}
-          >
-            {t.welcome}
-          </h1>
-          <h1 
-            className="text-8xl md:text-9xl lg:text-[12rem] font-black bg-gradient-to-r from-purple-600 via-pink-600 to-orange-600 bg-clip-text text-transparent italic"
-            style={{
-              letterSpacing: '-0.02em',
-              lineHeight: '0.9',
-              fontFamily: 'serif',
-            }}
-          >
-            {t.museAIWrite}
-          </h1>
-          <div className="w-40 h-1 bg-gradient-to-r from-purple-400 via-pink-400 to-orange-400 mx-auto mt-6 rounded-full"></div>
-        </div>
-
-        {/* 副标题 - 不同字体大小 */}
-        <div className="text-center mb-8 animate-fade-in" style={{ animationDelay: '0.2s' }}>
-          <p className="text-2xl md:text-3xl lg:text-4xl font-bold text-gray-800 mb-2">
-            {t.futureTitle}
-          </p>
-          <p className="text-xl md:text-2xl text-gray-600 font-medium">
-            {t.inAIEra}
-          </p>
-        </div>
-
-        {/* 核心标语 - 大号 */}
-        <div className="text-center mb-12 animate-fade-in" style={{ animationDelay: '0.3s' }}>
-          <p className="text-3xl md:text-4xl lg:text-5xl font-bold leading-tight">
-            <span className="bg-gradient-to-r from-purple-600 via-pink-600 to-orange-600 bg-clip-text text-transparent">
-              {t.unleashCreativity}
-            </span>
-            <span className="bg-gradient-to-r from-purple-600 via-pink-600 to-orange-600 bg-clip-text text-transparent">
-              {' '}{t.empowerExpression}
-            </span>
-          </p>
-        </div>
-
-        {/* 网格布局 - 分散内容 */}
-        <div className="max-w-7xl mx-auto">
-          {/* 第一行：平台介绍 */}
-          <div className="mb-12 animate-fade-in" style={{ animationDelay: '0.4s' }} data-about-section>
-            <div className="bg-white/80 backdrop-blur-lg rounded-3xl p-8 border-2 border-purple-200 shadow-xl max-w-3xl mx-auto">
-              <h3 className="text-2xl font-bold text-purple-700 mb-4 text-center">{t.aboutTitle}</h3>
-              <div className="text-base md:text-lg text-gray-700 leading-relaxed text-center">
-                <p>{t.aboutText1}</p>
-                <div className="mt-6 space-y-3">
-                  <p className="flex items-center justify-center gap-3">
-                    <span className="text-2xl">✨</span>
-                    <span className="text-sm md:text-base text-gray-700 font-medium">
-                      Support students' <span className="font-bold text-purple-600">creative writing</span> processes
-                    </span>
-                  </p>
-                  <p className="flex items-center justify-center gap-3">
-                    <span className="text-2xl">🪄</span>
-                    <span className="text-sm md:text-base text-gray-700 font-medium">
-                      Preserve students' <span className="font-bold text-green-600">personal voice</span>
-                    </span>
-                  </p>
-                  <p className="flex items-center justify-center gap-3">
-                    <span className="text-2xl">🧠</span>
-                    <span className="text-sm md:text-base text-gray-700 font-medium">
-                      Encourage metacognitive engagement
-                    </span>
-                  </p>
-                  <p className="flex items-center justify-center gap-3">
-                    <span className="text-2xl">🔒</span>
-                    <span className="text-sm md:text-base text-gray-700 font-medium">
-                      Promote <span className="font-bold text-rose-600">responsible</span> AI use.
-                    </span>
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* 第二行：三个功能卡片 - 滚动展开/收缩效果 */}
-          <div className="mb-6 animate-fade-in" style={{ animationDelay: '0.5s' }}>
-            <h2 className="text-3xl md:text-4xl font-bold text-center mb-8 bg-gradient-to-r from-purple-600 via-pink-600 to-orange-600 bg-clip-text text-transparent">
-              {t.enhanceTitle}
-            </h2>
-            
-            {/* 功能卡片容器 - 使用 ref 进行滚动检测 */}
-            <div 
-              ref={featuresRef}
-              className="relative h-[500px] md:h-[450px] flex items-center justify-center mb-4"
+      <div className={`relative z-10 flex min-h-screen flex-col pt-32 md:pt-36 pb-16 md:pb-24 transition-opacity duration-700 ${isLoaded ? "opacity-100" : "opacity-0"}`}>
+        <section className="flex flex-1 flex-col items-center justify-center gap-8 px-6 py-12 md:px-12 lg:flex-row lg:gap-12 lg:px-16">
+          <div className="flex flex-col items-center text-center lg:w-1/2 lg:items-start lg:text-left">
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 1.2 }}
+              className="mb-6"
             >
-              {/* 重叠状态 - 显示 logo.png */}
-              <div 
-                className="absolute inset-0 flex items-center justify-center pointer-events-none"
-                style={{
-                  opacity: 1 - expandProgress,
-                  transform: `scale(${1 - expandProgress * 0.1}) translateY(${-expandProgress * 20}px)`,
-                  transition: 'none', // 移除transition，使用直接样式更新
-                }}
-              >
-                <div className="relative w-64 h-64 md:w-80 md:h-80 bg-white/90 backdrop-blur-lg rounded-3xl p-4 md:p-6 border-4 border-purple-300 shadow-2xl flex items-center justify-center">
-                  <Image
-                    src="/logo.png"
-                    alt="CWrite Logo"
-                    width={240}
-                    height={240}
-                    className="object-contain w-full h-full"
-                    priority
-                  />
-                </div>
-              </div>
+              <p className="font-sans text-5xl font-light tracking-tight text-foreground md:text-6xl lg:text-7xl">{t.welcome}</p>
+              <h1 className="bg-gradient-to-r from-pink-400 via-yellow-400 to-pink-400 bg-clip-text font-baloo text-8xl font-bold leading-none tracking-tight text-transparent md:text-9xl lg:text-[16rem]">
+                CWrite
+              </h1>
+            </motion.div>
 
-              {/* 展开状态 - 三个分离的卡片 */}
-              <div 
-                className="absolute inset-0 flex items-center justify-center pointer-events-none"
-                style={{
-                  opacity: expandProgress,
-                }}
-              >
-                {/* 使用绝对定位，让卡片从中心点展开 */}
-                <div className="relative w-full max-w-7xl mx-auto h-full flex items-center justify-center px-4">
-                  {features.map((feature, index) => {
-                    const isHovered = hoveredCard === feature.id
-                    // 重新计算卡片展开逻辑
-                    // 当 progress = 0 时，所有卡片重叠在中心（offset = 0）
-                    // 当 progress = 1 时，卡片完全展开
-                    // 使用更大的间距，确保三个卡片完全展开
-                    // 计算合适的卡片宽度和间距，确保三个卡片能在容器内完全展开
-                    const cardWidth = 380 // 卡片宽度（像素）
-                    const cardGap = 80 // 卡片之间的间隙（像素）- 增大间隙，确保完全分离
-                    const totalCardSpacing = cardWidth + cardGap // 每个卡片占用的总空间 = 460px
-                    
-                    // 计算每个卡片从中心点展开的偏移量
-                    // 左边卡片：-460px，中间：0，右边：+460px
-                    // 直接使用 expandProgress，不使用任何变换函数
-                    // 确保当 expandProgress = 1 时，卡片完全展开
-                    const centerOffsetX = (index - 1) * totalCardSpacing * expandProgress
-                    
-                    // 计算每个卡片的垂直偏移量（错位效果）
-                    const baseOffsetY = index === 1 ? -28 : index === 2 ? 28 : 0
-                    const cardOffsetY = baseOffsetY * expandProgress
-                    
-                    // 计算缩放（从 0.4 到 1.0）- 从更小的尺寸开始，变化范围更大
-                    const minScale = 0.4
-                    const maxScale = 1.0
-                    const cardScale = minScale + expandProgress * (maxScale - minScale)
-                    
-                    // 计算z-index，确保展开时卡片有正确的层级
-                    // 当展开时，中间的卡片在最上层
-                    const cardZIndex = expandProgress > 0.3 
-                      ? (index === 1 ? 12 : index === 0 ? 11 : 10) // 中间卡片最高
-                      : index
-                    
-                    return (
-                      <div
-                        key={feature.id}
-                        className="absolute perspective-1000"
-                        onMouseEnter={() => expandProgress > 0.2 && setHoveredCard(feature.id)}
-                        onMouseLeave={() => setHoveredCard(null)}
-                        style={{
-                          left: `50%`,
-                          top: `50%`,
-                          transform: `translate(-50%, -50%) translateX(${centerOffsetX}px) translateY(${cardOffsetY}px) scale(${cardScale})`,
-                          pointerEvents: expandProgress > 0.2 ? 'auto' : 'none',
-                          width: `${cardWidth}px`,
-                          zIndex: cardZIndex,
-                        }}
-                      >
-                        <div 
-                          className={`relative bg-white/95 backdrop-blur-md rounded-2xl p-8 border-2 ${feature.borderColor} shadow-2xl cursor-pointer ${
-                            isHovered ? 'shadow-3xl' : ''
-                          }`}
-                          style={{
-                            transformStyle: 'preserve-3d',
-                            transform: isHovered 
-                              ? `perspective(1000px) rotateY(${index === 1 ? '12deg' : '-12deg'}) scale(1.05)` 
-                              : 'perspective(1000px) rotateY(0deg) scale(1)',
-                            transition: 'transform 0.3s ease-out, box-shadow 0.3s ease-out',
-                          }}
-                        >
-                          {/* 翻页阴影效果 */}
-                          <div 
-                            className={`absolute inset-0 bg-gradient-to-l ${feature.gradient} to-transparent rounded-2xl`}
-                            style={{
-                              opacity: isHovered ? 0.3 : 0,
-                              transition: 'opacity 0.3s ease-out',
-                            }}
-                          ></div>
-                          
-                          <div className="relative z-10">
-                            <div 
-                              className="text-6xl mb-5 text-center" 
-                              style={{
-                                transform: isHovered ? 'rotate(-5deg) scale(1.1)' : 'rotate(0deg) scale(1)',
-                                transition: 'transform 0.3s ease-out',
-                              }}
-                            >
-                              {feature.icon}
-                            </div>
-                            <h3 className={`text-2xl font-bold mb-4 ${feature.textColor} text-center`}>
-                              {feature.title}
-                            </h3>
-                            <div className="space-y-2 text-center">
-                              {feature.items.map((item, i) => (
-                                <p key={i} className="text-sm text-gray-700 font-medium">
-                                  {item}
-                                </p>
-                              ))}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-            </div>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 1.4 }}
+              className="mb-8"
+            >
+              <p className="font-sans text-3xl font-medium text-foreground/90 md:text-4xl lg:text-5xl">{t.subtitleTop}</p>
+              <p className="mt-2 font-sans text-xl text-foreground/70 md:text-2xl lg:text-3xl">{t.subtitleBottom}</p>
+            </motion.div>
+
+            <motion.p
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 1, delay: 2.1 }}
+              className="font-caveat text-4xl font-bold md:text-5xl lg:text-6xl"
+              style={{ textShadow: "0 2px 20px rgba(0,0,0,0.5), 0 0 40px rgba(255,255,255,0.3)" }}
+            >
+              <span className="text-white">{t.tagline}</span>
+            </motion.p>
           </div>
 
-          {/* 问题框 - 横贯页面，带背景图片 */}
-          <div className="mb-12 -mx-6 lg:-mx-12 mt-4 animate-fade-in" style={{ animationDelay: '0.6s' }}>
-            <div className="relative w-full h-[400px] md:h-[500px] overflow-hidden rounded-2xl shadow-2xl">
-              {/* 背景图片 */}
-              <div 
-                className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-                style={{
-                  backgroundImage: 'url(/Background.png)',
-                  backgroundSize: 'cover',
-                  backgroundPosition: 'center top',
-                }}
+          <div className="flex flex-col items-center lg:w-1/2">
+            <div className="mb-16 w-full">
+              <MagneticCards
+                cards={genreCards}
+                activeCard={activeGenre}
+                onCardClick={handleCardClick}
+                animationDuration={0.8}
+                staggerDelay={0.15}
+                delayStart={1}
               />
-              
-              {/* 渐变遮罩让文字清晰 */}
-              <div className="absolute inset-0 bg-gradient-to-b from-purple-900/70 via-pink-800/60 to-indigo-900/70"></div>
-              <div className="absolute inset-0 bg-gradient-to-r from-purple-900/50 via-transparent to-transparent"></div>
-              
-              {/* 问题文字 - 居中 */}
-              <div className="absolute inset-0 flex items-center justify-center z-10 px-6">
-                <div className="text-center max-w-4xl">
-                  <div className="text-6xl mb-6 animate-bounce-in" style={{ animationDelay: '0.1s' }}>💭</div>
-                  <p className="text-2xl md:text-3xl lg:text-4xl font-bold text-white leading-relaxed drop-shadow-lg">
-                    {t.question}
-                  </p>
-                </div>
-              </div>
-
-              {/* 图片信息 - 右下角 */}
-              <div className="absolute bottom-4 right-4 md:bottom-6 md:right-6 z-20 bg-black/60 backdrop-blur-md rounded-lg p-4 border border-white/20 shadow-xl max-w-xs">
-                <p className="text-white text-sm leading-relaxed">
-                  <span className="font-bold">Primavera</span> (Botticelli)
-                  <br />
-                  <span className="text-xs opacity-90">Luna, the goddess of inspiration, guides creativity.</span>
-                </p>
-              </div>
             </div>
-          </div>
 
-          {/* The Philosophy behind LuminiAI - 平面设计 */}
-          <div className="mb-16 mt-16 animate-fade-in" style={{ animationDelay: '0.65s' }}>
-            <h2 className="text-4xl md:text-5xl font-black text-center mb-12 bg-gradient-to-r from-purple-600 via-pink-600 to-orange-600 bg-clip-text text-transparent">
-              {t.philosophyTitle}
-            </h2>
-            
-            <div className="max-w-6xl mx-auto px-4">
-              {/* 平面设计容器 */}
-              <div className="relative bg-gradient-to-br from-amber-50 via-yellow-50 to-orange-50 rounded-3xl p-8 md:p-12 border-4 border-amber-200 shadow-2xl overflow-hidden">
-                {/* 装饰性 emoji - 随机分布在整个容器中 */}
-                <div className="absolute inset-0 pointer-events-none">
-                  {/* 第一行 - 顶部区域 */}
-                  <span className="absolute text-xl md:text-2xl opacity-30 animate-slow-twinkle" style={{ top: '8%', left: '10%', animationDelay: '0s' }}>🌙</span>
-                  <span className="absolute text-lg md:text-xl opacity-30 animate-slow-twinkle" style={{ top: '12%', right: '15%', animationDelay: '0.7s' }}>✨</span>
-                  <span className="absolute text-xl md:text-2xl opacity-30 animate-slow-twinkle" style={{ top: '6%', left: '45%', animationDelay: '1.4s' }}>💡</span>
-                  
-                  {/* 第二行 - 中间偏上 */}
-                  <span className="absolute text-lg md:text-xl opacity-30 animate-slow-twinkle" style={{ top: '25%', left: '5%', animationDelay: '2.1s' }}>🌟</span>
-                  <span className="absolute text-xl md:text-2xl opacity-30 animate-slow-twinkle" style={{ top: '30%', right: '8%', animationDelay: '2.8s' }}>🌙</span>
-                  <span className="absolute text-lg md:text-xl opacity-30 animate-slow-twinkle" style={{ top: '28%', left: '60%', animationDelay: '3.5s' }}>✨</span>
-                  
-                  {/* 第三行 - 中间区域 */}
-                  <span className="absolute text-xl md:text-2xl opacity-30 animate-slow-twinkle" style={{ top: '45%', left: '12%', animationDelay: '0.3s' }}>💫</span>
-                  <span className="absolute text-lg md:text-xl opacity-30 animate-slow-twinkle" style={{ top: '50%', right: '12%', animationDelay: '1s' }}>🌙</span>
-                  <span className="absolute text-xl md:text-2xl opacity-30 animate-slow-twinkle" style={{ top: '48%', left: '70%', animationDelay: '1.7s' }}>✨</span>
-                  
-                  {/* 第四行 - 中间偏下 */}
-                  <span className="absolute text-lg md:text-xl opacity-30 animate-slow-twinkle" style={{ top: '65%', left: '8%', animationDelay: '2.4s' }}>💡</span>
-                  <span className="absolute text-xl md:text-2xl opacity-30 animate-slow-twinkle" style={{ top: '70%', right: '10%', animationDelay: '3.1s' }}>🌟</span>
-                  <span className="absolute text-lg md:text-xl opacity-30 animate-slow-twinkle" style={{ top: '68%', left: '55%', animationDelay: '3.8s' }}>🌙</span>
-                  
-                  {/* 第五行 - 底部区域 */}
-                  <span className="absolute text-xl md:text-2xl opacity-30 animate-slow-twinkle" style={{ top: '85%', left: '15%', animationDelay: '0.6s' }}>✨</span>
-                  <span className="absolute text-lg md:text-xl opacity-30 animate-slow-twinkle" style={{ top: '88%', right: '18%', animationDelay: '1.3s' }}>💫</span>
-                  <span className="absolute text-xl md:text-2xl opacity-30 animate-slow-twinkle" style={{ top: '90%', left: '50%', animationDelay: '2s' }}>🌟</span>
-                  <span className="absolute text-lg md:text-xl opacity-30 animate-slow-twinkle" style={{ top: '92%', right: '5%', animationDelay: '2.7s' }}>🌙</span>
-                </div>
-                
-                {/* 文本内容 - 相对定位确保在 emoji 上方 */}
-                <div className="relative z-10">
-                  <div className="text-5xl mb-6 text-center opacity-80">📖</div>
-                  <p 
-                    className="text-base md:text-lg lg:text-xl text-gray-800 leading-relaxed mb-6 font-serif"
-                    dangerouslySetInnerHTML={{ __html: t.philosophyText1 }}
-                  />
-                  <p 
-                    className="text-base md:text-lg lg:text-xl text-gray-800 leading-relaxed font-serif"
-                    dangerouslySetInnerHTML={{ __html: t.philosophyText2 }}
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
+            <AnimatePresence>
+              {activeGenre && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.4 }}
+                  className="mb-8 w-full overflow-hidden"
+                >
+                  <GenreDetails activeGenre={activeGenre} onBack={handleBack} />
+                </motion.div>
+              )}
+            </AnimatePresence>
 
-          {/* Our Vision - 列表形式 */}
-          <div className="mb-12 mt-16 animate-fade-in" style={{ animationDelay: '0.7s' }}>
-            <h2 className="text-4xl md:text-5xl font-black text-center mb-8 text-black">
-              {t.visionTitle}
-            </h2>
-            
-            <div className="max-w-5xl mx-auto">
-              <ul className="space-y-4 text-xl md:text-2xl lg:text-3xl font-bold text-black leading-relaxed">
-                {t.visionItems.map((item, index) => (
-                  <li key={index} className="flex items-center justify-center gap-4">
-                    <span className="text-purple-600">•</span>
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-
-          {/* Start with a Plan 按钮 */}
-          <div className="text-center mb-12 mt-20 animate-fade-in" style={{ animationDelay: '0.7s' }}>
-            <div className="mb-8">
-              <span className="text-8xl md:text-9xl lg:text-[10rem] animate-wiggle" style={{ display: 'inline-block' }}>
-                ✍️
-              </span>
-            </div>
-            <Button
-              onClick={() => {
-                // 跳转到制定学习计划界面
-                onStartPlan?.()
-              }}
-              size="lg"
-              className="bg-gradient-to-r from-purple-600 via-pink-600 to-orange-600 hover:from-purple-700 hover:via-pink-700 hover:to-orange-700 text-white border-0 shadow-2xl py-8 px-16 text-2xl md:text-3xl lg:text-4xl font-bold hover:scale-105 transition-all duration-300 rounded-full relative overflow-hidden group animate-gentle-bounce"
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 2.5 }}
             >
-              <span className="relative z-10">{t.startButton}</span>
-              <div className="absolute inset-0 bg-gradient-to-r from-purple-700 via-pink-700 to-orange-700 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-full"></div>
-            </Button>
+              <button onClick={() => onStartPlan?.()} className="rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70">
+                <GlassSurface width="auto" height="auto" borderRadius={50} borderWidth={0.08} brightness={55} opacity={0.85} blur={12} displace={0.3}>
+                  <span className="flex items-center gap-3 px-12 py-5 text-xl font-bold whitespace-nowrap text-white md:px-16 md:py-6 md:text-2xl lg:text-3xl">
+                    {t.startButton}
+                    <span className="text-2xl md:text-3xl lg:text-4xl">&#9992;</span>
+                  </span>
+                </GlassSurface>
+              </button>
+            </motion.div>
           </div>
-        </div>
+        </section>
+
       </div>
-    </div>
+    </main>
   )
 }
-

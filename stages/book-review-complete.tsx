@@ -24,7 +24,7 @@ interface BookReviewCompleteProps {
     type: "recommendation" | "critical" | "literary"
     outline: string[]
   } | null
-  onReset: () => void
+  onReset: (finalReview: string) => void
   onBack: () => void
   onEdit?: () => void
   userId?: string
@@ -146,7 +146,7 @@ export default function BookReviewComplete({
   // 渲染带高亮的文本
   const renderHighlightedText = () => {
     if (grammarErrors.length === 0) {
-      return <pre className="whitespace-pre-wrap text-gray-800 text-lg leading-relaxed font-serif" style={{ fontFamily: 'var(--font-comic-neue)' }}>{currentReview}</pre>
+      return <pre className="whitespace-pre-wrap text-gray-800 text-lg leading-relaxed font-serif" style={{ fontFamily: 'var(--font-comic-neue)', overflowWrap: 'break-word' }}>{currentReview}</pre>
     }
 
     const parts: Array<{ text: string; isError: boolean; errorIndex?: number }> = []
@@ -276,7 +276,7 @@ export default function BookReviewComplete({
       })
     })
 
-    return <pre className="whitespace-pre-wrap text-gray-800 text-lg leading-relaxed font-serif" style={{ fontFamily: 'var(--font-comic-neue)' }}>{result}</pre>
+    return <pre className="whitespace-pre-wrap text-gray-800 text-lg leading-relaxed font-serif" style={{ fontFamily: 'var(--font-comic-neue)', overflowWrap: 'break-word' }}>{result}</pre>
   }
 
   // 自动保存到 gallery
@@ -426,7 +426,7 @@ export default function BookReviewComplete({
                   Your Complete Review
                 </h2>
 
-                <div className="bg-white/90 rounded-2xl p-8 border-3 border-purple-200 shadow-lg mb-6">
+                <div className="bg-white/90 rounded-2xl p-8 border-3 border-purple-200 shadow-lg mb-6" style={{ overflowWrap: 'break-word' }}>
                   {isReviewing ? (
                     <div className="flex flex-col items-center justify-center py-12">
                       <div className="relative mx-auto mb-6 w-16 h-16">
@@ -480,12 +480,12 @@ export default function BookReviewComplete({
                   </Button>
 
                   <Button
-                    onClick={onReset}
+                    onClick={() => onReset(currentReview)}
                     size="lg"
                     className="bg-gradient-to-r from-purple-600 via-pink-600 to-orange-600 hover:from-purple-700 hover:via-pink-700 hover:to-orange-700 text-white border-0 shadow-xl py-6 px-8 text-lg font-bold rounded-full hover:scale-105 transition-all duration-300"
                   >
                     <span className="text-xl mr-2">🏠</span>
-                    Back to Home
+                    Back to Map
                   </Button>
 
                   <Button

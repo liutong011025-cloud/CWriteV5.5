@@ -7,6 +7,7 @@ import type { Language, StoryState } from "@/app/page"
 import StageHeader from "@/components/stage-header"
 import { Loader2, Send } from "lucide-react"
 import { toast } from "sonner"
+import { getCurrentLevel } from "@/lib/current-level"
 
 interface PlotBrainstormProps {
   language: Language
@@ -36,6 +37,7 @@ export default function PlotBrainstorm({ language, character, onPlotCreate, onBa
   const [summaryConversationId, setSummaryConversationId] = useState<string | null>(null)
   const [summaryDone, setSummaryDone] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const chatContainerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     sendInitialMessage()
@@ -46,7 +48,13 @@ export default function PlotBrainstorm({ language, character, onPlotCreate, onBa
   }, [messages])
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+    const container = chatContainerRef.current
+    if (!container) return
+    if (container.scrollHeight <= container.clientHeight) return
+    container.scrollTo({
+      top: container.scrollHeight,
+      behavior: "smooth",
+    })
   }
 
   const extractLastSixWords = (text: string): { words: string[], cleanedText: string } => {
@@ -114,7 +122,7 @@ ${characterInfo}
 
 IMPORTANT: Always refer to the character by their name "${characterName}"${characterSpecies ? ` (a ${character.species})` : ""}, NOT "your character" or "the character". Use "${characterName}" in your questions.
 
-Start by asking: "Where does ${characterName}'s story take place?" (in Chinese: ${characterName}的故事发生在哪呢？) Then end your response with exactly six SINGLE WORDS related to story settings (like: school home forest park beach library). Each word must be a single word, not a phrase. Don't use commas between the six words - just space them. Keep proper punctuation in your question (question marks, periods, etc.).
+Start by asking: "Where does ${characterName}'s story take place?"  Then end your response with exactly six SINGLE WORDS related to story settings (like: school home forest park beach library). Each word must be a single word, not a phrase. Don't use commas between the six words - just space them. Keep proper punctuation in your question (question marks, periods, etc.).
 
 Continue guiding the student step by step. Each response should:
 - Always use "${characterName}"${characterSpecies ? ` (the ${character.species})` : ""} in your questions, NOT "your character"
@@ -144,6 +152,7 @@ Continue guiding step by step. Each response should:
           message: initialPrompt,
           conversation_id: conversationId,
           user_id: userId || "default-user",
+          level: getCurrentLevel(),
         }),
       })
 
@@ -189,6 +198,7 @@ Continue guiding step by step. Each response should:
           message: messageText,
           conversation_id: conversationId,
           user_id: userId || "default-user",
+          level: getCurrentLevel(),
         }),
       })
 
@@ -275,8 +285,9 @@ Continue guiding step by step. Each response should:
         },
         body: JSON.stringify({
           conversation_history: conversationHistory,
-          conversation_id: summaryConversationId || undefined, // 使用总结机器人的conversation_id，保持对话上下文
+          conversation_id: summaryConversationId || undefined,
           user_id: userId || "default-user",
+          level: getCurrentLevel(),
         }),
       })
 
@@ -418,7 +429,7 @@ Continue guiding step by step. Each response should:
         <div className="grid lg:grid-cols-12 gap-6 mt-8">
           <div className="lg:col-span-9">
             <div className="bg-gradient-to-br from-white to-purple-50 rounded-2xl p-8 border-2 border-purple-200 shadow-2xl">
-              <div className="h-[600px] overflow-y-auto mb-6 space-y-4 pr-4">
+              <div ref={chatContainerRef} className="h-[600px] overflow-y-auto mb-6 space-y-4 pr-4">
                 {messages.map((message, index) => (
                   <div
                     key={index}
@@ -507,7 +518,7 @@ Continue guiding step by step. Each response should:
                     size="lg"
                     className="w-full border-0 shadow-xl py-6 text-lg font-bold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-700 hover:via-purple-700 hover:to-pink-700 text-white animate-pulse"
                   >
-                    Continue to Story Structure →
+                    Continue →
                   </Button>
                 </div>
               )}

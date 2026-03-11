@@ -30,7 +30,7 @@ const LETTER_SECTIONS = [
 ]
 
 const LETTER_BEAR_POSITION = { x: 79.7, y: 20.1, scale: 1.0 }
-const DEFAULT_LETTER_HANG_POSITION = { x: 79.7, y: 34.0, scale: 1.0 }
+const LETTER_HANG_POSITION = { x: 79.7, y: 38.3, scale: 1.0 }
 
 export default function LetterGame({
   recipient,
@@ -51,9 +51,6 @@ export default function LetterGame({
   const [completedSections, setCompletedSections] = useState<Set<number>>(new Set())
   const [readerImageUrl, setReaderImageUrl] = useState<string | null>(readerImageUrlProp)
   const [writingMood, setWritingMood] = useState<"sit" | "like" | "angry" | "hang">("sit")
-  const [hangBearPosition, setHangBearPosition] = useState(DEFAULT_LETTER_HANG_POSITION)
-  const [showHangBearTool, setShowHangBearTool] = useState(false)
-  const [previewHang, setPreviewHang] = useState(false)
   const [isHoveringHang, setIsHoveringHang] = useState(false)
   const hangTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
@@ -61,7 +58,7 @@ export default function LetterGame({
   const allTextLower = Object.values(sectionTexts).join(" ").toLowerCase()
   const hasDangerKeyword = ["fuck", "shit", "asshole"].some((w) => allTextLower.includes(w))
   const hasLoveKeyword = ["love", "peace", "like"].some((w) => allTextLower.includes(w))
-  const activeBearPosition = writingMood === "hang" || previewHang ? hangBearPosition : LETTER_BEAR_POSITION
+  const activeBearPosition = writingMood === "hang" ? LETTER_HANG_POSITION : LETTER_BEAR_POSITION
 
   const shortEvaluation = (() => {
     const content = aiEvaluation.trim().replace(/\s+/g, " ")
@@ -69,6 +66,15 @@ export default function LetterGame({
     const firstSentence = content.match(/^[^.!?。！？]{1,120}[.!?。！？]?/)?.[0] ?? content
     return firstSentence.length > 120 ? `${firstSentence.slice(0, 120)}...` : firstSentence
   })()
+
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    const sources = ["/Cagentsit.png", "/Cagenthang.png", "/Cagentlike.png", "/Cagentangry.png"]
+    sources.forEach((src) => {
+      const img = new window.Image()
+      img.src = src
+    })
+  }, [])
 
   const updateWritingMoodFromText = (text: string) => {
     if (writingMood === "hang") {
@@ -85,27 +91,6 @@ export default function LetterGame({
       setWritingMood("sit")
     }
   }
-
-  useEffect(() => {
-    if (typeof window === "undefined") return
-    try {
-      const raw = localStorage.getItem("cwriteLetterGameCagentHangPosV1")
-      if (!raw) return
-      const parsed = JSON.parse(raw) as { x?: number; y?: number; scale?: number }
-      setHangBearPosition((prev) => ({
-        x: typeof parsed.x === "number" ? parsed.x : prev.x,
-        y: typeof parsed.y === "number" ? parsed.y : prev.y,
-        scale: typeof parsed.scale === "number" ? parsed.scale : prev.scale,
-      }))
-    } catch {
-      // ignore
-    }
-  }, [])
-
-  useEffect(() => {
-    if (typeof window === "undefined") return
-    localStorage.setItem("cwriteLetterGameCagentHangPosV1", JSON.stringify(hangBearPosition))
-  }, [hangBearPosition])
 
   useEffect(() => {
     if (hangTimeoutRef.current) {
@@ -370,39 +355,6 @@ export default function LetterGame({
           {/* 左侧：写作区 */}
           <div className="lg:col-span-2 space-y-6">
             <div className="bg-white/90 backdrop-blur-lg rounded-2xl p-6 border-4 border-pink-300 shadow-xl relative">
-              <button
-                type="button"
-                onClick={() => setShowHangBearTool((prev) => !prev)}
-                className="absolute right-3 top-3 z-30 rounded-lg border border-purple-200 bg-white/90 px-2 py-1 text-xs text-purple-700"
-              >
-                Hanging位置工具
-              </button>
-              {showHangBearTool && (
-                <div className="absolute right-3 top-11 z-30 w-52 rounded-xl border border-purple-200 bg-white/95 p-2 text-xs shadow-lg">
-                  <button
-                    type="button"
-                    onClick={() => setPreviewHang((v) => !v)}
-                    className={`w-full rounded-md border px-2 py-1 text-[11px] ${
-                      previewHang ? "border-purple-400 bg-purple-100 text-purple-800" : "border-gray-300 bg-white text-gray-700"
-                    }`}
-                  >
-                    {previewHang ? "已开启 hanging 预览" : "开启 hanging 预览"}
-                  </button>
-                  <label className="mb-1 block">X: {hangBearPosition.x.toFixed(1)}%</label>
-                  <input type="range" min={10} max={98} step={0.1} value={hangBearPosition.x} onChange={(e) => setHangBearPosition((p) => ({ ...p, x: Number(e.target.value) }))} className="w-full" />
-                  <label className="mb-1 mt-2 block">Y: {hangBearPosition.y.toFixed(1)}%</label>
-                  <input type="range" min={-20} max={90} step={0.1} value={hangBearPosition.y} onChange={(e) => setHangBearPosition((p) => ({ ...p, y: Number(e.target.value) }))} className="w-full" />
-                  <label className="mb-1 mt-2 block">缩放: {hangBearPosition.scale.toFixed(2)}</label>
-                  <input type="range" min={0.4} max={2.2} step={0.01} value={hangBearPosition.scale} onChange={(e) => setHangBearPosition((p) => ({ ...p, scale: Number(e.target.value) }))} className="w-full" />
-                  <button
-                    type="button"
-                    onClick={() => setHangBearPosition(DEFAULT_LETTER_HANG_POSITION)}
-                    className="mt-2 w-full rounded-md border border-gray-300 bg-white px-2 py-1 text-[11px] text-gray-700"
-                  >
-                    重置 hanging 默认值
-                  </button>
-                </div>
-              )}
               <div
                 className="absolute z-20"
                 style={{
@@ -425,7 +377,7 @@ export default function LetterGame({
                           ? "/Cagentangry.png"
                           : writingMood === "like"
                           ? "/Cagentlike.png"
-                        : writingMood === "hang" || previewHang
+                        : writingMood === "hang"
                           ? "/Cagenthang.png"
                           : "/Cagentsit.png"
                       }
@@ -433,7 +385,7 @@ export default function LetterGame({
                       className="h-24 w-24 object-contain drop-shadow-lg"
                     />
                   </button>
-                  {(writingMood === "hang" || previewHang) && isHoveringHang && (
+                  {writingMood === "hang" && isHoveringHang && (
                     <div className="absolute left-1/2 top-full mt-1 -translate-x-1/2 rounded-full bg-black/70 px-3 py-1 text-[11px] text-white shadow-lg">
                       Save me!
                     </div>

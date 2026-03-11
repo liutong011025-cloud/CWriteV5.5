@@ -18,7 +18,7 @@ interface GrammarError {
 interface StoryReviewProps {
   language: Language
   storyState: StoryState
-  onReset: () => void
+  onReset: (finalStory: string) => void
   onEdit: (stage: "character" | "plot" | "structure" | "writing") => void
   onBack: () => void
   userId?: string
@@ -171,7 +171,7 @@ export default function StoryReview({ storyState, onReset, onEdit, onBack, userI
   // 渲染带高亮的文本
   const renderHighlightedText = () => {
     if (grammarErrors.length === 0) {
-      return <p className="text-foreground leading-relaxed whitespace-pre-wrap text-base font-serif">{currentStory}</p>
+      return <p className="text-foreground leading-relaxed whitespace-pre-wrap text-base font-serif" style={{ overflowWrap: 'break-word' }}>{currentStory}</p>
     }
 
     const parts: Array<{ text: string; isError: boolean; errorIndex?: number }> = []
@@ -506,7 +506,7 @@ Created with Story Writer
               <p className="text-lg text-gray-700 mb-8 font-semibold">
                 {storyState.plot?.setting} • {storyState.structure?.type}
               </p>
-              <div className="bg-white/90 backdrop-blur-sm rounded-xl p-8 border-2 border-purple-200 shadow-inner">
+              <div className="bg-white/90 backdrop-blur-sm rounded-xl p-8 border-2 border-purple-200 shadow-inner" style={{ overflowWrap: 'break-word' }}>
                 {isReviewing ? (
                     <div className="flex flex-col items-center justify-center py-12">
                       <div className="relative mx-auto mb-6 w-16 h-16">
@@ -576,11 +576,11 @@ Created with Story Writer
             </div>
 
             <Button 
-              onClick={onReset} 
+              onClick={() => onReset(currentStory)} 
               size="lg" 
               className="w-full bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-700 hover:via-purple-700 hover:to-pink-700 text-white border-0 shadow-xl py-4 text-sm font-bold"
             >
-              Create New Story
+              Back to Map
             </Button>
           </div>
         </div>

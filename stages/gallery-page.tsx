@@ -3,9 +3,10 @@
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import Image from "next/image"
-import { BookOpen, Book, Mail, FileText, ChevronDown, ChevronRight, Sparkles, ArrowLeft } from "lucide-react"
+import { BookOpen, Book, Mail, FileText, ChevronDown, ChevronRight, Sparkles, ArrowLeft, MessageSquare, Clapperboard, Feather } from "lucide-react"
+import { toast } from "sonner"
 
-type ArticleType = "story" | "bookReview" | "letter"
+type ArticleType = "story" | "bookReview" | "letter" | "drama" | "poetry"
 
 interface Article {
   id: string
@@ -18,20 +19,35 @@ interface Article {
   recipient?: string
   occasion?: string
   bookTitle?: string
+  summary?: string
+  form?: string
+  topic?: string
 }
 
 interface GalleryPageProps {
+  currentUser?: string | null
+  currentUserRole?: "teacher" | "student" | null
   onBack?: () => void
   fromEdit?: boolean
   editType?: 'story' | 'review' | 'letter'
   onBackToEdit?: () => void
 }
 
-export default function GalleryPage({ onBack, fromEdit = false, editType, onBackToEdit }: GalleryPageProps) {
+function workTypeFromArticleType(t: ArticleType): "story" | "bookReview" | "letter" | "drama" | "poetry" {
+  if (t === "bookReview") return "bookReview"
+  if (t === "letter") return "letter"
+  if (t === "drama") return "drama"
+  if (t === "poetry") return "poetry"
+  return "story"
+}
+
+export default function GalleryPage({ currentUser = null, currentUserRole = null, fromEdit = false, editType, onBackToEdit }: GalleryPageProps) {
   const [selectedType, setSelectedType] = useState<ArticleType | null>(null)
   const [expandedArticles, setExpandedArticles] = useState<Set<string>>(new Set())
   const [interactions, setInteractions] = useState<any[]>([])
   const [mounted, setMounted] = useState(false)
+  const [reviewContent, setReviewContent] = useState<Record<string, string>>({})
+  const [reviewSubmitting, setReviewSubmitting] = useState<string | null>(null)
 
   useEffect(() => {
     setMounted(true)
@@ -113,6 +129,43 @@ export default function GalleryPage({ onBack, fromEdit = false, editType, onBack
             timestamp: i.timestamp,
             recipient: i.recipient,
             occasion: i.occasion,
+          })
+        }
+      })
+
+    // 从 interactions 中提取 Drama 文章
+    interactions
+      .filter(i => i.drama && (i.stage === 'dramaBook' || (typeof i.drama === 'string' && i.drama.trim().length > 0)))
+      .forEach((i) => {
+        const drama = typeof i.drama === 'string' ? i.drama : ''
+        if (drama.trim()) {
+          articles.push({
+            id: `drama-${i.user_id}-${i.timestamp}`,
+            title: i.dramaTitle || 'Untitled Drama',
+            author: i.user_id,
+            type: 'drama',
+            content: drama,
+            timestamp: i.timestamp,
+            summary: i.dramaSummary,
+          })
+        }
+      })
+
+    // 从 interactions 中提取 Poetry 文章
+    interactions
+      .filter(i => i.poetry && (typeof i.poetry === 'string' && i.poetry.trim().length > 0))
+      .forEach((i) => {
+        const poetry = typeof i.poetry === 'string' ? i.poetry : ''
+        if (poetry.trim()) {
+          articles.push({
+            id: `poetry-${i.user_id}-${i.timestamp}`,
+            title: [i.poetryForm, i.poetryTopic].filter(Boolean).join(' — ') || 'Poem',
+            author: i.user_id,
+            type: 'poetry',
+            content: poetry,
+            timestamp: i.timestamp,
+            form: i.poetryForm,
+            topic: i.poetryTopic,
           })
         }
       })
@@ -199,6 +252,67 @@ Emma`,
     })
   }
 
+  const submitReview = async (article: Article, role: "teacher" | "student") => {
+    if (!currentUser || !reviewContent[article.id]?.trim()) return
+    setReviewSubmitting(article.id)
+    try {
+      const res = await fetch("/api/reviews", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          work_type: workTypeFromArticleType(article.type),
+          work_interaction_id: null,
+          author_username: article.author,
+          reviewer_username: currentUser,
+          reviewer_role: role,
+          content: reviewContent[article.id].trim(),
+          work_title: article.title,
+          work_content: article.content,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || "Failed to submit")
+      setReviewContent((prev) => ({ ...prev, [article.id]: "" }))
+      toast.success("Review submitted! The author will see it in their profile.")
+    } catch (e: any) {
+      toast.error(e.message || "Failed to submit review")
+    } finally {
+      setReviewSubmitting(null)
+    }
+  }
+
+  const renderLeaveReview = (article: Article, theme: "purple" | "indigo" | "pink") => {
+    if (!currentUser) return null
+    const role = currentUserRole || "student"
+    const border = theme === "purple" ? "border-purple-700/50" : theme === "indigo" ? "border-indigo-700/50" : "border-pink-700/50"
+    const bg = theme === "purple" ? "bg-slate-900/80" : theme === "indigo" ? "bg-slate-900/80" : "bg-slate-900/80"
+    return (
+      <div className={`mt-4 rounded-lg border ${border} ${bg} p-4`}>
+        <p className="mb-2 flex items-center gap-2 text-sm font-semibold text-yellow-300">
+          <MessageSquare className="h-4 w-4" />
+          Leave a review (Peer review)
+        </p>
+        <textarea
+          placeholder="Write your feedback for the author..."
+          value={reviewContent[article.id] ?? ""}
+          onChange={(e) => setReviewContent((prev) => ({ ...prev, [article.id]: e.target.value }))}
+          className="mb-2 w-full rounded-lg border border-slate-600 bg-slate-800/80 px-3 py-2 text-sm text-white placeholder:text-slate-400"
+          rows={3}
+        />
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            size="sm"
+            onClick={() => submitReview(article, "student")}
+            disabled={!reviewContent[article.id]?.trim() || reviewSubmitting === article.id}
+            className="rounded-lg bg-amber-600 hover:bg-amber-700"
+          >
+            {reviewSubmitting === article.id ? "Submitting..." : "Submit review"}
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-900 via-purple-900 to-indigo-900 relative overflow-hidden" data-stage="gallery">
       {/* 深色神秘背景 */}
@@ -232,7 +346,7 @@ Emma`,
                 Luminai Library
               </h1>
               <p className="text-purple-200 text-lg mb-4 leading-relaxed">
-                Welcome to the sacred library of memory, where every story, review, and letter written by our young authors is carefully preserved.
+                Welcome to the sacred library of memory, where every story, review, letter, drama, and poem written by our young authors is carefully preserved.
               </p>
               <div className="space-y-3 text-purple-300">
                 <div className="flex items-start gap-3">
@@ -241,7 +355,7 @@ Emma`,
                 </div>
                 <div className="flex items-start gap-3">
                   <BookOpen className="w-5 h-5 text-yellow-400 mt-1 flex-shrink-0" />
-                  <p className="text-sm">Browse through the <strong className="text-yellow-400">Stories</strong>, <strong className="text-yellow-400">Book Reviews</strong>, and <strong className="text-yellow-400">Letters</strong> created by students, each one a treasure of imagination.</p>
+                  <p className="text-sm">Browse through <strong className="text-yellow-400">Stories</strong>, <strong className="text-yellow-400">Book Reviews</strong>, <strong className="text-yellow-400">Letters</strong>, <strong className="text-yellow-400">Drama</strong>, and <strong className="text-yellow-400">Poetry</strong> created by students, each one a treasure of imagination.</p>
                 </div>
                 <div className="flex items-start gap-3">
                   <FileText className="w-5 h-5 text-yellow-400 mt-1 flex-shrink-0" />
@@ -315,11 +429,14 @@ Emma`,
                         )}
                       </button>
                       {expandedArticles.has(article.id) && (
-                        <div className="mt-4 p-4 bg-slate-950/60 rounded-lg border border-purple-800/30">
-                          <pre className="text-purple-100 whitespace-pre-wrap text-sm leading-relaxed font-serif">
-                            {article.content}
-                          </pre>
-                        </div>
+                        <>
+                          <div className="mt-4 p-4 bg-slate-950/60 rounded-lg border border-purple-800/30">
+                            <pre className="text-purple-100 whitespace-pre-wrap text-sm leading-relaxed font-serif">
+                              {article.content}
+                            </pre>
+                          </div>
+                          {renderLeaveReview(article, "purple")}
+                        </>
                       )}
                     </div>
                   ))
@@ -390,6 +507,7 @@ Emma`,
                               {article.content}
                             </pre>
                           </div>
+                          {renderLeaveReview(article, "indigo")}
                         </div>
                       )}
                     </div>
@@ -447,16 +565,144 @@ Emma`,
                         )}
                       </button>
                       {expandedArticles.has(article.id) && (
-                        <div className="mt-4 p-4 bg-slate-950/60 rounded-lg border border-pink-800/30">
-                          <pre className="text-pink-100 whitespace-pre-wrap text-sm leading-relaxed font-serif" style={{ fontFamily: 'Patrick Hand, cursive' }}>
-                            {article.content}
-                          </pre>
-                        </div>
+                        <>
+                          <div className="mt-4 p-4 bg-slate-950/60 rounded-lg border border-pink-800/30">
+                            <pre className="text-pink-100 whitespace-pre-wrap text-sm leading-relaxed font-serif" style={{ fontFamily: 'Patrick Hand, cursive' }}>
+                              {article.content}
+                            </pre>
+                          </div>
+                          {renderLeaveReview(article, "pink")}
+                        </>
                       )}
                     </div>
                   ))
                 ) : (
                   <p className="text-pink-400 text-center py-8">No letters yet. Students' heartfelt letters will appear here!</p>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Drama 分类 */}
+          <div className="bg-slate-800/80 backdrop-blur-lg rounded-2xl border-2 border-amber-700/50 shadow-xl overflow-hidden">
+            <button
+              onClick={() => setSelectedType(selectedType === 'drama' ? null : 'drama')}
+              className="w-full p-6 flex items-center justify-between hover:bg-amber-900/30 transition-all"
+            >
+              <div className="flex items-center gap-4">
+                {selectedType === 'drama' ? (
+                  <ChevronDown className="w-6 h-6 text-amber-400" />
+                ) : (
+                  <ChevronRight className="w-6 h-6 text-amber-400" />
+                )}
+                <Clapperboard className="w-8 h-8 text-amber-400" />
+                <h2 className="text-2xl font-bold text-amber-400">Drama</h2>
+                <span className="text-amber-300 text-sm bg-amber-900/50 px-3 py-1 rounded-full">
+                  {groupedArticles.drama?.length || 0}
+                </span>
+              </div>
+            </button>
+
+            {selectedType === 'drama' && (
+              <div className="p-6 pt-0 space-y-4 max-h-[600px] overflow-y-auto">
+                {groupedArticles.drama?.length ? (
+                  groupedArticles.drama.map((article) => (
+                    <div
+                      key={article.id}
+                      className="bg-slate-900/60 rounded-xl p-5 border border-amber-700/30 hover:border-amber-500/50 transition-all"
+                    >
+                      <button
+                        onClick={() => toggleArticle(article.id)}
+                        className="w-full text-left flex items-center justify-between mb-2"
+                      >
+                        <div>
+                          <h3 className="text-xl font-bold text-amber-300 mb-1">{article.title}</h3>
+                          <p className="text-amber-300 text-sm">by {article.author} • {formatDate(article.timestamp) || 'Loading...'}</p>
+                        </div>
+                        {expandedArticles.has(article.id) ? (
+                          <ChevronDown className="w-5 h-5 text-amber-400" />
+                        ) : (
+                          <ChevronRight className="w-5 h-5 text-amber-400" />
+                        )}
+                      </button>
+                      {expandedArticles.has(article.id) && (
+                        <>
+                          {article.summary && (
+                            <p className="mt-2 text-amber-200/90 text-sm italic">{article.summary}</p>
+                          )}
+                          <div className="mt-4 p-4 bg-slate-950/60 rounded-lg border border-amber-800/30">
+                            <pre className="text-amber-100 whitespace-pre-wrap text-sm leading-relaxed font-serif">
+                              {article.content}
+                            </pre>
+                          </div>
+                          {renderLeaveReview(article, "purple")}
+                        </>
+                      )}
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-amber-400 text-center py-8">No drama scripts yet. Students' drama works will appear here!</p>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Poetry 分类 */}
+          <div className="bg-slate-800/80 backdrop-blur-lg rounded-2xl border-2 border-emerald-700/50 shadow-xl overflow-hidden">
+            <button
+              onClick={() => setSelectedType(selectedType === 'poetry' ? null : 'poetry')}
+              className="w-full p-6 flex items-center justify-between hover:bg-emerald-900/30 transition-all"
+            >
+              <div className="flex items-center gap-4">
+                {selectedType === 'poetry' ? (
+                  <ChevronDown className="w-6 h-6 text-emerald-400" />
+                ) : (
+                  <ChevronRight className="w-6 h-6 text-emerald-400" />
+                )}
+                <Feather className="w-8 h-8 text-emerald-400" />
+                <h2 className="text-2xl font-bold text-emerald-400">Poetry</h2>
+                <span className="text-emerald-300 text-sm bg-emerald-900/50 px-3 py-1 rounded-full">
+                  {groupedArticles.poetry?.length || 0}
+                </span>
+              </div>
+            </button>
+
+            {selectedType === 'poetry' && (
+              <div className="p-6 pt-0 space-y-4 max-h-[600px] overflow-y-auto">
+                {groupedArticles.poetry?.length ? (
+                  groupedArticles.poetry.map((article) => (
+                    <div
+                      key={article.id}
+                      className="bg-slate-900/60 rounded-xl p-5 border border-emerald-700/30 hover:border-emerald-500/50 transition-all"
+                    >
+                      <button
+                        onClick={() => toggleArticle(article.id)}
+                        className="w-full text-left flex items-center justify-between mb-2"
+                      >
+                        <div>
+                          <h3 className="text-xl font-bold text-emerald-300 mb-1">{article.title}</h3>
+                          <p className="text-emerald-300 text-sm">by {article.author} • {formatDate(article.timestamp) || 'Loading...'}</p>
+                        </div>
+                        {expandedArticles.has(article.id) ? (
+                          <ChevronDown className="w-5 h-5 text-emerald-400" />
+                        ) : (
+                          <ChevronRight className="w-5 h-5 text-emerald-400" />
+                        )}
+                      </button>
+                      {expandedArticles.has(article.id) && (
+                        <>
+                          <div className="mt-4 p-4 bg-slate-950/60 rounded-lg border border-emerald-800/30">
+                            <pre className="text-emerald-100 whitespace-pre-wrap text-sm leading-relaxed font-serif" style={{ fontFamily: 'Patrick Hand, cursive' }}>
+                              {article.content}
+                            </pre>
+                          </div>
+                          {renderLeaveReview(article, "purple")}
+                        </>
+                      )}
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-emerald-400 text-center py-8">No poems yet. Students' poetry will appear here!</p>
                 )}
               </div>
             )}

@@ -9,6 +9,8 @@ interface WriteTypeSelectionProps {
   onSelectStory?: () => void
   onSelectBookReview?: () => void
   onSelectLetter?: () => void
+  onSelectDrama?: () => void
+  onSelectPoetry?: () => void
   onBack?: () => void
 }
 
@@ -44,7 +46,25 @@ const translations = {
       "Connect with friends",
       "Practice friendly tone"
     ],
-    letterPrompt: "Hi! Guess what I did today?"
+    letterPrompt: "Hi! Guess what I did today?",
+    dramaTitle: "Drama Writing",
+    dramaDesc: "Create drama with characters, scenes and dialogue",
+    dramaFeatures: [
+      "Create unique characters",
+      "Design drama scenes",
+      "Write dialogue and thoughts",
+      "Visual storytelling"
+    ],
+    dramaPrompt: "Let's create a drama!",
+    poetryTitle: "Poetry Writing",
+    poetryDesc: "Write poems in different forms with rhyme and rhetoric help",
+    poetryFeatures: [
+      "Choose poem forms",
+      "Rhyme and syllable tools",
+      "Word inspiration",
+      "AI feedback"
+    ],
+    poetryPrompt: "Let's write a poem!"
   },
   zh: {
     title: "選擇你的寫作冒險",
@@ -77,7 +97,25 @@ const translations = {
       "與朋友聯繫",
       "練習友好語氣"
     ],
-    letterPrompt: "你好！猜猜我今日做了什麼？"
+    letterPrompt: "你好！猜猜我今日做了什麼？",
+    dramaTitle: "戲劇寫作",
+    dramaDesc: "創造包含角色、場景和對話的精彩戲劇",
+    dramaFeatures: [
+      "創造獨特角色",
+      "設計戲劇場景",
+      "撰寫對話和思考",
+      "視覺敘事"
+    ],
+    dramaPrompt: "讓我們創作一個戲劇吧！",
+    poetryTitle: "詩歌寫作",
+    poetryDesc: "用不同詩體寫詩，獲得押韻與修辭建議",
+    poetryFeatures: [
+      "多種詩體選擇",
+      "押韻與音節輔助",
+      "修辭與靈感",
+      "AI 反饋"
+    ],
+    poetryPrompt: "一起寫一首詩吧！"
   },
 }
 
@@ -116,6 +154,28 @@ const getWritingTypes = (language: Language = "en") => {
       borderColor: "border-green-200",
       features: t.letterFeatures,
       prompt: t.letterPrompt
+    },
+    {
+      id: "drama",
+      title: t.dramaTitle,
+      icon: "🎭",
+      description: t.dramaDesc,
+      gradient: "from-indigo-600 to-purple-600",
+      hoverGradient: "from-indigo-700 to-purple-700",
+      borderColor: "border-indigo-200",
+      features: t.dramaFeatures,
+      prompt: t.dramaPrompt
+    },
+    {
+      id: "poetry",
+      title: t.poetryTitle,
+      icon: "📜",
+      description: t.poetryDesc,
+      gradient: "from-amber-600 to-rose-600",
+      hoverGradient: "from-amber-700 to-rose-700",
+      borderColor: "border-amber-200",
+      features: t.poetryFeatures,
+      prompt: t.poetryPrompt
     }
   ]
 }
@@ -125,6 +185,8 @@ export default function WriteTypeSelection({
   onSelectStory, 
   onSelectBookReview, 
   onSelectLetter,
+  onSelectDrama,
+  onSelectPoetry,
   onBack 
 }: WriteTypeSelectionProps) {
   const [hoveredCard, setHoveredCard] = useState<string | null>(null)
@@ -138,6 +200,10 @@ export default function WriteTypeSelection({
       onSelectBookReview?.()
     } else if (type === "letter") {
       onSelectLetter?.()
+    } else if (type === "drama") {
+      onSelectDrama?.()
+    } else if (type === "poetry") {
+      onSelectPoetry?.()
     }
   }
 
@@ -176,8 +242,8 @@ export default function WriteTypeSelection({
           </p>
         </div>
 
-        {/* 三种写作类型卡片 */}
-        <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
+        {/* 五种写作类型卡片 */}
+        <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-12">
           {writingTypes.map((type, index) => {
             const isHovered = hoveredCard === type.id
             return (

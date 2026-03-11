@@ -7,6 +7,7 @@ import { Loader2 } from "lucide-react"
 import { toast } from "sonner"
 import StageHeader from "@/components/stage-header"
 import { Sparkles, Mail, Heart, Star } from "lucide-react"
+import { getCurrentLevel } from "@/lib/current-level"
 
 interface LetterAdventureProps {
   onStart: (recipient: string, occasion: string, guidance: string | null, readerImageUrl: string | null) => void
@@ -50,6 +51,7 @@ export default function LetterAdventure({ onStart, onBack, userId, noAi = false 
             recipient: recipient.trim(),
             occasion: occasion.trim(),
             user_id: userId || "student",
+            level: getCurrentLevel(),
           }),
         }),
         fetch("/api/generate-letter-reader", {

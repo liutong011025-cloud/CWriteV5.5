@@ -6,6 +6,7 @@ import type { Language, StoryState } from "@/app/page"
 import StageHeader from "@/components/stage-header"
 import { Loader2 } from "lucide-react"
 import { toast } from "sonner"
+import { getCurrentLevel } from "@/lib/current-level"
 
 interface StoryStructureProps {
   language: Language
@@ -120,7 +121,8 @@ export default function StoryStructure({ language, plot, character, onStructureS
           character: character,
           plot: plot,
           user_id: userId || "default-user",
-          generate_all: true, // 标志：一次性生成所有故事
+          generate_all: true,
+          level: getCurrentLevel(),
         }),
       })
 

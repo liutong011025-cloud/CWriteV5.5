@@ -13,6 +13,7 @@ interface LetterGameNoAiProps {
   onComplete: (sections: string[]) => void
   onBack: () => void
   userId?: string
+  onDraftChange?: (text: string) => void
 }
 
 // 默认的信件结构
@@ -29,7 +30,8 @@ export default function LetterGameNoAi({
   occasion,
   onComplete,
   onBack,
-  userId
+  userId,
+  onDraftChange,
 }: LetterGameNoAiProps) {
   const [currentSection, setCurrentSection] = useState(0)
   const [sectionTexts, setSectionTexts] = useState<Record<number, string>>({})
@@ -38,6 +40,11 @@ export default function LetterGameNoAi({
 
   const handleTextChange = (text: string) => {
     setSectionTexts(prev => ({ ...prev, [currentSection]: text }))
+    if (onDraftChange) {
+      const merged = { ...sectionTexts, [currentSection]: text }
+      const allText = Object.values(merged).join(" ")
+      onDraftChange(allText)
+    }
   }
 
   const handleNext = () => {

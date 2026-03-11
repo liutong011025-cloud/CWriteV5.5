@@ -5,6 +5,14 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import StageHeader from "@/components/stage-header"
 import { Sparkles } from "lucide-react"
+import { EOB_TRAITS, type EobTrait } from "@/lib/character-eob-traits"
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 
 interface CharacterCreationNoAiProps {
   language: "en" | "zh"
@@ -39,16 +47,17 @@ const SPECIES = [
   { name: "Owl", icon: "🦉", color: "from-amber-500 to-brown-600" },
 ]
 
-const TRAITS = [
-  { name: "Brave", color: "from-red-400 to-red-600" },
-  { name: "Kind", color: "from-green-400 to-green-600" },
-  { name: "Curious", color: "from-blue-400 to-blue-600" },
-  { name: "Funny", color: "from-yellow-400 to-yellow-600" },
-  { name: "Clever", color: "from-purple-400 to-purple-600" },
-  { name: "Shy", color: "from-indigo-400 to-indigo-600" },
-  { name: "Adventurous", color: "from-orange-400 to-orange-600" },
-  { name: "Loyal", color: "from-pink-400 to-pink-600" },
-]
+const EOB_TRAIT_COLORS: Record<string, string> = {
+  Kind: "from-green-400 to-green-600",
+  Helpful: "from-teal-400 to-teal-600",
+  Brave: "from-red-400 to-red-600",
+  Honest: "from-blue-400 to-blue-600",
+  Responsible: "from-amber-400 to-amber-600",
+  "Team-player": "from-indigo-400 to-indigo-600",
+  "Obeys rules": "from-slate-400 to-slate-600",
+  Hardworking: "from-orange-400 to-orange-600",
+  Empathetic: "from-pink-400 to-pink-600",
+}
 
 export default function CharacterCreationNoAi({ language, onCharacterCreate, onBack, userId }: CharacterCreationNoAiProps) {
   const [name, setName] = useState("")
@@ -56,6 +65,8 @@ export default function CharacterCreationNoAi({ language, onCharacterCreate, onB
   const [customSpecies, setCustomSpecies] = useState("")
   const [selectedTraits, setSelectedTraits] = useState<string[]>([])
   const [description, setDescription] = useState("")
+  const [traitDialogOpen, setTraitDialogOpen] = useState(false)
+  const [traitDialogTrait, setTraitDialogTrait] = useState<EobTrait | null>(null)
 
   const toggleTrait = (trait: string) => {
     setSelectedTraits((prev) =>
@@ -109,6 +120,48 @@ export default function CharacterCreationNoAi({ language, onCharacterCreate, onB
 
   return (
     <div className="min-h-screen py-8 px-6 bg-gradient-to-br from-indigo-100 via-purple-50 via-pink-50 to-orange-50 relative" style={{ paddingTop: '120px', paddingBottom: '120px' }}>
+      <Dialog open={traitDialogOpen} onOpenChange={(open) => { setTraitDialogOpen(open); if (!open) setTraitDialogTrait(null) }}>
+        <DialogContent className="sm:max-w-md">
+          {traitDialogTrait && (
+            <>
+              <DialogHeader>
+                <DialogTitle>{traitDialogTrait.name}</DialogTitle>
+              </DialogHeader>
+              <p className="text-sm text-foreground">
+                {traitDialogTrait.explanationTemplate.replace(/\{\{name\}\}/g, name.trim() || "your character")}
+              </p>
+              <div className="space-y-2">
+                <p className="text-sm font-semibold text-foreground">When writing, you can use:</p>
+                <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
+                  {traitDialogTrait.writingTips.map((tip, i) => (
+                    <li key={i}>"{tip}"</li>
+                  ))}
+                </ul>
+              </div>
+              <DialogFooter className="gap-2 sm:gap-0">
+                {selectedTraits.includes(traitDialogTrait.name) ? (
+                  <Button
+                    variant="outline"
+                    onClick={() => { toggleTrait(traitDialogTrait.name); setTraitDialogOpen(false); setTraitDialogTrait(null) }}
+                  >
+                    Unselect
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={() => { toggleTrait(traitDialogTrait.name); setTraitDialogOpen(false); setTraitDialogTrait(null) }}
+                  >
+                    Select this trait
+                  </Button>
+                )}
+                <Button variant="outline" onClick={() => { setTraitDialogOpen(false); setTraitDialogTrait(null) }}>
+                  Close
+                </Button>
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+
       {/* 背景装饰 */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-0 left-0 w-96 h-96 bg-purple-300 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse"></div>
@@ -182,15 +235,19 @@ export default function CharacterCreationNoAi({ language, onCharacterCreate, onB
               <div>
                 <label className="block text-lg font-bold mb-2 text-blue-700">Traits (Select at least one)</label>
                 <div className="flex flex-wrap gap-2">
-                  {TRAITS.map((trait) => {
+                  {EOB_TRAITS.map((trait) => {
                     const isSelected = selectedTraits.includes(trait.name)
+                    const color = EOB_TRAIT_COLORS[trait.name] ?? "from-gray-400 to-gray-600"
                     return (
                       <Button
                         key={trait.name}
-                        onClick={() => toggleTrait(trait.name)}
+                        onClick={() => {
+                          setTraitDialogTrait(trait)
+                          setTraitDialogOpen(true)
+                        }}
                         className={`px-4 py-2 rounded-full text-sm font-semibold border-2 transition-all transform hover:scale-105 ${
                           isSelected
-                            ? `bg-gradient-to-r ${trait.color} text-white border-blue-400 shadow-md`
+                            ? `bg-gradient-to-r ${color} text-white border-blue-400 shadow-md`
                             : "bg-white border-blue-200 text-gray-700 hover:bg-blue-50"
                         }`}
                       >
@@ -218,7 +275,7 @@ export default function CharacterCreationNoAi({ language, onCharacterCreate, onB
                 className="w-full bg-gradient-to-r from-purple-600 via-pink-600 to-orange-600 hover:from-purple-700 hover:via-pink-700 hover:to-orange-700 text-white border-0 shadow-xl py-4 text-lg font-bold disabled:opacity-50"
               >
                 <Sparkles className="mr-2 h-5 w-5 inline" />
-                Continue to Plot
+                Continue
               </Button>
             </div>
           </div>
@@ -239,11 +296,11 @@ export default function CharacterCreationNoAi({ language, onCharacterCreate, onB
                   <p className="text-xl text-gray-700 font-semibold mb-4">{finalSpecies}</p>
                   <div className="flex flex-wrap gap-2 justify-center">
                     {selectedTraits.map((trait) => {
-                      const traitData = TRAITS.find(t => t.name === trait)
+                      const color = EOB_TRAIT_COLORS[trait] ?? "from-gray-400 to-gray-600"
                       return (
                         <span
                           key={trait}
-                          className={`px-3 py-1 rounded-full text-sm font-bold bg-gradient-to-r ${traitData?.color || 'from-gray-400 to-gray-600'} text-white shadow-lg`}
+                          className={`px-3 py-1 rounded-full text-sm font-bold bg-gradient-to-r ${color} text-white shadow-lg`}
                         >
                           {trait}
                         </span>

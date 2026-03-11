@@ -168,7 +168,7 @@ export default function PlotBrainstormNoAi({ language, character, onPlotCreate, 
                   size="lg"
                   className="w-full bg-gradient-to-r from-purple-600 via-pink-600 to-orange-600 hover:from-purple-700 hover:via-pink-700 hover:to-orange-700 text-white border-0 shadow-xl py-6 text-lg font-bold disabled:opacity-50"
                 >
-                  Continue to Story Structure →
+                  Back to Map →
                 </Button>
               </div>
             </div>

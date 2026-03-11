@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import type { Language, StoryState } from "@/app/page"
 import StageHeader from "@/components/stage-header"
@@ -11,6 +11,7 @@ interface GuidedWritingNoAiProps {
   onStoryWrite: (story: string) => void
   onBack: () => void
   userId?: string
+  onDraftChange?: (text: string) => void
 }
 
 // 增强的字数统计函数
@@ -22,7 +23,7 @@ const countWords = (text: string): number => {
   return chineseChars + englishWords
 }
 
-export default function GuidedWritingNoAi({ language, storyState, onStoryWrite, onBack, userId }: GuidedWritingNoAiProps) {
+export default function GuidedWritingNoAi({ language, storyState, onStoryWrite, onBack, userId, onDraftChange }: GuidedWritingNoAiProps) {
   const [currentSection, setCurrentSection] = useState(0)
   const [sectionTexts, setSectionTexts] = useState<Record<number, string>>({})
 
@@ -33,6 +34,13 @@ export default function GuidedWritingNoAi({ language, storyState, onStoryWrite, 
     const allText = Object.values(sectionTexts).join(' ')
     return countWords(allText)
   }, [sectionTexts])
+
+  // 將草稿內容回傳給上層，供 Cagent 實時做價值觀檢查
+  useEffect(() => {
+    if (!onDraftChange) return
+    const allText = Object.values(sectionTexts).join(" ")
+    onDraftChange(allText)
+  }, [sectionTexts, onDraftChange])
 
   const handleSectionTextChange = (sectionIndex: number, text: string) => {
     setSectionTexts(prev => ({
