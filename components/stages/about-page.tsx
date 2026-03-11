@@ -415,8 +415,8 @@ export default function AboutPage({ onBack, language = "en" }: { onBack?: () => 
         </div>
       </section>
 
-      {/* ========== Research Team（與 footer 無間隙）========== */}
-      <section ref={teamRef} className="pt-12 pb-0 px-4 relative overflow-hidden">
+      {/* ========== Research Team（底部留白由背景圖顯示，當作與 footer 間距）========== */}
+      <section ref={teamRef} className="pt-12 pb-16 md:pb-24 px-4 relative overflow-hidden">
         <div className={`absolute inset-0 transition-opacity duration-1000 ${teamVisible ? "opacity-100" : "opacity-0"}`}>
           <Image src="/Background.png" alt="" fill className="object-cover" unoptimized />
           <div className="absolute inset-0 bg-background/40" />
