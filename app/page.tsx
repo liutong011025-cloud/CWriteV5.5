@@ -1765,7 +1765,7 @@ export default function Home() {
       {stage === "dashboard" && user && user.role === "teacher" && (
         <Dashboard user={user} onBack={() => setStage("login")} />
       )}
-      {stage === "about" && user && (
+      {stage === "about" && (
         <AboutPage />
       )}
 
