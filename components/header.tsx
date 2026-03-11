@@ -152,11 +152,9 @@ export default function Header() {
         window.dispatchEvent(new CustomEvent("navigateToResearch"))
       }
     } },
-    { label: "About us", href: "/#about", action: () => {
-      // 触发自定义事件来通知主页面切换到about
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('navigateToAbout'))
-      }
+    { label: "About us", href: "/about", action: () => {
+      // 优先走独立路由，避免 hash/事件丢失导致还停在首页
+      router.push("/about")
     } },
   ]
 
@@ -197,7 +195,7 @@ export default function Header() {
   // 2. 如果向下滚动（isScrolled = true），显示背景和窄窄的header
   // 3. 顶部时，文字为黑色；滚动后，文字根据背景调整
   const isHomePage = currentStage === 'home' || pathname === '/'
-  const isAboutPage = currentStage === 'about' || pathname === '/#about'
+  const isAboutPage = currentStage === 'about' || pathname === '/about' || pathname === '/#about'
   const isGalleryPage = currentStage === 'gallery' || pathname === '/gallery' || pathname?.includes('gallery')
   const showBackground = isScrolled || isAboutPage || isGalleryPage // About 和 Gallery 页面始终显示背景
   const showLogo = isHomePage && isAtTop && !isHovering && !isAboutPage && !isGalleryPage // 只在首页顶部且未悬停时显示logo
@@ -312,7 +310,7 @@ export default function Header() {
                  {navItems.map((item) => {
                    // 检查是否激活
                   const isHomePageActive = (currentStage === 'home' || pathname === '/') && item.href === "/"
-                  const isAboutPageActive = (currentStage === 'about' || pathname === '/#about') && item.href === "/#about"
+                  const isAboutPageActive = (currentStage === 'about' || pathname === '/about' || pathname === '/#about') && item.href === "/about"
                   const isWritePageActive = currentStage === 'writeTypeSelection' && item.href === "/write"
                   const isGalleryPageActive = isGalleryPage && (item.href === "/gallery" || item.label === "Luminai Library")
                   const isActive = isHomePageActive || isAboutPageActive || isWritePageActive || isGalleryPageActive
