@@ -234,12 +234,12 @@ export default function Header() {
         <div className="flex items-center h-full">
           <Link 
             href="/" 
-            onClick={(e) => {
-              e.preventDefault()
-              // 如果点击CWrite，跳转到About页面
+            onClick={() => {
+              // 点 Logo 回到首页
               if (typeof window !== 'undefined') {
-                window.dispatchEvent(new CustomEvent('navigateToAbout'))
+                window.dispatchEvent(new CustomEvent('navigateToHome'))
               }
+              window.scrollTo({ top: 0, behavior: 'smooth' })
             }}
             className="transition-all duration-200 flex items-center h-full"
           >
