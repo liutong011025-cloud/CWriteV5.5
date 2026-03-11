@@ -20,6 +20,7 @@ export default function Header() {
   const [isScrolled, setIsScrolled] = useState(false)
   const [isAtTop, setIsAtTop] = useState(true)
   const [isHovering, setIsHovering] = useState(false)
+  const [aboutMenuOpen, setAboutMenuOpen] = useState(false)
   const [currentStage, setCurrentStage] = useState<string | null>(null)
   const [language, setLanguage] = useState<HeaderLanguage>("en") // 默认英语
   const [userInfo, setUserInfo] = useState<HeaderUserInfo>(null)
@@ -152,12 +153,6 @@ export default function Header() {
         window.dispatchEvent(new CustomEvent("navigateToResearch"))
       }
     } },
-    // About us：不跳转 URL，只发事件切到 about 区块，保持原域名/路径
-    { label: "About us", href: "#", action: () => {
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('navigateToAbout'))
-      }
-    } },
   ]
 
   const handleLanguageChange = (lang: HeaderLanguage) => {
@@ -197,7 +192,7 @@ export default function Header() {
   // 2. 如果向下滚动（isScrolled = true），显示背景和窄窄的header
   // 3. 顶部时，文字为黑色；滚动后，文字根据背景调整
   const isHomePage = currentStage === 'home' || pathname === '/'
-  const isAboutPage = currentStage === 'about'
+  const isAboutPage = currentStage?.startsWith('about') || false
   const isGalleryPage = currentStage === 'gallery' || pathname === '/gallery' || pathname?.includes('gallery')
   const showBackground = isScrolled || isAboutPage || isGalleryPage // About 和 Gallery 页面始终显示背景
   const showLogo = isHomePage && isAtTop && !isHovering && !isAboutPage && !isGalleryPage // 只在首页顶部且未悬停时显示logo
@@ -312,7 +307,7 @@ export default function Header() {
                  {navItems.map((item) => {
                    // 检查是否激活
                   const isHomePageActive = (currentStage === 'home' || pathname === '/') && item.href === "/"
-                  const isAboutPageActive = currentStage === 'about' && item.label === "About us"
+                  const isAboutPageActive = false
                   const isWritePageActive = currentStage === 'writeTypeSelection' && item.href === "/write"
                   const isGalleryPageActive = isGalleryPage && (item.href === "/gallery" || item.label === "Luminai Library")
                   const isActive = isHomePageActive || isAboutPageActive || isWritePageActive || isGalleryPageActive
@@ -339,28 +334,74 @@ export default function Header() {
                      </Link>
                    )
                  })}
+                 {/* About us 下拉菜單 */}
+                 <div className="relative">
+                   <button
+                     type="button"
+                     onClick={() => setAboutMenuOpen((open) => !open)}
+                     onMouseEnter={() => setAboutMenuOpen(true)}
+                     className={`px-6 py-3 rounded-lg font-semibold text-lg transition-all duration-200 whitespace-nowrap ${
+                       isAboutPage
+                         ? showBackground
+                           ? "text-yellow-200"
+                           : "text-black"
+                         : showBackground
+                         ? "text-blue-100 hover:text-white"
+                         : "text-black drop-shadow-sm hover:text-gray-700"
+                     }`}
+                   >
+                     About us
+                   </button>
+                   {aboutMenuOpen && (
+                     <div
+                       className="absolute right-0 mt-2 w-56 rounded-xl border border-slate-700/60 bg-slate-900/95 text-sm text-slate-100 shadow-xl py-2 z-50"
+                       onMouseLeave={() => setAboutMenuOpen(false)}
+                     >
+                       <button
+                         type="button"
+                         className="w-full px-4 py-2.5 text-left hover:bg-slate-800/90 transition-colors"
+                         onClick={() => {
+                           setAboutMenuOpen(false)
+                           if (typeof window !== "undefined") {
+                             window.dispatchEvent(new CustomEvent("navigateToAboutVision"))
+                           }
+                         }}
+                       >
+                         Vision &amp; Philosophy
+                       </button>
+                       <button
+                         type="button"
+                         className="w-full px-4 py-2.5 text-left hover:bg-slate-800/90 transition-colors"
+                         onClick={() => {
+                           setAboutMenuOpen(false)
+                           if (typeof window !== "undefined") {
+                             window.dispatchEvent(new CustomEvent("navigateToAboutResearchTeam"))
+                           }
+                         }}
+                       >
+                         Research team
+                       </button>
+                     </div>
+                   )}
+                 </div>
                  </div>
                  
-                 {/* User avatar - 登录后显示，点击进入用户资料 */}
+                 {/* My Farm 圖標 - 登录后显示，点击进入农场 */}
                  {userInfo && (
                    <button
                      type="button"
                      onClick={() => window.dispatchEvent(new CustomEvent("navigateToUserProfile"))}
-                     className="relative flex-shrink-0 ml-1 rounded-full ring-2 ring-transparent hover:ring-yellow-400/50 focus:outline-none focus:ring-2 focus:ring-yellow-400"
-                     aria-label="Open profile"
+                     className="relative flex-shrink-0 ml-1 rounded-full focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:ring-offset-2 focus:ring-offset-slate-900/50"
+                     aria-label="Go to My Farm"
                    >
-                     <Avatar className={`h-9 w-9 rounded-full border-2 flex-shrink-0 ${
-                       showBackground ? 'border-white/20' : 'border-slate-300/80 bg-white/95'
-                     }`}>
-                       <AvatarImage src={userInfo.avatarUrl || undefined} alt={userInfo.username} />
-                       <AvatarFallback className={`rounded-full text-sm font-bold ${
-                         showBackground
-                           ? 'bg-primary/20 text-yellow-200'
-                           : 'bg-slate-200 text-slate-700'
-                       }`}>
-                         {userInfo.avatarEmoji || (userInfo.username || "?").slice(0, 2).toUpperCase()}
-                       </AvatarFallback>
-                     </Avatar>
+                     <Image
+                       src="/myfarm.png"
+                       alt="My Farm"
+                       width={80}
+                       height={80}
+                       className="w-12 h-12 md:w-14 md:h-14 object-contain drop-shadow-lg transition-transform duration-200 hover:scale-110"
+                       unoptimized
+                     />
                      {userInfo.unreadCount > 0 && (
                        <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
                          {userInfo.unreadCount > 99 ? "99+" : userInfo.unreadCount}
