@@ -2,10 +2,8 @@
 
 import { useState, useEffect, useRef } from "react"
 import Image from "next/image"
+import { Users, Star, BookOpen, Sparkles, Zap } from "lucide-react"
 import type { Language } from "@/app/page"
-
-// aboutnew 风格：neo-brutalist 粗边框阴影（用 Tailwind 近似）
-const shadowBrutal = "shadow-[4px_4px_0_0_var(--foreground)]"
 
 interface TeamMember {
   id: number
@@ -120,8 +118,8 @@ export default function AboutPage({ onBack, language = "en" }: { onBack?: () => 
   }, [])
 
   return (
-    <div className="min-h-screen bg-background" style={{ paddingTop: "88px", paddingBottom: "80px" }}>
-      {/* ========== Opening (aboutnew: 花紋 flower.png + 主卡 + logo logobig) ========== */}
+    <div className="about-new-theme min-h-screen bg-background" style={{ paddingTop: "88px", paddingBottom: "80px" }}>
+      {/* ========== Opening（完全依 aboutnew opening-section）========== */}
       <section className="min-h-screen flex items-center justify-center relative overflow-hidden">
         <div
           className="absolute inset-0 z-0"
@@ -132,14 +130,16 @@ export default function AboutPage({ onBack, language = "en" }: { onBack?: () => 
             opacity: 0.75,
           }}
         />
-        <div className={`absolute top-16 left-10 w-32 h-32 bg-primary rounded-[2rem] rotate-12 animate-float ${shadowBrutal} z-[1]`} />
-        <div className={`absolute bottom-20 right-12 w-24 h-24 bg-secondary rounded-[2rem] -rotate-6 animate-pulse ${shadowBrutal} z-[1]`} />
-        <div className={`absolute top-1/3 right-8 w-16 h-16 bg-accent rounded-[1.5rem] rotate-45 animate-pulse ${shadowBrutal} z-[1]`} />
-        <div className={`absolute bottom-1/3 left-8 w-20 h-20 bg-chart-2 rounded-[2rem] -rotate-12 animate-float ${shadowBrutal} z-[1]`} style={{ animationDelay: "1s" }} />
+        <div className="absolute top-16 left-10 w-32 h-32 bg-primary rounded-[2rem] rotate-12 animate-float shadow-brutal z-[1]" />
+        <div className="absolute bottom-20 right-12 w-24 h-24 bg-secondary rounded-[2rem] -rotate-6 animate-morphing shadow-brutal z-[1]" />
+        <div className="absolute top-1/3 right-8 w-16 h-16 bg-accent rounded-[1.5rem] rotate-45 animate-pulse shadow-brutal z-[1]" />
+        <div className="absolute bottom-1/3 left-8 w-20 h-20 bg-chart-2 rounded-[2rem] -rotate-12 animate-float shadow-brutal z-[1]" style={{ animationDelay: "1s" }} />
 
-        <div className={`relative z-10 max-w-4xl w-full mx-4 md:mx-8 p-10 md:p-20 rounded-[2.5rem] ${shadowBrutal} border-4 border-foreground bg-card/95 backdrop-blur-sm overflow-hidden group hover:shadow-xl transition-all duration-500`}>
-          <div className="absolute top-0 right-0 w-28 h-28 bg-primary rounded-bl-[2rem] group-hover:scale-110 transition-transform duration-500" />
-          <div className="absolute bottom-0 left-0 w-24 h-24 bg-secondary rounded-tr-[2rem] group-hover:scale-110 transition-transform duration-500" />
+        <div className="relative z-10 max-w-4xl w-full mx-4 md:mx-8 p-10 md:p-20 rounded-[2.5rem] shadow-brutal border-4 border-foreground bg-card/95 backdrop-blur-sm overflow-hidden group hover:shadow-xl transition-all duration-500">
+          <div className="absolute top-0 right-0 w-28 h-28 bg-primary rounded-bl-[2rem] group-hover:scale-110 transition-transform duration-500 shadow-brutal" />
+          <div className="absolute bottom-0 left-0 w-24 h-24 bg-secondary rounded-tr-[2rem] group-hover:scale-110 transition-transform duration-500 shadow-brutal" />
+          <div className="absolute top-1/2 right-6 w-4 h-4 bg-accent rounded-full animate-ping" />
+          <div className="absolute top-8 left-8 w-3 h-3 bg-chart-2 rounded-full animate-pulse" />
           <div className="relative z-10 text-center">
             <div className="flex justify-center mb-6">
               <Image src="/logobig.png" alt="CWrite" width={220} height={72} className="object-contain h-16 w-auto" unoptimized />
@@ -152,7 +152,7 @@ export default function AboutPage({ onBack, language = "en" }: { onBack?: () => 
             <p className="text-xl md:text-2xl text-muted-foreground mb-5 font-semibold">
               {t.openingSubtitle}
             </p>
-            <div className={`w-24 h-2 bg-gradient-to-r from-primary to-secondary mx-auto rounded-full mb-6 ${shadowBrutal}`} />
+            <div className="w-24 h-2 bg-gradient-to-r from-primary to-secondary mx-auto rounded-full shadow-brutal mb-6" />
             <p className="text-base md:text-lg text-muted-foreground leading-relaxed max-w-2xl mx-auto whitespace-pre-line">
               {t.openingP}
             </p>
@@ -160,12 +160,17 @@ export default function AboutPage({ onBack, language = "en" }: { onBack?: () => 
         </div>
       </section>
 
-      {/* ========== Philosophy (aboutnew: Background.png 全屏 + 玻璃卡) ========== */}
+      {/* ========== Philosophy（完全依 aboutnew philosophy-section）========== */}
       <section className="py-0 relative overflow-hidden">
         <div className="relative min-h-[600px] md:min-h-[700px] flex items-center justify-center">
           <Image src="/Background.png" alt="" fill className="object-cover object-center" unoptimized />
           <div className="absolute inset-0 bg-black/55" />
           <div className="relative z-10 max-w-3xl w-full mx-4 md:mx-8 text-center px-6 md:px-12 py-14 md:py-20 rounded-[2rem] border-2 border-white/20 bg-white/10 backdrop-blur-md shadow-2xl">
+            <div className="inline-flex items-center gap-2 px-6 py-3 bg-white/15 backdrop-blur-md rounded-[2rem] border border-white/30 text-white font-black mb-6">
+              <BookOpen className="w-5 h-5 text-primary animate-bounce" />
+              Philosophy
+              <Sparkles className="w-5 h-5 text-secondary animate-pulse" />
+            </div>
             <h2 className="text-4xl md:text-6xl font-black text-white mb-6 leading-tight drop-shadow-lg">
               {t.philosophyTitle}
             </h2>
@@ -186,10 +191,15 @@ export default function AboutPage({ onBack, language = "en" }: { onBack?: () => 
 
         <div className="max-w-6xl mx-auto relative z-10">
           <div className="text-center mb-10">
-            <h2 className={`text-4xl md:text-5xl font-black text-foreground mb-4 bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent transition-all duration-700 ${teamVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}`}>
+            <div className={`inline-flex items-center px-6 py-3 bg-card border-4 border-foreground rounded-[2rem] text-card-foreground font-black mb-6 shadow-brutal hover:scale-105 transition-all duration-500 ${teamVisible ? "animate-slide-up" : "opacity-0"}`}>
+              <Users className="w-5 h-5 mr-2 text-primary animate-bounce" />
+              Our Team
+              <Star className="w-5 h-5 ml-2 text-accent animate-spin" />
+            </div>
+            <h2 className={`text-4xl md:text-5xl font-black text-foreground mb-4 bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent ${teamVisible ? "animate-slide-up opacity-100" : "opacity-0"}`} style={{ animationDelay: "100ms" }}>
               {t.researchTeamTitle}
             </h2>
-            <p className={`text-lg text-muted-foreground max-w-2xl mx-auto font-medium transition-all duration-700 delay-100 ${teamVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}`}>
+            <p className={`text-lg text-muted-foreground max-w-2xl mx-auto font-medium ${teamVisible ? "animate-slide-up opacity-100" : "opacity-0"}`} style={{ animationDelay: "200ms" }}>
               {t.researchTeamSubtitle}
             </p>
           </div>
@@ -198,12 +208,12 @@ export default function AboutPage({ onBack, language = "en" }: { onBack?: () => 
             {topRow.map((member, index) => (
               <div
                 key={member.id}
-                className={`group rounded-[2rem] overflow-hidden border-4 border-foreground bg-card hover:-translate-y-2 hover:rotate-1 transition-all duration-500 cursor-pointer relative ${shadowBrutal} hover:shadow-xl ${teamVisible ? "animate-fade-in-up opacity-100" : "opacity-0"}`}
+                className={`group rounded-[2rem] overflow-hidden border-4 border-foreground bg-card hover:-translate-y-2 hover:rotate-1 transition-all duration-500 cursor-pointer relative shadow-brutal hover:shadow-xl ${teamVisible ? "animate-slide-up opacity-100" : "opacity-0"}`}
                 style={{ animationDelay: `${300 + index * 100}ms` }}
                 onMouseEnter={() => setHoveredTeamId(member.id)}
                 onMouseLeave={() => setHoveredTeamId(null)}
               >
-                <div className="absolute top-3 left-3 z-20 w-8 h-8 bg-primary rounded-[0.75rem] flex items-center justify-center border-2 border-foreground">
+                <div className="absolute top-3 left-3 z-20 w-8 h-8 bg-primary rounded-[0.75rem] flex items-center justify-center border-[3px] border-foreground shadow-brutal">
                   <span className="text-primary-foreground font-black text-xs">0{index + 1}</span>
                 </div>
                 <div className="relative h-72 overflow-hidden">
@@ -213,7 +223,7 @@ export default function AboutPage({ onBack, language = "en" }: { onBack?: () => 
                   </div>
                 </div>
                 <div className="p-4 relative">
-                  <div className="absolute top-0 right-0 w-12 h-12 bg-accent rounded-bl-[1rem] border-l-2 border-b-2 border-foreground group-hover:scale-110 transition-transform duration-500" />
+                  <div className="absolute top-0 right-0 w-12 h-12 bg-accent rounded-bl-[1rem] border-l-[3px] border-b-[3px] border-foreground group-hover:scale-110 transition-transform duration-500" />
                   <h3 className="text-sm font-black text-foreground mb-1 group-hover:text-primary transition-colors duration-300 pr-12">{member.name}</h3>
                   <p className="text-xs font-bold text-primary mb-0.5">{member.role}</p>
                   <p className="text-xs text-muted-foreground">{member.subtitle}</p>
@@ -227,12 +237,12 @@ export default function AboutPage({ onBack, language = "en" }: { onBack?: () => 
             {bottomRow.map((member, index) => (
               <div
                 key={member.id}
-                className={`group rounded-[2rem] overflow-hidden border-4 border-foreground bg-card hover:-translate-y-2 hover:rotate-1 transition-all duration-500 cursor-pointer relative ${shadowBrutal} hover:shadow-xl ${teamVisible ? "animate-fade-in-up opacity-100" : "opacity-0"}`}
+                className={`group rounded-[2rem] overflow-hidden border-4 border-foreground bg-card hover:-translate-y-2 hover:rotate-1 transition-all duration-500 cursor-pointer relative shadow-brutal hover:shadow-xl ${teamVisible ? "animate-slide-up opacity-100" : "opacity-0"}`}
                 style={{ animationDelay: `${500 + index * 100}ms` }}
                 onMouseEnter={() => setHoveredTeamId(member.id)}
                 onMouseLeave={() => setHoveredTeamId(null)}
               >
-                <div className="absolute top-3 left-3 z-20 w-8 h-8 bg-primary rounded-[0.75rem] flex items-center justify-center border-2 border-foreground">
+                <div className="absolute top-3 left-3 z-20 w-8 h-8 bg-primary rounded-[0.75rem] flex items-center justify-center border-[3px] border-foreground shadow-brutal">
                   <span className="text-primary-foreground font-black text-xs">0{index + 3}</span>
                 </div>
                 <div className="relative h-96 overflow-hidden">
@@ -242,7 +252,7 @@ export default function AboutPage({ onBack, language = "en" }: { onBack?: () => 
                   </div>
                 </div>
                 <div className="p-4 relative">
-                  <div className="absolute top-0 right-0 w-12 h-12 bg-accent rounded-bl-[1rem] border-l-2 border-b-2 border-foreground group-hover:scale-110 transition-transform duration-500" />
+                  <div className="absolute top-0 right-0 w-12 h-12 bg-accent rounded-bl-[1rem] border-l-[3px] border-b-[3px] border-foreground group-hover:scale-110 transition-transform duration-500" />
                   <h3 className="text-sm font-black text-foreground mb-1 group-hover:text-primary transition-colors duration-300 pr-12">{member.name}</h3>
                   <p className="text-xs font-bold text-primary mb-0.5">{member.role}</p>
                   <p className="text-xs text-muted-foreground">{member.subtitle}</p>
@@ -254,13 +264,23 @@ export default function AboutPage({ onBack, language = "en" }: { onBack?: () => 
         </div>
       </section>
 
-      {/* ========== How We Enhance (aboutnew 風格，logo 用 logobig.png) ========== */}
+      {/* ========== How We Enhance（完全依 aboutnew how-we-enhance）========== */}
       <section className="py-12 px-4 bg-background relative overflow-hidden">
+        <div className="absolute inset-0 -z-10">
+          <div className="absolute top-0 left-0 w-80 h-80 bg-primary/20 rounded-[2rem] -translate-x-40 -translate-y-40 animate-morphing shadow-brutal" />
+          <div className="absolute bottom-0 right-0 w-64 h-64 bg-secondary/30 rounded-[2rem] translate-x-32 translate-y-32 rotate-45 animate-float shadow-brutal" />
+          <div className="absolute top-1/2 left-1/4 w-48 h-48 bg-accent/25 rounded-[2rem] rotate-12 animate-pulse shadow-brutal" />
+        </div>
         <div className="max-w-7xl mx-auto relative z-10">
           <div className="flex justify-center mb-8">
             <Image src="/logobig.png" alt="CWrite" width={320} height={100} className="object-contain hover:scale-105 transition-transform duration-500" unoptimized />
           </div>
-          <h2 className="text-4xl md:text-6xl font-black text-foreground mb-4 text-center bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
+          <div className="inline-flex items-center px-8 py-4 bg-card border-4 border-foreground rounded-[2rem] text-card-foreground font-black mb-8 shadow-brutal hover:scale-105 transition-transform duration-300 w-full justify-center">
+            <Sparkles className="w-6 h-6 mr-3 text-primary animate-spin" />
+            Creative Writing
+            <Zap className="w-6 h-6 ml-3 text-accent" />
+          </div>
+          <h2 className="text-5xl md:text-7xl font-black text-foreground mb-8 text-center bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
             {t.enhanceTitle}
           </h2>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto font-medium text-center mb-10">
@@ -274,9 +294,9 @@ export default function AboutPage({ onBack, language = "en" }: { onBack?: () => 
             ].map((block, i) => (
               <div
                 key={i}
-                className={`p-8 rounded-[2rem] border-4 border-foreground bg-card hover:scale-105 hover:-rotate-1 transition-all duration-500 cursor-pointer group ${shadowBrutal} hover:shadow-xl relative overflow-hidden`}
+                className="p-8 rounded-[2rem] border-4 border-foreground bg-card hover:bg-muted/50 hover:scale-105 hover:-rotate-1 transition-all duration-500 cursor-pointer group shadow-brutal hover:shadow-xl relative overflow-hidden"
               >
-                <div className={`absolute top-0 right-0 w-24 h-24 rounded-bl-[2rem] group-hover:scale-110 transition-transform duration-500 ${block.color === "primary" ? "bg-primary" : block.color === "secondary" ? "bg-secondary" : "bg-accent"}`} />
+                <div className={`absolute top-0 right-0 w-24 h-24 rounded-bl-[2rem] group-hover:scale-110 transition-transform duration-500 shadow-brutal ${block.color === "primary" ? "bg-primary" : block.color === "secondary" ? "bg-secondary" : "bg-accent"}`} />
                 <h3 className="text-2xl font-black text-foreground mb-6 group-hover:text-primary transition-colors duration-300 relative z-10">
                   {block.title}
                 </h3>
@@ -288,6 +308,7 @@ export default function AboutPage({ onBack, language = "en" }: { onBack?: () => 
                     </li>
                   ))}
                 </ul>
+                <div className="absolute bottom-1/3 left-6 w-3 h-3 bg-chart-2 rounded-full animate-ping shadow-brutal" style={{ animationDelay: `${i * 0.5}s` }} />
                 <div className="absolute bottom-0 left-0 h-2 w-0 group-hover:w-full transition-all duration-500 bg-gradient-to-r from-primary via-secondary to-accent" />
               </div>
             ))}
@@ -295,7 +316,7 @@ export default function AboutPage({ onBack, language = "en" }: { onBack?: () => 
         </div>
       </section>
 
-      {/* ========== Values (aboutnew 風格) ========== */}
+      {/* ========== Values（完全依 aboutnew values-education：border-3）========== */}
       <section className="py-12 px-4 bg-background">
         <div className="max-w-4xl mx-auto">
           <h2 className="text-4xl md:text-5xl font-black text-foreground mb-8 text-center bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
@@ -305,7 +326,7 @@ export default function AboutPage({ onBack, language = "en" }: { onBack?: () => 
             {t.valuesItems.map((value, index) => (
               <span
                 key={index}
-                className="px-4 py-2 rounded-full border-2 border-foreground font-bold text-sm text-foreground hover:-translate-y-1 hover:shadow-lg transition-all duration-300 bg-card"
+                className="px-4 py-2 rounded-full border-[3px] border-foreground font-bold text-sm text-foreground hover:-translate-y-1 hover:shadow-xl transition-all duration-300 bg-card shadow-brutal cursor-pointer"
               >
                 {value}
               </span>
@@ -343,7 +364,7 @@ export default function AboutPage({ onBack, language = "en" }: { onBack?: () => 
         </div>
       </section>
 
-      <footer className="py-6 px-4 bg-card border-t-4 border-foreground text-center text-muted-foreground text-sm">
+      <footer className="py-6 px-4 bg-card border-t-4 border-foreground text-center text-muted-foreground text-sm shadow-brutal">
         © 2025 CWrite - The Education University of Hong Kong
       </footer>
     </div>
