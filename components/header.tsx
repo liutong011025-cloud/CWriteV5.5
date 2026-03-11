@@ -5,7 +5,6 @@ import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
 type HeaderLanguage = "en" | "zh"
 
@@ -334,13 +333,13 @@ export default function Header() {
                      </Link>
                    )
                  })}
-                 {/* About us 下拉菜單 */}
+                {/* About us 下拉菜單 */}
                  <div className="relative">
                    <button
                      type="button"
                      onClick={() => setAboutMenuOpen((open) => !open)}
                      onMouseEnter={() => setAboutMenuOpen(true)}
-                     className={`px-6 py-3 rounded-lg font-semibold text-lg transition-all duration-200 whitespace-nowrap ${
+                    className={`px-6 py-3 rounded-xl font-semibold text-lg transition-all duration-200 whitespace-nowrap ${
                        isAboutPage
                          ? showBackground
                            ? "text-yellow-200"
@@ -353,13 +352,13 @@ export default function Header() {
                      About us
                    </button>
                    {aboutMenuOpen && (
-                     <div
-                       className="absolute right-0 mt-2 w-56 rounded-xl border border-slate-700/60 bg-slate-900/95 text-sm text-slate-100 shadow-xl py-2 z-50"
+                    <div
+                      className="absolute right-0 mt-2 w-64 rounded-2xl border border-blue-200/30 bg-gradient-to-br from-slate-900/95 via-blue-950/95 to-slate-900/95 text-sm text-slate-100 shadow-2xl py-2 z-50 backdrop-blur-md"
                        onMouseLeave={() => setAboutMenuOpen(false)}
                      >
                        <button
                          type="button"
-                         className="w-full px-4 py-2.5 text-left hover:bg-slate-800/90 transition-colors"
+                        className="w-full px-4 py-3 text-left hover:bg-white/10 transition-all duration-200"
                          onClick={() => {
                            setAboutMenuOpen(false)
                            if (typeof window !== "undefined") {
@@ -367,11 +366,14 @@ export default function Header() {
                            }
                          }}
                        >
-                         Vision &amp; Philosophy
+                        <span className="inline-flex items-center gap-2 font-semibold">
+                          <span className="h-2 w-2 rounded-full bg-fuchsia-300" />
+                          Vision &amp; Philosophy
+                        </span>
                        </button>
                        <button
                          type="button"
-                         className="w-full px-4 py-2.5 text-left hover:bg-slate-800/90 transition-colors"
+                        className="w-full px-4 py-3 text-left hover:bg-white/10 transition-all duration-200"
                          onClick={() => {
                            setAboutMenuOpen(false)
                            if (typeof window !== "undefined") {
@@ -379,29 +381,25 @@ export default function Header() {
                            }
                          }}
                        >
-                         Research team
+                        <span className="inline-flex items-center gap-2 font-semibold">
+                          <span className="h-2 w-2 rounded-full bg-cyan-300" />
+                          Research Team
+                        </span>
                        </button>
                      </div>
                    )}
                  </div>
                  </div>
                  
-                 {/* My Farm 圖標 - 登录后显示，点击进入农场 */}
+                {/* My Farm 文字按钮 - 登录后显示，点击进入农场 */}
                  {userInfo && (
                    <button
                      type="button"
                      onClick={() => window.dispatchEvent(new CustomEvent("navigateToUserProfile"))}
-                     className="relative flex-shrink-0 ml-1 rounded-full focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:ring-offset-2 focus:ring-offset-slate-900/50"
+                    className="relative flex-shrink-0 ml-1 rounded-xl px-4 py-2 bg-white/10 text-white font-bold hover:scale-105 transition-transform duration-200 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:ring-offset-2 focus:ring-offset-slate-900/50"
                      aria-label="Go to My Farm"
                    >
-                     <Image
-                       src="/myfarm.png"
-                       alt="My Farm"
-                       width={80}
-                       height={80}
-                       className="w-12 h-12 md:w-14 md:h-14 object-contain drop-shadow-lg transition-transform duration-200 hover:scale-110"
-                       unoptimized
-                     />
+                    My Farm
                      {userInfo.unreadCount > 0 && (
                        <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
                          {userInfo.unreadCount > 99 ? "99+" : userInfo.unreadCount}
