@@ -175,7 +175,7 @@ export default function JourneyMap({
 
         <div className="pt-4 pb-2 text-center">
           <h1 className="font-hand text-4xl md:text-5xl font-extrabold text-purple-900 drop-shadow-[0_2px_2px_rgba(255,255,255,0.9)]">
-            Your Writing Atlas
+            Writing Map
           </h1>
         </div>
 
