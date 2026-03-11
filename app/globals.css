@@ -197,6 +197,48 @@
   animation: float 3.5s ease-in-out infinite 0.5s;
 }
 
+/* ========== aboutnew 設計：neo-brutalist 動畫與陰影 ========== */
+@keyframes morphing {
+  0%, 100% { border-radius: 2rem; transform: rotate(0deg) scale(1); }
+  25% { border-radius: 3rem; transform: rotate(2deg) scale(1.02); }
+  50% { border-radius: 1.5rem; transform: rotate(-1deg) scale(0.98); }
+  75% { border-radius: 2.5rem; transform: rotate(1deg) scale(1.01); }
+}
+@keyframes slide-up {
+  0% { opacity: 0; transform: translateY(60px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+.animate-morphing {
+  animation: morphing 8s ease-in-out infinite;
+}
+.animate-slide-up {
+  animation: slide-up 0.8s ease-out forwards;
+}
+.shadow-brutal {
+  box-shadow: 2px 2px 3.5px 2px hsl(0 0% 0% / 100%), 2px 4px 6px 1px hsl(0 0% 0% / 100%);
+}
+
+/* aboutnew 配色：僅在 .about-new-theme 內套用 */
+.about-new-theme {
+  --background: oklch(0.98 0.01 85);
+  --foreground: oklch(0.2478 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.2478 0 0);
+  --primary: oklch(0.75 0.18 85);
+  --primary-foreground: oklch(0.2 0 0);
+  --secondary: oklch(0.80 0.12 350);
+  --secondary-foreground: oklch(0.2 0 0);
+  --muted: oklch(0.95 0.02 85);
+  --muted-foreground: oklch(0.4 0 0);
+  --accent: oklch(0.55 0.15 250);
+  --accent-foreground: oklch(1 0 0);
+  --chart-1: oklch(0.75 0.18 85);
+  --chart-2: oklch(0.80 0.12 350);
+  --chart-3: oklch(0.55 0.15 250);
+  --chart-4: oklch(0.85 0.10 85);
+  --chart-5: oklch(0.70 0.14 350);
+}
+
 .styled-scrollbar::-webkit-scrollbar {
   width: 5px;
 }
