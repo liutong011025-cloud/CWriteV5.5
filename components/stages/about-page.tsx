@@ -131,15 +131,17 @@ export default function AboutPage({ onBack, language = "en" }: { onBack?: () => 
   }, [])
 
   return (
-    <div className="about-new-theme min-h-screen bg-background" style={{ paddingTop: "88px", paddingBottom: "48px" }}>
-      {/* ========== Opening：花紋左右超出填滿，主卡加寬，標題上不放 logo ========== */}
-      <section className="min-h-screen flex items-center justify-center relative overflow-hidden">
-        {/* flower 花紋：左右超出屏幕，上下鋪滿無空白 */}
+    <div className="about-new-theme min-h-screen bg-background" style={{ paddingTop: "88px", paddingBottom: "0" }}>
+      {/* ========== Opening：花紋頂到頂部無空白，左右超出 ========== */}
+      <section className="min-h-screen flex items-center justify-center relative overflow-hidden" style={{ marginTop: "-88px", paddingTop: "88px" }}>
+        {/* flower 花紋：從頂部鋪滿、左右超出，無上下空白 */}
         <div
-          className="absolute top-0 bottom-0 left-1/2 -translate-x-1/2 z-0 min-h-full"
+          className="absolute left-1/2 -translate-x-1/2 z-0"
           style={{
+            top: 0,
             width: "120vw",
-            minHeight: "100vh",
+            height: "100%",
+            minHeight: "calc(100vh + 88px)",
             backgroundImage: "url(/flower.png)",
             backgroundRepeat: "repeat",
             backgroundSize: "420px",
@@ -413,8 +415,8 @@ export default function AboutPage({ onBack, language = "en" }: { onBack?: () => 
         </div>
       </section>
 
-      {/* ========== Research Team（aboutusnewest research-team）========== */}
-      <section ref={teamRef} className="py-12 px-4 relative overflow-hidden">
+      {/* ========== Research Team（與 footer 無間隙）========== */}
+      <section ref={teamRef} className="pt-12 pb-0 px-4 relative overflow-hidden">
         <div className={`absolute inset-0 transition-opacity duration-1000 ${teamVisible ? "opacity-100" : "opacity-0"}`}>
           <Image src="/Background.png" alt="" fill className="object-cover" unoptimized />
           <div className="absolute inset-0 bg-background/40" />
@@ -494,9 +496,7 @@ export default function AboutPage({ onBack, language = "en" }: { onBack?: () => 
         </div>
       </section>
 
-      <footer className="py-4 px-4 bg-card border-t-4 border-foreground text-center text-muted-foreground text-sm">
-        © 2025 CWrite - The Education University of Hong Kong
-      </footer>
+      <footer className="py-0 px-4 bg-card border-t-4 border-foreground" />
     </div>
   )
 }
