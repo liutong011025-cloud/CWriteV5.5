@@ -132,31 +132,40 @@ export default function AboutPage({ onBack, language = "en" }: { onBack?: () => 
 
   return (
     <div className="about-new-theme min-h-screen bg-background" style={{ paddingTop: "88px", paddingBottom: "48px" }}>
-      {/* ========== Opening（aboutusnewest opening-section）========== */}
+      {/* ========== Opening：花紋左右超出填滿，主卡加寬，標題上不放 logo ========== */}
       <section className="min-h-screen flex items-center justify-center relative overflow-hidden">
-        <div className="absolute inset-0 z-0" style={{ backgroundImage: "url(/flower.png)", backgroundRepeat: "repeat", backgroundSize: "420px", opacity: 0.75 }} />
+        {/* flower 花紋：左右超出屏幕，上下鋪滿無空白 */}
+        <div
+          className="absolute top-0 bottom-0 left-1/2 -translate-x-1/2 z-0 min-h-full"
+          style={{
+            width: "120vw",
+            minHeight: "100vh",
+            backgroundImage: "url(/flower.png)",
+            backgroundRepeat: "repeat",
+            backgroundSize: "420px",
+            backgroundPosition: "center",
+            opacity: 0.75,
+          }}
+        />
         <div className="absolute top-16 left-10 w-32 h-32 bg-primary rounded-[2rem] rotate-12 animate-float shadow-brutal z-[1]" />
         <div className="absolute bottom-20 right-12 w-24 h-24 bg-secondary rounded-[2rem] -rotate-6 animate-morphing shadow-brutal z-[1]" />
         <div className="absolute top-1/3 right-8 w-16 h-16 bg-accent rounded-[1.5rem] rotate-45 animate-pulse shadow-brutal z-[1]" />
         <div className="absolute bottom-1/3 left-8 w-20 h-20 bg-chart-2 rounded-[2rem] -rotate-12 animate-float shadow-brutal z-[1]" style={{ animationDelay: "1s" }} />
 
-        <div className="relative z-10 max-w-4xl w-full mx-4 md:mx-8 p-10 md:p-20 rounded-[2.5rem] shadow-brutal border-4 border-foreground bg-card/95 backdrop-blur-sm overflow-hidden group hover:shadow-xl transition-all duration-500">
+        <div className="relative z-10 max-w-5xl w-full mx-4 md:mx-8 px-10 md:px-24 py-12 md:py-24 rounded-[2.5rem] shadow-brutal border-4 border-foreground bg-card/95 backdrop-blur-sm overflow-hidden group hover:shadow-xl transition-all duration-500">
           <div className="absolute top-0 right-0 w-28 h-28 bg-primary rounded-bl-[2rem] group-hover:scale-110 transition-transform duration-500 shadow-brutal" />
           <div className="absolute bottom-0 left-0 w-24 h-24 bg-secondary rounded-tr-[2rem] group-hover:scale-110 transition-transform duration-500 shadow-brutal" />
           <div className="absolute top-1/2 right-6 w-4 h-4 bg-accent rounded-full animate-ping" />
           <div className="absolute top-8 left-8 w-3 h-3 bg-chart-2 rounded-full animate-pulse" />
           <div className="relative z-10 text-center">
-            <div className="flex justify-center mb-6">
-              <Image src="/logobig.png" alt="CWrite" width={220} height={72} className="object-contain h-16 w-auto" unoptimized />
-            </div>
             <h1 className="text-4xl sm:text-5xl md:text-7xl font-black text-foreground mb-6 leading-[1.1] tracking-tight">
               {t.openingH1a}
               <br />
               {t.openingH1b}
             </h1>
-            <p className="text-xl md:text-2xl text-muted-foreground mb-5 font-semibold">{t.openingSub}</p>
+            <p className="text-xl md:text-2xl text-muted-foreground mb-6 font-semibold">{t.openingSub}</p>
             <div className="w-24 h-2 bg-gradient-to-r from-primary to-secondary mx-auto rounded-full shadow-brutal mb-6" />
-            <p className="text-base md:text-lg text-muted-foreground leading-relaxed max-w-2xl mx-auto">{t.openingP}</p>
+            <p className="text-lg md:text-xl text-muted-foreground leading-relaxed max-w-3xl mx-auto">{t.openingP}</p>
           </div>
         </div>
       </section>
@@ -288,10 +297,10 @@ export default function AboutPage({ onBack, language = "en" }: { onBack?: () => 
         </div>
       </section>
 
-      {/* ========== Philosophy（aboutusnewest philosophy-section）========== */}
+      {/* ========== Philosophy：背景用 background.png（與 Research 的 Background.png 區分）========== */}
       <section className="py-0 relative overflow-hidden">
         <div className="relative min-h-[600px] md:min-h-[700px] flex items-center justify-center">
-          <Image src="/Background.png" alt="" fill className="object-cover object-center" unoptimized />
+          <Image src="/background.png" alt="" fill className="object-cover object-center" unoptimized />
           <div className="absolute inset-0 bg-black/55" />
           <div className="absolute top-6 left-6 z-20 px-4 py-2 bg-white/10 backdrop-blur-md rounded-[1rem] border border-white/20">
             <p className="text-white/90 text-xs font-semibold leading-tight">Primavera (Botticelli)</p>
