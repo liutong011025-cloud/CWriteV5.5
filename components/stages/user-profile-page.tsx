@@ -58,6 +58,14 @@ interface FarmElementConfig {
   imageSrc: string
 }
 
+/** 與 object-cover 背景對齊的 overlay 矩形（px），overlay 內 % 即為背景圖上的相對位置/大小 */
+interface CoverOverlayRect {
+  width: number
+  height: number
+  left: number
+  top: number
+}
+
 interface FarmElementState {
   x: number
   y: number
@@ -166,6 +174,42 @@ export default function UserProfilePage({
   const farmBackgroundSrc = isOtherFarm ? "/farm2.png" : "/farm.png"
   const farmBackgroundAlt = isOtherFarm ? "Other Student Farm Background" : "My Farm Background"
   const treeCount = 12
+
+  const farmImageRef = useRef<HTMLImageElement | null>(null)
+  const [coverOverlayRect, setCoverOverlayRect] = useState<CoverOverlayRect | null>(null)
+
+  const updateCoverOverlayRect = useCallback(() => {
+    const container = farmContainerRef.current
+    const img = farmImageRef.current
+    if (!container || !img || !img.naturalWidth || !img.naturalHeight) return
+    const cw = container.clientWidth
+    const ch = container.clientHeight
+    const iw = img.naturalWidth
+    const ih = img.naturalHeight
+    const s = Math.max(cw / iw, ch / ih)
+    setCoverOverlayRect({
+      width: s * iw,
+      height: s * ih,
+      left: -(s * iw - cw) / 2,
+      top: -(s * ih - ch) / 2,
+    })
+  }, [])
+
+  useEffect(() => {
+    const container = farmContainerRef.current
+    const img = farmImageRef.current
+    if (!img || !container) return
+    if (img.complete && img.naturalWidth) updateCoverOverlayRect()
+    img.addEventListener("load", updateCoverOverlayRect)
+    window.addEventListener("resize", updateCoverOverlayRect)
+    const ro = new ResizeObserver(updateCoverOverlayRect)
+    ro.observe(container)
+    return () => {
+      img.removeEventListener("load", updateCoverOverlayRect)
+      window.removeEventListener("resize", updateCoverOverlayRect)
+      ro.disconnect()
+    }
+  }, [updateCoverOverlayRect])
 
   useEffect(() => {
     if (!isOtherFarm || typeof window === "undefined") return
@@ -831,14 +875,27 @@ export default function UserProfilePage({
       {/* My Farm - 固定視窗鋪滿，背景 object-cover 不露 firstmap，前景用 % 鎖定相對位置 */}
       <div ref={farmContainerRef} className="fixed inset-0 w-full h-full overflow-hidden">
         <img
+          ref={farmImageRef}
           src={farmBackgroundSrc}
           alt={farmBackgroundAlt}
           className="absolute inset-0 h-full w-full object-cover object-center"
           draggable={false}
         />
 
-        {/* 與視窗同大，所有元素用 % 定位，鎖定與背景的相對位置與大小 */}
-        <div className="absolute inset-0">
+        {/* 與 object-cover 背景同尺度、同裁切，內層 % 即為背景圖上的相對位置與大小，不穿幫 */}
+        <div
+          className="absolute"
+          style={
+            coverOverlayRect
+              ? {
+                  width: coverOverlayRect.width,
+                  height: coverOverlayRect.height,
+                  left: coverOverlayRect.left,
+                  top: coverOverlayRect.top,
+                }
+              : { left: 0, top: 0, right: 0, bottom: 0, width: "100%", height: "100%" }
+          }
+        >
             {!isOtherFarm &&
               Array.from({ length: treeCount }).map((_, index) => {
                 const treeState = farmTreeStates[index] || DEFAULT_TREE_LAYOUT[index]
