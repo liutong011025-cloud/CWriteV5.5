@@ -58,14 +58,6 @@ interface FarmElementConfig {
   imageSrc: string
 }
 
-/** 背景圖在容器內實際顯示的區域（object-contain 後的矩形），用於鎖定元素與背景的相對位置 */
-interface ImageOverlayRect {
-  left: number
-  top: number
-  width: number
-  height: number
-}
-
 interface FarmElementState {
   x: number
   y: number
@@ -170,51 +162,6 @@ export default function UserProfilePage({
 
   const farmElementStates = getDefaultFarmButtonStates(isOtherFarm)
   const farmTreeStates = DEFAULT_TREE_LAYOUT
-
-  const farmImageRef = useRef<HTMLImageElement | null>(null)
-  const [imageOverlayRect, setImageOverlayRect] = useState<ImageOverlayRect | null>(null)
-  const imageOverlayRectRef = useRef<ImageOverlayRect | null>(null)
-  imageOverlayRectRef.current = imageOverlayRect
-
-  const updateImageOverlayRect = () => {
-    const container = farmContainerRef.current
-    const img = farmImageRef.current
-    if (!container || !img) return
-    const cr = container.getBoundingClientRect()
-    const ir = img.getBoundingClientRect()
-    setImageOverlayRect({
-      left: ir.left - cr.left,
-      top: ir.top - cr.top,
-      width: ir.width,
-      height: ir.height,
-    })
-  }
-
-  useEffect(() => {
-    const container = farmContainerRef.current
-    const img = farmImageRef.current
-    if (!img || !container) return
-    if (img.complete) updateImageOverlayRect()
-    img.addEventListener("load", updateImageOverlayRect)
-    window.addEventListener("resize", updateImageOverlayRect)
-    const vv = typeof window !== "undefined" ? window.visualViewport : null
-    if (vv) {
-      vv.addEventListener("resize", updateImageOverlayRect)
-      vv.addEventListener("scroll", updateImageOverlayRect)
-    }
-    const ro = new ResizeObserver(updateImageOverlayRect)
-    ro.observe(container)
-    return () => {
-      img.removeEventListener("load", updateImageOverlayRect)
-      window.removeEventListener("resize", updateImageOverlayRect)
-      if (vv) {
-        vv.removeEventListener("resize", updateImageOverlayRect)
-        vv.removeEventListener("scroll", updateImageOverlayRect)
-      }
-      ro.disconnect()
-    }
-  }, [])
-
 
   const farmBackgroundSrc = isOtherFarm ? "/farm2.png" : "/farm.png"
   const farmBackgroundAlt = isOtherFarm ? "Other Student Farm Background" : "My Farm Background"
@@ -881,32 +828,17 @@ export default function UserProfilePage({
       style={{ paddingTop: 0, paddingBottom: 0 }}
       data-stage="userProfile"
     >
-      <div className="w-full h-screen">
-        {/* My Farm - 全屏農場圖片 + 可拖拽元素 */}
-        <div ref={farmContainerRef} className="relative w-full h-full overflow-hidden">
-          <img
-            ref={farmImageRef}
-            src={farmBackgroundSrc}
-            alt={farmBackgroundAlt}
-            className="absolute inset-0 h-full w-full object-contain"
-            draggable={false}
-          />
+      {/* My Farm - 固定視窗鋪滿，背景 object-cover 不露 firstmap，前景用 % 鎖定相對位置 */}
+      <div ref={farmContainerRef} className="fixed inset-0 w-full h-full overflow-hidden">
+        <img
+          src={farmBackgroundSrc}
+          alt={farmBackgroundAlt}
+          className="absolute inset-0 h-full w-full object-cover object-center"
+          draggable={false}
+        />
 
-          {/* 疊在背景圖實際顯示區域上，使元素座標與大小都相對背景圖，瀏覽器縮放時一齊變化 */}
-          <div
-            className="absolute pointer-events-none"
-            style={
-              imageOverlayRect
-                ? {
-                    left: imageOverlayRect.left,
-                    top: imageOverlayRect.top,
-                    width: imageOverlayRect.width,
-                    height: imageOverlayRect.height,
-                    pointerEvents: "auto",
-                  }
-                : { left: 0, top: 0, right: 0, bottom: 0, width: "100%", height: "100%", pointerEvents: "auto" }
-            }
-          >
+        {/* 與視窗同大，所有元素用 % 定位，鎖定與背景的相對位置與大小 */}
+        <div className="absolute inset-0">
             {!isOtherFarm &&
               Array.from({ length: treeCount }).map((_, index) => {
                 const treeState = farmTreeStates[index] || DEFAULT_TREE_LAYOUT[index]
@@ -1115,8 +1047,8 @@ export default function UserProfilePage({
           )}
         </div>
 
-        {/* Modal: selected review + work content */}
-        {false && selectedReview && (
+      {/* Modal: selected review + work content */}
+      {false && selectedReview && (
           <div
             className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
             onClick={() => setSelectedReview(null)}
@@ -1157,7 +1089,6 @@ export default function UserProfilePage({
             </div>
           </div>
         )}
-      </div>
     </div>
   )
 }
