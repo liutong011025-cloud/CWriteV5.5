@@ -1047,7 +1047,7 @@ export default function Home() {
       {stage === "planTest" && user && (
         <PlanTest
           language={language}
-          onBack={() => setStage("journeyTicket")}
+          onBack={() => setStage("journeyMap")}
           onComplete={async (result) => {
             setWritingAssessment({
               score: result.score,
