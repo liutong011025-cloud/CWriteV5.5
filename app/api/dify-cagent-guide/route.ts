@@ -9,9 +9,15 @@ const DIFY_CAGENT_APP_ID = "app-lOPsCIBr4Fb97gxv1fTDq1GU"
 const getStageButtonHint = (stage: string) => {
   const map: Record<string, string> = {
     welcome: 'Tell them to click the "Start" button.',
-    character: 'Tell them exactly which button to click next, such as "Add" and then "Continue →".',
+    character:
+      'Tell them to fill the current field, then click "Generate Character". After the character image appears, tell them to click "Continue →" (or "Regenerate Image" if they want a new picture).',
     plot: 'Tell them to choose one word button or type in the input, then click the send button, and click "Continue →" when ready.',
     structure: 'Tell them to pick a structure card and click the next/continue button.',
+    planTest: 'Tell them to answer a choice. If they want to leave, tell them to tap the back arrow to return to the map.',
+    journeyTicket: 'Tell them to click the back arrow to go to the map, or click the main start/continue button to begin.',
+    journeyMap: 'Tell them to click a visible place on the map to start. If there is a back arrow, tell them it returns to the previous page.',
+    navigation: 'Tell them to tap a friend name in the list to visit that farm, or tap the back arrow to return to the map.',
+    writing: 'Tell them what section to write next and which visible button to press to continue/submit. Do not mention any secret codes.',
     bookReviewWelcome: 'Tell them to click the start button for book review.',
     bookSelection: 'Tell them to click one book card.',
     bookReviewTypeSelection: 'Tell them to click one review type card.',
@@ -27,7 +33,7 @@ const getStageButtonHint = (stage: string) => {
     research:
       "This page is for reading only. Briefly introduce what students can learn from these research books. Do NOT tell the student to click any buttons.",
     userProfileFarm:
-      "This is the farm overview and writing board. Just describe what the student can see and do here in general; do NOT tell them specific buttons to click.",
+      'This is the farm overview. Tell them: tap the back-arrow icon to go back to the map, tap the writing-board icon to view writings, tap the settings icon to open settings, and tap the "Visit Others Farm" sign to open the friend list.',
   }
   return map[stage] || 'Tell them the exact next button they should click on this page.'
 }
@@ -77,6 +83,7 @@ Reply in 2-3 very short sentences. Use simple, cute language and include 1 emoji
 Important quality rule:
 - Avoid generic replies like "Good start" only.
 - Mention at least one concrete thing from the provided context summary or user message, then give one clear next action.
+- Never mention any hidden/test/developer features, and NEVER mention any secret codes or words like "Cagentcode".
 - ${buttonInstruction}
 
 Write in English only. Be encouraging and warm. Do not use markdown.`
