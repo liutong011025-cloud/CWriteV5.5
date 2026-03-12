@@ -133,7 +133,7 @@ export default function NavigationPage({ onBack, onSelectFarm, currentUsername }
             <button
               type="button"
               onClick={onBack}
-              className="absolute z-20 w-[9%] aspect-square transition-transform duration-200 hover:scale-110"
+              className="absolute z-20 w-[7%] aspect-square transition-transform duration-200 hover:scale-110"
               style={{ left: "2%", top: "8%" }}
               aria-label="Back"
             >
