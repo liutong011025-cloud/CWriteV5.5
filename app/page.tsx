@@ -2259,8 +2259,35 @@ export default function Home() {
           userRole="student"
           currentUsername={user.username}
           currentUserRole={user.role}
-          onBack={() => setStage("journeyMap")}
-          onOpenSettings={() => setStage("journeyMap")}
+          onBack={() => {
+            // 返回自己的農場與地圖：確保旅程地圖狀態已就緒
+            setJourneyActive(true)
+            if (!journeySelection) {
+              setJourneySelection({ type: "story", difficulty: writingAssessment?.level || 1 })
+            }
+            if (!writingAssessment) {
+              setWritingAssessment({
+                score: planTestResult?.score ?? 0,
+                level: planTestResult?.level ?? 1,
+                mapImageStatus: "idle",
+              })
+            }
+            setStage("journeyMap")
+          }}
+          onOpenSettings={() => {
+            setJourneyActive(true)
+            if (!journeySelection) {
+              setJourneySelection({ type: "story", difficulty: writingAssessment?.level || 1 })
+            }
+            if (!writingAssessment) {
+              setWritingAssessment({
+                score: planTestResult?.score ?? 0,
+                level: planTestResult?.level ?? 1,
+                mapImageStatus: "idle",
+              })
+            }
+            setStage("journeyMap")
+          }}
           isOtherFarm
         />
       )}
