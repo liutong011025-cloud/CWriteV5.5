@@ -333,15 +333,11 @@ export default function Header() {
                      </Link>
                    )
                  })}
-                {/* About us 下拉菜單：位置對齊文字，樣式更簡潔 */}
-                 <div
-                   className="relative"
-                   onMouseLeave={() => setAboutMenuOpen(false)}
-                 >
+                {/* About us 下拉菜單：改為點擊開關，不因移出 header 立即消失 */}
+                 <div className="relative">
                    <button
                      type="button"
                      onClick={() => setAboutMenuOpen((open) => !open)}
-                     onMouseEnter={() => setAboutMenuOpen(true)}
                      className={`px-6 py-3 rounded-xl font-semibold text-lg transition-all duration-200 whitespace-nowrap ${
                        isAboutPage
                          ? showBackground
