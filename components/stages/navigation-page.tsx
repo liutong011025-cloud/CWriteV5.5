@@ -61,36 +61,38 @@ export default function NavigationPage({ onBack, onSelectFarm, currentUsername }
   }, [currentUsername])
 
   return (
-    <div
-      className="min-h-screen w-full flex items-center justify-center bg-cover bg-center bg-no-repeat"
-      style={{ backgroundImage: "url(/navigation.png)" }}
-      data-stage="navigation"
-    >
-      {/* 這個容器必須有具體高度，top 的百分比才會生效 */}
-      <div className="relative w-full min-h-screen">
-        {/* 可選：左上角返回按鈕 */}
-        {onBack && (
-          <button
-            type="button"
-            onClick={onBack}
-            className="absolute left-4 top-14 z-20 transition-transform duration-200 hover:scale-110"
-            aria-label="Back"
-          >
-            <img src="/back.png" alt="Back" className="h-24 w-24 object-contain lg:h-28 lg:w-28" />
-          </button>
-        )}
+    <div className="min-h-screen w-full" data-stage="navigation">
+      {/* 固定視窗鋪滿，背景 object-cover 不露 firstmap，前景用 % 鎖定相對位置 */}
+      <div className="fixed inset-0 w-full h-full overflow-hidden">
+        <img
+          src="/navigation.png"
+          alt="Navigation"
+          className="absolute inset-0 w-full h-full object-cover object-center"
+        />
+        <div className="absolute inset-0">
+          {/* 可選：左上角返回按鈕（用 % 鎖定相對位置） */}
+          {onBack && (
+            <button
+              type="button"
+              onClick={onBack}
+              className="absolute z-20 w-[12%] max-w-28 aspect-square transition-transform duration-200 hover:scale-110"
+              style={{ left: "2%", top: "8%" }}
+              aria-label="Back"
+            >
+              <img src="/back.png" alt="Back" className="w-full h-full object-contain" />
+            </button>
+          )}
 
-        {/* 右側標題文字 + 列表（根據測試參數定位） */}
-        <div
-          className="absolute z-10 space-y-3"
-          style={{
-            left: `${rectLeft}%`,
-            top: `${rectTop}%`,
-            width: `${rectWidth}%`,
-            // 僅水平居中，垂直位置完全由 top 控制，避免展開列表時把文字頂上去
-            transform: "translateX(-50%)",
-          }}
-        >
+          {/* 右側標題文字 + 列表（根據百分比定位） */}
+          <div
+            className="absolute z-10 space-y-3"
+            style={{
+              left: `${rectLeft}%`,
+              top: `${rectTop}%`,
+              width: `${rectWidth}%`,
+              transform: "translateX(-50%)",
+            }}
+          >
           {/* 點擊文字（不再有圓角矩形框） */}
           <p
             className="w-full cursor-pointer text-center text-base sm:text-lg font-black text-slate-500 drop-shadow-[0_1px_0_rgba(255,255,255,0.98)] tracking-wide transition-transform hover:scale-105"
@@ -130,6 +132,7 @@ export default function NavigationPage({ onBack, onSelectFarm, currentUsername }
               </ul>
             </div>
           )}
+          </div>
         </div>
       </div>
     </div>
