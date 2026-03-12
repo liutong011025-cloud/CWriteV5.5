@@ -188,21 +188,14 @@ export default function Cagent({
           onMouseEnter={() => setIsInteracting(true)}
           onMouseLeave={() => setIsInteracting(false)}
         >
-          <div className="flex items-start gap-2 text-base text-foreground">
+          <div className="flex items-start gap-2 text-lg text-foreground">
             <div className="flex-1">
-              <div className="relative">
-                <p
-                  className="whitespace-pre-wrap"
-                  style={{ fontFamily: '"Comic Neue", var(--font-comic-neue), "Comic Sans MS", cursive' }}
-                >
-                  {displayMessage}
-                </p>
-                {!valuesMessage && (
-                  <span className="pointer-events-none absolute -right-1 -bottom-1 text-lg text-purple-500/80 animate-pulse">
-                    🖱
-                  </span>
-                )}
-              </div>
+              <p
+                className="whitespace-pre-wrap"
+                style={{ fontFamily: '"Comic Neue", var(--font-comic-neue), "Comic Sans MS", cursive' }}
+              >
+                {displayMessage}
+              </p>
               {!valuesMessage && (
                 <form onSubmit={handleSendMessage} className="mt-3 flex gap-2">
                   <input
