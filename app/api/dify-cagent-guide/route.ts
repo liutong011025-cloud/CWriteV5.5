@@ -19,6 +19,15 @@ const getStageButtonHint = (stage: string) => {
     letterGame: 'Tell them to click submit/continue after finishing each section.',
     poetryWriting: 'Tell them which visible button to click next in this page.',
     dramaWriting: 'Tell them which visible button to click next in this page.',
+    about: "This page is for reading only. Give a short, friendly introduction and do NOT ask the student to click any button.",
+    aboutVision:
+      "This page is for reading only. Briefly introduce the vision & philosophy. Do NOT tell the student to click any buttons.",
+    aboutResearch:
+      "This page is for reading only. Briefly introduce the research team. Do NOT tell the student to click any buttons.",
+    research:
+      "This page is for reading only. Briefly introduce what students can learn from these research books. Do NOT tell the student to click any buttons.",
+    userProfileFarm:
+      "This is the farm overview and writing board. Just describe what the student can see and do here in general; do NOT tell them specific buttons to click.",
   }
   return map[stage] || 'Tell them the exact next button they should click on this page.'
 }
@@ -42,6 +51,19 @@ export async function POST(request: NextRequest) {
     const normalizedStage = String(stage || "unknown")
     const stageButtonHint = getStageButtonHint(normalizedStage)
 
+    const isReadOnlyStage = [
+      "about",
+      "aboutVision",
+      "aboutResearch",
+      "research",
+      "userProfileFarm",
+    ].includes(normalizedStage)
+
+    const buttonInstruction = isReadOnlyStage
+      ? `- ${stageButtonHint}`
+      : `- ${stageButtonHint}
+- The "next action" sentence must include a concrete button label in quotes, e.g. click "Add" or click "Continue →".`
+
     const basePrompt = `You are Cagent, a friendly AI assistant for elementary students in a creative writing app. You know every page of the app. Your answers must always be in simple English that a young child can understand.
 
 Current page/stage: ${normalizedStage}
@@ -55,8 +77,7 @@ Reply in 2-3 very short sentences. Use simple, cute language and include 1 emoji
 Important quality rule:
 - Avoid generic replies like "Good start" only.
 - Mention at least one concrete thing from the provided context summary or user message, then give one clear next action.
-- ${stageButtonHint}
-- The "next action" sentence must include a concrete button label in quotes, e.g. click "Add" or click "Continue →".
+- ${buttonInstruction}
 
 Write in English only. Be encouraging and warm. Do not use markdown.`
 
