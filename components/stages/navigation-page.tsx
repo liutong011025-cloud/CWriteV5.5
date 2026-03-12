@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
 interface FriendFarm {
   name: string
@@ -43,9 +43,54 @@ const FRIEND_NAMES = [
   "Luthor",
 ]
 
+/** 與 object-cover 背景對齊的 overlay 矩形（px） */
+interface CoverOverlayRect {
+  width: number
+  height: number
+  left: number
+  top: number
+}
+
 export default function NavigationPage({ onBack, onSelectFarm, currentUsername }: NavigationPageProps) {
   const [listOpen, setListOpen] = useState(false)
-  // 固定為你提供的最終位置
+  const containerRef = useRef<HTMLDivElement>(null)
+  const imgRef = useRef<HTMLImageElement>(null)
+  const [coverOverlayRect, setCoverOverlayRect] = useState<CoverOverlayRect | null>(null)
+
+  const updateCoverOverlayRect = useCallback(() => {
+    const container = containerRef.current
+    const img = imgRef.current
+    if (!container || !img || !img.naturalWidth || !img.naturalHeight) return
+    const cw = container.clientWidth
+    const ch = container.clientHeight
+    const iw = img.naturalWidth
+    const ih = img.naturalHeight
+    const s = Math.max(cw / iw, ch / ih)
+    setCoverOverlayRect({
+      width: s * iw,
+      height: s * ih,
+      left: -(s * iw - cw) / 2,
+      top: -(s * ih - ch) / 2,
+    })
+  }, [])
+
+  useEffect(() => {
+    const container = containerRef.current
+    const img = imgRef.current
+    if (!img || !container) return
+    if (img.complete && img.naturalWidth) updateCoverOverlayRect()
+    img.addEventListener("load", updateCoverOverlayRect)
+    window.addEventListener("resize", updateCoverOverlayRect)
+    const ro = new ResizeObserver(updateCoverOverlayRect)
+    ro.observe(container)
+    return () => {
+      img.removeEventListener("load", updateCoverOverlayRect)
+      window.removeEventListener("resize", updateCoverOverlayRect)
+      ro.disconnect()
+    }
+  }, [updateCoverOverlayRect])
+
+  // 固定為你提供的最終位置（相對背景圖的 %）
   const rectLeft = 74.5 // 百分比，0-100
   const rectTop = 32.0 // 百分比，0-100
   const rectWidth = 38.5 // 百分比，0-100
@@ -62,20 +107,33 @@ export default function NavigationPage({ onBack, onSelectFarm, currentUsername }
 
   return (
     <div className="min-h-screen w-full" data-stage="navigation">
-      {/* 固定視窗鋪滿，背景 object-cover 不露 firstmap，前景用 % 鎖定相對位置 */}
-      <div className="fixed inset-0 w-full h-full overflow-hidden">
+      <div ref={containerRef} className="fixed inset-0 w-full h-full overflow-hidden">
         <img
+          ref={imgRef}
           src="/navigation.png"
           alt="Navigation"
           className="absolute inset-0 w-full h-full object-cover object-center"
         />
-        <div className="absolute inset-0">
-          {/* 可選：左上角返回按鈕（用 % 鎖定相對位置） */}
+        {/* 與 object-cover 背景同尺度、同裁切，內層 % 即為背景圖上的相對位置與大小 */}
+        <div
+          className="absolute"
+          style={
+            coverOverlayRect
+              ? {
+                  width: coverOverlayRect.width,
+                  height: coverOverlayRect.height,
+                  left: coverOverlayRect.left,
+                  top: coverOverlayRect.top,
+                }
+              : { left: 0, top: 0, right: 0, bottom: 0, width: "100%", height: "100%" }
+          }
+        >
+          {/* 返回按鈕：相對背景圖的 % */}
           {onBack && (
             <button
               type="button"
               onClick={onBack}
-              className="absolute z-20 w-[12%] max-w-28 aspect-square transition-transform duration-200 hover:scale-110"
+              className="absolute z-20 w-[12%] aspect-square transition-transform duration-200 hover:scale-110"
               style={{ left: "2%", top: "8%" }}
               aria-label="Back"
             >
@@ -83,7 +141,7 @@ export default function NavigationPage({ onBack, onSelectFarm, currentUsername }
             </button>
           )}
 
-          {/* 右側標題文字 + 列表（根據百分比定位） */}
+          {/* 右側標題文字 + 列表（相對背景圖的 %） */}
           <div
             className="absolute z-10 space-y-3"
             style={{
