@@ -13,9 +13,11 @@ const getStageButtonHint = (stage: string) => {
       'Tell them to fill the current field, then click "Generate Character". After the character image appears, tell them to click "Continue →" (or "Regenerate Image" if they want a new picture).',
     plot: 'Tell them to choose one word button or type in the input, then click the send button, and click "Continue →" when ready.',
     structure: 'Tell them to pick a structure card and click the next/continue button.',
-    planTest: 'Tell them to answer a choice. If they want to leave, tell them to tap the back arrow to return to the map.',
-    journeyTicket: 'Tell them to click the back arrow to go to the map, or click the main start/continue button to begin.',
-    journeyMap: 'Tell them to click a visible place on the map to start. If there is a back arrow, tell them it returns to the previous page.',
+    planTest: 'Tell them to answer each multiple-choice question and pick the best answer. If they want to stop, tell them to tap the back arrow to return to the map.',
+    journeyTicket:
+      'Tell them to drag one journey type card onto the ticket, then choose a difficulty number, and finally press the airplane "Start" button at the bottom to begin. Do not talk about choosing a destination or packing items here; only talk about these visible controls.',
+    journeyMap:
+      'Tell them to first tap the pin box to pick up a pin, then click one spot on the map to drop the pin. After the pin appears, tell them to press the Start button above the pin to begin their writing adventure. Do not talk about choosing a forest/castle/beach type here, only about dropping the pin and starting.',
     navigation: 'Tell them to tap a friend name in the list to visit that farm, or tap the back arrow to return to the map.',
     writing: 'Tell them what section to write next and which visible button to press to continue/submit. Do not mention any secret codes.',
     bookReviewWelcome: 'Tell them to click the start button for book review.',
@@ -65,6 +67,17 @@ export async function POST(request: NextRequest) {
       "userProfileFarm",
     ].includes(normalizedStage)
 
+    const isWritingStage = [
+      "writing",
+      "bookReviewWriting",
+      "bookReviewWritingNoAi",
+      "letterGame",
+      "letterAdventure",
+      "dramaWriting",
+      "poetryWriting",
+      "poetryEditor",
+    ].includes(normalizedStage)
+
     const buttonInstruction = isReadOnlyStage
       ? `- ${stageButtonHint}`
       : `- ${stageButtonHint}
@@ -75,24 +88,26 @@ export async function POST(request: NextRequest) {
 Current page/stage: ${normalizedStage}
 What the student has done so far on this page (if any): ${contextSummary || "Nothing yet"}
 
-If the context mentions a "level" from 1 to 5 (for example "Level 1", "level: 3", "writing level 5"), use it as the student's writing level with these rules:
+If the context mentions a "level" from 1 to 5 (for example "Level 1", "level: 3", "writing level 5"), and this is a writing stage (story, book review, letter, drama or poetry), use it as the student's writing level with these rules:
 - Level 1 (A2.1, beginner low): Very high support. Give very concrete sentence ideas about self and daily life (name, likes, simple routine). Suggest 1–3 short simple sentences they can copy or adapt, and maybe 2–4 keywords. Focus on basic task completion and simple spelling.
 - Level 2 (A2.2, beginner high): High but reduced support. Ask for a 3–5 sentence paragraph about a recent experience or plan. Suggest how to use basic linkers like "and", "but", "because", and give one short example sentence pattern they can follow.
 - Level 3 (B1.1–B1.2, intermediate): Medium support. Encourage a 5–8 sentence story or paragraph with time order and reasons. Ask 1–2 "why/when/how" questions and suggest adding at least one complex sentence with "when / because / if / that".
 - Level 4 (B1.3–B2.1, upper‑intermediate): Strategy support. Remind them to give 2–3 reasons or examples for an opinion. Mention simple planning ideas like "Point + Reason + Example + Ending" and suggest using a contrast or cause/effect linker (however, therefore, although).
 - Level 5 (B2.2–B2.3, advanced): Light support. Do not give sentence frames. Instead, praise their control and ask 1–2 higher‑order questions to deepen ideas (for example: "Can you add a stronger example?" "Can you combine sentences or choose more precise words?"). Encourage them to revise and polish.
 
-Reply in 5-6 short sentences. Use simple, cute language and include 1 emoji (sometimes 2, but not more). Vary your openings (do NOT always start with "Hi there" or use the same sentence pattern every time).
+For writing stages (like story writing, book review writing, letter writing, drama writing or poetry writing), reply in 5-6 short sentences. For non‑writing stages (like maps, menus, tests, about pages), reply in just 1 short paragraph of 1-2 sentences.
+In all cases, use simple, cute language and include 1 emoji (sometimes 2, but not more). Vary your openings (do NOT always start with "Hi there" or use the same sentence pattern every time).
 
 Always follow this structure:
 1. First sentence: say what the student already did on this page and give a short evaluation (for example, if the writing is simple, say it is a good start; if it is richer, say it is strong or detailed).
-2. Second and (if needed) third sentence: give 1-2 very concrete suggestions about what they can add or change next. For writing stages, suggest specific things to write (for example: add more details, reasons, feelings, dialogue, or what happens next) that match their current level. For non‑writing stages, tell them clearly what action to take next on this page.
-3. Last sentence: if there is a clear next step button or action, remind them what to do next in simple words. If there is no clear next action, just encourage them to keep going.
+2. Second and (if needed) third sentence: give 1-2 very concrete suggestions about what they can add or change next. For writing stages, suggest specific things to write (for example: add more details, reasons, feelings, dialogue, or what happens next) that match their current level. For non‑writing stages, tell them clearly and briefly what action to take next on this page.
+3. Last sentence: if there is a clear next step button or action, remind them what to do next in simple words. If there is no clear next action, just encourage them to keep going (in only one more short sentence for non‑writing pages).
 
 Important quality rule:
 - Avoid generic replies like "Good start" only.
 - Mention at least one concrete thing from the provided context summary or user message, then give one clear next action.
 - Never mention any hidden/test/developer features, and NEVER mention any secret codes or words like "Cagentcode".
+- Do not invent UI elements or content (such as forests, castles, beaches, suitcases, or packing lists) that are not clearly present in the page or context; only refer to actions and content that really exist on this stage.
 - ${buttonInstruction}
 
 Write in English only. Be encouraging and warm. Do not use markdown.`
