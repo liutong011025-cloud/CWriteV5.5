@@ -153,15 +153,35 @@ export default function CopywritingToolbar({ username, stage }: CopywritingToolb
         }),
       })
 
-      const data = await res.json().catch(() => ({}))
+      const data = (await res.json().catch(() => ({}))) as {
+        success?: boolean
+        file?: string | null
+        count?: number
+        payload?: unknown
+        error?: string
+      }
+
       if (!res.ok || !data.success) {
         console.error("Failed to save copywriting changes:", data)
-        window.alert("保存修改失敗，請稍後再試。")
+        if (data && (data as any).payload) {
+          // 後端已經把完整 payload 返回，仍然給你一個可以複製的 JSON
+          const json = JSON.stringify((data as any).payload, null, 2)
+          window.alert(
+            `伺服器寫檔失敗，但已回傳修改內容。\n\n請打開開發者工具 Network，查詢 /api/copywriting-changes 的 Response，或複製以下 JSON 給我：\n\n${json}`,
+          )
+        } else {
+          window.alert("保存修改失敗，請稍後再試。")
+        }
         return
       }
 
+      const msgFile = data.file ? `\n\n伺服器路徑：${data.file}` : ""
+      const msgJson = data.payload
+        ? "\n\n同時已把完整 JSON 返回給前端，你可在 Network 裡打開這次請求的 Response，直接複製發給我。"
+        : ""
+
       window.alert(
-        `已保存 ${changes.length} 條修改。\n\n伺服器路徑：${data.file}\n\n你可以把這個文件內容發給我，然後我幫你逐條改進站內文字。`,
+        `已保存 ${changes.length} 條修改。${msgFile}${msgJson}`,
       )
     } catch (error) {
       console.error("Error saving copywriting changes:", error)
