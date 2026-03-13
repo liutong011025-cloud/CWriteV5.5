@@ -14,10 +14,10 @@ export default function ClickSoundProvider() {
 
     const audio = new Audio("/click.MP3")
     audio.preload = "auto"
+    audio.volume = 0.25
 
     const handleClick = () => {
       try {
-        // 若正在播放，從頭開始，避免積累延遲
         audio.currentTime = 0
         void audio.play()
       } catch {
