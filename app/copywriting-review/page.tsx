@@ -59,12 +59,44 @@ export default function CopywritingReviewPage() {
     }
   }
 
+  const handleDelete = async (id: string) => {
+    if (!window.confirm("確定要刪除這筆修改記錄嗎？刪除後無法恢復。")) return
+    try {
+      const res = await fetch(`/api/copywriting-changes/${id}`, {
+        method: "DELETE",
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Failed to delete change")
+      }
+      setItems((prev) => prev.filter((it) => it.id !== id))
+    } catch (err) {
+      console.error("Failed to delete copywriting change:", err)
+      alert("刪除失敗，請稍後再試。")
+    }
+  }
+
   return (
     <div className="mx-auto flex max-w-5xl flex-col gap-4 px-4 py-6">
-      <h1 className="text-2xl font-bold">Copywriting 修改記錄</h1>
-      <p className="text-sm text-muted-foreground">
-        這裡會顯示所有通過「完成修改」提交到後端的文案變更。你可以按每一項旁邊的按鈕，把 JSON 內容複製給我。
-      </p>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold">Copywriting 修改記錄</h1>
+          <p className="text-sm text-muted-foreground">
+            這裡會顯示所有通過「完成修改」提交到後端的文案變更。你可以按每一項旁邊的按鈕，把 JSON 內容複製給我。
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => {
+            if (typeof window !== "undefined") {
+              window.location.href = "/"
+            }
+          }}
+          className="inline-flex items-center justify-center rounded-md border border-input bg-background px-3 py-1.5 text-xs font-semibold hover:bg-accent"
+        >
+          返回寫作首頁
+        </button>
+      </div>
 
       <div className="flex flex-wrap items-center gap-2 rounded-md bg-muted px-3 py-2 text-sm">
         <span className="font-semibold">篩選使用者：</span>
@@ -113,13 +145,22 @@ export default function CopywritingReviewPage() {
                     <span>{createdAt.toLocaleString()}</span>
                   </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => handleCopyJson(item.payload)}
-                  className="inline-flex items-center justify-center rounded-md bg-emerald-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-600"
-                >
-                  複製這筆 JSON
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleCopyJson(item.payload)}
+                    className="inline-flex items-center justify-center rounded-md bg-emerald-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-600"
+                  >
+                    複製這筆 JSON
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(item.id)}
+                    className="inline-flex items-center justify-center rounded-md border border-red-500 px-3 py-1.5 text-xs font-semibold text-red-500 hover:bg-red-500/10"
+                  >
+                    刪除這筆
+                  </button>
+                </div>
               </div>
             </div>
           )
