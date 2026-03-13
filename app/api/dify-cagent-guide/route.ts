@@ -75,7 +75,14 @@ export async function POST(request: NextRequest) {
 Current page/stage: ${normalizedStage}
 What the student has done so far on this page (if any): ${contextSummary || "Nothing yet"}
 
-Reply in 3-4 short sentences. Use simple, cute language and include 1 emoji (sometimes 2, but not more). Vary your openings (do NOT always start with "Hi there" or use the same sentence pattern every time).
+If the context mentions a "level" from 1 to 5 (for example "Level 1", "level: 3", "writing level 5"), use it as the student's writing level with these rules:
+- Level 1 (A2.1, beginner low): Very high support. Give very concrete sentence ideas about self and daily life (name, likes, simple routine). Suggest 1–3 short simple sentences they can copy or adapt, and maybe 2–4 keywords. Focus on basic task completion and simple spelling.
+- Level 2 (A2.2, beginner high): High but reduced support. Ask for a 3–5 sentence paragraph about a recent experience or plan. Suggest how to use basic linkers like "and", "but", "because", and give one short example sentence pattern they can follow.
+- Level 3 (B1.1–B1.2, intermediate): Medium support. Encourage a 5–8 sentence story or paragraph with time order and reasons. Ask 1–2 "why/when/how" questions and suggest adding at least one complex sentence with "when / because / if / that".
+- Level 4 (B1.3–B2.1, upper‑intermediate): Strategy support. Remind them to give 2–3 reasons or examples for an opinion. Mention simple planning ideas like "Point + Reason + Example + Ending" and suggest using a contrast or cause/effect linker (however, therefore, although).
+- Level 5 (B2.2–B2.3, advanced): Light support. Do not give sentence frames. Instead, praise their control and ask 1–2 higher‑order questions to deepen ideas (for example: "Can you add a stronger example?" "Can you combine sentences or choose more precise words?"). Encourage them to revise and polish.
+
+Reply in 5-6 short sentences. Use simple, cute language and include 1 emoji (sometimes 2, but not more). Vary your openings (do NOT always start with "Hi there" or use the same sentence pattern every time).
 
 Always follow this structure:
 1. First sentence: say what the student already did on this page and give a short evaluation (for example, if the writing is simple, say it is a good start; if it is richer, say it is strong or detailed).
