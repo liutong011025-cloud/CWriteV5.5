@@ -199,14 +199,27 @@ export default function CopywritingToolbar({ username, stage }: CopywritingToolb
           Copywriting 模式：當前帳號 <strong>{username}</strong>，本頁所有文字可直接點擊編輯。
         </span>
       </div>
-      <button
-        type="button"
-        onClick={handleSave}
-        disabled={isSaving}
-        className="ml-auto inline-flex items-center justify-center rounded-md bg-emerald-500 hover:bg-emerald-600 disabled:bg-emerald-500/60 px-3 py-1.5 text-xs sm:text-sm font-semibold shadow"
-      >
-        {isSaving ? "保存中..." : "完成修改（匯出變更）"}
-      </button>
+      <div className="ml-auto flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => {
+            if (typeof window !== "undefined") {
+              window.open("/copywriting-review", "_blank", "noopener,noreferrer")
+            }
+          }}
+          className="inline-flex items-center justify-center rounded-md border border-emerald-400/70 bg-transparent px-3 py-1.5 text-xs sm:text-sm font-semibold text-emerald-200 hover:bg-emerald-600/20"
+        >
+          查看修改列表
+        </button>
+        <button
+          type="button"
+          onClick={handleSave}
+          disabled={isSaving}
+          className="inline-flex items-center justify-center rounded-md bg-emerald-500 hover:bg-emerald-600 disabled:bg-emerald-500/60 px-3 py-1.5 text-xs sm:text-sm font-semibold shadow"
+        >
+          {isSaving ? "保存中..." : "完成修改（匯出變更）"}
+        </button>
+      </div>
     </div>
   )
 }
