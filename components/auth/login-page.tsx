@@ -7,8 +7,16 @@ import { Input } from "@/components/ui/input"
 import { toast } from "sonner"
 import SpotlightCard from "@/components/ui/spotlight-card"
 
+interface LoginUser {
+  username: string
+  role: "teacher" | "student"
+  noAi?: boolean
+  // 文案專用帳號標記（copywriting）
+  isCopywriter?: boolean
+}
+
 interface LoginPageProps {
-  onLogin: (user: { username: string; role: 'teacher' | 'student'; noAi?: boolean }, showContinueDialog?: boolean) => void
+  onLogin: (user: LoginUser, showContinueDialog?: boolean) => void
 }
 
 export default function LoginPage({ onLogin }: LoginPageProps) {
