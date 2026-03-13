@@ -68,13 +68,8 @@ export default function GuidedWriting({ language, storyState, onStoryWrite, onBa
     return countWords(currentSectionText)
   }, [currentSectionText])
 
-  const shortEvaluation = useMemo(() => {
-    const content = aiEvaluation.trim().replace(/\s+/g, " ")
-    if (!content) return ""
-    // 顯示前兩句，避免只剩一句「Good start」
-    const twoSentences = content.match(/^(.{1,220}?[.!?。！？])\s*(.{1,220}?[.!?。！？])?/)?.[0] ?? content
-    return twoSentences.length > 220 ? `${twoSentences.slice(0, 220)}...` : twoSentences
-  }, [aiEvaluation])
+  // 對話框可關閉；學生繼續寫、收到新評語時會再次顯示
+  const [showEvaluationBubble, setShowEvaluationBubble] = useState(true)
 
   const activeBearPosition = writingMood === "hang" ? hangPosition : sitPosition
 
@@ -188,6 +183,7 @@ export default function GuidedWriting({ language, storyState, onStoryWrite, onBa
           }
 
           setAiEvaluation(data.evaluation || "")
+          setShowEvaluationBubble(true)
           if (data.secretCodeDetected && data.secretCode) {
             setGoodEnoughSecret(data.secretCode)
             setWritingMood("like")
@@ -377,9 +373,19 @@ export default function GuidedWriting({ language, storyState, onStoryWrite, onBa
                           Save me!
                         </div>
                       )}
-                      {writingMood !== "hang" && (isLoadingEvaluation || shortEvaluation) && (
-                        <div className="absolute left-1/2 top-full mt-2 w-[340px] -translate-x-1/2 rounded-2xl border border-purple-300 bg-white/95 px-4 py-3 text-sm text-purple-800 shadow-xl">
-                          {isLoadingEvaluation ? "Cagent is thinking..." : shortEvaluation}
+                      {writingMood !== "hang" && showEvaluationBubble && (isLoadingEvaluation || aiEvaluation) && (
+                        <div className="absolute left-1/2 top-full mt-2 w-[340px] max-h-[280px] -translate-x-1/2 rounded-2xl border border-purple-300 bg-white/95 px-4 py-3 pt-8 text-sm text-purple-800 shadow-xl relative">
+                          <button
+                            type="button"
+                            onClick={() => setShowEvaluationBubble(false)}
+                            className="absolute top-2 right-2 rounded p-1 text-purple-500 hover:bg-purple-100 hover:text-purple-700 text-base leading-none"
+                            aria-label="Close Cagent message"
+                          >
+                            ✕
+                          </button>
+                          <div className="overflow-y-auto max-h-[240px] whitespace-pre-wrap pr-2">
+                            {isLoadingEvaluation ? "Cagent is thinking..." : aiEvaluation.trim()}
+                          </div>
                         </div>
                       )}
                       {writingMood === "angry" && (
