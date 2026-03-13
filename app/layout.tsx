@@ -5,6 +5,7 @@ import { Analytics } from '@vercel/analytics/next'
 import { Toaster } from '@/components/ui/sonner'
 import HeaderWrapper from '@/components/header-wrapper'
 import Footer from '@/components/footer'
+import ClickSoundProvider from '@/components/click-sound-provider'
 import './globals.css'
 
 const geist = Geist({ subsets: ["latin"], variable: '--font-geist' });
@@ -58,6 +59,7 @@ export default function RootLayout({
         <main className="flex-1">
           {children}
         </main>
+        <ClickSoundProvider />
         <Footer />
         <Toaster />
         <Analytics />
