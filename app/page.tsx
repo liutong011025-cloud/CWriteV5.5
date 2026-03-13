@@ -1093,7 +1093,16 @@ export default function Home() {
             setStage("journeyMap")
           }}
           onRetest={() => {
-            // Retest：回到測驗頁，保留當前 assessment，完成後會用新結果覆蓋
+            // Retest：清空當前測驗結果與等級，重新做 7 題選擇題
+            setWritingAssessment(null)
+            setPlanTestResult(null)
+            if (typeof window !== "undefined" && user?.username) {
+              try {
+                localStorage.removeItem(getPlanTestResultKey(user.username))
+              } catch {
+                // ignore storage errors
+              }
+            }
             setStage("planTest")
           }}
           onStart={({ type, difficulty }) => {
