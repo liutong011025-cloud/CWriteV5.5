@@ -173,7 +173,7 @@ export default function JourneyMap({
           <div />
         </div>
 
-        <div className="-mt-14 pb-1 text-center">
+        <div className="-mt-20 pb-1 text-center">
           <h1 className="font-hand text-4xl md:text-5xl font-extrabold text-purple-900 drop-shadow-[0_2px_2px_rgba(255,255,255,0.9)]">
             Writing Map
           </h1>
