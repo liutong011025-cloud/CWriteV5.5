@@ -44,6 +44,7 @@ import DramaWriting from "@/components/stages/drama-writing"
 import PoetryWriting from "@/components/stages/poetry-writing"
 import ResearchRoom from "@/components/stages/research-room"
 import NavigationPage from "@/components/stages/navigation-page"
+import CopywritingToolbar from "@/components/copywriting-toolbar"
 import { useDramaStore } from "@/lib/drama-store"
 import { usePoetryStore } from "@/lib/poetry-store"
 import Cagent, { type CagentMood } from "@/components/cagent/Cagent"
@@ -208,8 +209,16 @@ const writeLocalTrees = (username: string, trees: { id: number; stage: number }[
   }
 }
 
+type AppUser = {
+  username: string
+  role: "teacher" | "student"
+  noAi?: boolean
+  // 文案專用帳號（copywriting），用於開啟站內所有文字編輯與匯出功能
+  isCopywriter?: boolean
+}
+
 export default function Home() {
-  const [user, setUser] = useState<{ username: string; role: 'teacher' | 'student'; noAi?: boolean } | null>(null)
+  const [user, setUser] = useState<AppUser | null>(null)
   const [stage, setStage] = useState<"login" | "home" | "planTest" | "journeyTicket" | "journeyMap" | "writeTypeSelection" | "bookReviewWelcome" | "bookReviewTypeSelection" | "bookSelection" | "bookReviewLoading" | "bookReviewWriting" | "bookReviewComplete" | "bookReviewWritingNoAi" | "bookReviewCompleteNoAi" | "letterAdventure" | "letterGame" | "letterPuzzle" | "letterComplete" | "welcome" | "character" | "plot" | "structure" | "writing" | "review" | "dashboard" | "about" | "aboutVision" | "aboutResearch" | "gallery" | "userProfile" | "userSettings" | "storyEdit" | "bookReviewEdit" | "letterEdit" | "dramaWriting" | "dramaBook" | "poetryWriting" | "poetryForm" | "poetryTopic" | "poetryEditor" | "poetryReview" | "research" | "navigation" | "otherFarm">("login")
   const [language, setLanguage] = useState<Language>("en")
   const [writingAssessment, setWritingAssessment] = useState<WritingAssessment | null>(null)
@@ -416,7 +425,7 @@ export default function Home() {
       try {
         const savedUser = localStorage.getItem('cwriteUser')
         if (savedUser && !user) {
-          const parsed = JSON.parse(savedUser) as { username: string; role: 'teacher' | 'student'; noAi?: boolean }
+          const parsed = JSON.parse(savedUser) as AppUser
           if (parsed && parsed.username && parsed.role) {
             setUser(parsed)
           }
@@ -906,6 +915,8 @@ export default function Home() {
     writingAssessment.level >= 1 &&
     writingAssessment.level <= 5 &&
     !["login", "home", "planTest", "journeyTicket", "journeyMap"].includes(stage)
+
+  const isCopywriter = !!user?.isCopywriter || user?.username === "copywriting"
 
   return (
     <main className="min-h-screen" data-stage={stage}>
@@ -2290,6 +2301,11 @@ export default function Home() {
           }}
           isOtherFarm
         />
+      )}
+
+      {/* 文案帳號工具條：所有頁面共用 */}
+      {isCopywriter && user && (
+        <CopywritingToolbar username={user.username} stage={stage} />
       )}
     </main>
   )
