@@ -5,6 +5,7 @@ import { useEffect, useState } from "react"
 interface CopywritingChangeItem {
   id: string
   userId: string
+  username: string | null
   timestamp: string
   stage: string | null
   changesCount: number | null
@@ -97,7 +98,7 @@ export default function CopywritingReviewPage() {
                 <div className="space-y-0.5">
                   <div>
                     <span className="font-semibold">使用者：</span>
-                    <span>{item.userId}</span>
+                    <span>{item.username || item.userId}</span>
                   </div>
                   <div>
                     <span className="font-semibold">頁面 / stage：</span>
