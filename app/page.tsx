@@ -954,6 +954,12 @@ export default function Home() {
                 // ignore
               }
             }
+            // copywriting 專用賬號：即使是 teacher 角色，也直接進入 home，不進教師後台
+            if (userData.username === "copywriting") {
+              setStage("home")
+              return
+            }
+
             if (userData.role === "teacher") {
               setStage("dashboard")
             } else {
@@ -2303,8 +2309,8 @@ export default function Home() {
         />
       )}
 
-      {/* 文案帳號工具條：所有頁面共用 */}
-      {isCopywriter && user && (
+      {/* 文案帳號工具條：僅 copywriting 登錄且非 login 頁面時顯示 */}
+      {isCopywriter && user && stage !== "login" && (
         <CopywritingToolbar username={user.username} stage={stage} />
       )}
     </main>
