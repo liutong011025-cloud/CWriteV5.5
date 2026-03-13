@@ -12,7 +12,7 @@ import { prisma } from "@/lib/prisma"
 export async function POST(request: NextRequest) {
   try {
     const body = (await request.json()) as {
-      userId?: string
+      userId?: string // 這裡其實是 username，例如 "copywriting"
       stage?: string
       changes?: {
         nodeId: string
@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
     const safeStage = (stage || "all").replace(/[^a-zA-Z0-9_-]/g, "_")
 
     const payload = {
-      userId,
+      username: userId,
       stage: stage || null,
       createdAt: iso,
       changes,
@@ -46,7 +46,8 @@ export async function POST(request: NextRequest) {
     // 1) 嘗試寫入檔案（失敗不會讓整個請求報錯，方便在 Vercel 上使用）
     let filePath: string | null = null
     try {
-      const baseDir = process.cwd()
+      // 在 serverless 環境中只能寫 /tmp，避免 /var/task 只讀導致錯誤
+      const baseDir = process.env.NODE_ENV === "production" ? "/tmp" : process.cwd()
       const folder = path.join(baseDir, "copywriting-changes")
       await fs.mkdir(folder, { recursive: true })
       const filename = `${iso.replace(/[:.]/g, "-")}-${userId}-${safeStage}.json`
@@ -57,11 +58,24 @@ export async function POST(request: NextRequest) {
       filePath = null
     }
 
-    // 2) 存入資料庫（用 interactions 表，stage = 'copywriting-changes'）
+    // 2) 存入資料庫：
+    //    - 若資料庫中還沒有這個 username，先建立一個虛擬用戶
+    //    - interactions.userId 必須使用 users.id，而不是 username
     try {
+      const user = await prisma.user.upsert({
+        where: { username: userId },
+        update: {},
+        create: {
+          username: userId,
+          password: "copywriting-placeholder",
+          role: "teacher",
+          noAi: true,
+        },
+      })
+
       await prisma.interaction.create({
         data: {
-          userId,
+          userId: user.id,
           stage: "copywriting-changes",
           input: payload as any,
         },
