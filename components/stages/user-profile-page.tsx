@@ -76,7 +76,7 @@ const getDefaultFarmButtonStates = (otherFarm: boolean): Record<FarmElementId, F
   farmbacktomap: otherFarm ? { x: 74.0, y: 43.9, scale: 0.71 } : { x: 74.1, y: 44.0, scale: 0.78 },
   farmsetting: otherFarm ? { x: 34.7, y: 49.6, scale: 0.8 } : { x: 34.3, y: 49.5, scale: 0.8 },
   farmwrittingboard: otherFarm ? { x: 63.2, y: 50.6, scale: 1.1 } : { x: 62.9, y: 51.0, scale: 1.15 },
-  vistothersfarm: otherFarm ? { x: 73.1, y: 37.0, scale: 0.0 } : { x: 73.2, y: 37.0, scale: 0.81 },
+  vistothersfarm: { x: 73.2, y: 37.0, scale: 0.81 },
 })
 
 const DEFAULT_TREE_LAYOUT: FarmElementState[] = [
@@ -160,6 +160,7 @@ export default function UserProfilePage({
         { id: "farmbacktomap", label: "Back", imageSrc: "/farmbacktomap.png" },
         { id: "farmsetting", label: "Their Map", imageSrc: "/theirmap.png" },
         { id: "farmwrittingboard", label: "Writing Board", imageSrc: "/farmwritingboard.png" },
+        { id: "vistothersfarm", label: "Visit Others' Farms", imageSrc: "/visitothersfarm.png" },
       ]
     : [
     { id: "farmbacktomap", label: "Back to Map", imageSrc: "/farmbacktomap.png" },
@@ -171,7 +172,7 @@ export default function UserProfilePage({
   const farmElementStates = getDefaultFarmButtonStates(isOtherFarm)
   const farmTreeStates = DEFAULT_TREE_LAYOUT
 
-  const farmBackgroundSrc = isOtherFarm ? "/farm2.png" : "/farm.png"
+  const farmBackgroundSrc = "/farm.png"
   const farmBackgroundAlt = isOtherFarm ? "Other Student Farm Background" : "My Farm Background"
   const treeCount = 12
 
@@ -323,12 +324,43 @@ export default function UserProfilePage({
       .finally(() => setLoading(false))
   }, [userId])
 
-  // 同步来自主页的小树森林与最近成长信息
+  // 同步来自主页的小树森林与最近成长信息（仅自己的農場）
   useEffect(() => {
-    if (trees && Array.isArray(trees)) {
+    if (!isOtherFarm && trees && Array.isArray(trees)) {
       setForest(trees.slice(0, 12))
     }
-  }, [trees])
+  }, [isOtherFarm, trees])
+
+  // 其他用戶農場：拉取該用戶的 12 棵價值觀樹數據並顯示
+  useEffect(() => {
+    if (!isOtherFarm || !userId) return
+    let cancelled = false
+    void (async () => {
+      try {
+        const res = await fetch(`/api/user-profile?user_id=${encodeURIComponent(userId)}`)
+        if (!res.ok) return
+        const data = await res.json()
+        const raw = data?.trees
+        if (cancelled) return
+        if (Array.isArray(raw) && raw.length > 0) {
+          const normalized = raw
+            .slice(0, 12)
+            .map((item: { id?: number; stage?: number }, idx: number) => ({
+              id: Number(item?.id) || idx + 1,
+              stage: Math.min(4, Math.max(2, Number(item?.stage) ?? 2)),
+            }))
+          setForest(normalized)
+        } else {
+          setForest(Array.from({ length: 12 }, (_, i) => ({ id: i + 1, stage: 2 })))
+        }
+      } catch {
+        if (!cancelled) setForest(Array.from({ length: 12 }, (_, i) => ({ id: i + 1, stage: 2 })))
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [isOtherFarm, userId])
 
   useEffect(() => {
     if (recentGrowthTreeId && trees && trees.some((t) => t.id === recentGrowthTreeId)) {
@@ -896,8 +928,7 @@ export default function UserProfilePage({
               : { left: 0, top: 0, right: 0, bottom: 0, width: "100%", height: "100%" }
           }
         >
-            {!isOtherFarm &&
-              Array.from({ length: treeCount }).map((_, index) => {
+            {Array.from({ length: treeCount }).map((_, index) => {
                 const treeState = farmTreeStates[index] || DEFAULT_TREE_LAYOUT[index]
                 const treeData = forest[index]
                 const isHighlightedTree = treeData && highlightTreeId === treeData.id
@@ -961,7 +992,10 @@ export default function UserProfilePage({
                       if (isOtherFarm) setShowOtherMapDialog(true)
                       else onOpenSettings()
                     } else if (element.id === "farmwrittingboard") setViewMode("writings")
-                    else if (element.id === "vistothersfarm" && !isOtherFarm && typeof onVisitOthersFarm === "function") onVisitOthersFarm()
+                    else if (element.id === "vistothersfarm") {
+                      if (isOtherFarm) onBack()
+                      else if (typeof onVisitOthersFarm === "function") onVisitOthersFarm()
+                    }
                   }}
                 >
                   <img
