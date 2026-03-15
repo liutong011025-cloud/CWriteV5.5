@@ -2286,7 +2286,6 @@ export default function Home() {
           currentUsername={user.username}
           currentUserRole={user.role}
           onBack={() => {
-            // 返回自己的農場與地圖：確保旅程地圖狀態已就緒
             setJourneyActive(true)
             if (!journeySelection) {
               setJourneySelection({ type: "story", difficulty: writingAssessment?.level || 1 })
@@ -2314,6 +2313,7 @@ export default function Home() {
             }
             setStage("journeyMap")
           }}
+          onVisitOthersFarm={() => setStage("navigation")}
           isOtherFarm
         />
       )}
