@@ -35,6 +35,29 @@ export interface ReviewItem {
   createdAt: number
 }
 
+/** 單棵樹的成長記錄（與 page 的 TreeGrowthDetail 一致） */
+export interface TreeGrowthDetailRecord {
+  workTitle: string
+  workType: "story" | "review" | "letter"
+  excerpt: string
+  timestamp: number
+}
+
+const TREE_DIMENSION_NAMES: Record<number, string> = {
+  1: "Perseverance",
+  2: "Respect for Others",
+  3: "Responsibility",
+  4: "National Identity",
+  5: "Commitment",
+  6: "Integrity",
+  7: "Benevolence",
+  8: "Law-abidingness",
+  9: "Empathy",
+  10: "Diligence",
+  11: "Filial Piety",
+  12: "Unity",
+}
+
 interface UserProfilePageProps {
   userId: string
   userRole: string
@@ -45,6 +68,7 @@ interface UserProfilePageProps {
   onBack: () => void
   onOpenSettings: () => void
   trees?: { id: number; stage: number }[] | null
+  treeGrowthDetails?: Record<number, TreeGrowthDetailRecord[]>
   recentGrowthTreeId?: number | null
   recentGrowthDimension?: "vocab" | "detail" | "logic" | null
   onVisitOthersFarm?: () => void
@@ -105,6 +129,7 @@ export default function UserProfilePage({
   onBack,
   onOpenSettings,
   trees,
+  treeGrowthDetails,
   recentGrowthTreeId,
   recentGrowthDimension,
   onVisitOthersFarm,
@@ -137,6 +162,7 @@ export default function UserProfilePage({
   const [loading, setLoading] = useState(true)
   const [forest, setForest] = useState<{ id: number; stage: number }[]>([])
   const [highlightTreeId, setHighlightTreeId] = useState<number | null>(null)
+  const [selectedTreeId, setSelectedTreeId] = useState<number | null>(null)
   const farmContainerRef = useRef<HTMLDivElement | null>(null)
   const [hoveredFarmElement, setHoveredFarmElement] = useState<FarmElementId | null>(null)
   const [viewMode, setViewMode] = useState<"farm" | "writings">("farm")
@@ -368,7 +394,7 @@ export default function UserProfilePage({
       setHighlightTreeId(recentGrowthTreeId)
       const timer = setTimeout(() => {
         setHighlightTreeId(null)
-      }, 2600)
+      }, 4000)
       return () => clearTimeout(timer)
     }
   }, [recentGrowthTreeId, trees])
@@ -931,29 +957,38 @@ export default function UserProfilePage({
                 const treeBaseSizePercent = treeStage >= 4 ? 11.2 : 8
                 const treeTop = treeStage >= 4 ? treeState.y + 3.6 : treeState.y
                 const treeLeft = treeStage >= 4 ? treeState.x + 1.2 : treeState.x
+                const treeId = treeData?.id ?? index + 1
+                const canClickTree = !isOtherFarm && treeGrowthDetails != null
+                const Wrapper = canClickTree ? "button" : "div"
                 return (
-                  <div
+                  <Wrapper
                     key={`farm-tree-${index}`}
-                    className="absolute -translate-x-1/2 -translate-y-1/2"
+                    type={canClickTree ? "button" : undefined}
+                    className="absolute -translate-x-1/2 -translate-y-1/2 border-0 bg-transparent p-0 cursor-pointer focus:outline-none focus:ring-0"
                     style={{
                       left: `${treeLeft}%`,
                       top: `${treeTop}%`,
                       width: `${treeBaseSizePercent}%`,
                       aspectRatio: "698 / 850",
                       zIndex: 5,
-                      filter: isHighlightedTree ? "drop-shadow(0 0 14px rgba(250, 204, 21, 0.95))" : "none",
+                      filter: isHighlightedTree ? "drop-shadow(0 0 18px rgba(250, 204, 21, 1)) drop-shadow(0 0 28px rgba(255, 215, 0, 0.8))" : "none",
                       transform: `translate(-50%, -50%) scale(${treeState.scale * (isHighlightedTree ? 1.06 : 1)})`,
                       transformOrigin: "center center",
                       transition: "transform 0.25s ease, filter 0.25s ease",
                     }}
+                    onClick={canClickTree ? () => setSelectedTreeId(treeId) : undefined}
+                    aria-label={canClickTree ? `View growth record for tree ${treeId}` : undefined}
                   >
+                    {isHighlightedTree && (
+                      <span className="absolute inset-0 pointer-events-none rounded-full animate-pulse opacity-60" style={{ boxShadow: "inset 0 0 30px 8px rgba(255, 215, 0, 0.4)" }} aria-hidden />
+                    )}
                     <img
                       src={treeImageSrc}
                       alt={`Farm tree ${index + 1}`}
                       className="h-full w-full object-contain select-none pointer-events-none"
                       draggable={false}
                     />
-                  </div>
+                  </Wrapper>
                 )
               })}
 
@@ -1007,6 +1042,65 @@ export default function UserProfilePage({
                 </button>
               )
             })}
+
+            {/* 樹苗成長記錄彈窗：僅在自己的農場且點擊某棵樹時顯示 */}
+            {selectedTreeId != null && !isOtherFarm && (
+              <div
+                className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="tree-growth-dialog-title"
+              >
+                <div
+                  className="absolute inset-0 bg-black/40"
+                  onClick={() => setSelectedTreeId(null)}
+                  aria-hidden
+                />
+                <div
+                  className="relative w-full max-w-md max-h-[85vh] overflow-hidden rounded-3xl border-2 border-amber-200/80 bg-gradient-to-b from-amber-50/98 via-orange-50/98 to-yellow-50/98 shadow-2xl shadow-amber-200/30"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div className="flex items-center justify-between gap-3 border-b border-amber-200/60 bg-white/50 px-5 py-4">
+                    <h2 id="tree-growth-dialog-title" className="text-lg font-bold text-amber-900 flex items-center gap-2">
+                      <span className="text-2xl" aria-hidden>🌱</span>
+                      {TREE_DIMENSION_NAMES[selectedTreeId] ?? `Tree ${selectedTreeId}`} 成長記錄
+                    </h2>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedTreeId(null)}
+                      className="rounded-full p-2 text-amber-700 hover:bg-amber-200/60 focus:outline-none focus:ring-2 focus:ring-amber-400"
+                      aria-label="Close"
+                    >
+                      <span className="text-xl leading-none">×</span>
+                    </button>
+                  </div>
+                  <div className="overflow-y-auto p-4 space-y-4 max-h-[calc(85vh-4.5rem)]">
+                    {(treeGrowthDetails?.[selectedTreeId] ?? []).length === 0 ? (
+                      <p className="text-amber-800/80 text-center py-6">這棵小樹還沒有成長記錄，多寫文章來澆灌它吧～</p>
+                    ) : (
+                      [...(treeGrowthDetails?.[selectedTreeId] ?? [])]
+                        .sort((a, b) => b.timestamp - a.timestamp)
+                        .map((record, i) => (
+                          <div
+                            key={`${record.timestamp}-${i}`}
+                            className="rounded-2xl border border-amber-200/70 bg-white/80 p-4 shadow-sm"
+                          >
+                            <p className="font-semibold text-amber-900 mb-1 flex items-center gap-2">
+                              <span className="text-base">
+                                {record.workType === "story" ? "📖" : record.workType === "review" ? "⭐" : "✉️"}
+                              </span>
+                              {record.workTitle}
+                            </p>
+                            <p className="text-sm text-amber-800/90 italic border-l-2 border-amber-300/70 pl-3 mt-2">
+                              「{record.excerpt}」
+                            </p>
+                          </div>
+                        ))
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Cagent: invisible trigger (larger), no visible region; hover shows bubble with "Hello there!", click opens conversation in same bubble */}
             <button
