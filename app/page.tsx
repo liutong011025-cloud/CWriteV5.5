@@ -209,6 +209,54 @@ const writeLocalTrees = (username: string, trees: { id: number; stage: number }[
   }
 }
 
+/** 單次成長記錄：哪篇文章、類型、觸發成長的句子摘錄 */
+export type TreeGrowthDetail = {
+  workTitle: string
+  workType: "story" | "review" | "letter"
+  excerpt: string
+  timestamp: number
+}
+
+const TREE_GROWTH_DETAILS_KEY = (username: string) => `cwriteTreeGrowthDetails:${username}`
+
+function readLocalTreeGrowthDetails(username: string): Record<number, TreeGrowthDetail[]> {
+  if (typeof window === "undefined") return {}
+  try {
+    const raw = localStorage.getItem(TREE_GROWTH_DETAILS_KEY(username))
+    if (!raw) return {}
+    const parsed = JSON.parse(raw) as Record<string, TreeGrowthDetail[]>
+    const out: Record<number, TreeGrowthDetail[]> = {}
+    Object.entries(parsed).forEach(([k, arr]) => {
+      const id = Number(k)
+      if (Number.isFinite(id) && id >= 1 && id <= 12 && Array.isArray(arr)) {
+        out[id] = arr.filter(
+          (x) => x && typeof x.workTitle === "string" && typeof x.excerpt === "string" && typeof x.timestamp === "number"
+        )
+      }
+    })
+    return out
+  } catch {
+    return {}
+  }
+}
+
+function writeLocalTreeGrowthDetails(username: string, details: Record<number, TreeGrowthDetail[]>) {
+  if (typeof window === "undefined") return
+  try {
+    localStorage.setItem(TREE_GROWTH_DETAILS_KEY(username), JSON.stringify(details))
+  } catch {
+    // ignore
+  }
+}
+
+function getFirstSentenceOrExcerpt(text: string, maxLen = 180): string {
+  const trimmed = text.trim()
+  if (!trimmed) return ""
+  const match = trimmed.match(/^[^.!?]*[.!?]?/)
+  const first = match ? match[0].trim() : trimmed.slice(0, maxLen)
+  return first.length > maxLen ? first.slice(0, maxLen) + "…" : first
+}
+
 type AppUser = {
   username: string
   role: "teacher" | "student"
@@ -269,6 +317,8 @@ export default function Home() {
   const [lastMetrics, setLastMetrics] = useState<WritingMetricsSnapshot | null>(null)
   // 最近一次长高的树 + 对应维度，供 Profile 页面做施法特效
   const [lastGrownTree, setLastGrownTree] = useState<{ treeId: number; dimension: TreeGrowthDimension } | null>(null)
+  // 每棵樹的成長記錄（哪篇文章、哪句話讓它長高）
+  const [treeGrowthDetails, setTreeGrowthDetails] = useState<Record<number, TreeGrowthDetail[]>>({})
 
   // Hydration safety: only use store-derived progress after mount
   const [isReady, setIsReady] = useState(false)
@@ -757,6 +807,7 @@ export default function Home() {
         const initialTrees = normalizeValuesTrees(rawTrees && rawTrees.length > 0 ? rawTrees : localTrees)
         setTrees(initialTrees)
         writeLocalTrees(user.username, initialTrees)
+        setTreeGrowthDetails(readLocalTreeGrowthDetails(user.username))
         const lm = profileRes.lastMetrics as WritingMetricsSnapshot | undefined
         if (lm && typeof lm.vocabRichness === "number") {
           setLastMetrics(lm)
@@ -811,6 +862,7 @@ export default function Home() {
           const nextTrees = normalizeValuesTrees(rawTrees && rawTrees.length > 0 ? rawTrees : localTrees)
           setTrees(nextTrees)
           writeLocalTrees(user.username, nextTrees)
+          setTreeGrowthDetails(readLocalTreeGrowthDetails(user.username))
           const lm = profileRes.lastMetrics as WritingMetricsSnapshot | undefined
           if (lm && typeof lm.vocabRichness === "number") {
             setLastMetrics(lm)
@@ -833,9 +885,12 @@ export default function Home() {
     }
   }, [currentLevel])
 
-  // 根据 12 价值观命中维度更新森林：命中的树 stage +1（上限 4）
+  // 根据 12 价值观命中维度更新森林：命中的树 stage +1（上限 4），並記錄是哪篇文章/哪句話讓它長高
   const applyTreeGrowthFromMetrics = useCallback(
-    async (matchedDimensions: number[]) => {
+    async (
+      matchedDimensions: number[],
+      payload?: { workTitle: string; workType: "story" | "review" | "letter"; excerpt: string }
+    ) => {
       if (!user) return
       const currentTrees = normalizeValuesTrees(trees)
       const growthCounter = new Map<number, number>()
@@ -861,7 +916,22 @@ export default function Home() {
       writeLocalTrees(user.username, nextTrees)
       setLastGrownTree({ treeId: grownTreeId, dimension: "vocab" })
 
-      // 同步到后端 profile
+      if (payload) {
+        const detail: TreeGrowthDetail = {
+          ...payload,
+          timestamp: Date.now(),
+        }
+        setTreeGrowthDetails((prev) => {
+          const next = { ...prev }
+          matchedIds.forEach((id) => {
+            const list = next[id] ?? []
+            next[id] = [...list, detail]
+          })
+          writeLocalTreeGrowthDetails(user.username, next)
+          return next
+        })
+      }
+
       try {
         await fetch("/api/user-profile", {
           method: "POST",
@@ -879,8 +949,10 @@ export default function Home() {
   )
 
   const evaluateValuesGrowth = useCallback(
-    async (text: string, type: "story" | "review" | "letter") => {
+    async (text: string, type: "story" | "review" | "letter", workTitle?: string) => {
       if (!user || !text.trim()) return
+      const excerpt = getFirstSentenceOrExcerpt(text)
+      const title = workTitle?.trim() || (type === "story" ? "My Story" : type === "review" ? "Book Review" : "My Letter")
       try {
         const valuesRes = await fetch("/api/writing-values-growth", {
           method: "POST",
@@ -895,7 +967,11 @@ export default function Home() {
         const matchedDimensions = Array.isArray(valuesJson?.matchedDimensions)
           ? valuesJson.matchedDimensions
           : []
-        await applyTreeGrowthFromMetrics(matchedDimensions)
+        await applyTreeGrowthFromMetrics(matchedDimensions, {
+          workTitle: title,
+          workType: type,
+          excerpt: excerpt || text.slice(0, 120) + (text.length > 120 ? "…" : ""),
+        })
       } catch (error) {
         console.error("Error evaluating values growth:", error)
       }
@@ -1409,7 +1485,7 @@ export default function Home() {
           structure={bookReviewState.structure}
           onReset={async (finalReview) => {
             const backToStage = "journeyMap"
-            void evaluateValuesGrowth(finalReview, "review")
+            void evaluateValuesGrowth(finalReview, "review", bookReviewState.bookTitle ? `Review: ${bookReviewState.bookTitle}` : "Book Review")
 
             const reviewSnapshot = {
               bookTitle: bookReviewState.bookTitle,
@@ -1517,7 +1593,7 @@ export default function Home() {
           review={bookReviewState.review}
           onReset={async (finalReview) => {
             const backToStage = "journeyMap"
-            void evaluateValuesGrowth(finalReview, "review")
+            void evaluateValuesGrowth(finalReview, "review", bookReviewState.bookTitle ? `Review: ${bookReviewState.bookTitle}` : "Book Review")
 
             const reviewSnapshot = {
               bookTitle: bookReviewState.bookTitle,
@@ -1754,7 +1830,8 @@ export default function Home() {
           storyState={storyState}
           onReset={async (finalStory) => {
             const backToStage = "journeyMap"
-            void evaluateValuesGrowth(finalStory, "story")
+            const storyTitle = storyState.character?.name?.trim() ? `${storyState.character.name}'s Story` : "My Story"
+            void evaluateValuesGrowth(finalStory, "story", storyTitle)
 
             const characterSnapshot = storyState.character
             const plotSnapshot = storyState.plot
@@ -1907,6 +1984,7 @@ export default function Home() {
           onBack={() => setStage("journeyMap")}
           onOpenSettings={() => setStage("userSettings")}
           trees={trees ?? undefined}
+          treeGrowthDetails={treeGrowthDetails}
           recentGrowthTreeId={lastGrownTree?.treeId ?? null}
           recentGrowthDimension={lastGrownTree?.dimension ?? null}
           onVisitOthersFarm={() => setStage("navigation")}
@@ -2026,7 +2104,8 @@ export default function Home() {
           sections={letterState.sections}
           onReset={async (finalLetter) => {
             const backToStage = "journeyMap"
-            void evaluateValuesGrowth(finalLetter, "letter")
+            const letterTitle = letterState.recipient ? `Letter to ${letterState.recipient}` : "My Letter"
+            void evaluateValuesGrowth(finalLetter, "letter", letterTitle)
 
             setLetterState({
               recipient: null,
@@ -2147,7 +2226,7 @@ export default function Home() {
           backLabel={journeyActive ? "Back to Map" : undefined}
           onBack={() => {
             if (journeyActive && dramaBook) {
-              void evaluateValuesGrowth(JSON.stringify(dramaBook), "story")
+              void evaluateValuesGrowth(JSON.stringify(dramaBook), "story", "My Drama")
             }
             setStage(journeyActive ? "journeyMap" : "writeTypeSelection")
           }}
@@ -2170,7 +2249,7 @@ export default function Home() {
           backLabel={journeyActive ? "Back to Map" : undefined}
           onBack={() => {
             if (journeyActive && dramaBook) {
-              void evaluateValuesGrowth(JSON.stringify(dramaBook), "story")
+              void evaluateValuesGrowth(JSON.stringify(dramaBook), "story", "My Drama")
             }
             setStage(journeyActive ? "journeyMap" : "writeTypeSelection")
           }}
@@ -2194,7 +2273,7 @@ export default function Home() {
             })
           }}
           onComplete={() => {
-            evaluateValuesGrowth(poetryLinesText, "story")
+            evaluateValuesGrowth(poetryLinesText, "story", poetryTopicValue ? `Poetry: ${poetryTopicValue}` : "My Poetry")
             if (poetryTopicValue) {
               queueJourneyMapUpdate({
                 title: `A Poetry about ${poetryTopicValue}`,
@@ -2213,7 +2292,7 @@ export default function Home() {
           backLabel={journeyActive ? "Back to Map" : undefined}
           onBack={() => setStage(journeyActive ? "journeyMap" : "writeTypeSelection")}
           onComplete={() => {
-            evaluateValuesGrowth(poetryLinesText, "story")
+            evaluateValuesGrowth(poetryLinesText, "story", poetryTopicValue ? `Poetry: ${poetryTopicValue}` : "My Poetry")
             setStage(journeyActive ? "journeyMap" : "home")
           }}
         />
@@ -2234,7 +2313,7 @@ export default function Home() {
             })
           }}
           onComplete={() => {
-            evaluateValuesGrowth(poetryLinesText, "story")
+            evaluateValuesGrowth(poetryLinesText, "story", poetryTopicValue ? `Poetry: ${poetryTopicValue}` : "My Poetry")
             setStage(journeyActive ? "journeyMap" : "home")
           }}
         />
@@ -2246,7 +2325,7 @@ export default function Home() {
           backLabel={journeyActive ? "Back to Map" : undefined}
           onBack={() => setStage(journeyActive ? "journeyMap" : "writeTypeSelection")}
           onComplete={() => {
-            evaluateValuesGrowth(poetryLinesText, "story")
+            evaluateValuesGrowth(poetryLinesText, "story", poetryTopicValue ? `Poetry: ${poetryTopicValue}` : "My Poetry")
             setStage(journeyActive ? "journeyMap" : "home")
           }}
         />
@@ -2258,7 +2337,7 @@ export default function Home() {
           backLabel={journeyActive ? "Back to Map" : undefined}
           onBack={() => setStage(journeyActive ? "journeyMap" : "writeTypeSelection")}
           onComplete={() => {
-            evaluateValuesGrowth(poetryLinesText, "story")
+            evaluateValuesGrowth(poetryLinesText, "story", poetryTopicValue ? `Poetry: ${poetryTopicValue}` : "My Poetry")
             setStage(journeyActive ? "journeyMap" : "home")
           }}
         />
