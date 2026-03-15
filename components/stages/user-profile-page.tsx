@@ -1043,7 +1043,7 @@ export default function UserProfilePage({
               )
             })}
 
-            {/* 樹苗成長記錄彈窗：僅在自己的農場且點擊某棵樹時顯示 */}
+            {/* Tree growth record modal: only on own farm when a tree is clicked */}
             {selectedTreeId != null && !isOtherFarm && (
               <div
                 className="fixed inset-0 z-[100] flex items-center justify-center p-4"
@@ -1063,7 +1063,7 @@ export default function UserProfilePage({
                   <div className="flex items-center justify-between gap-3 border-b border-amber-200/60 bg-white/50 px-5 py-4">
                     <h2 id="tree-growth-dialog-title" className="text-lg font-bold text-amber-900 flex items-center gap-2">
                       <span className="text-2xl" aria-hidden>🌱</span>
-                      {TREE_DIMENSION_NAMES[selectedTreeId] ?? `Tree ${selectedTreeId}`} 成長記錄
+                      {TREE_DIMENSION_NAMES[selectedTreeId] ?? `Tree ${selectedTreeId}`} Growth Record
                     </h2>
                     <button
                       type="button"
@@ -1076,7 +1076,7 @@ export default function UserProfilePage({
                   </div>
                   <div className="overflow-y-auto p-4 space-y-4 max-h-[calc(85vh-4.5rem)]">
                     {(treeGrowthDetails?.[selectedTreeId] ?? []).length === 0 ? (
-                      <p className="text-amber-800/80 text-center py-6">這棵小樹還沒有成長記錄，多寫文章來澆灌它吧～</p>
+                      <p className="text-amber-800/80 text-center py-6">This little tree has no growth records yet. Keep writing to water it!</p>
                     ) : (
                       [...(treeGrowthDetails?.[selectedTreeId] ?? [])]
                         .sort((a, b) => b.timestamp - a.timestamp)
