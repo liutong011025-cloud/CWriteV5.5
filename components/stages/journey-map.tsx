@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { BackButton } from "@/components/ui/back-button"
 import { Flag } from "lucide-react"
 import Image from "next/image"
-import type { Language, StoryState, BookReviewState, LetterState } from "@/app/page"
+import type { Language, StoryState, BookReviewState, LetterState, MapFlagItem } from "@/app/page"
 import type { JourneyType } from "@/components/stages/journey-ticket"
 import Antigravity from "@/components/effects/antigravity"
 import ShapeBlur from "@/components/effects/shape-blur"
@@ -26,7 +26,7 @@ interface JourneyMapProps {
   language?: Language
   type: JourneyType
   mapImageUrl?: string
-  mapFlags?: MapFlag[]
+  mapFlags?: MapFlagItem[]
   pin?: { x: number; y: number } | null
   onPinChange?: (pin: { x: number; y: number } | null) => void
   storyState: StoryState
@@ -38,13 +38,7 @@ interface JourneyMapProps {
   onNavigate: (stage: string) => void
   onBack?: () => void
   onGoProfile?: () => void
-}
-
-interface MapFlag {
-  id: string
-  x: number
-  y: number
-  title: string
+  onFlagUpdate?: (flagId: string, updates: { title?: string; content?: string }) => void
 }
 
 export default function JourneyMap({
@@ -57,15 +51,17 @@ export default function JourneyMap({
   onNavigate,
   onBack,
   onGoProfile,
+  onFlagUpdate,
 }: JourneyMapProps) {
   const [internalPin, setInternalPin] = useState<{ x: number; y: number } | null>(pin ?? null)
-  // 是否已在地圖上放置起點旗幟（還沒開始寫作）
   const [isPlacingPin, setIsPlacingPin] = useState(false)
-  // 是否當前手上正「拿著」圖釘，準備放置
   const [isHoldingPin, setIsHoldingPin] = useState(false)
   const [isHoveringBox, setIsHoveringBox] = useState(false)
   const [pinBoxHidden, setPinBoxHidden] = useState(false)
-  const [flags] = useState<MapFlag[]>(mapFlags ?? [])
+  const [selectedFlag, setSelectedFlag] = useState<MapFlagItem | null>(null)
+  const [editContent, setEditContent] = useState("")
+  const [editTitle, setEditTitle] = useState("")
+  const flags = mapFlags ?? []
 
   const pinPosition = pin ?? internalPin
   const effectiveMapImageUrl = mapImageUrl || "/firstmap.png"
@@ -272,7 +268,15 @@ export default function JourneyMap({
                 <button
                   key={flag.id}
                   type="button"
-                  onClick={() => onNavigate("review")}
+                  onClick={() => {
+                    if (onFlagUpdate) {
+                      setSelectedFlag(flag)
+                      setEditTitle(flag.title)
+                      setEditContent(flag.content ?? "")
+                    } else {
+                      onNavigate("review")
+                    }
+                  }}
                   className="absolute -translate-x-1/2 -translate-y-full group"
                   style={{ left: `${flag.x}%`, top: `${flag.y}%` }}
                   aria-label={flag.title}
@@ -293,6 +297,82 @@ export default function JourneyMap({
           {/* 右側原說明面板已移除，保留空間以後可放其它內容 */}
         </div>
       </div>
+
+      {/* Article detail modal: click flag → show full text, edit and save */}
+      {selectedFlag && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="article-dialog-title"
+        >
+          <div
+            className="absolute inset-0 bg-black/50"
+            onClick={() => setSelectedFlag(null)}
+            aria-hidden
+          />
+          <div
+            className="relative w-full max-w-2xl max-h-[90vh] overflow-hidden rounded-2xl border-2 border-purple-200 bg-white shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between gap-3 border-b border-purple-200 bg-purple-50/80 px-4 py-3">
+              <h2 id="article-dialog-title" className="text-lg font-bold text-purple-900">
+                Article
+              </h2>
+              <button
+                type="button"
+                onClick={() => setSelectedFlag(null)}
+                className="rounded-full p-2 text-purple-700 hover:bg-purple-200/60 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                aria-label="Close"
+              >
+                <span className="text-xl leading-none">×</span>
+              </button>
+            </div>
+            <div className="overflow-y-auto p-4 space-y-4 max-h-[calc(90vh-8rem)]">
+              <div>
+                <label className="block text-sm font-semibold text-purple-800 mb-1">Title</label>
+                <input
+                  type="text"
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                  className="w-full rounded-lg border border-purple-200 px-3 py-2 text-purple-900 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-purple-800 mb-1">Full article</label>
+                <textarea
+                  value={editContent}
+                  onChange={(e) => setEditContent(e.target.value)}
+                  rows={14}
+                  className="w-full rounded-lg border border-purple-200 px-3 py-2 text-purple-900 focus:outline-none focus:ring-2 focus:ring-purple-400 resize-y"
+                  placeholder="No content stored for this article."
+                />
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 border-t border-purple-200 bg-purple-50/50 px-4 py-3">
+              <Button
+                variant="outline"
+                onClick={() => setSelectedFlag(null)}
+                className="border-purple-300 text-purple-800"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={() => {
+                  if (onFlagUpdate && selectedFlag) {
+                    onFlagUpdate(selectedFlag.id, { title: editTitle.trim() || selectedFlag.title, content: editContent })
+                    setSelectedFlag(null)
+                  }
+                }}
+                className="bg-purple-600 hover:bg-purple-700 text-white"
+              >
+                Save
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <style jsx global>{`
         @keyframes atlas-jitter-sm {
           0%, 100% { transform: translate3d(0, 0, 0) rotate(0deg); }
