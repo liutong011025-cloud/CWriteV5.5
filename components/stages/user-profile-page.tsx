@@ -11,7 +11,6 @@ import {
   User as UserIcon,
   Settings,
   Sparkles,
-  SlidersHorizontal,
 } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
@@ -75,9 +74,9 @@ interface FarmElementState {
 }
 
 const getDefaultFarmButtonStates = (otherFarm: boolean): Record<FarmElementId, FarmElementState> => ({
-  farmbacktomap: otherFarm ? { x: 74.0, y: 43.9, scale: 0.71 } : { x: 74.1, y: 44.0, scale: 0.78 },
-  farmsetting: otherFarm ? { x: 34.7, y: 49.6, scale: 0.8 } : { x: 34.3, y: 49.5, scale: 0.8 },
-  farmwrittingboard: otherFarm ? { x: 63.2, y: 50.6, scale: 1.1 } : { x: 62.9, y: 51.0, scale: 1.15 },
+  farmbacktomap: otherFarm ? { x: 74, y: 43.9, scale: 0.75 } : { x: 74.1, y: 44.0, scale: 0.78 },
+  farmsetting: otherFarm ? { x: 34.1, y: 49.6, scale: 0.8 } : { x: 34.3, y: 49.5, scale: 0.8 },
+  farmwrittingboard: otherFarm ? { x: 62.8, y: 50.5, scale: 1.1 } : { x: 62.9, y: 51.0, scale: 1.15 },
   vistothersfarm: { x: 73.2, y: 37.0, scale: 0.81 },
 })
 
@@ -156,9 +155,6 @@ export default function UserProfilePage({
   const [bearLogoPosition, setBearLogoPosition] = useState({ x: 49.7, y: 43.7, scale: 0.5, rotation: -11 })
   const [showOtherMapDialog, setShowOtherMapDialog] = useState(false)
   const [otherMapImageUrl, setOtherMapImageUrl] = useState<string | null>(null)
-  const [showOtherFarmPositionTool, setShowOtherFarmPositionTool] = useState(false)
-  const [otherFarmLayout, setOtherFarmLayout] = useState<Record<FarmElementId, FarmElementState> | null>(null)
-  const [editingLayout, setEditingLayout] = useState<Record<FarmElementId, FarmElementState>>(getDefaultFarmButtonStates(true))
 
   const farmElements: FarmElementConfig[] = isOtherFarm
     ? [
@@ -174,31 +170,8 @@ export default function UserProfilePage({
     { id: "vistothersfarm", label: "Visit Others' Farms", imageSrc: "/visitothersfarm.png" },
   ]
 
-  const defaultOtherFarmStates = getDefaultFarmButtonStates(true)
-  const farmElementStates: Record<FarmElementId, FarmElementState> = isOtherFarm
-    ? { ...defaultOtherFarmStates, ...(otherFarmLayout ?? {}) }
-    : getDefaultFarmButtonStates(false)
+  const farmElementStates = getDefaultFarmButtonStates(isOtherFarm)
   const farmTreeStates = DEFAULT_TREE_LAYOUT
-
-  useEffect(() => {
-    if (!isOtherFarm || typeof window === "undefined") return
-    try {
-      const raw = localStorage.getItem("cwriteOtherFarmLayout")
-      if (raw) {
-        const parsed = JSON.parse(raw) as Record<string, { x: number; y: number; scale: number }>
-        const defaults = getDefaultFarmButtonStates(true)
-        const next: Record<FarmElementId, FarmElementState> = { ...defaults }
-        ;(Object.keys(next) as FarmElementId[]).forEach((id) => {
-          if (parsed[id] && typeof parsed[id].x === "number" && typeof parsed[id].y === "number" && typeof parsed[id].scale === "number") {
-            next[id] = { x: parsed[id].x, y: parsed[id].y, scale: parsed[id].scale }
-          }
-        })
-        setOtherFarmLayout(next)
-      }
-    } catch {
-      // ignore
-    }
-  }, [isOtherFarm])
 
   const farmBackgroundSrc = "/farm.png"
   const farmBackgroundAlt = isOtherFarm ? "Other Student Farm Background" : "My Farm Background"
@@ -1158,108 +1131,6 @@ export default function UserProfilePage({
             </div>
           )}
 
-          {isOtherFarm && (
-            <>
-              <button
-                type="button"
-                onClick={() => {
-                  setEditingLayout({ ...farmElementStates })
-                  setShowOtherFarmPositionTool(true)
-                }}
-                className="fixed right-4 bottom-4 z-40 flex items-center gap-2 rounded-xl border-2 border-amber-300 bg-amber-50/95 px-3 py-2 font-hand text-sm font-bold text-amber-900 shadow-lg hover:bg-amber-100"
-                aria-label="Adjust button positions"
-              >
-                <SlidersHorizontal className="h-4 w-4" />
-                Adjust positions
-              </button>
-              {showOtherFarmPositionTool && (
-                <div
-                  className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4"
-                  onClick={() => setShowOtherFarmPositionTool(false)}
-                >
-                  <div
-                    className="w-full max-w-md rounded-2xl border-2 border-amber-200 bg-white p-4 shadow-2xl"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <h3 className="mb-3 font-hand text-lg font-bold text-foreground">Other farm button positions (%)</h3>
-                    <p className="mb-3 text-xs text-muted-foreground">x, y = position (0–100), scale = size factor</p>
-                    <div className="space-y-3 max-h-[60vh] overflow-y-auto">
-                      {(Object.keys(editingLayout) as FarmElementId[]).map((id) => {
-                        const el = farmElements.find((e) => e.id === id)
-                        const s = editingLayout[id]
-                        if (!s) return null
-                        return (
-                          <div key={id} className="rounded-xl border border-amber-100 bg-amber-50/50 p-3">
-                            <div className="mb-2 font-hand text-sm font-bold text-foreground">{el?.label ?? id}</div>
-                            <div className="grid grid-cols-3 gap-2">
-                              <label className="text-xs text-muted-foreground">x</label>
-                              <label className="text-xs text-muted-foreground">y</label>
-                              <label className="text-xs text-muted-foreground">scale</label>
-                              <input
-                                type="number"
-                                min={0}
-                                max={100}
-                                step={0.1}
-                                value={s.x}
-                                onChange={(e) => setEditingLayout((prev) => ({ ...prev, [id]: { ...prev[id], x: Number(e.target.value) || 0 } }))}
-                                className="rounded border border-amber-200 px-2 py-1 text-sm"
-                              />
-                              <input
-                                type="number"
-                                min={0}
-                                max={100}
-                                step={0.1}
-                                value={s.y}
-                                onChange={(e) => setEditingLayout((prev) => ({ ...prev, [id]: { ...prev[id], y: Number(e.target.value) || 0 } }))}
-                                className="rounded border border-amber-200 px-2 py-1 text-sm"
-                              />
-                              <input
-                                type="number"
-                                min={0.1}
-                                max={2}
-                                step={0.05}
-                                value={s.scale}
-                                onChange={(e) => setEditingLayout((prev) => ({ ...prev, [id]: { ...prev[id], scale: Number(e.target.value) || 0.5 } }))}
-                                className="rounded border border-amber-200 px-2 py-1 text-sm"
-                              />
-                            </div>
-                          </div>
-                        )
-                      })}
-                    </div>
-                    <div className="mt-4 flex flex-wrap gap-2">
-                      <Button
-                        size="sm"
-                        onClick={() => {
-                          const saved = { ...editingLayout }
-                          setOtherFarmLayout(saved)
-                          try {
-                            localStorage.setItem("cwriteOtherFarmLayout", JSON.stringify(saved))
-                          } catch {
-                            // ignore
-                          }
-                          setShowOtherFarmPositionTool(false)
-                        }}
-                        className="bg-amber-600 hover:bg-amber-700"
-                      >
-                        Save
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setEditingLayout(getDefaultFarmButtonStates(true))}
-                      >
-                        Reset to default
-                      </Button>
-                      <Button size="sm" variant="ghost" onClick={() => setShowOtherFarmPositionTool(false)}>
-                        Cancel
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </>
-          )}
         </div>
 
       {/* Modal: selected review + work content */}
