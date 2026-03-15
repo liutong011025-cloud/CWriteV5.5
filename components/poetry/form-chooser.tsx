@@ -112,6 +112,7 @@ export function FormChooser({ onBack, backLabel }: FormChooserProps) {
           },
         )}
       </div>
+      </div>
 
       <Star className="pointer-events-none absolute top-20 right-[18%] h-4 w-4 text-secondary/20 animate-float" />
       <Star className="pointer-events-none absolute bottom-28 left-[12%] h-3 w-3 text-primary/15 animate-float-delayed" />
