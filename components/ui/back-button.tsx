@@ -40,8 +40,8 @@ export function BackButton({
   "aria-label": ariaLabel = "Back",
 }: BackButtonProps) {
   const v = VARIANT_CLASSES[variant] ?? VARIANT_CLASSES.default
-  const baseClass = `rounded-full border-2 p-0 w-10 h-10 transition-transform duration-200 hover:scale-110 inline-flex items-center justify-center ${v} ${className}`
-  const icon = <ArrowLeft className="w-5 h-5" strokeWidth={2.5} />
+  const baseClass = `rounded-full border-2 p-0 w-12 h-12 transition-transform duration-200 hover:scale-110 inline-flex items-center justify-center ${v} ${className}`
+  const icon = <ArrowLeft className="w-6 h-6" strokeWidth={2.5} />
   const btn = href ? (
     <Link href={href} aria-label={ariaLabel} className={baseClass}>
       {icon}
