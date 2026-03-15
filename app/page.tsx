@@ -115,9 +115,18 @@ interface WritingAssessment {
   mapImageStatus: "idle" | "loading" | "ready" | "error"
 }
 
+export interface MapFlagItem {
+  id: string
+  x: number
+  y: number
+  title: string
+  content?: string
+  workType?: "story" | "review" | "letter"
+}
+
 interface PersistedMapState {
   mapImageUrl?: string
-  mapFlags: { id: string; x: number; y: number; title: string }[]
+  mapFlags: MapFlagItem[]
   currentPin: { x: number; y: number } | null
   journeySelection: { type: JourneyType; difficulty: number } | null
   journeyActive: boolean
@@ -140,12 +149,17 @@ const normalizeMapState = (raw: unknown): Partial<PersistedMapState> => {
   if (Array.isArray(parsed.mapFlags)) {
     safe.mapFlags = parsed.mapFlags
       .filter((f) => f && typeof f.id === "string")
-      .map((f) => ({
-        id: f.id,
-        x: typeof f.x === "number" ? f.x : 50,
-        y: typeof f.y === "number" ? f.y : 50,
-        title: typeof f.title === "string" ? f.title : "Journey",
-      }))
+      .map((f) => {
+        const item: MapFlagItem = {
+          id: f.id,
+          x: typeof f.x === "number" ? f.x : 50,
+          y: typeof f.y === "number" ? f.y : 50,
+          title: typeof f.title === "string" ? f.title : "Journey",
+        }
+        if (typeof (f as MapFlagItem).content === "string") item.content = (f as MapFlagItem).content
+        if (["story", "review", "letter"].includes((f as MapFlagItem).workType as string)) item.workType = (f as MapFlagItem).workType
+        return item
+      })
   }
   if (parsed.currentPin && typeof parsed.currentPin.x === "number" && typeof parsed.currentPin.y === "number") {
     safe.currentPin = parsed.currentPin
@@ -307,7 +321,7 @@ export default function Home() {
   const [redFlashActive, setRedFlashActive] = useState(false)
   const valuesCheckTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [currentPin, setCurrentPin] = useState<{ x: number; y: number } | null>(null)
-  const [mapFlags, setMapFlags] = useState<{ id: string; x: number; y: number; title: string }[]>([])
+  const [mapFlags, setMapFlags] = useState<MapFlagItem[]>([])
   const [mapImageUrl, setMapImageUrl] = useState<string | undefined>(undefined)
   const [levelBadgeUnlocked, setLevelBadgeUnlocked] = useState(false)
   const mapStateHydratedRef = useRef(false)
@@ -1235,6 +1249,9 @@ export default function Home() {
             setStage(targetStage as any)
           }}
           onGoProfile={() => setStage("userProfile")}
+          onFlagUpdate={(flagId, updates) => {
+            setMapFlags((prev) => prev.map((f) => (f.id === flagId ? { ...f, ...updates } : f)))
+          }}
         />
       )}
       {stage === "writeTypeSelection" && user && (
@@ -1544,6 +1561,8 @@ export default function Home() {
                       x: mapJson.mapX ?? currentPin.x,
                       y: mapJson.mapY ?? currentPin.y,
                       title: mapJson.title || title,
+                      content: finalReview,
+                      workType: "review",
                     },
                   ])
                 }
@@ -1652,6 +1671,8 @@ export default function Home() {
                       x: mapJson.mapX ?? currentPin.x,
                       y: mapJson.mapY ?? currentPin.y,
                       title: mapJson.title || title,
+                      content: finalReview,
+                      workType: "review",
                     },
                   ])
                 }
@@ -1904,6 +1925,8 @@ export default function Home() {
                       x: mapJson.mapX ?? currentPin.x,
                       y: mapJson.mapY ?? currentPin.y,
                       title: mapJson.title || title,
+                      content: finalStory,
+                      workType: "story",
                     },
                   ])
                 }
