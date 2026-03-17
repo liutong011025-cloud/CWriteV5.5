@@ -5,6 +5,7 @@ import { SceneTabs } from "./scene-tabs";
 import { SceneCanvas } from "./scene-canvas";
 import { CharacterPanel } from "./character-panel";
 import { Button } from "@/components/ui/button";
+import { BackButton } from "@/components/ui/back-button";
 import {
   BookOpen,
   Sparkles,
