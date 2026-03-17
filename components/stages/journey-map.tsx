@@ -105,7 +105,7 @@ export default function JourneyMap({
 
   return (
     <div
-      className="min-h-screen relative overflow-hidden pt-0"
+      className="min-h-screen relative overflow-hidden pt-[96px]"
       style={{
         cursor: isHoldingPin
           ? 'url("/pin.png") 16 32, pointer'
