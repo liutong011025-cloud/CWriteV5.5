@@ -23,6 +23,39 @@ interface DramaBookProps {
   onBack: () => void;
 }
 
+function stripCharactersRoleDescriptions(script: string) {
+  if (!script) return script;
+
+  const lines = script.split(/\r?\n/);
+  let inCharacters = false;
+
+  for (let i = 0; i < lines.length; i++) {
+    const trimmed = lines[i].trim();
+
+    if (!inCharacters) {
+      if (trimmed.includes("**Characters:**")) {
+        inCharacters = true;
+      }
+      continue;
+    }
+
+    if (trimmed === "") continue;
+
+    if (trimmed.startsWith("- ")) {
+      const m = trimmed.match(/^- (.+?)\s*:\s*(.+)$/);
+      if (m) {
+        const leading = lines[i].match(/^\s*/)?.[0] ?? "";
+        lines[i] = `${leading}- ${m[1].trim()}`;
+      }
+      continue;
+    }
+
+    inCharacters = false;
+  }
+
+  return lines.join("\n");
+}
+
 export function DramaBook({ onBack }: DramaBookProps) {
   const scenes = useDramaStore((s) => s.scenes);
   const characters = useDramaStore((s) => s.characters);
@@ -32,8 +65,12 @@ export function DramaBook({ onBack }: DramaBookProps) {
 
   const [currentPage, setCurrentPage] = useState(0);
   const [isEditingScript, setIsEditingScript] = useState(false);
-  const [editedScript, setEditedScript] = useState(dramaBook?.script || "");
-  const [originalScript] = useState(dramaBook?.script || "");
+  const [editedScript, setEditedScript] = useState(() =>
+    stripCharactersRoleDescriptions(dramaBook?.script || ""),
+  );
+  const [originalScript] = useState(() =>
+    stripCharactersRoleDescriptions(dramaBook?.script || ""),
+  );
   const [aiFeedback, setAiFeedback] = useState<string | null>(null);
   const [isSendingRevision, setIsSendingRevision] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
