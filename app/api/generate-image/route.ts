@@ -43,9 +43,9 @@ export async function POST(request: NextRequest) {
     // 如果是角色图片，增强prompt确保无背景
     let finalPrompt = prompt.trim()
     if (stage === 'dramaCharacter') {
-      finalPrompt = `${finalPrompt}, full-body character sprite only, isolated subject, no background, transparent alpha background, clean cutout edges, sticker style, no shadow, no scenery, no props, png with transparency`
+      finalPrompt = `${finalPrompt}, cute cartoon style, friendly children's illustration, full-body character sprite only, isolated subject, no background, transparent alpha background, clean cutout edges, sticker style, no shadow, no scenery, no props, png with transparency`
     } else if (stage === 'dramaBackground') {
-      finalPrompt = `${finalPrompt}, background only, no people, no characters, no persons, landscape or setting only, empty scene background`
+      finalPrompt = `${finalPrompt}, cute cartoon style illustration, soft pastel child-friendly colors, simple clean shapes, whimsical 2D game background art, background only, no people, no characters, no persons, landscape or setting only, empty scene background`
     }
     
     const requestBody = {
