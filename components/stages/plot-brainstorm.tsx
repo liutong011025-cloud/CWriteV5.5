@@ -504,6 +504,12 @@ Options (CRITICAL):
     plotData.goal && 
     plotData.goal.toLowerCase() !== "unknown"
 
+  const progressCount = [plotData.setting, plotData.conflict, plotData.goal].reduce((acc, v) => {
+    const ok = !!v && v.trim() !== "" && v.toLowerCase() !== "unknown"
+    return acc + (ok ? 1 : 0)
+  }, 0)
+  const progressPct = Math.round((progressCount / 3) * 100)
+
   const handleContinue = () => {
     // Check if summary is done and all fields are not unknown
     if (canContinue) {
@@ -516,13 +522,21 @@ Options (CRITICAL):
   }
 
   return (
-    <div className="min-h-screen py-8 px-6 bg-gradient-to-br from-blue-100 via-cyan-50 via-purple-50 to-pink-50" style={{ paddingTop: '120px', paddingBottom: '120px' }}>
-      <div className="max-w-7xl mx-auto">
+    <div
+      className="relative min-h-screen py-8 px-6 bg-gradient-to-br from-blue-100 via-cyan-50 via-purple-50 to-pink-50 overflow-hidden"
+      style={{ paddingTop: "120px", paddingBottom: "120px" }}
+    >
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute -top-24 -left-24 h-72 w-72 rounded-full bg-fuchsia-200/50 blur-3xl animate-pulse" />
+        <div className="absolute top-1/3 -right-24 h-72 w-72 rounded-full bg-cyan-200/50 blur-3xl animate-pulse" style={{ animationDelay: "500ms" }} />
+      </div>
+
+      <div className="relative max-w-7xl mx-auto">
         <StageHeader stage={2} title="Brainstorm Your Plot" onBack={onBack} character={character?.name} />
 
         <div className="grid lg:grid-cols-12 gap-6 mt-8">
           <div className="lg:col-span-9">
-            <div className="bg-gradient-to-br from-white to-purple-50 rounded-2xl p-8 border-2 border-purple-200 shadow-2xl">
+            <div className="bg-gradient-to-br from-white to-purple-50 rounded-2xl p-8 border-2 border-purple-200 shadow-2xl transition-all duration-300 hover:shadow-[0_24px_80px_rgba(167,139,250,0.35)] hover:-translate-y-0.5">
               <div ref={chatContainerRef} className="h-[600px] overflow-y-auto mb-6 space-y-4 pr-4">
                 {messages.map((message, index) => (
                   <div
@@ -555,10 +569,10 @@ Options (CRITICAL):
                               <button
                                 key={i}
                                 onClick={() => handleSuggestionClick(cleanSuggestion)}
-                                className="px-3 py-2 bg-gradient-to-r from-purple-400 via-pink-400 to-purple-500 hover:from-purple-500 hover:via-pink-500 hover:to-purple-600 border-2 border-purple-400 rounded-xl text-xs font-bold text-white transition-all duration-300 hover:scale-110 active:scale-95 shadow-lg hover:shadow-2xl animate-bounce-in hover:animate-wiggle relative overflow-hidden group flex-shrink-0"
+                                className="px-3 py-2 bg-gradient-to-r from-purple-400 via-pink-400 to-purple-500 hover:from-purple-500 hover:via-pink-500 hover:to-purple-600 border-2 border-purple-400 rounded-xl text-xs font-bold text-white transition-all duration-200 hover:scale-110 active:scale-95 shadow-lg hover:shadow-2xl relative overflow-hidden group flex-shrink-0"
                                 style={{
                                   animationDelay: `${i * 100}ms`,
-                                  animationFillMode: 'forwards',
+                                  animationFillMode: "forwards",
                                 }}
                               >
                                 {/* 背景光效 */}
@@ -576,8 +590,12 @@ Options (CRITICAL):
                 ))}
                 {isLoading && (
                   <div className="flex justify-start">
-                    <div className="bg-gradient-to-r from-purple-100 to-pink-100 rounded-2xl p-4 border-2 border-purple-200">
-                      <Loader2 className="h-5 w-5 animate-spin text-purple-600" />
+                    <div className="bg-gradient-to-r from-purple-100 to-pink-100 rounded-2xl p-4 border-2 border-purple-200 shadow-sm">
+                      <div className="flex items-center gap-2">
+                        <span className="h-2.5 w-2.5 rounded-full bg-purple-500 animate-bounce" />
+                        <span className="h-2.5 w-2.5 rounded-full bg-pink-500 animate-bounce" style={{ animationDelay: "150ms" }} />
+                        <span className="h-2.5 w-2.5 rounded-full bg-cyan-500 animate-bounce" style={{ animationDelay: "300ms" }} />
+                      </div>
                     </div>
                   </div>
                 )}
@@ -595,13 +613,13 @@ Options (CRITICAL):
                     }
                   }}
                   placeholder="Choose one as answer or type your response here..."
-                  className="flex-1 border-2 border-purple-200 focus:border-purple-500 rounded-xl"
+                  className="flex-1 border-2 border-purple-200 focus:border-purple-500 rounded-xl bg-white/70 backdrop-blur-sm"
                   disabled={isLoading}
                 />
                 <Button
                   onClick={() => sendMessage(input)}
                   disabled={isLoading || !input.trim()}
-                  className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white border-0 shadow-xl"
+                  className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white border-0 shadow-xl transition-transform duration-150 active:scale-[0.98] hover:scale-[1.02]"
                 >
                   {isLoading ? (
                     <Loader2 className="h-5 w-5 animate-spin" />
@@ -612,14 +630,15 @@ Options (CRITICAL):
               </div>
 
               {canContinue && (
-                <div className="mt-6 p-4 bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-300 rounded-xl shadow-lg">
-                  <p className="text-green-800 font-semibold text-center mb-3">
+                <div className="mt-6 p-4 bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-300 rounded-xl shadow-lg relative overflow-hidden">
+                  <div className="absolute -top-10 -right-10 h-24 w-24 rounded-full bg-emerald-200/60 blur-2xl animate-pulse" />
+                  <p className="relative text-green-800 font-semibold text-center mb-3">
                     ✨ You can proceed to the next step, or continue chatting with AI to make your plot more accurate!
                   </p>
                   <Button
                     onClick={handleContinue}
                     size="lg"
-                    className="w-full border-0 shadow-xl py-6 text-lg font-bold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-700 hover:via-purple-700 hover:to-pink-700 text-white animate-pulse"
+                    className="relative w-full border-0 shadow-xl py-6 text-lg font-bold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-700 hover:via-purple-700 hover:to-pink-700 text-white animate-pulse"
                   >
                     Continue →
                   </Button>
@@ -631,7 +650,7 @@ Options (CRITICAL):
           <div className="lg:col-span-3 space-y-4">
             {/* 角色图片 */}
             {character?.imageUrl && (
-              <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-2xl p-4 border-2 border-indigo-200 shadow-xl">
+              <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-2xl p-4 border-2 border-indigo-200 shadow-xl transition-all duration-300 hover:-translate-y-0.5">
                 <h3 className="text-lg font-bold mb-3 text-indigo-700">Your Character</h3>
                 <div className="relative overflow-hidden rounded-xl shadow-lg">
                   <img
@@ -655,6 +674,19 @@ Options (CRITICAL):
                 <span>📊</span>
                 Plot Progress
               </h3>
+
+              <div className="mb-5">
+                <div className="h-2.5 w-full bg-white/60 border border-blue-100 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 rounded-full transition-all duration-500"
+                    style={{ width: `${progressPct}%` }}
+                  />
+                </div>
+                <p className="mt-2 text-xs text-blue-800/80 text-center font-semibold">
+                  {progressCount}/3 unlocked
+                </p>
+              </div>
+
               <div className="space-y-4">
                 <div className={`transition-all duration-500 ${updatingFields.has("setting") ? "animate-pulse scale-105" : ""}`}>
                   <div className="flex items-center gap-2 mb-2">
