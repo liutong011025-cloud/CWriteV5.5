@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
     if (stage === 'dramaCharacter') {
       finalPrompt = `${finalPrompt}, cute cartoon style, friendly children's illustration, full-body character sprite only, isolated subject, no background, transparent alpha background, clean cutout edges, sticker style, no shadow, no scenery, no props, png with transparency`
     } else if (stage === 'dramaBackground') {
-      finalPrompt = `${finalPrompt}, cute cartoon style illustration, soft pastel child-friendly colors, simple clean shapes, whimsical 2D game background art, background only, no people, no characters, no persons, landscape or setting only, empty scene background`
+      finalPrompt = `${finalPrompt}, painterly semi-realistic background art, photorealistic texture, more realistic lighting, natural materials, subtle depth of field, cinematic atmosphere, detailed environment, background only, no people, no characters, no persons, landscape or setting only, empty scene background, avoid cartoon, avoid anime, avoid sticker, avoid illustration, avoid flat vector`
     }
     
     const requestBody = {
