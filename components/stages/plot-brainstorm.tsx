@@ -124,7 +124,19 @@ ${characterInfo}
 
 IMPORTANT: Always refer to the character by their name "${characterName}"${characterSpecies ? ` (a ${character.species})` : ""}, NOT "your character" or "the character". Use "${characterName}" in your questions.
 
-Start by asking: "Where does ${characterName}'s story take place?" Then ask your guiding question. At the very end of your answer, add exactly six SINGLE ENGLISH WORDS related to story settings (like: school home forest park beach library). Each word must be a single word, not a phrase. Do not use commas between the six words - just use spaces. Keep proper punctuation in your questions (question marks, periods, etc.).
+Conversation plan (CRITICAL):
+1) First question (turn 1): Ask ONLY about setting / place. Use: "Where does ${characterName}'s story take place?"
+2) Second question (turn 2): Ask ONLY about conflict / problem. Use: "What problem or challenge does ${characterName} face?"
+3) Third question (turn 3): Ask ONLY about goal / want. Use: "What does ${characterName} want to achieve?"
+After the third question, if the plot is clear, you may ask small follow-ups.
+
+Tone (IMPORTANT):
+- Keep the AI's message short and calm: 1-2 simple sentences.
+- Do NOT be too vivid or dramatic. No extra worldbuilding beyond the next question.
+- Always refer to the student's last answer briefly (1 short phrase) before asking the next question.
+  Example: "You said it happens at school. Now, what problem happens there?"
+
+At the very end of your answer, add exactly six SINGLE ENGLISH WORDS related to story settings (like: school home forest park beach library). Each word must be a single word, not a phrase. Do not use commas between the six words - just use spaces. Keep proper punctuation in your questions (question marks, periods, etc.).
 
 Continue guiding the student step by step. In every response you must:
 - Always use "${characterName}"${characterSpecies ? ` (the ${character.species})` : ""} in your questions, NOT "your character"
@@ -142,7 +154,19 @@ CRITICAL: Always use "${characterName}" in your questions. Always keep proper pu
       } else {
         initialPrompt = `You are a mind map robot helping elementary school students with plot writing. Use simple, kid-friendly language with proper punctuation. Always answer in English only.
 
-Start by asking: "Where does this story take place?" Then ask your guiding question. At the very end of your answer, add exactly six SINGLE ENGLISH WORDS related to story settings (like: school home forest park beach library). Each word must be a single word, not a phrase. Don't use commas between the six words - just use spaces. Keep proper punctuation in your questions (question marks, periods, etc.).
+Conversation plan (CRITICAL):
+1) First question (turn 1): Ask ONLY about setting / place. Use: "Where does this story take place?"
+2) Second question (turn 2): Ask ONLY about conflict / problem. Use: "What problem or challenge does the hero face?"
+3) Third question (turn 3): Ask ONLY about goal / want. Use: "What does the hero want to achieve?"
+After the third question, if the plot is clear, you may ask small follow-ups.
+
+Tone (IMPORTANT):
+- Keep the AI's message short and calm: 1-2 simple sentences.
+- Do NOT be too vivid or dramatic. No extra worldbuilding beyond the next question.
+- Always refer to the student's last answer briefly (1 short phrase) before asking the next question.
+  Example: "You said it happens at school. Now, what problem happens there?"
+
+At the very end of your answer, add exactly six SINGLE ENGLISH WORDS related to story settings (like: school home forest park beach library). Each word must be a single word, not a phrase. Don't use commas between the six words - just use spaces. Keep proper punctuation in your questions (question marks, periods, etc.).
 
 Continue guiding step by step. In every response you must:
 - Use proper punctuation (question marks, periods, etc.) - DO NOT remove punctuation
@@ -336,22 +360,53 @@ Continue guiding step by step. In every response you must:
         console.log("Summary done signal received")
       }
       
-      // 解析总结结果，提取setting、conflict、goal
-      // 格式应该是: setting: xxx\nconflict: xxx\ngoal: xxx
-      // 支持中英文冒号，提取到行尾或下一个字段前
-      const settingMatch = summary.match(/setting[：:]\s*([^\n\r]+?)(?=\n\s*(?:conflict|goal|done)|$)/i)
-      const conflictMatch = summary.match(/conflict[：:]\s*([^\n\r]+?)(?=\n\s*(?:goal|done|$)|$)/i)
-      const goalMatch = summary.match(/goal[：:]\s*([^\n\r]+?)(?=\n\s*(?:done|$)|$)/i)
-      
+      // 解析总结结果，提取 setting / conflict / goal
+      // 为了避免“永远提取不到”，这里做更强的容错：优先逐行匹配字段名，其次才回退到多行正则。
+      const lines = summary
+        .split(/\r?\n/)
+        .map((l) => l.trim())
+        .filter(Boolean)
+
+      let extractedSetting: string | undefined
+      let extractedConflict: string | undefined
+      let extractedGoal: string | undefined
+
+      for (const line of lines) {
+        // setting / location / place
+        const mSetting = line.match(/^(setting|location|place)[：:]\s*(.+)$/i)
+        if (mSetting) extractedSetting = mSetting[2]?.trim()
+
+        // conflict（容错：conflic / confilc / problem / challenge）
+        const mConflict = line.match(/^(conflict|confilc|conflcit|problem|challenge)[：:]\s*(.+)$/i)
+        if (mConflict) extractedConflict = mConflict[2]?.trim()
+
+        // goal（容错：objective / aim / want）
+        const mGoal = line.match(/^(goal|objective|aim|want)[：:]\s*(.+)$/i)
+        if (mGoal) extractedGoal = mGoal[2]?.trim()
+      }
+
+      // 回退：仍然支持“setting: ... \n conflict: ...”这种多行结构
+      const settingMatch = extractedSetting
+        ? null
+        : summary.match(/setting[：:]\s*([^\n\r]+?)(?=\n\s*(?:conflict|goal|done)|$)/i)
+      const conflictMatch = extractedConflict
+        ? null
+        : summary.match(/conflict[：:]\s*([^\n\r]+?)(?=\n\s*(?:goal|done|$)|$)/i)
+      const goalMatch = extractedGoal ? null : summary.match(/goal[：:]\s*([^\n\r]+?)(?=\n\s*(?:done|$)|$)/i)
+
+      const settingValue = extractedSetting ?? settingMatch?.[1]
+      const conflictValue = extractedConflict ?? conflictMatch?.[1]
+      const goalValue = extractedGoal ?? goalMatch?.[1]
+
       console.log("Extracted matches:", {
-        setting: settingMatch?.[1],
-        conflict: conflictMatch?.[1],
-        goal: goalMatch?.[1]
+        setting: settingValue,
+        conflict: conflictValue,
+        goal: goalValue,
       })
 
-      if (settingMatch && settingMatch[1].trim()) {
-        // 去掉可能的"setting:"前缀和多余空格
-        let newSetting = settingMatch[1].trim().replace(/^setting[：:]\s*/i, "").trim()
+      if (settingValue && settingValue.trim()) {
+        // 去掉可能的"setting:"前缀和多余空格（兼容偶发输出）
+        let newSetting = settingValue.trim().replace(/^setting[：:]\s*/i, "").trim()
         // Setting 允许单个单词，不进行长度检查
         if (newSetting && newSetting.toLowerCase() !== "unknown" && newSetting !== plotData.setting) {
           setUpdatingFields((prev) => new Set([...prev, "setting"]))
@@ -368,9 +423,9 @@ Continue guiding step by step. In every response you must:
         }
       }
 
-      if (conflictMatch && conflictMatch[1].trim()) {
-        // 去掉可能的"conflict:"前缀和多余空格
-        let newConflict = conflictMatch[1].trim().replace(/^conflict[：:]\s*/i, "").trim()
+      if (conflictValue && conflictValue.trim()) {
+        // 去掉可能的"conflict:"前缀和多余空格（兼容偶发输出）
+        let newConflict = conflictValue.trim().replace(/^(conflict|confilc|problem|challenge)[：:]\s*/i, "").trim()
         // 如果提取到内容且不是 "unknown"，就使用它（允许单个词或短句）
         if (newConflict && newConflict.toLowerCase() !== "unknown" && newConflict !== plotData.conflict) {
           setUpdatingFields((prev) => new Set([...prev, "conflict"]))
@@ -387,9 +442,9 @@ Continue guiding step by step. In every response you must:
         }
       }
 
-      if (goalMatch && goalMatch[1].trim()) {
-        // 去掉可能的"goal:"前缀和多余空格
-        let newGoal = goalMatch[1].trim().replace(/^goal[：:]\s*/i, "").trim()
+      if (goalValue && goalValue.trim()) {
+        // 去掉可能的"goal:"前缀和多余空格（兼容偶发输出）
+        let newGoal = goalValue.trim().replace(/^(goal|objective|aim|want)[：:]\s*/i, "").trim()
         // 如果提取到内容且不是 "unknown"，就使用它（允许单个词或短句）
         if (newGoal && newGoal.toLowerCase() !== "unknown" && newGoal !== plotData.goal) {
           setUpdatingFields((prev) => new Set([...prev, "goal"]))
@@ -416,8 +471,8 @@ Continue guiding step by step. In every response you must:
   }
 
   // 检查是否可以继续：三个字段都不能是unknown或空
-  const canContinue = summaryDone && 
-    plotData.setting && 
+  const canContinue =
+    plotData.setting &&
     plotData.setting.toLowerCase() !== "unknown" &&
     plotData.conflict && 
     plotData.conflict.toLowerCase() !== "unknown" &&
