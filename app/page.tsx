@@ -404,6 +404,15 @@ export default function Home() {
   const [lastGrownTree, setLastGrownTree] = useState<{ treeId: number; dimension: TreeGrowthDimension } | null>(null)
   // 每棵樹的成長記錄（哪篇文章、哪句話讓它長高）
   const [treeGrowthDetails, setTreeGrowthDetails] = useState<Record<number, TreeGrowthDetail[]>>({})
+  // 进入 farm 的次数：用于强制“闪光长大”动画每次都能重新触发
+  const [farmEntryNonce, setFarmEntryNonce] = useState(0)
+
+  // 每次切换到自己的 farm 都增加一次 nonce，确保闪光动画必定重新播放
+  useEffect(() => {
+    if (stage === "userProfile" && user?.username) {
+      setFarmEntryNonce((n: number) => n + 1)
+    }
+  }, [stage, user?.username])
 
   // Hydration safety: only use store-derived progress after mount
   const [isReady, setIsReady] = useState(false)
@@ -2190,6 +2199,7 @@ export default function Home() {
           treeGrowthDetails={treeGrowthDetails}
           recentGrowthTreeId={lastGrownTree?.treeId ?? null}
           recentGrowthDimension={lastGrownTree?.dimension ?? null}
+          farmEntryNonce={farmEntryNonce}
           onVisitOthersFarm={() => setStage("navigation")}
         />
       )}
