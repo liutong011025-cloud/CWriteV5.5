@@ -67,9 +67,10 @@ export default function PlotBrainstorm({ language, character, onPlotCreate, onBa
   }
 
   const extractLastSixWords = (text: string): { words: string[]; cleanedText: string } => {
-    // 优先按 OPTIONS: w1 w2 w3 w4 w5 w6 的格式抽取（更稳定，也能保证每个都是单词）。
     const normalizedAll = text.trim()
-    const optionsMatch = normalizedAll.match(/OPTIONS\s*:\s*([A-Za-z\s]+)\s*$/i)
+
+    // 1) 首选：严格解析最后一行 OPTIONS: w1 w2 w3 w4 w5 w6
+    const optionsMatch = normalizedAll.match(/OPTIONS\s*:\s*([A-Za-z]+(?:\s+[A-Za-z]+){5})\s*$/i)
     if (optionsMatch) {
       const optionsBody = optionsMatch[1] || ""
       const tokens = optionsBody
@@ -77,48 +78,32 @@ export default function PlotBrainstorm({ language, character, onPlotCreate, onBa
         .map((t) => t.replace(/[^A-Za-z]/g, "").trim())
         .filter(Boolean)
         .map((t) => t.toLowerCase())
-
       if (tokens.length === 6) {
         const cleanedText = normalizedAll.replace(optionsMatch[0], "").trim()
         return { words: tokens, cleanedText }
       }
     }
 
-    // 某些情况下，AI 会在最后 6 个选项后面又补一个句号/问号等标点。
-    // 这会导致“最后一个标点后的 tail”为空，从而抽不到 suggestions。
-    // 这里先移除末尾的句末标点，再进行后续抽取。
-    const normalizedText = normalizedAll.replace(/[.!?。！？]+$/g, "").trim()
+    // 2) 兜底：如果最后一行“恰好 6 个纯字母单词”，就当它是 options（但要避免把问题句子也当 options）
+    const lines = normalizedAll.split(/\r?\n/).map((l) => l.trim()).filter(Boolean)
+    const lastLine = lines.length > 0 ? lines[lines.length - 1] : normalizedAll
 
-    // 先找到最後一個句號/問號/感嘆號，把「六個單詞」限制在標點後的尾段
-    const lastPunctuationIndex = Math.max(
-      normalizedText.lastIndexOf("."),
-      normalizedText.lastIndexOf("?"),
-      normalizedText.lastIndexOf("!"),
-      normalizedText.lastIndexOf("。"),
-      normalizedText.lastIndexOf("？"),
-      normalizedText.lastIndexOf("！")
-    )
+    const lastLineTokens = lastLine
+      .replace(/[.!?。！？]+$/g, "")
+      .split(/\s+/)
+      .map((t) => t.replace(/[^A-Za-z]/g, "").trim())
+      .filter(Boolean)
+      .map((t) => t.toLowerCase())
 
-    const tail = (lastPunctuationIndex >= 0 ? normalizedText.substring(lastPunctuationIndex + 1) : normalizedText).trim()
-
-    // 從尾巴往前收集，僅保留純英文字母構成的單詞
-    const rawTokens = tail.split(/\s+/).filter(Boolean)
-    const collected: string[] = []
-
-    for (let i = rawTokens.length - 1; i >= 0 && collected.length < 6; i--) {
-      const cleaned = rawTokens[i].replace(/[^A-Za-z]/g, "").trim()
-      if (cleaned.length > 0) {
-        collected.push(cleaned.toLowerCase())
-      }
+    const QUESTION_WORDS = new Set(["where", "does", "take", "place", "story"])
+    const looksLikeQuestion = lastLineTokens.some((t) => QUESTION_WORDS.has(t))
+    if (lastLineTokens.length === 6 && !looksLikeQuestion) {
+      const cleanedText = normalizedAll.replace(new RegExp(`${lastLine.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\\\$&")}\\s*$`), "").trim()
+      return { words: lastLineTokens, cleanedText }
     }
 
-    const words = collected.reverse()
-
-    // cleanedText：保留到最後一個主要標點為止，去掉尾部提示單詞
-    const cleanedText =
-      lastPunctuationIndex >= 0 ? normalizedText.substring(0, lastPunctuationIndex + 1).trim() : normalizedText.trim()
-
-    return { words, cleanedText }
+    // 3) 不符合 options 格式：为了不把“问题句子”当按钮，直接返回空按钮
+    return { words: [], cleanedText: normalizedAll }
   }
 
   const extractGrammarIssue = (text: string): { grammarIssue: string | null; cleaned: string } => {
@@ -170,14 +155,15 @@ After the student answers conflict:
 - Briefly acknowledge their answer, then ask ONLY the goal/want.
 
 Options (CRITICAL):
-- On the last line, output exactly:
-  OPTIONS: w1 w2 w3 w4 w5 w6
+- Output EXACTLY TWO LINES:
+  Line 1: your question (one short sentence, ends with ?)
+  Line 2: OPTIONS: w1 w2 w3 w4 w5 w6
 - Each wi must be a single English word (letters only, no spaces inside).
 - These 6 words must be valid answer options for the question you just asked:
   - setting question: location words
   - conflict question: problem/challenge words
   - goal question: want/action words
-- After the 6 words, end immediately (no punctuation, no extra text).`
+- After w6, end immediately (no punctuation, no extra text).`
       } else {
         initialPrompt = `You help elementary students brainstorm a plot mind map. Answer in English only.
 
@@ -196,14 +182,15 @@ After the student answers conflict:
 - Briefly acknowledge their answer, then ask ONLY the goal/want.
 
 Options (CRITICAL):
-- On the last line, output exactly:
-  OPTIONS: w1 w2 w3 w4 w5 w6
+- Output EXACTLY TWO LINES:
+  Line 1: your question (one short sentence, ends with ?)
+  Line 2: OPTIONS: w1 w2 w3 w4 w5 w6
 - Each wi must be a single English word (letters only, no spaces inside).
 - These 6 words must be valid answer options for the question you just asked:
   - setting question: location words
   - conflict question: problem/challenge words
   - goal question: want/action words
-- After the 6 words, end immediately (no punctuation, no extra text).`
+- After w6, end immediately (no punctuation, no extra text).`
       }
 
       const response = await fetch("/api/dify-chat", {
