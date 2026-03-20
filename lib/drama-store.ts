@@ -69,7 +69,7 @@ const createDefaultScene = (): Scene => ({
 export const useDramaStore = create<DramaState>((set, get) => ({
   scenes: [createDefaultScene()],
   characters: [],
-  title: "My Amazing Drama",
+  title: "",
   activeSceneIndex: 0,
   dramaBook: null,
   isGeneratingBook: false,
@@ -242,7 +242,7 @@ export const useDramaStore = create<DramaState>((set, get) => ({
     set({
       scenes: [createDefaultScene()],
       characters: [],
-      title: "My Amazing Drama",
+      title: "",
       activeSceneIndex: 0,
       dramaBook: null,
       isGeneratingBook: false,
