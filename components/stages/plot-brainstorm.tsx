@@ -41,6 +41,13 @@ export default function PlotBrainstorm({ language, character, onPlotCreate, onBa
   const chatContainerRef = useRef<HTMLDivElement>(null)
   const summaryNonceRef = useRef(0)
 
+  const sanitizeAiToEnglishOnly = (text: string): string => {
+    // 去掉中文字符块，避免出现 “... (in Chinese: ...)” 或中英混排
+    // 仅保留 ASCII 英文与常见英文标点/空白。
+    const withoutChinese = text.replace(/[\u4e00-\u9fff]+[，。、！？]?\s*/g, " ")
+    return withoutChinese.replace(/\s+/g, " ").trim()
+  }
+
   useEffect(() => {
     sendInitialMessage()
   }, [])
@@ -109,89 +116,68 @@ export default function PlotBrainstorm({ language, character, onPlotCreate, onBa
         const characterInfo = [
           `Character name: ${character.name}`,
           character.species ? `Species: ${character.species}` : "",
-          character.traits && character.traits.length > 0 ? `Traits: ${character.traits.join(", ")}` : "",
           character.description ? `Description: ${character.description}` : "",
         ].filter(Boolean).join("\n")
+
+        // Cap prompt size to keep the first Dify response fast.
+        const characterInfoCapped = characterInfo.length > 420 ? `${characterInfo.slice(0, 420)}...` : characterInfo
         
         // 新的设定：脑图机器人，面向小学生，六个单词收尾（保留标点符号，单词不用逗号）
         const characterName = character.name || "the character"
         const characterSpecies = character.species ? ` (a ${character.species})` : ""
         const characterReference = `${characterName}${characterSpecies}`
         
-        initialPrompt = `You are a mind map robot helping elementary school students with plot writing. Use simple, kid-friendly language with proper punctuation. Always answer in English only.
+        initialPrompt = `You help elementary students brainstorm a plot mind map. Answer in English only.
 
-Here's the character information the student created:
-${characterInfo}
+Character info:
+${characterInfoCapped}
 
-IMPORTANT: Always refer to the character by their name "${characterName}"${characterSpecies ? ` (a ${character.species})` : ""}, NOT "your character" or "the character". Use "${characterName}" in your questions.
+Rules:
+- Always use "${characterName}"${characterSpecies ? ` (a ${character.species})` : ""} in your questions.
+- Never invent setting/conflict/goal the student did not say.
+- Keep order: setting → conflict → goal.
+- Be short and calm (1-2 sentences). No extra worldbuilding.
 
-Flow (CRITICAL):
-Never invent a setting/conflict/goal that the student did not write.
-If the student has not answered yet in this conversation, ask ONLY about the setting/place (no “So Tony is in…” yet).
-In that first message, do NOT name any specific place; just ask the setting question.
-After the student answers the setting/place, briefly acknowledge using the student's last answer (in your own words), then ask about the conflict/problem next.
-After the student answers the conflict/problem, briefly acknowledge using the student's last answer (in your own words), then ask about the goal/want next.
-You MUST keep the order setting → conflict → goal.
-Let your next question sound like a real chat that continues from the student's last answer.
+First message (before the student replies):
+- Ask ONLY this question (no specific place): "Where does ${characterName}'s story take place?"
 
-Tone (IMPORTANT):
-- Keep the AI's message short and calm: 1-2 simple sentences.
-- Do NOT be too vivid or dramatic. No extra worldbuilding beyond the next question.
-- Briefly and naturally reflect the student's last answer (in your own words, 1 short clause) before asking the next question.
-- Do NOT use a fixed sentence template every time; vary the wording naturally.
+After the student answers setting:
+- Briefly acknowledge their answer, then ask ONLY the conflict/problem.
 
-At the very end of your answer, add exactly six SINGLE ENGLISH WORDS as answer options for the question you are asking NOW.
-If you are asking about the setting/place, use setting/location words.
-If you are asking about conflict/problem, use conflict/problem words.
-If you are asking about goal/want, use goal/action words.
-Each word must be a single word (letters only), not a phrase. Do not use commas between the six words - just use spaces.
-These six words MUST match the question you just asked (do not mix setting words into conflict/goal messages).
+After the student answers conflict:
+- Briefly acknowledge their answer, then ask ONLY the goal/want.
 
-Continue guiding the student step by step. In every response you must:
-- Always use "${characterName}"${characterSpecies ? ` (the ${character.species})` : ""} in your questions, NOT "your character"
-- Use proper punctuation (question marks, periods, etc.) in your questions - DO NOT remove punctuation
-- Grammar rule:
-  - The student is allowed to answer with single words or short phrases (like "water", "big monster", "dark forest"). This is NOT a grammar error.
-  - ONLY when the student's last message is a full sentence in English AND there is a clear grammar or spelling mistake, you may add ONE short error note like this: [GRAMMAR_ERROR]You wrote \"He go school\" → it should be \"He goes to school\".[/GRAMMAR_ERROR].
-  - If there is no clear error, or if the student only wrote one word or a short phrase, do NOT use [GRAMMAR_ERROR] and do NOT talk about grammar.
-  - Never ask the student to always answer with a full sentence. Do not say "Please answer with a full sentence".
-- The six options at the end must match the question you asked (space-separated, no commas)
-- When the conversation can fully describe a complete story, say: "The plot is getting clearer! Anything else you'd like to talk about?" (in Chinese: 故事情节已经比较清晰了，还想再聊些什么吗？)
-
-CRITICAL: Always use "${characterName}" in your questions. Always keep proper punctuation in your questions. End with exactly six SINGLE WORDS (space-separated, no commas).`
+Options (CRITICAL):
+- End your message with exactly six SINGLE ENGLISH WORDS (letters only), separated by spaces, no commas.
+- These 6 words must be valid answer options for the question you just asked:
+  - setting question: location words
+  - conflict question: problem/challenge words
+  - goal question: want/action words
+- End with the 6 words and nothing after them.`
       } else {
-        initialPrompt = `You are a mind map robot helping elementary school students with plot writing. Use simple, kid-friendly language with proper punctuation. Always answer in English only.
+        initialPrompt = `You help elementary students brainstorm a plot mind map. Answer in English only.
 
-Flow (CRITICAL):
-Never invent a setting/conflict/goal that the student did not write.
-If the student has not answered yet in this conversation, ask ONLY about the setting/place (no “So the hero is in…” yet).
-In that first message, do NOT name any specific place; just ask the setting question.
-After the student answers the setting/place, briefly acknowledge using the student's last answer (in your own words), then ask about the conflict/problem next.
-After the student answers the conflict/problem, briefly acknowledge using the student's last answer (in your own words), then ask about the goal/want next.
-You MUST keep the order setting → conflict → goal.
-Let your next question sound like a real chat that continues from the student's last answer.
+Rules:
+- Never invent setting/conflict/goal the student did not say.
+- Keep order: setting → conflict → goal.
+- Be short and calm (1-2 sentences). No extra worldbuilding.
 
-Tone (IMPORTANT):
-- Keep the AI's message short and calm: 1-2 simple sentences.
-- Do NOT be too vivid or dramatic. No extra worldbuilding beyond the next question.
-- Briefly and naturally reflect the student's last answer (in your own words, 1 short clause) before asking the next question.
-- Do NOT use a fixed sentence template every time; vary the wording naturally.
+First message (before the student replies):
+- Ask ONLY this question (no specific place): "Where does the story take place?"
 
-At the very end of your answer, add exactly six SINGLE ENGLISH WORDS as answer options for the question you are asking NOW.
-If you are asking about the setting/place, use setting/location words.
-If you are asking about conflict/problem, use conflict/problem words.
-If you are asking about goal/want, use goal/action words.
-Each word must be a single word (letters only), not a phrase. Do not use commas between the six words - just use spaces.
-These six words MUST match the question you just asked (do not mix setting words into conflict/goal messages).
+After the student answers setting:
+- Briefly acknowledge their answer, then ask ONLY the conflict/problem.
 
-Continue guiding step by step. In every response you must:
-- Use proper punctuation (question marks, periods, etc.) - DO NOT remove punctuation
-- Grammar rule:
-  - The student is allowed to answer with single words or short phrases (like "water", "big monster", "dark forest"). This is NOT a grammar error.
-  - ONLY when the student's last message is a full sentence in English AND there is a clear grammar or spelling mistake, you may add ONE short error note like this: [GRAMMAR_ERROR]You wrote \"He go school\" → it should be \"He goes to school\".[/GRAMMAR_ERROR].
-  - If there is no clear error, or if the student only wrote one word or a short phrase, do NOT use [GRAMMAR_ERROR] and do NOT talk about grammar.
-  - Never ask the student to always answer with a full sentence. Do not say "Please answer with a full sentence".
-- The six options at the end must match the question you asked (space-separated, no commas)`
+After the student answers conflict:
+- Briefly acknowledge their answer, then ask ONLY the goal/want.
+
+Options (CRITICAL):
+- End your message with exactly six SINGLE ENGLISH WORDS (letters only), separated by spaces, no commas.
+- These 6 words must be valid answer options for the question you just asked:
+  - setting question: location words
+  - conflict question: problem/challenge words
+  - goal question: want/action words
+- End with the 6 words and nothing after them.`
       }
 
       const response = await fetch("/api/dify-chat", {
@@ -215,10 +201,13 @@ Continue guiding step by step. In every response you must:
       }
 
       const aiMessage = data.answer || "Hello! Let's start brainstorming your plot."
-      const { grammarIssue, cleaned } = extractGrammarIssue(aiMessage)
+      const sanitizedAiMessage = sanitizeAiToEnglishOnly(aiMessage)
+      const { grammarIssue, cleaned } = extractGrammarIssue(sanitizedAiMessage)
       const { words: suggestions, cleanedText } = extractLastSixWords(cleaned)
 
-      const initialMessages: Message[] = [{ role: "ai", content: cleanedText || cleaned || aiMessage, suggestions, grammarIssue }]
+      const initialMessages: Message[] = [
+        { role: "ai", content: cleanedText || cleaned || sanitizedAiMessage, suggestions, grammarIssue },
+      ]
       setMessages(initialMessages)
       setConversationId(data.conversation_id)
       
@@ -263,10 +252,11 @@ Continue guiding step by step. In every response you must:
       }
 
       const aiMessage = data.answer || ""
-      const { grammarIssue, cleaned } = extractGrammarIssue(aiMessage)
+      const sanitizedAiMessage = sanitizeAiToEnglishOnly(aiMessage)
+      const { grammarIssue, cleaned } = extractGrammarIssue(sanitizedAiMessage)
       const { words: suggestions, cleanedText } = extractLastSixWords(cleaned)
 
-      const updatedMessages = [...messages, userMessage, { role: "ai" as const, content: cleanedText || cleaned || aiMessage, suggestions, grammarIssue }]
+      const updatedMessages = [...messages, userMessage, { role: "ai" as const, content: cleanedText || cleaned || sanitizedAiMessage, suggestions, grammarIssue }]
       setMessages(updatedMessages)
       setConversationId(data.conversation_id)
 
@@ -301,7 +291,7 @@ Continue guiding step by step. In every response you must:
       const studentMessageCount = updatedMessages.filter(msg => msg.role === 'user').length
       
       // 只在达到一定轮数时才总结
-      if (studentMessageCount >= 1) {
+      if (studentMessageCount >= 2) {
         // 异步触发总结，避免用户感知聊天“变慢”
         summarizePlot(updatedMessages).catch((e) => {
           console.error("Plot summary failed:", e)
