@@ -67,17 +67,22 @@ export default function PlotBrainstorm({ language, character, onPlotCreate, onBa
   }
 
   const extractLastSixWords = (text: string): { words: string[]; cleanedText: string } => {
+    // 某些情况下，AI 会在最后 6 个选项后面又补一个句号/问号等标点。
+    // 这会导致“最后一个标点后的 tail”为空，从而抽不到 suggestions。
+    // 这里先移除末尾的句末标点，再进行后续抽取。
+    const normalizedText = text.trim().replace(/[.!?。！？]+$/g, "").trim()
+
     // 先找到最後一個句號/問號/感嘆號，把「六個單詞」限制在標點後的尾段
     const lastPunctuationIndex = Math.max(
-      text.lastIndexOf("."),
-      text.lastIndexOf("?"),
-      text.lastIndexOf("!"),
-      text.lastIndexOf("。"),
-      text.lastIndexOf("？"),
-      text.lastIndexOf("！")
+      normalizedText.lastIndexOf("."),
+      normalizedText.lastIndexOf("?"),
+      normalizedText.lastIndexOf("!"),
+      normalizedText.lastIndexOf("。"),
+      normalizedText.lastIndexOf("？"),
+      normalizedText.lastIndexOf("！")
     )
 
-    const tail = (lastPunctuationIndex >= 0 ? text.substring(lastPunctuationIndex + 1) : text).trim()
+    const tail = (lastPunctuationIndex >= 0 ? normalizedText.substring(lastPunctuationIndex + 1) : normalizedText).trim()
 
     // 從尾巴往前收集，僅保留純英文字母構成的單詞
     const rawTokens = tail.split(/\s+/).filter(Boolean)
@@ -94,7 +99,7 @@ export default function PlotBrainstorm({ language, character, onPlotCreate, onBa
 
     // cleanedText：保留到最後一個主要標點為止，去掉尾部提示單詞
     const cleanedText =
-      lastPunctuationIndex >= 0 ? text.substring(0, lastPunctuationIndex + 1).trim() : text.trim()
+      lastPunctuationIndex >= 0 ? normalizedText.substring(0, lastPunctuationIndex + 1).trim() : normalizedText.trim()
 
     return { words, cleanedText }
   }
