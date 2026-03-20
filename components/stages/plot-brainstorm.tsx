@@ -67,10 +67,27 @@ export default function PlotBrainstorm({ language, character, onPlotCreate, onBa
   }
 
   const extractLastSixWords = (text: string): { words: string[]; cleanedText: string } => {
+    // 优先按 OPTIONS: w1 w2 w3 w4 w5 w6 的格式抽取（更稳定，也能保证每个都是单词）。
+    const normalizedAll = text.trim()
+    const optionsMatch = normalizedAll.match(/OPTIONS\s*:\s*([A-Za-z\s]+)\s*$/i)
+    if (optionsMatch) {
+      const optionsBody = optionsMatch[1] || ""
+      const tokens = optionsBody
+        .split(/\s+/)
+        .map((t) => t.replace(/[^A-Za-z]/g, "").trim())
+        .filter(Boolean)
+        .map((t) => t.toLowerCase())
+
+      if (tokens.length === 6) {
+        const cleanedText = normalizedAll.replace(optionsMatch[0], "").trim()
+        return { words: tokens, cleanedText }
+      }
+    }
+
     // 某些情况下，AI 会在最后 6 个选项后面又补一个句号/问号等标点。
     // 这会导致“最后一个标点后的 tail”为空，从而抽不到 suggestions。
     // 这里先移除末尾的句末标点，再进行后续抽取。
-    const normalizedText = text.trim().replace(/[.!?。！？]+$/g, "").trim()
+    const normalizedText = normalizedAll.replace(/[.!?。！？]+$/g, "").trim()
 
     // 先找到最後一個句號/問號/感嘆號，把「六個單詞」限制在標點後的尾段
     const lastPunctuationIndex = Math.max(
@@ -153,12 +170,14 @@ After the student answers conflict:
 - Briefly acknowledge their answer, then ask ONLY the goal/want.
 
 Options (CRITICAL):
-- End your message with exactly six SINGLE ENGLISH WORDS (letters only), separated by spaces, no commas.
+- On the last line, output exactly:
+  OPTIONS: w1 w2 w3 w4 w5 w6
+- Each wi must be a single English word (letters only, no spaces inside).
 - These 6 words must be valid answer options for the question you just asked:
   - setting question: location words
   - conflict question: problem/challenge words
   - goal question: want/action words
-- End with the 6 words and nothing after them.`
+- After the 6 words, end immediately (no punctuation, no extra text).`
       } else {
         initialPrompt = `You help elementary students brainstorm a plot mind map. Answer in English only.
 
@@ -177,12 +196,14 @@ After the student answers conflict:
 - Briefly acknowledge their answer, then ask ONLY the goal/want.
 
 Options (CRITICAL):
-- End your message with exactly six SINGLE ENGLISH WORDS (letters only), separated by spaces, no commas.
+- On the last line, output exactly:
+  OPTIONS: w1 w2 w3 w4 w5 w6
+- Each wi must be a single English word (letters only, no spaces inside).
 - These 6 words must be valid answer options for the question you just asked:
   - setting question: location words
   - conflict question: problem/challenge words
   - goal question: want/action words
-- End with the 6 words and nothing after them.`
+- After the 6 words, end immediately (no punctuation, no extra text).`
       }
 
       const response = await fetch("/api/dify-chat", {
@@ -296,7 +317,7 @@ Options (CRITICAL):
       const studentMessageCount = updatedMessages.filter(msg => msg.role === 'user').length
       
       // 只在达到一定轮数时才总结
-      if (studentMessageCount >= 2) {
+      if (studentMessageCount >= 1) {
         // 异步触发总结，避免用户感知聊天“变慢”
         summarizePlot(updatedMessages).catch((e) => {
           console.error("Plot summary failed:", e)
@@ -320,6 +341,57 @@ Options (CRITICAL):
       if (messagesToUse.length === 0) {
         console.log("No messages to summarize")
         return
+      }
+
+      // 本地快速抽取：直接把前三次学生输入视为 setting/conflict/goal。
+      // 这样可以保证 Plot Progress 不会因为 summary 抽取失败而一直显示 unknown。
+      const studentValues = messagesToUse
+        .filter((msg) => msg.role === "user")
+        .map((msg) => msg.content.trim())
+        .filter(Boolean)
+
+      const normalizeByField = (value: string, field: "setting" | "conflict" | "goal"): string => {
+        const cleaned = value
+          .replace(new RegExp(`^(${field === "setting" ? "setting|location|place" : field === "conflict" ? "conflict|confilc|problem|challenge" : "goal|objective|aim|want"})[：:]\\s*`, "i"), "")
+          .trim()
+        return cleaned
+      }
+
+      if (studentValues.length >= 1) {
+        const localSetting = normalizeByField(studentValues[0], "setting")
+        if (localSetting && (!plotData.setting || plotData.setting.toLowerCase() === "unknown")) {
+          setUpdatingFields((prev) => new Set([...prev, "setting"]))
+          setPlotData((prev) => ({ ...prev, setting: localSetting }))
+          setTimeout(() => setUpdatingFields((prev) => {
+            const newSet = new Set(prev)
+            newSet.delete("setting")
+            return newSet
+          }), 1000)
+        }
+      }
+      if (studentValues.length >= 2) {
+        const localConflict = normalizeByField(studentValues[1], "conflict")
+        if (localConflict && (!plotData.conflict || plotData.conflict.toLowerCase() === "unknown")) {
+          setUpdatingFields((prev) => new Set([...prev, "conflict"]))
+          setPlotData((prev) => ({ ...prev, conflict: localConflict }))
+          setTimeout(() => setUpdatingFields((prev) => {
+            const newSet = new Set(prev)
+            newSet.delete("conflict")
+            return newSet
+          }), 1000)
+        }
+      }
+      if (studentValues.length >= 3) {
+        const localGoal = normalizeByField(studentValues[2], "goal")
+        if (localGoal && (!plotData.goal || plotData.goal.toLowerCase() === "unknown")) {
+          setUpdatingFields((prev) => new Set([...prev, "goal"]))
+          setPlotData((prev) => ({ ...prev, goal: localGoal }))
+          setTimeout(() => setUpdatingFields((prev) => {
+            const newSet = new Set(prev)
+            newSet.delete("goal")
+            return newSet
+          }), 1000)
+        }
       }
       
       // 构建对话历史（包含所有对话内容）
@@ -430,7 +502,11 @@ Options (CRITICAL):
         // Setting 允许单个单词，不进行长度检查
         if (newSetting && newSetting.toLowerCase() !== "unknown" && newSetting !== plotData.setting) {
           setUpdatingFields((prev) => new Set([...prev, "setting"]))
-          setPlotData((prev) => ({ ...prev, setting: newSetting }))
+          setPlotData((prev) => {
+            // 如果本地已填充过（非 unknown），就不要被 summary 覆盖回别的值
+            if (prev.setting && prev.setting.toLowerCase() !== "unknown") return prev
+            return { ...prev, setting: newSetting }
+          })
           setTimeout(() => {
             setUpdatingFields((prev) => {
               const newSet = new Set(prev)
@@ -439,7 +515,7 @@ Options (CRITICAL):
             })
           }, 1000)
         } else if (newSetting && newSetting.toLowerCase() === "unknown") {
-          setPlotData((prev) => ({ ...prev, setting: "unknown" }))
+          // Summary 可能会抽取失败返回 unknown；此处不覆盖已有值
         }
       }
 
@@ -459,7 +535,10 @@ Options (CRITICAL):
         // 如果提取到内容且不是 "unknown"，就使用它（允许单个词或短句）
         if (newConflict && newConflict.toLowerCase() !== "unknown" && newConflict !== plotData.conflict) {
           setUpdatingFields((prev) => new Set([...prev, "conflict"]))
-          setPlotData((prev) => ({ ...prev, conflict: newConflict }))
+          setPlotData((prev) => {
+            if (prev.conflict && prev.conflict.toLowerCase() !== "unknown") return prev
+            return { ...prev, conflict: newConflict }
+          })
           setTimeout(() => {
             setUpdatingFields((prev) => {
               const newSet = new Set(prev)
@@ -468,7 +547,7 @@ Options (CRITICAL):
             })
           }, 1000)
         } else if (newConflict && newConflict.toLowerCase() === "unknown") {
-          setPlotData((prev) => ({ ...prev, conflict: "unknown" }))
+          // Summary 可能会抽取失败返回 unknown；此处不覆盖已有值
         }
       }
 
@@ -478,7 +557,10 @@ Options (CRITICAL):
         // 如果提取到内容且不是 "unknown"，就使用它（允许单个词或短句）
         if (newGoal && newGoal.toLowerCase() !== "unknown" && newGoal !== plotData.goal) {
           setUpdatingFields((prev) => new Set([...prev, "goal"]))
-          setPlotData((prev) => ({ ...prev, goal: newGoal }))
+          setPlotData((prev) => {
+            if (prev.goal && prev.goal.toLowerCase() !== "unknown") return prev
+            return { ...prev, goal: newGoal }
+          })
           setTimeout(() => {
             setUpdatingFields((prev) => {
               const newSet = new Set(prev)
@@ -487,7 +569,7 @@ Options (CRITICAL):
             })
           }, 1000)
         } else if (newGoal && newGoal.toLowerCase() === "unknown") {
-          setPlotData((prev) => ({ ...prev, goal: "unknown" }))
+          // Summary 可能会抽取失败返回 unknown；此处不覆盖已有值
         }
       }
     } catch (error) {
