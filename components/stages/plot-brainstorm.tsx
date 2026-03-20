@@ -124,17 +124,18 @@ ${characterInfo}
 
 IMPORTANT: Always refer to the character by their name "${characterName}"${characterSpecies ? ` (a ${character.species})` : ""}, NOT "your character" or "the character". Use "${characterName}" in your questions.
 
-Conversation plan (CRITICAL):
-1) First question (turn 1): Ask ONLY about setting / place. Use: "Where does ${characterName}'s story take place?"
-2) Second question (turn 2): Ask ONLY about conflict / problem. Use: "What problem or challenge does ${characterName} face?"
-3) Third question (turn 3): Ask ONLY about goal / want. Use: "What does ${characterName} want to achieve?"
-After the third question, if the plot is clear, you may ask small follow-ups.
+Flow (CRITICAL):
+Start by getting the setting/place.
+After the student answers, briefly acknowledge in a natural way, then ask about the conflict/problem next.
+After the student answers the conflict, briefly acknowledge, then ask about the goal/want next.
+You MUST keep the order setting → conflict → goal, but do not use rigid turn numbers or rigid templates.
+Let your next question sound like a real chat that continues from the student's last answer.
 
 Tone (IMPORTANT):
 - Keep the AI's message short and calm: 1-2 simple sentences.
 - Do NOT be too vivid or dramatic. No extra worldbuilding beyond the next question.
-- Always refer to the student's last answer briefly (1 short phrase) before asking the next question.
-  Example: "You said it happens at school. Now, what problem happens there?"
+- Briefly and naturally reflect the student's last answer (in your own words, 1 short clause) before asking the next question.
+- Do NOT use a fixed sentence template every time; vary the wording naturally.
 
 At the very end of your answer, add exactly six SINGLE ENGLISH WORDS related to story settings (like: school home forest park beach library). Each word must be a single word, not a phrase. Do not use commas between the six words - just use spaces. Keep proper punctuation in your questions (question marks, periods, etc.).
 
@@ -154,17 +155,18 @@ CRITICAL: Always use "${characterName}" in your questions. Always keep proper pu
       } else {
         initialPrompt = `You are a mind map robot helping elementary school students with plot writing. Use simple, kid-friendly language with proper punctuation. Always answer in English only.
 
-Conversation plan (CRITICAL):
-1) First question (turn 1): Ask ONLY about setting / place. Use: "Where does this story take place?"
-2) Second question (turn 2): Ask ONLY about conflict / problem. Use: "What problem or challenge does the hero face?"
-3) Third question (turn 3): Ask ONLY about goal / want. Use: "What does the hero want to achieve?"
-After the third question, if the plot is clear, you may ask small follow-ups.
+Flow (CRITICAL):
+Start by getting the setting/place.
+After the student answers, briefly acknowledge in a natural way, then ask about the conflict/problem next.
+After the student answers the conflict, briefly acknowledge, then ask about the goal/want next.
+You MUST keep the order setting → conflict → goal, but do not use rigid turn numbers or rigid templates.
+Let your next question sound like a real chat that continues from the student's last answer.
 
 Tone (IMPORTANT):
 - Keep the AI's message short and calm: 1-2 simple sentences.
 - Do NOT be too vivid or dramatic. No extra worldbuilding beyond the next question.
-- Always refer to the student's last answer briefly (1 short phrase) before asking the next question.
-  Example: "You said it happens at school. Now, what problem happens there?"
+- Briefly and naturally reflect the student's last answer (in your own words, 1 short clause) before asking the next question.
+- Do NOT use a fixed sentence template every time; vary the wording naturally.
 
 At the very end of your answer, add exactly six SINGLE ENGLISH WORDS related to story settings (like: school home forest park beach library). Each word must be a single word, not a phrase. Don't use commas between the six words - just use spaces. Keep proper punctuation in your questions (question marks, periods, etc.).
 
@@ -425,7 +427,17 @@ Continue guiding step by step. In every response you must:
 
       if (conflictValue && conflictValue.trim()) {
         // 去掉可能的"conflict:"前缀和多余空格（兼容偶发输出）
-        let newConflict = conflictValue.trim().replace(/^(conflict|confilc|problem|challenge)[：:]\s*/i, "").trim()
+        let newConflict = conflictValue
+          .trim()
+          .replace(/^(conflict|confilc|problem|challenge)[：:]\s*/i, "")
+          .replace(/\s+/g, " ")
+          .trim()
+
+        // Dify 有时只抽取到不完整片段（例如 "is lost"），这里做轻量“补句式”让展示更顺。
+        if (/^(is|are)\s+lost$/i.test(newConflict)) {
+          const subject = character?.name ? character.name : "the hero"
+          newConflict = `${subject} is lost`
+        }
         // 如果提取到内容且不是 "unknown"，就使用它（允许单个词或短句）
         if (newConflict && newConflict.toLowerCase() !== "unknown" && newConflict !== plotData.conflict) {
           setUpdatingFields((prev) => new Set([...prev, "conflict"]))
