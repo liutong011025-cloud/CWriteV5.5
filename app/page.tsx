@@ -324,6 +324,8 @@ export default function Home() {
   const [mapFlags, setMapFlags] = useState<MapFlagItem[]>([])
   const [mapImageUrl, setMapImageUrl] = useState<string | undefined>(undefined)
   const [levelBadgeUnlocked, setLevelBadgeUnlocked] = useState(false)
+  // Drama 生成完成后，用于把 drama script 写回对应的地图旗帜（显示全文）
+  const [pendingDramaMapTitle, setPendingDramaMapTitle] = useState<string | null>(null)
   const mapStateHydratedRef = useRef(false)
   // 12 价值观维度小树：每棵 stage 2->3->4（最多成长两次）
   const [trees, setTrees] = useState<{ id: number; stage: number }[] | null>(null)
@@ -2249,15 +2251,17 @@ export default function Home() {
           backLabel={journeyActive ? "Back to Map" : undefined}
           onBack={() => {
             if (journeyActive && dramaBook) {
-              void evaluateValuesGrowth(JSON.stringify(dramaBook), "story", "My Drama")
+              void evaluateValuesGrowth(dramaBook.script || "", "story", "My Drama")
             }
             setStage(journeyActive ? "journeyMap" : "writeTypeSelection")
           }}
           onBackToMap={journeyActive ? () => setStage("journeyMap") : undefined}
           onDramaGenerated={({ topic }) => {
             const dramaTopic = (topic || "").split(",")[0]?.trim() || topic || "mysterious place"
+            const mapTitle = `A Drama in ${dramaTopic}`
+            setPendingDramaMapTitle(mapTitle)
             queueJourneyMapUpdate({
-              title: `A Drama in ${dramaTopic}`,
+              title: mapTitle,
               topic: dramaTopic,
               source: "drama-generated",
             })
@@ -2272,11 +2276,83 @@ export default function Home() {
           backLabel={journeyActive ? "Back to Map" : undefined}
           onBack={() => {
             if (journeyActive && dramaBook) {
-              void evaluateValuesGrowth(JSON.stringify(dramaBook), "story", "My Drama")
+              const script = dramaBook.script || ""
+              // 回到地图时把全文塞回对应 flag，避免 journey-map 只显示标题/空全文
+              setMapFlags((prev) => {
+                if (!script.trim()) return prev
+
+                let targetIndex = -1
+                if (pendingDramaMapTitle) {
+                  for (let i = prev.length - 1; i >= 0; i--) {
+                    if (prev[i]?.title === pendingDramaMapTitle) {
+                      targetIndex = i
+                      break
+                    }
+                  }
+                }
+
+                // fallback: 找到最近一条 “A Drama in …” 且还没有 content 的 flag
+                if (targetIndex === -1) {
+                  for (let i = prev.length - 1; i >= 0; i--) {
+                    const t = prev[i]?.title || ""
+                    if (t.startsWith("A Drama in ") && !prev[i]?.content) {
+                      targetIndex = i
+                      break
+                    }
+                  }
+                }
+
+                if (targetIndex === -1) return prev
+                const next = [...prev]
+                next[targetIndex] = { ...next[targetIndex], content: script }
+                return next
+              })
+
+              void evaluateValuesGrowth(script, "story", "My Drama")
             }
             setStage(journeyActive ? "journeyMap" : "writeTypeSelection")
           }}
-          onBackToMap={journeyActive ? () => setStage("journeyMap") : undefined}
+          onBackToMap={
+            journeyActive
+              ? () => {
+                  if (dramaBook) {
+                    const script = dramaBook.script || ""
+                    if (script.trim()) {
+                      setMapFlags((prev) => {
+                        let targetIndex = -1
+                        if (pendingDramaMapTitle) {
+                          for (let i = prev.length - 1; i >= 0; i--) {
+                            if (prev[i]?.title === pendingDramaMapTitle) {
+                              targetIndex = i
+                              break
+                            }
+                          }
+                        }
+
+                        // fallback: 找到最近一条 “A Drama in …” 且还没有 content 的 flag
+                        if (targetIndex === -1) {
+                          for (let i = prev.length - 1; i >= 0; i--) {
+                            const t = prev[i]?.title || ""
+                            if (t.startsWith("A Drama in ") && !prev[i]?.content) {
+                              targetIndex = i
+                              break
+                            }
+                          }
+                        }
+
+                        if (targetIndex === -1) return prev
+                        const next = [...prev]
+                        next[targetIndex] = { ...next[targetIndex], content: script }
+                        return next
+                      })
+
+                      void evaluateValuesGrowth(script, "story", "My Drama")
+                    }
+                  }
+                  setStage("journeyMap")
+                }
+              : undefined
+          }
         />
       )}
 
