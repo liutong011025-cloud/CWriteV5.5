@@ -489,11 +489,8 @@ Options (CRITICAL):
         // Setting 允许单个单词，不进行长度检查
         if (newSetting && newSetting.toLowerCase() !== "unknown" && newSetting !== plotData.setting) {
           setUpdatingFields((prev) => new Set([...prev, "setting"]))
-          setPlotData((prev) => {
-            // 如果本地已填充过（非 unknown），就不要被 summary 覆盖回别的值
-            if (prev.setting && prev.setting.toLowerCase() !== "unknown") return prev
-            return { ...prev, setting: newSetting }
-          })
+          // 允许 AI 结果覆盖/纠正本地兜底（只不覆盖 unknown）
+          setPlotData((prev) => ({ ...prev, setting: newSetting }))
           setTimeout(() => {
             setUpdatingFields((prev) => {
               const newSet = new Set(prev)
@@ -522,10 +519,8 @@ Options (CRITICAL):
         // 如果提取到内容且不是 "unknown"，就使用它（允许单个词或短句）
         if (newConflict && newConflict.toLowerCase() !== "unknown" && newConflict !== plotData.conflict) {
           setUpdatingFields((prev) => new Set([...prev, "conflict"]))
-          setPlotData((prev) => {
-            if (prev.conflict && prev.conflict.toLowerCase() !== "unknown") return prev
-            return { ...prev, conflict: newConflict }
-          })
+          // 允许 AI 结果覆盖/纠正本地兜底（只不覆盖 unknown）
+          setPlotData((prev) => ({ ...prev, conflict: newConflict }))
           setTimeout(() => {
             setUpdatingFields((prev) => {
               const newSet = new Set(prev)
@@ -544,10 +539,8 @@ Options (CRITICAL):
         // 如果提取到内容且不是 "unknown"，就使用它（允许单个词或短句）
         if (newGoal && newGoal.toLowerCase() !== "unknown" && newGoal !== plotData.goal) {
           setUpdatingFields((prev) => new Set([...prev, "goal"]))
-          setPlotData((prev) => {
-            if (prev.goal && prev.goal.toLowerCase() !== "unknown") return prev
-            return { ...prev, goal: newGoal }
-          })
+          // 允许 AI 结果覆盖/纠正本地兜底（只不覆盖 unknown）
+          setPlotData((prev) => ({ ...prev, goal: newGoal }))
           setTimeout(() => {
             setUpdatingFields((prev) => {
               const newSet = new Set(prev)
@@ -578,6 +571,9 @@ Options (CRITICAL):
     plotData.goal && 
     plotData.goal.toLowerCase() !== "unknown"
 
+  // 以 AI 总结完成（done 信号）为准才允许跳转
+  const canProceed = !!canContinue && summaryDone
+
   const progressCount = [plotData.setting, plotData.conflict, plotData.goal].reduce((acc, v) => {
     const ok = !!v && v.trim() !== "" && v.toLowerCase() !== "unknown"
     return acc + (ok ? 1 : 0)
@@ -586,7 +582,7 @@ Options (CRITICAL):
 
   const handleContinue = () => {
     // Check if summary is done and all fields are not unknown
-    if (canContinue) {
+    if (canProceed) {
       onPlotCreate(plotData)
     } else if (!summaryDone) {
       toast.error("Please wait for the plot summary to complete")
@@ -703,7 +699,7 @@ Options (CRITICAL):
                 </Button>
               </div>
 
-              {canContinue && (
+              {canProceed && (
                 <div className="mt-6 p-4 bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-300 rounded-xl shadow-lg relative overflow-hidden">
                   <div className="absolute -top-10 -right-10 h-24 w-24 rounded-full bg-emerald-200/60 blur-2xl animate-pulse" />
                   <p className="relative text-green-800 font-semibold text-center mb-3">
