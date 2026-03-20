@@ -130,7 +130,7 @@ export default function DramaWriting({
 
   return (
     <div
-      className="relative min-h-screen"
+      className="relative z-10 min-h-screen bg-white text-foreground"
       style={{ paddingTop: "128px", paddingBottom: "120px" }}
     >
       {content}
