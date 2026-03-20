@@ -39,6 +39,7 @@ export default function PlotBrainstorm({ language, character, onPlotCreate, onBa
   const [summaryDone, setSummaryDone] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const chatContainerRef = useRef<HTMLDivElement>(null)
+  const summaryNonceRef = useRef(0)
 
   useEffect(() => {
     sendInitialMessage()
@@ -125,10 +126,12 @@ ${characterInfo}
 IMPORTANT: Always refer to the character by their name "${characterName}"${characterSpecies ? ` (a ${character.species})` : ""}, NOT "your character" or "the character". Use "${characterName}" in your questions.
 
 Flow (CRITICAL):
-Start by getting the setting/place.
-After the student answers, briefly acknowledge in a natural way, then ask about the conflict/problem next.
-After the student answers the conflict, briefly acknowledge, then ask about the goal/want next.
-You MUST keep the order setting → conflict → goal, but do not use rigid turn numbers or rigid templates.
+Never invent a setting/conflict/goal that the student did not write.
+If the student has not answered yet in this conversation, ask ONLY about the setting/place (no “So Tony is in…” yet).
+In that first message, do NOT name any specific place; just ask the setting question.
+After the student answers the setting/place, briefly acknowledge using the student's last answer (in your own words), then ask about the conflict/problem next.
+After the student answers the conflict/problem, briefly acknowledge using the student's last answer (in your own words), then ask about the goal/want next.
+You MUST keep the order setting → conflict → goal.
 Let your next question sound like a real chat that continues from the student's last answer.
 
 Tone (IMPORTANT):
@@ -137,7 +140,12 @@ Tone (IMPORTANT):
 - Briefly and naturally reflect the student's last answer (in your own words, 1 short clause) before asking the next question.
 - Do NOT use a fixed sentence template every time; vary the wording naturally.
 
-At the very end of your answer, add exactly six SINGLE ENGLISH WORDS related to story settings (like: school home forest park beach library). Each word must be a single word, not a phrase. Do not use commas between the six words - just use spaces. Keep proper punctuation in your questions (question marks, periods, etc.).
+At the very end of your answer, add exactly six SINGLE ENGLISH WORDS as answer options for the question you are asking NOW.
+If you are asking about the setting/place, use setting/location words.
+If you are asking about conflict/problem, use conflict/problem words.
+If you are asking about goal/want, use goal/action words.
+Each word must be a single word (letters only), not a phrase. Do not use commas between the six words - just use spaces.
+These six words MUST match the question you just asked (do not mix setting words into conflict/goal messages).
 
 Continue guiding the student step by step. In every response you must:
 - Always use "${characterName}"${characterSpecies ? ` (the ${character.species})` : ""} in your questions, NOT "your character"
@@ -147,8 +155,7 @@ Continue guiding the student step by step. In every response you must:
   - ONLY when the student's last message is a full sentence in English AND there is a clear grammar or spelling mistake, you may add ONE short error note like this: [GRAMMAR_ERROR]You wrote \"He go school\" → it should be \"He goes to school\".[/GRAMMAR_ERROR].
   - If there is no clear error, or if the student only wrote one word or a short phrase, do NOT use [GRAMMAR_ERROR] and do NOT talk about grammar.
   - Never ask the student to always answer with a full sentence. Do not say "Please answer with a full sentence".
-- End with exactly six SINGLE ENGLISH WORDS related to the current topic (space-separated, no commas)
-- Each of the six should be a single word, not a phrase (e.g., "school home forest park beach library" not "magic school enchanted forest")
+- The six options at the end must match the question you asked (space-separated, no commas)
 - When the conversation can fully describe a complete story, say: "The plot is getting clearer! Anything else you'd like to talk about?" (in Chinese: 故事情节已经比较清晰了，还想再聊些什么吗？)
 
 CRITICAL: Always use "${characterName}" in your questions. Always keep proper punctuation in your questions. End with exactly six SINGLE WORDS (space-separated, no commas).`
@@ -156,10 +163,12 @@ CRITICAL: Always use "${characterName}" in your questions. Always keep proper pu
         initialPrompt = `You are a mind map robot helping elementary school students with plot writing. Use simple, kid-friendly language with proper punctuation. Always answer in English only.
 
 Flow (CRITICAL):
-Start by getting the setting/place.
-After the student answers, briefly acknowledge in a natural way, then ask about the conflict/problem next.
-After the student answers the conflict, briefly acknowledge, then ask about the goal/want next.
-You MUST keep the order setting → conflict → goal, but do not use rigid turn numbers or rigid templates.
+Never invent a setting/conflict/goal that the student did not write.
+If the student has not answered yet in this conversation, ask ONLY about the setting/place (no “So the hero is in…” yet).
+In that first message, do NOT name any specific place; just ask the setting question.
+After the student answers the setting/place, briefly acknowledge using the student's last answer (in your own words), then ask about the conflict/problem next.
+After the student answers the conflict/problem, briefly acknowledge using the student's last answer (in your own words), then ask about the goal/want next.
+You MUST keep the order setting → conflict → goal.
 Let your next question sound like a real chat that continues from the student's last answer.
 
 Tone (IMPORTANT):
@@ -168,7 +177,12 @@ Tone (IMPORTANT):
 - Briefly and naturally reflect the student's last answer (in your own words, 1 short clause) before asking the next question.
 - Do NOT use a fixed sentence template every time; vary the wording naturally.
 
-At the very end of your answer, add exactly six SINGLE ENGLISH WORDS related to story settings (like: school home forest park beach library). Each word must be a single word, not a phrase. Don't use commas between the six words - just use spaces. Keep proper punctuation in your questions (question marks, periods, etc.).
+At the very end of your answer, add exactly six SINGLE ENGLISH WORDS as answer options for the question you are asking NOW.
+If you are asking about the setting/place, use setting/location words.
+If you are asking about conflict/problem, use conflict/problem words.
+If you are asking about goal/want, use goal/action words.
+Each word must be a single word (letters only), not a phrase. Do not use commas between the six words - just use spaces.
+These six words MUST match the question you just asked (do not mix setting words into conflict/goal messages).
 
 Continue guiding step by step. In every response you must:
 - Use proper punctuation (question marks, periods, etc.) - DO NOT remove punctuation
@@ -177,8 +191,7 @@ Continue guiding step by step. In every response you must:
   - ONLY when the student's last message is a full sentence in English AND there is a clear grammar or spelling mistake, you may add ONE short error note like this: [GRAMMAR_ERROR]You wrote \"He go school\" → it should be \"He goes to school\".[/GRAMMAR_ERROR].
   - If there is no clear error, or if the student only wrote one word or a short phrase, do NOT use [GRAMMAR_ERROR] and do NOT talk about grammar.
   - Never ask the student to always answer with a full sentence. Do not say "Please answer with a full sentence".
-- End with exactly six SINGLE ENGLISH WORDS (space-separated, no commas)
-- Each word must be a single word, not a phrase`
+- The six options at the end must match the question you asked (space-separated, no commas)`
       }
 
       const response = await fetch("/api/dify-chat", {
@@ -289,7 +302,10 @@ Continue guiding step by step. In every response you must:
       
       // 只在达到一定轮数时才总结
       if (studentMessageCount >= 1) {
-        await summarizePlot(updatedMessages)
+        // 异步触发总结，避免用户感知聊天“变慢”
+        summarizePlot(updatedMessages).catch((e) => {
+          console.error("Plot summary failed:", e)
+        })
       }
     } catch (error) {
       console.error("Error sending message:", error)
@@ -300,6 +316,7 @@ Continue guiding step by step. In every response you must:
   }
 
   const summarizePlot = async (messageHistory?: Message[]) => {
+    const nonce = ++summaryNonceRef.current
     try {
       // 使用传入的消息历史，如果没有则使用当前messages
       const messagesToUse = messageHistory || messages
@@ -311,10 +328,10 @@ Continue guiding step by step. In every response you must:
       }
       
       // 构建对话历史（包含所有对话内容）
-      const conversationHistory = messagesToUse.map((msg) => ({
-        role: msg.role,
-        content: msg.content,
-      }))
+      // 后端只会读取 role==='user 的消息，但这里先裁掉 ai 消息可以减少 payload 加速
+      const conversationHistory = messagesToUse
+        .filter((msg) => msg.role === "user")
+        .map((msg) => ({ role: msg.role, content: msg.content }))
 
       console.log("Calling plot summary API with", conversationHistory.length, "messages")
 
@@ -335,6 +352,9 @@ Continue guiding step by step. In every response you must:
 
       console.log("Plot summary API response:", data)
 
+      // 如果这不是最新一次总结请求，就直接丢弃（包括 conversation_id 也不更新）
+      if (nonce !== summaryNonceRef.current) return
+
       // 保存总结机器人的conversation_id
       if (data.conversation_id && !summaryConversationId) {
         setSummaryConversationId(data.conversation_id)
@@ -354,6 +374,9 @@ Continue guiding step by step. In every response you must:
 
       const summary = data.summary || ""
       
+      // 如果这不是最新一次总结请求，就丢弃结果避免覆盖更新
+      if (nonce !== summaryNonceRef.current) return
+
       console.log("Plot summary result:", summary)
       
       // 检查是否输出"done"
