@@ -138,6 +138,16 @@ const getPlanTestResultKey = (username: string) => `cwritePlanTestResult:${usern
 const getTreesStateKey = (username: string) => `cwriteTreesState:${username}`
 const VALUES_DIMENSION_COUNT = 12
 
+const getChapterBaseMapImageUrl = (chapterIndex: number) => {
+  // 章节0使用第一张底图；后续章节使用第二张底图。
+  return chapterIndex <= 0 ? "/firstmap.png" : "/secondmap.png"
+}
+
+interface PersistedMapChaptersState {
+  activeChapterIndex?: number
+  chapters?: PersistedMapState[]
+}
+
 const normalizeMapState = (raw: unknown): Partial<PersistedMapState> => {
   if (!raw || typeof raw !== "object") return {}
   const parsed = raw as Partial<PersistedMapState>
@@ -178,6 +188,61 @@ const normalizeMapState = (raw: unknown): Partial<PersistedMapState> => {
     safe.levelBadgeUnlocked = parsed.levelBadgeUnlocked
   }
   return safe
+}
+
+const normalizeMapChaptersState = (
+  raw: unknown,
+): {
+  activeChapterIndex: number
+  chapters: PersistedMapState[]
+} => {
+  const defaults: PersistedMapState = {
+    mapImageUrl: getChapterBaseMapImageUrl(0),
+    mapFlags: [],
+    currentPin: null,
+    journeySelection: null,
+    journeyActive: false,
+    levelBadgeUnlocked: false,
+  }
+
+  if (!raw || typeof raw !== "object") {
+    return { activeChapterIndex: 0, chapters: [defaults] }
+  }
+
+  const parsed = raw as PersistedMapChaptersState & Partial<PersistedMapState>
+  const activeChapterIndex = Number.isFinite(Number(parsed.activeChapterIndex)) ? Math.max(0, Math.floor(Number(parsed.activeChapterIndex))) : 0
+
+  if (Array.isArray(parsed.chapters)) {
+    const chapters = parsed.chapters.map((c, idx) => {
+      const safe = normalizeMapState(c)
+      return {
+        mapImageUrl: typeof safe.mapImageUrl === "string" ? safe.mapImageUrl : getChapterBaseMapImageUrl(idx),
+        mapFlags: safe.mapFlags ?? [],
+        currentPin: safe.currentPin ?? null,
+        journeySelection: safe.journeySelection ?? null,
+        journeyActive: typeof safe.journeyActive === "boolean" ? safe.journeyActive : false,
+        levelBadgeUnlocked: typeof safe.levelBadgeUnlocked === "boolean" ? safe.levelBadgeUnlocked : false,
+      } satisfies PersistedMapState
+    })
+
+    return {
+      activeChapterIndex: Math.min(activeChapterIndex, Math.max(0, chapters.length - 1)),
+      chapters: chapters.length > 0 ? chapters : [defaults],
+    }
+  }
+
+  // 兼容旧格式：raw 本身就是单个 PersistedMapState
+  const safe = normalizeMapState(raw)
+  const chapter0: PersistedMapState = {
+    mapImageUrl: typeof safe.mapImageUrl === "string" ? safe.mapImageUrl : getChapterBaseMapImageUrl(0),
+    mapFlags: safe.mapFlags ?? [],
+    currentPin: safe.currentPin ?? null,
+    journeySelection: safe.journeySelection ?? null,
+    journeyActive: typeof safe.journeyActive === "boolean" ? safe.journeyActive : false,
+    levelBadgeUnlocked: typeof safe.levelBadgeUnlocked === "boolean" ? safe.levelBadgeUnlocked : false,
+  }
+
+  return { activeChapterIndex: 0, chapters: [chapter0] }
 }
 
 const normalizeTreeStage = (stage: number) => {
@@ -326,6 +391,10 @@ export default function Home() {
   const [levelBadgeUnlocked, setLevelBadgeUnlocked] = useState(false)
   // Drama 生成完成后，用于把 drama script 写回对应的地图旗帜（显示全文）
   const [pendingDramaMapTitle, setPendingDramaMapTitle] = useState<string | null>(null)
+
+  // Writing map chapters（多章节底图 + 章节文章分页）
+  const [activeMapChapterIndex, setActiveMapChapterIndex] = useState(0)
+  const [mapChapters, setMapChapters] = useState<PersistedMapState[]>([])
   const mapStateHydratedRef = useRef(false)
   // 12 价值观维度小树：每棵 stage 2->3->4（最多成长两次）
   const [trees, setTrees] = useState<{ id: number; stage: number }[] | null>(null)
@@ -615,6 +684,8 @@ export default function Home() {
     setJourneySelection(null)
     setJourneyActive(false)
     setLevelBadgeUnlocked(false)
+    setActiveMapChapterIndex(0)
+    setMapChapters([])
     let cancelled = false
     void (async () => {
       let loadedFromDb = false
@@ -623,20 +694,20 @@ export default function Home() {
         const dbRes = await fetch(`/api/user-map-state?user_id=${encodeURIComponent(user.username)}`)
         if (dbRes.ok) {
           const dbJson = await dbRes.json()
-          const safe = normalizeMapState(dbJson?.state)
+          const normalized = normalizeMapChaptersState(dbJson?.state)
           if (!cancelled) {
-            if (safe.mapImageUrl) setMapImageUrl(safe.mapImageUrl)
-            if (safe.mapFlags) setMapFlags(safe.mapFlags)
-            if (safe.currentPin) setCurrentPin(safe.currentPin)
-            if (safe.journeySelection) setJourneySelection(safe.journeySelection)
-            if (typeof safe.journeyActive === "boolean") setJourneyActive(safe.journeyActive)
-            if (typeof safe.levelBadgeUnlocked === "boolean") setLevelBadgeUnlocked(safe.levelBadgeUnlocked)
-            loadedFromDb = !!(
-              safe.mapImageUrl ||
-              (safe.mapFlags && safe.mapFlags.length > 0) ||
-              safe.currentPin ||
-              safe.journeySelection
-            )
+            setMapChapters(normalized.chapters)
+            setActiveMapChapterIndex(normalized.activeChapterIndex)
+            const active = normalized.chapters[normalized.activeChapterIndex] || normalized.chapters[0]
+
+            setMapImageUrl(active?.mapImageUrl || getChapterBaseMapImageUrl(normalized.activeChapterIndex))
+            setMapFlags(active?.mapFlags ?? [])
+            setCurrentPin(active?.currentPin ?? null)
+            setJourneySelection(active?.journeySelection ?? null)
+            setJourneyActive(typeof active?.journeyActive === "boolean" ? active?.journeyActive : false)
+            setLevelBadgeUnlocked(typeof active?.levelBadgeUnlocked === "boolean" ? active?.levelBadgeUnlocked : false)
+
+            loadedFromDb = (active?.mapFlags?.length ?? 0) > 0 || !!active?.currentPin || !!active?.journeySelection
           }
         }
       } catch {
@@ -647,13 +718,17 @@ export default function Home() {
       try {
         const raw = localStorage.getItem(getMapStateKey(user.username))
         if (raw && !cancelled && !loadedFromDb) {
-          const safe = normalizeMapState(JSON.parse(raw))
-          if (safe.mapImageUrl) setMapImageUrl(safe.mapImageUrl)
-          if (safe.mapFlags) setMapFlags(safe.mapFlags)
-          if (safe.currentPin) setCurrentPin(safe.currentPin)
-          if (safe.journeySelection) setJourneySelection(safe.journeySelection)
-          if (typeof safe.journeyActive === "boolean") setJourneyActive(safe.journeyActive)
-          if (typeof safe.levelBadgeUnlocked === "boolean") setLevelBadgeUnlocked(safe.levelBadgeUnlocked)
+          const normalized = normalizeMapChaptersState(JSON.parse(raw))
+          setMapChapters(normalized.chapters)
+          setActiveMapChapterIndex(normalized.activeChapterIndex)
+          const active = normalized.chapters[normalized.activeChapterIndex] || normalized.chapters[0]
+
+          setMapImageUrl(active?.mapImageUrl || getChapterBaseMapImageUrl(normalized.activeChapterIndex))
+          setMapFlags(active?.mapFlags ?? [])
+          setCurrentPin(active?.currentPin ?? null)
+          setJourneySelection(active?.journeySelection ?? null)
+          setJourneyActive(typeof active?.journeyActive === "boolean" ? active?.journeyActive : false)
+          setLevelBadgeUnlocked(typeof active?.levelBadgeUnlocked === "boolean" ? active?.levelBadgeUnlocked : false)
         }
       } catch {
         // ignore parse/storage errors
@@ -709,7 +784,7 @@ export default function Home() {
     }) => {
       if (!journeyActive || !user || !currentPin) return
       const pinSnapshot = { x: currentPin.x, y: currentPin.y }
-      const previousMapImageUrl = mapImageUrl || "/firstmap.png"
+      const previousMapImageUrl = mapImageUrl || getChapterBaseMapImageUrl(activeMapChapterIndex)
 
       void (async () => {
         try {
@@ -754,19 +829,118 @@ export default function Home() {
         }
       })()
     },
-    [journeyActive, user, currentPin, mapImageUrl],
+    [journeyActive, user, currentPin, mapImageUrl, activeMapChapterIndex],
+  )
+
+  const canMoveToNextChapter = (mapFlags?.length ?? 0) >= 10
+
+  const handleMoveToChapter = useCallback(
+    (targetChapterIndex: number) => {
+      if (!user?.username) return
+      if (targetChapterIndex === activeMapChapterIndex) return
+      if (targetChapterIndex < 0) return
+
+      // 保存当前章节的当前状态到内存。
+      const currentChapter: PersistedMapState = {
+        mapImageUrl,
+        mapFlags,
+        currentPin,
+        journeySelection,
+        journeyActive,
+        levelBadgeUnlocked,
+      }
+
+      setMapChapters((prev) => {
+        const updated = Array.isArray(prev) ? [...prev] : []
+
+        const maxIndex = Math.max(activeMapChapterIndex, targetChapterIndex)
+        while (updated.length <= maxIndex) {
+          const i = updated.length
+          updated.push({
+            mapImageUrl: getChapterBaseMapImageUrl(i),
+            mapFlags: [],
+            currentPin: null,
+            journeySelection,
+            journeyActive,
+            levelBadgeUnlocked,
+          })
+        }
+
+        // 当前章节写回（chapter 切换后强制清空 pin，避免旧 pin 残留）
+        updated[activeMapChapterIndex] = { ...currentChapter, currentPin: null }
+
+        // 目标章节如果不存在，默认用底图 + 空旗帜。
+        if (!updated[targetChapterIndex]) {
+          updated[targetChapterIndex] = {
+            mapImageUrl: getChapterBaseMapImageUrl(targetChapterIndex),
+            mapFlags: [],
+            currentPin: null,
+            journeySelection,
+            journeyActive,
+            levelBadgeUnlocked,
+          }
+        } else {
+          updated[targetChapterIndex] = { ...updated[targetChapterIndex], currentPin: null }
+        }
+
+        return updated
+      })
+
+      setPendingDramaMapTitle(null)
+      setActiveMapChapterIndex(targetChapterIndex)
+
+      const target = mapChapters[targetChapterIndex]
+      setMapImageUrl(target?.mapImageUrl || getChapterBaseMapImageUrl(targetChapterIndex))
+      setMapFlags(target?.mapFlags ?? [])
+      setCurrentPin(null)
+      // journeySelection/journeyActive/levelBadgeUnlocked 维持不变（同一段旅程）
+    },
+    [
+      activeMapChapterIndex,
+      currentPin,
+      journeyActive,
+      journeySelection,
+      levelBadgeUnlocked,
+      mapChapters,
+      mapFlags,
+      mapImageUrl,
+      user?.username,
+    ],
   )
 
   useEffect(() => {
     if (!user?.username || typeof window === "undefined") return
     if (!mapStateHydratedRef.current) return
-    const payload: PersistedMapState = {
+    const currentChapter: PersistedMapState = {
       mapImageUrl,
       mapFlags,
       currentPin,
       journeySelection,
       journeyActive,
       levelBadgeUnlocked,
+    }
+
+    const chapters = Array.isArray(mapChapters) ? [...mapChapters] : []
+    const needLen = Math.max(activeMapChapterIndex + 1, chapters.length)
+    for (let i = chapters.length; i < needLen; i++) {
+      chapters.push({
+        mapImageUrl: getChapterBaseMapImageUrl(i),
+        mapFlags: [],
+        currentPin: null,
+        journeySelection: null,
+        journeyActive: false,
+        levelBadgeUnlocked: false,
+      })
+    }
+    chapters[activeMapChapterIndex] = {
+      ...currentChapter,
+      // 确保每章节至少有自己的底图标识，避免其它逻辑拿不到 base image。
+      mapImageUrl: currentChapter.mapImageUrl || getChapterBaseMapImageUrl(activeMapChapterIndex),
+    }
+
+    const payload: PersistedMapChaptersState = {
+      activeChapterIndex: activeMapChapterIndex,
+      chapters,
     }
     try {
       localStorage.setItem(getMapStateKey(user.username), JSON.stringify(payload))
@@ -784,7 +958,7 @@ export default function Home() {
     }).catch(() => {
       // ignore network errors
     })
-  }, [user?.username, mapImageUrl, mapFlags, currentPin, journeySelection, journeyActive, levelBadgeUnlocked])
+  }, [user?.username, activeMapChapterIndex, mapChapters, mapImageUrl, mapFlags, currentPin, journeySelection, journeyActive, levelBadgeUnlocked])
 
   // Notify header of current user + profile + unread reviews count
   const [headerUserInfo, setHeaderUserInfo] = useState<{ username: string; avatarUrl?: string | null; avatarEmoji?: string | null; unreadCount: number } | null>(null)
@@ -1240,6 +1414,10 @@ export default function Home() {
           mapFlags={mapFlags}
           pin={currentPin}
           onPinChange={setCurrentPin}
+          chapterIndex={activeMapChapterIndex}
+          onPrevChapter={activeMapChapterIndex > 0 ? () => handleMoveToChapter(activeMapChapterIndex - 1) : undefined}
+          onNextChapter={canMoveToNextChapter ? () => handleMoveToChapter(activeMapChapterIndex + 1) : undefined}
+          canMoveToNextChapter={canMoveToNextChapter}
           storyState={storyState}
           bookReviewState={bookReviewState}
           letterState={letterState}
