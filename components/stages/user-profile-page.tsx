@@ -71,6 +71,7 @@ interface UserProfilePageProps {
   treeGrowthDetails?: Record<number, TreeGrowthDetailRecord[]>
   recentGrowthTreeId?: number | null
   recentGrowthDimension?: "vocab" | "detail" | "logic" | null
+  farmEntryNonce?: number
   onVisitOthersFarm?: () => void
   isOtherFarm?: boolean
 }
@@ -132,6 +133,7 @@ export default function UserProfilePage({
   treeGrowthDetails,
   recentGrowthTreeId,
   recentGrowthDimension,
+  farmEntryNonce = 0,
   onVisitOthersFarm,
   isOtherFarm = false,
 }: UserProfilePageProps) {
@@ -163,9 +165,18 @@ export default function UserProfilePage({
   const [forest, setForest] = useState<{ id: number; stage: number }[]>([])
   const [highlightTreeId, setHighlightTreeId] = useState<number | null>(null)
   const [selectedTreeId, setSelectedTreeId] = useState<number | null>(null)
+  const [hoveredTreeId, setHoveredTreeId] = useState<number | null>(null)
   const farmContainerRef = useRef<HTMLDivElement | null>(null)
   const [hoveredFarmElement, setHoveredFarmElement] = useState<FarmElementId | null>(null)
   const [viewMode, setViewMode] = useState<"farm" | "writings">("farm")
+  // 进入 farm 视图的次数：用于确保每次切回 farm 时都能重新触发闪光动画
+  const [farmViewNonce, setFarmViewNonce] = useState(0)
+
+  useEffect(() => {
+    if (!isOtherFarm && viewMode === "farm") {
+      setFarmViewNonce((n) => n + 1)
+    }
+  }, [viewMode, isOtherFarm])
 
   // Writing Board 界面：Cagent 僅氣泡，無小熊圖片
   const [cagentBubbleOpen, setCagentBubbleOpen] = useState(false)
@@ -455,13 +466,24 @@ export default function UserProfilePage({
 
   useEffect(() => {
     if (recentGrowthTreeId && trees && trees.some((t) => t.id === recentGrowthTreeId)) {
-      setHighlightTreeId(recentGrowthTreeId)
-      const timer = setTimeout(() => {
+      // 强制“重新触发闪光”：
+      // 如果这次进入 farm 的 recentGrowthTreeId 和上次相同，React 可能不会触发重新动画，
+      // 所以先清空，再立刻设回去让 span 重新挂载/动画重新开始。
+      setHighlightTreeId(null)
+      const restart = window.setTimeout(() => {
+        setHighlightTreeId(recentGrowthTreeId)
+      }, 30)
+
+      const timer = window.setTimeout(() => {
         setHighlightTreeId(null)
-      }, 4000)
-      return () => clearTimeout(timer)
+      }, 4030)
+
+      return () => {
+        clearTimeout(restart)
+        clearTimeout(timer)
+      }
     }
-  }, [recentGrowthTreeId, trees])
+  }, [recentGrowthTreeId, trees, farmEntryNonce, farmViewNonce])
 
   const teacherReviews = reviews.filter((r) => r.reviewerRole === "teacher")
   const peerReviews = reviews.filter((r) => r.reviewerRole === "student")
@@ -1016,6 +1038,7 @@ export default function UserProfilePage({
                 const treeState = farmTreeStates[index] || DEFAULT_TREE_LAYOUT[index]
                 const treeData = forest[index]
                 const isHighlightedTree = treeData && highlightTreeId === treeData.id
+                const isHoveredTree = treeData && hoveredTreeId === treeData.id
                 const treeStage = Math.max(2, Math.min(4, Number(treeData?.stage ?? 2)))
                 const treeImageSrc = treeStage >= 4 ? "/tree4.png" : treeStage >= 3 ? "/tree3.png" : "/tree2.png"
                 const treeBaseSizePercent = treeStage >= 4 ? 11.2 : 8
@@ -1023,25 +1046,29 @@ export default function UserProfilePage({
                 const treeLeft = treeStage >= 4 ? treeState.x + 1.2 : treeState.x
                 const treeId = treeData?.id ?? index + 1
                 const canClickTree = !isOtherFarm && treeGrowthDetails != null
+                const hoverScale = isHighlightedTree ? 1.14 : isHoveredTree ? 1.08 : 1
                 const Wrapper = canClickTree ? "button" : "div"
                 return (
                   <Wrapper
                     key={`farm-tree-${index}`}
                     type={canClickTree ? "button" : undefined}
-                    className="absolute -translate-x-1/2 -translate-y-1/2 border-0 bg-transparent p-0 cursor-pointer focus:outline-none focus:ring-0"
+                    className="absolute -translate-x-1/2 -translate-y-1/2 border-0 bg-transparent p-0 focus:outline-none focus:ring-0"
                     style={{
                       left: `${treeLeft}%`,
                       top: `${treeTop}%`,
                       width: `${treeBaseSizePercent}%`,
                       aspectRatio: "698 / 850",
-                      zIndex: 5,
-                      filter: isHighlightedTree ? "drop-shadow(0 0 18px rgba(250, 204, 21, 1)) drop-shadow(0 0 28px rgba(255, 215, 0, 0.8))" : "none",
-                      transform: `translate(-50%, -50%) scale(${treeState.scale * (isHighlightedTree ? 1.06 : 1)})`,
+                      zIndex: isHoveredTree || isHighlightedTree ? 8 : 5,
+                      cursor: canClickTree ? "pointer" : "default",
+                      filter: isHighlightedTree || isHoveredTree ? "drop-shadow(0 0 18px rgba(250, 204, 21, 1)) drop-shadow(0 0 28px rgba(255, 215, 0, 0.8))" : "none",
+                      transform: `translate(-50%, -50%) scale(${treeState.scale * hoverScale})`,
                       transformOrigin: "center center",
                       transition: "transform 0.25s ease, filter 0.25s ease",
                     }}
                     onClick={canClickTree ? () => setSelectedTreeId(treeId) : undefined}
                     aria-label={canClickTree ? `View growth record for tree ${treeId}` : undefined}
+                    onMouseEnter={() => setHoveredTreeId(treeId)}
+                    onMouseLeave={() => setHoveredTreeId((prev) => (prev === treeId ? null : prev))}
                   >
                     {isHighlightedTree && (
                       <span className="absolute inset-0 pointer-events-none rounded-full animate-pulse opacity-60" style={{ boxShadow: "inset 0 0 30px 8px rgba(255, 215, 0, 0.4)" }} aria-hidden />
