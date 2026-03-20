@@ -47,9 +47,9 @@ export async function POST(request: NextRequest) {
     }
     
     // 总结机器人的设定：只分析学生的回答，提取Setting、Conflict、Goal
-    // 确保在10轮对话内完成总结
+    // 确保在 6 轮对话内完成总结（用于写作流程推进）
     const studentMessageCount = studentMessages.length
-    const MAX_ROUNDS = 10 // 最大对话轮数
+    const MAX_ROUNDS = 6 // 最大对话轮数
     
     // 根据对话轮数决定提取哪些字段
     let fieldsToExtract: string[] = []
@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
     }
     
     // 构建提示词
-    const forceCompleteMessage = isForceComplete 
+    const forceCompleteMessage = isForceComplete
       ? `\n\nCRITICAL: The student has had ${studentMessageCount} exchanges (reached the maximum of ${MAX_ROUNDS} rounds). You MUST extract all three fields (setting, conflict, goal) NOW, even if some information is limited. Use "unknown" only if absolutely no information is available. You MUST output "done" at the end.`
       : ''
     
@@ -103,19 +103,19 @@ ${conversationText}
 
 REQUIREMENTS:
 1. Setting: Extract location/setting. Can be a single word or short phrase.
-2. Conflict: Extract the problem/challenge as a SHORT SENTENCE (2-5 words), not just one word. Example: "save the library" or "find the treasure", NOT just "conflict" or "problem".
-3. Goal: Extract what the character wants as a SHORT SENTENCE (2-5 words), not just one word. Example: "become a wizard" or "help friends", NOT just "goal" or "win".
+    2. Conflict: Extract the problem/challenge as a SHORT PHRASE (2-6 words). Prefer a noun/verb phrase that includes what is at stake (object/subject), NOT just a bare adjective. Avoid phrasing like "is lost" without a clear object. Example: "lost map", "can't find the map", "gets separated from friends".
+    3. Goal: Extract what the character wants as a SHORT PHRASE (2-6 words). Prefer a noun/verb phrase that states the action or desired outcome. Example: "find the library", "escape the maze", "help my friends".
 
 IMPORTANT:
-- Conflict and Goal MUST be short sentences (2-5 words), not single words
+    - Conflict and Goal MUST be coherent short phrases (2-6 words), not just a label
 - If student hasn't discussed enough, use "unknown"
-- Be generous - extract even if brief, but make it a phrase, not a single word
+- Be generous - extract even if brief, but make it a phrase (2-6 words), not a single word
 ${forceCompleteMessage}
 
 Format your response exactly as:
 setting: [setting or unknown]
-conflict: [short sentence or unknown]
-goal: [short sentence or unknown]
+conflict: [short phrase or unknown]
+goal: [short phrase or unknown]
 done
 
 You MUST output "done" at the end when you have extracted all requested fields (even if some are "unknown").${levelSuffix}`
