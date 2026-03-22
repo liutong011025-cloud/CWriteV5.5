@@ -424,19 +424,20 @@ export default function CharacterCreation({ language, onCharacterCreate, onBack,
         <div className="flex-1 flex items-stretch justify-center gap-4 px-8 min-h-0">
           {/* Left: 配料表 */}
           {showIngredientList && (
-            <div className="flex flex-col items-center w-[300px] flex-shrink-0 py-4 relative">
-              {/* Paper背景 */}
-              <div 
-                className="relative w-full h-full min-h-[500px] flex flex-col items-center justify-start p-8 pb-12"
-                style={{
-                  backgroundImage: 'url(/paper.png)',
-                  backgroundSize: 'contain',
-                  backgroundRepeat: 'no-repeat',
-                  backgroundPosition: 'center',
-                }}
-              >
+            <div className="flex flex-col items-center w-[min(300px,92vw)] flex-shrink-0 py-4 relative">
+              {/* Paper：固定宽高比 + 内容用百分比 inset，随缩放保持与纸张相对位置 */}
+              <div className="relative w-full max-w-[300px] aspect-[3/4] mx-auto">
+                <div
+                  aria-hidden
+                  className="absolute inset-0 bg-no-repeat bg-center pointer-events-none"
+                  style={{
+                    backgroundImage: "url(/paper.png)",
+                    backgroundSize: "contain",
+                  }}
+                />
+                <div className="absolute inset-[11%_12%_15%_12%] flex flex-col min-h-0 overflow-hidden">
                 {/* 配料列表 */}
-                <div className="flex flex-col gap-5 w-full mt-14">
+                <div className="flex flex-col gap-4 sm:gap-5 w-full flex-1 min-h-0 overflow-y-auto overflow-x-hidden pr-1 pt-1 [scrollbar-width:thin]">
                   {allFields.map((fieldId, index) => {
                     const cfg = FIELD_CONFIG[fieldId as keyof typeof FIELD_CONFIG]
                     if (!cfg) return null
@@ -478,7 +479,7 @@ export default function CharacterCreation({ language, onCharacterCreate, onBack,
 
                 {/* 生成按钮 - 所有字段完成后显示在单词下面 */}
                 {allFieldsComplete && (
-                  <div className="mt-6 w-full">
+                  <div className="mt-4 w-full flex-shrink-0">
                     <Button
                       onClick={handleStartGenerate}
                       className="w-full font-ancient text-lg py-4 shadow-lg"
@@ -504,6 +505,7 @@ export default function CharacterCreation({ language, onCharacterCreate, onBack,
                     </Button>
                   </div>
                 )}
+                </div>
               </div>
             </div>
           )}
