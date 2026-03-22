@@ -116,6 +116,20 @@ export default function PlotBrainstorm({ language, character, onPlotCreate, onBa
     return { grammarIssue: issue || "There is a grammar or spelling issue.", cleaned }
   }
 
+  const getFallbackSuggestions = (questionText: string): string[] => {
+    const q = questionText.toLowerCase()
+    if (q.includes("where") || q.includes("place") || q.includes("setting")) {
+      return ["school", "park", "forest", "beach", "city", "village"]
+    }
+    if (q.includes("conflict") || q.includes("problem") || q.includes("challenge")) {
+      return ["storm", "danger", "thief", "monster", "fire", "trouble"]
+    }
+    if (q.includes("goal") || q.includes("want") || q.includes("plan")) {
+      return ["save", "help", "find", "protect", "escape", "win"]
+    }
+    return []
+  }
+
   const sendInitialMessage = async () => {
     setIsLoading(true)
     try {
@@ -219,9 +233,19 @@ Options (CRITICAL):
       const sanitizedAiMessage = sanitizeAiToEnglishOnly(aiMessage)
       const { grammarIssue, cleaned } = extractGrammarIssue(sanitizedAiMessage)
       const { words: suggestions, cleanedText } = extractLastSixWords(cleaned)
+      const normalizedInitial = (cleanedText || cleaned || sanitizedAiMessage).trim().toLowerCase()
+      const isOnlyWelcomeLine = normalizedInitial === "hello! let's start brainstorming your plot.".toLowerCase()
+      const defaultOpeningQuestion = character?.name
+        ? `Where does ${character.name}'s story take place?`
+        : "Where does the story take place?"
+      const finalContent = isOnlyWelcomeLine ? defaultOpeningQuestion : (cleanedText || cleaned || sanitizedAiMessage)
+      const finalSuggestions =
+        suggestions.length > 0
+          ? suggestions
+          : getFallbackSuggestions(finalContent)
 
       const initialMessages: Message[] = [
-        { role: "ai", content: cleanedText || cleaned || sanitizedAiMessage, suggestions, grammarIssue },
+        { role: "ai", content: finalContent, suggestions: finalSuggestions, grammarIssue },
       ]
       setMessages(initialMessages)
       setConversationId(data.conversation_id)
@@ -270,8 +294,9 @@ Options (CRITICAL):
       const sanitizedAiMessage = sanitizeAiToEnglishOnly(aiMessage)
       const { grammarIssue, cleaned } = extractGrammarIssue(sanitizedAiMessage)
       const { words: suggestions, cleanedText } = extractLastSixWords(cleaned)
+      const finalSuggestions = suggestions.length > 0 ? suggestions : getFallbackSuggestions(cleanedText || cleaned || sanitizedAiMessage)
 
-      const updatedMessages = [...messages, userMessage, { role: "ai" as const, content: cleanedText || cleaned || sanitizedAiMessage, suggestions, grammarIssue }]
+      const updatedMessages = [...messages, userMessage, { role: "ai" as const, content: cleanedText || cleaned || sanitizedAiMessage, suggestions: finalSuggestions, grammarIssue }]
       setMessages(updatedMessages)
       setConversationId(data.conversation_id)
 
