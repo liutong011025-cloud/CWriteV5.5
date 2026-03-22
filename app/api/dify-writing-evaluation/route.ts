@@ -58,7 +58,11 @@ const computeQualityScores = (
   let contentMatch = 0
   if (characterName && textLower.includes(characterName)) contentMatch += 30
   if (settingTokens.some((w) => textLower.includes(w))) contentMatch += 25
-  if (section.includes("setup") && (characterName || settingTokens.length > 0)) contentMatch += 10
+  if (section.includes("setup")) {
+    if (sentenceCount >= 2) contentMatch += 20
+    if (wordCount >= 20) contentMatch += 20
+    if (/\b(in|at|on|inside|near)\b/i.test(text)) contentMatch += 10
+  }
   if (section.includes("confront") && conflictTokens.some((w) => textLower.includes(w))) contentMatch += 25
   if (section.includes("resol") && goalTokens.some((w) => textLower.includes(w))) contentMatch += 25
   if (!section.includes("confront") && !section.includes("resol") && conflictTokens.some((w) => textLower.includes(w))) contentMatch += 10
@@ -76,9 +80,9 @@ const computeQualityScores = (
   structureCompleteness = Math.min(100, structureCompleteness)
 
   const pass =
-    semanticFluency >= 70 &&
-    contentMatch >= 70 &&
-    structureCompleteness >= 70 &&
+    semanticFluency >= 40 &&
+    contentMatch >= 40 &&
+    structureCompleteness >= 40 &&
     gibberishRatio < 0.35
 
   return {
@@ -278,16 +282,22 @@ ${levelSuffix}`
     
     // 检查是否包含"done"（不区分大小写）
     const modelDone = /\bdone\b/i.test(evaluation)
-    const hasSecretCode = evaluation.includes(GOOD_ENOUGH_CODE)
+    const modelHasSecretCode = evaluation.includes(GOOD_ENOUGH_CODE)
     const quality = computeQualityScores(String(text || ""), character, plot, currentSectionName)
-    const hasDone = modelDone && quality.pass
+    const hasDone = quality.pass
+    const hasSecretCode = modelHasSecretCode || hasDone
     
     // 移除控制信号，避免直接展示在前端反馈文本中
     const cleanEvaluation = evaluation
       .replace(/\bdone\b/gi, '')
       .replace(new RegExp(GOOD_ENOUGH_CODE.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), '')
       .trim()
-    const displayEvaluation = cleanEvaluation || "Please continue improving this section."
+    const doneHint = "You can move on to the next part of your writing!"
+    const baseEvaluation = cleanEvaluation || "Please continue improving this section."
+    const displayEvaluation =
+      hasDone && !baseEvaluation.includes(doneHint)
+        ? `${baseEvaluation}\n${doneHint}`
+        : baseEvaluation
 
     // 记录API调用
     await logApiCall(
@@ -307,7 +317,7 @@ ${levelSuffix}`
       evaluation: displayEvaluation,
       done: hasDone,
       secretCodeDetected: hasSecretCode,
-      secretCode: hasDone && hasSecretCode ? GOOD_ENOUGH_CODE : null,
+      secretCode: hasDone ? GOOD_ENOUGH_CODE : null,
       quality,
     })
   } catch (error) {
