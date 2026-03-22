@@ -32,8 +32,8 @@ const countWords = (text: string): number => {
   return chineseChars + englishWords
 }
 
-const STORY_BEAR_POSITION = { x: 83.0, y: 5.5, scale: 0.92 }
-const STORY_HANG_POSITION = { x: 83.2, y: 21.3, scale: 0.92 }
+const STORY_BEAR_POSITION = { x: 82.1, y: 5.5, scale: 1.27 }
+const STORY_HANG_POSITION = { x: 83.2, y: 19.8, scale: 1.27 }
 
 export default function GuidedWriting({ language, storyState, onStoryWrite, onBack, userId, onDraftChange }: GuidedWritingProps) {
   const [currentSection, setCurrentSection] = useState(0)
@@ -361,7 +361,7 @@ export default function GuidedWriting({ language, storyState, onStoryWrite, onBa
                     避免气泡撑高布局导致小熊整体上移。
                   */}
                   <div
-                    className="absolute z-20"
+                    className="absolute z-[60]"
                     style={{
                       left: `${activeBearPosition.x}%`,
                       top: `${activeBearPosition.y}%`,
@@ -395,12 +395,12 @@ export default function GuidedWriting({ language, storyState, onStoryWrite, onBa
                         </button>
                       </div>
                       {writingMood === "hang" && isHoveringHang && (
-                        <div className="absolute left-1/2 top-full z-10 mt-2 -translate-x-1/2 whitespace-nowrap rounded-full bg-black/70 px-4 py-1 text-xs text-white shadow-lg">
+                        <div className="absolute left-1/2 top-full z-[70] mt-2 -translate-x-1/2 whitespace-nowrap rounded-full bg-black/80 px-4 py-1 text-xs text-white shadow-lg">
                           Save me!
                         </div>
                       )}
                       {writingMood !== "hang" && showEvaluationBubble && (isLoadingEvaluation || aiEvaluation) && (
-                        <div className="absolute left-1/2 top-full z-10 mt-2 w-[min(340px,85vw)] max-h-[min(280px,42vh)] -translate-x-1/2 rounded-2xl border border-purple-300 bg-white/95 px-4 py-3 pt-8 text-sm text-purple-800 shadow-xl">
+                        <div className="absolute left-1/2 top-full z-[70] mt-2 w-[min(340px,85vw)] max-h-[min(280px,42vh)] -translate-x-1/2 rounded-2xl border border-purple-300 bg-white/95 px-4 py-3 pt-8 text-sm text-purple-800 shadow-2xl">
                           <button
                             type="button"
                             onClick={() => setShowEvaluationBubble(false)}
@@ -417,7 +417,7 @@ export default function GuidedWriting({ language, storyState, onStoryWrite, onBa
                         </div>
                       )}
                       {writingMood === "angry" && (
-                        <div className="absolute left-1/2 top-full z-10 mt-[4.5rem] w-[min(320px,85vw)] -translate-x-1/2 rounded-2xl border border-red-300 bg-white/95 px-3 py-2 text-xs text-red-700 shadow-xl">
+                        <div className="absolute left-1/2 top-full z-[70] mt-[4.5rem] w-[min(320px,85vw)] -translate-x-1/2 rounded-2xl border border-red-300 bg-white/95 px-3 py-2 text-xs text-red-700 shadow-xl">
                           This text contains offensive words. Please revise with respectful language.
                         </div>
                       )}
@@ -439,7 +439,7 @@ export default function GuidedWriting({ language, storyState, onStoryWrite, onBa
                     placeholder={`Start writing the "${sections[currentSection]}" section here... Let your imagination flow! 💭`}
                     value={currentSectionText}
                     onChange={(e) => handleSectionTextChange(currentSection, e.target.value)}
-                    className={`relative w-full h-[500px] p-6 rounded-xl border-4 bg-white/90 text-foreground placeholder-gray-400 font-serif text-base leading-relaxed shadow-inner focus:shadow-lg transition-all duration-300 ${
+                    className={`relative z-10 w-full h-[500px] p-6 rounded-xl border-4 bg-white/90 text-foreground placeholder-gray-400 font-serif text-base leading-relaxed shadow-inner focus:shadow-lg transition-all duration-300 ${
                       writingMood === "angry"
                         ? "border-red-400 bg-pink-50 focus:border-red-500 focus:ring-4 focus:ring-red-200"
                         : "border-blue-300 focus:border-purple-400 focus:ring-4 focus:ring-purple-200"
