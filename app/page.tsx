@@ -137,6 +137,20 @@ const getMapStateKey = (username: string) => `cwriteMapState:${username}`
 const getPlanTestResultKey = (username: string) => `cwritePlanTestResult:${username}`
 const getTreesStateKey = (username: string) => `cwriteTreesState:${username}`
 const VALUES_DIMENSION_COUNT = 12
+const VALUES_DIMENSION_NAMES = [
+  "Perseverance",
+  "Respect for Others",
+  "Responsibility",
+  "National Identity",
+  "Commitment",
+  "Integrity",
+  "Benevolence",
+  "Law-abidingness",
+  "Empathy",
+  "Diligence",
+  "Filial Piety",
+  "Unity",
+] as const
 
 const getChapterBaseMapImageUrl = (chapterIndex: number) => {
   // 章节0使用第一张底图；后续章节使用第二张底图。
@@ -293,6 +307,8 @@ export type TreeGrowthDetail = {
   workTitle: string
   workType: "story" | "review" | "letter"
   excerpt: string
+  triggerSentence?: string
+  reason?: string
   timestamp: number
 }
 
@@ -308,9 +324,25 @@ function readLocalTreeGrowthDetails(username: string): Record<number, TreeGrowth
     Object.entries(parsed).forEach(([k, arr]) => {
       const id = Number(k)
       if (Number.isFinite(id) && id >= 1 && id <= 12 && Array.isArray(arr)) {
-        out[id] = arr.filter(
-          (x) => x && typeof x.workTitle === "string" && typeof x.excerpt === "string" && typeof x.timestamp === "number"
-        )
+        out[id] = arr
+          .filter(
+            (x) =>
+              x &&
+              typeof x.workTitle === "string" &&
+              typeof x.excerpt === "string" &&
+              typeof x.timestamp === "number"
+          )
+          .map((x) => ({
+            ...x,
+            triggerSentence:
+              typeof (x as { triggerSentence?: unknown }).triggerSentence === "string"
+                ? (x as { triggerSentence?: string }).triggerSentence
+                : undefined,
+            reason:
+              typeof (x as { reason?: unknown }).reason === "string"
+                ? (x as { reason?: string }).reason
+                : undefined,
+          }))
       }
     })
     return out
@@ -334,6 +366,27 @@ function getFirstSentenceOrExcerpt(text: string, maxLen = 180): string {
   const match = trimmed.match(/^[^.!?]*[.!?]?/)
   const first = match ? match[0].trim() : trimmed.slice(0, maxLen)
   return first.length > maxLen ? first.slice(0, maxLen) + "…" : first
+}
+
+function getBestGrowthSentence(text: string, maxLen = 180): string {
+  const trimmed = text.trim()
+  if (!trimmed) return ""
+  const lines = trimmed
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+  const richLine = lines.find((line) => line.length >= 25) || lines[0] || trimmed
+  const sentenceMatch = richLine.match(/[^.!?。！？\n]+[.!?。！？]?/)
+  const sentence = sentenceMatch ? sentenceMatch[0].trim() : richLine
+  return sentence.length > maxLen ? `${sentence.slice(0, maxLen)}…` : sentence
+}
+
+function buildGrowthReason(dimensionId: number, sentence: string): string {
+  const name = VALUES_DIMENSION_NAMES[dimensionId - 1] || `Value ${dimensionId}`
+  if (!sentence) {
+    return `This writing supports ${name} because it shows the student's positive attitude and action.`
+  }
+  return `This line reflects ${name} because it shows a clear attitude or action that matches this value.`
 }
 
 type AppUser = {
@@ -1088,7 +1141,12 @@ export default function Home() {
   const applyTreeGrowthFromMetrics = useCallback(
     async (
       matchedDimensions: number[],
-      payload?: { workTitle: string; workType: "story" | "review" | "letter"; excerpt: string }
+      payload?: {
+        workTitle: string
+        workType: "story" | "review" | "letter"
+        excerpt: string
+        triggerSentence?: string
+      }
     ) => {
       if (!user) return
       const currentTrees = normalizeValuesTrees(trees)
@@ -1124,7 +1182,13 @@ export default function Home() {
           const next = { ...prev }
           matchedIds.forEach((id) => {
             const list = next[id] ?? []
-            next[id] = [...list, detail]
+            next[id] = [
+              ...list,
+              {
+                ...detail,
+                reason: buildGrowthReason(id, payload.triggerSentence || ""),
+              },
+            ]
           })
           writeLocalTreeGrowthDetails(user.username, next)
           return next
@@ -1151,6 +1215,7 @@ export default function Home() {
     async (text: string, type: "story" | "review" | "letter", workTitle?: string) => {
       if (!user || !text.trim()) return
       const excerpt = getFirstSentenceOrExcerpt(text)
+      const triggerSentence = getBestGrowthSentence(text)
       const title = workTitle?.trim() || (type === "story" ? "My Story" : type === "review" ? "Book Review" : "My Letter")
       try {
         const valuesRes = await fetch("/api/writing-values-growth", {
@@ -1170,6 +1235,7 @@ export default function Home() {
           workTitle: title,
           workType: type,
           excerpt: excerpt || text.slice(0, 120) + (text.length > 120 ? "…" : ""),
+          triggerSentence,
         })
       } catch (error) {
         console.error("Error evaluating values growth:", error)
