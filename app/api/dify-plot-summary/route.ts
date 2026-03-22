@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { logApiCall } from '@/lib/log-api-call'
-import { getLevelPromptSuffix } from '@/lib/level-details'
 import { extractDifyAnswer } from '@/lib/extract-dify-answer'
 
 // 使用环境变量中的 DIFY_API_KEY（这是真正的 API Key）
@@ -10,9 +9,7 @@ const DIFY_BASE_URL = 'https://api.dify.ai/v1'
 
 export async function POST(request: NextRequest) {
   try {
-    const { conversation_history, conversation_id, user_id, level: levelRaw } = await request.json()
-    const level = Math.min(5, Math.max(1, Number(levelRaw) || 1))
-    const levelSuffix = getLevelPromptSuffix(level, 'story')
+    const { conversation_history, conversation_id, user_id } = await request.json()
 
     if (!DIFY_API_KEY) {
       return NextResponse.json(
@@ -78,7 +75,7 @@ conflict: [conflict or unknown]
 goal: [goal or unknown]
 [optional line: done only when all three are NOT unknown]
 
-Only output "done" when setting/conflict/goal are all clearly present (none is unknown).${levelSuffix}`
+Only output "done" when setting/conflict/goal are all clearly present (none is unknown).`
     
     const scopedUser = `${user_id || 'default-user'}::plot-summary`
 
