@@ -54,6 +54,7 @@ import {
   buildValuesCheckContent,
   VALUES_CHECK_STAGES,
 } from "@/lib/cagent-context"
+import { toast } from "sonner"
 
 export type Language = "en" | "zh"
 
@@ -113,6 +114,14 @@ interface WritingAssessment {
   level: number
   mapImageUrl?: string
   mapImageStatus: "idle" | "loading" | "ready" | "error"
+}
+
+type ValuesGrowthDiagnostics = {
+  code?: string
+  title?: string
+  detail?: string
+  tips?: string[]
+  missingEnv?: string[]
 }
 
 export interface MapFlagItem {
@@ -550,6 +559,7 @@ export default function Home() {
   )
 
   const lastValuesWordCountRef = useRef(0)
+  const lastValuesGrowthDiagKeyRef = useRef<string>("")
 
   useEffect(() => {
     if (!user || !VALUES_CHECK_STAGES.includes(stage as any)) {
@@ -1245,6 +1255,24 @@ export default function Home() {
           }),
         })
         const valuesJson = await valuesRes.json()
+        const diagnostics =
+          valuesJson?.diagnostics && typeof valuesJson.diagnostics === "object"
+            ? (valuesJson.diagnostics as ValuesGrowthDiagnostics)
+            : null
+        const source = typeof valuesJson?.source === "string" ? valuesJson.source : ""
+        const diagCode = diagnostics?.code || source
+        if (diagCode && diagCode !== "dify") {
+          const missing = Array.isArray(diagnostics?.missingEnv) ? diagnostics?.missingEnv.join(", ") : ""
+          const tips = Array.isArray(diagnostics?.tips) ? diagnostics?.tips.slice(0, 2).join(" ") : ""
+          const title = diagnostics?.title || "Values growth diagnostic"
+          const detail = diagnostics?.detail || "Values growth returned fallback result."
+          const dedupeKey = `${diagCode}|${missing}`
+          if (lastValuesGrowthDiagKeyRef.current !== dedupeKey) {
+            lastValuesGrowthDiagKeyRef.current = dedupeKey
+            toast.warning(`${title}: ${detail}${missing ? ` Missing env: ${missing}.` : ""}${tips ? ` ${tips}` : ""}`)
+          }
+        }
+
         const matchedDimensions = Array.isArray(valuesJson?.matchedDimensions)
           ? valuesJson.matchedDimensions
           : []
