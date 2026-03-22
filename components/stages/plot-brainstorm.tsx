@@ -78,38 +78,38 @@ export default function PlotBrainstorm({ language, character, onPlotCreate, onBa
   const extractLastSixWords = (text: string): { words: string[]; cleanedText: string } => {
     const normalizedAll = text.trim()
 
-    // 1) 首选：严格解析最后一行 OPTIONS: w1 w2 w3 w4 w5 w6
-    const optionsMatch = normalizedAll.match(/OPTIONS\s*:\s*([A-Za-z]+(?:\s+[A-Za-z]+){5})\s*$/i)
+    // 1) 优先解析 OPTIONS: ...（强约束：按钮必须是 6 个单词）
+    const optionsMatch = normalizedAll.match(/OPTIONS\s*:\s*([^\n\r]+)\s*$/i)
     if (optionsMatch) {
       const optionsBody = optionsMatch[1] || ""
-      const tokens = optionsBody
-        .split(/\s+/)
-        .map((t) => t.replace(/[^A-Za-z]/g, "").trim())
-        .filter(Boolean)
-        .map((t) => t.toLowerCase())
-      if (tokens.length === 6) {
+      const tokens = (optionsBody.match(/[A-Za-z]+/g) || []).map((t) => t.toLowerCase())
+      if (tokens.length >= 6) {
         const cleanedText = normalizedAll.replace(optionsMatch[0], "").trim()
-        return { words: tokens, cleanedText }
+        // 若模型多给了词，按“结尾六词”取值，保证满足“六个单词结尾”
+        return { words: tokens.slice(-6), cleanedText }
       }
     }
 
-    // 2) 兜底：最后一行必须是「仅字母与空格」的 6 词列表（如 school park home …），
-    //    避免把 "Hello! Let's start brainstorming your plot." 去标点后当成 6 个按钮词。
+    // 2) 兜底：整段文本以“6个英文单词结尾”时，抽出这6个做按钮
     const lines = normalizedAll.split(/\r?\n/).map((l) => l.trim()).filter(Boolean)
     const lastLine = lines.length > 0 ? lines[lines.length - 1] : normalizedAll
     const lastLineForBareOptions = lastLine.replace(/[.!?。！？]+$/g, "").trim()
-    const looksLikeBareSixWordList = /^[A-Za-z]+(?:\s+[A-Za-z]+){5}\s*$/.test(lastLineForBareOptions)
+    const trailingSixMatch = lastLineForBareOptions.match(/([A-Za-z]+(?:\s+[A-Za-z]+){5})\s*$/)
+    const bareSixTail = trailingSixMatch ? trailingSixMatch[1] : ""
 
-    const lastLineTokens = lastLineForBareOptions
+    const lastLineTokens = bareSixTail
       .split(/\s+/)
       .map((t) => t.replace(/[^A-Za-z]/g, "").trim())
       .filter(Boolean)
       .map((t) => t.toLowerCase())
 
     const QUESTION_WORDS = new Set(["where", "does", "take", "place", "story"])
-    const looksLikeQuestion = lastLineTokens.some((t) => QUESTION_WORDS.has(t))
-    if (lastLineTokens.length === 6 && !looksLikeQuestion && looksLikeBareSixWordList) {
-      const cleanedText = normalizedAll.replace(new RegExp(`${lastLine.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\\\$&")}\\s*$`), "").trim()
+    const looksLikeQuestionTail = lastLineTokens.some((t) => QUESTION_WORDS.has(t))
+    if (lastLineTokens.length === 6 && !looksLikeQuestionTail) {
+      const cleanedText = normalizedAll.replace(
+        new RegExp(`${bareSixTail.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\\\$&")}\\s*$`),
+        ""
+      ).trim()
       return { words: lastLineTokens, cleanedText }
     }
 
