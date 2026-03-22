@@ -88,6 +88,41 @@ export default function PlotBrainstorm({ language, character, onPlotCreate, onBa
     return { words: lastSix, cleanedText: cleanedText.trim() }
   }
 
+  const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+
+  const postJsonWithRetry = async (
+    url: string,
+    body: Record<string, unknown>,
+    maxAttempts = 3
+  ): Promise<{ data: any; ok: boolean }> => {
+    let lastError = "Request failed"
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        const response = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        })
+        const data = await response.json().catch(() => ({}))
+        if (response.ok) return { data, ok: true }
+        lastError = (typeof data?.error === "string" && data.error) || `HTTP ${response.status}`
+        const retryable = response.status >= 500 || response.status === 429
+        if (attempt < maxAttempts && retryable) {
+          await sleep(attempt * 700)
+          continue
+        }
+        return { data: { error: lastError }, ok: false }
+      } catch (e) {
+        lastError = e instanceof Error ? e.message : "Network error"
+        if (attempt < maxAttempts) {
+          await sleep(attempt * 700)
+          continue
+        }
+      }
+    }
+    return { data: { error: lastError }, ok: false }
+  }
+
   const sendInitialMessage = async () => {
     setIsLoading(true)
     try {
@@ -131,21 +166,13 @@ Continue guiding step by step. Each response should:
 - Each word must be a single word, not a phrase`
       }
 
-      const response = await fetch("/api/dify-chat", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          message: initialPrompt,
-          conversation_id: conversationId,
-          user_id: userId || "default-user",
-        }),
+      const { data, ok } = await postJsonWithRetry("/api/dify-chat", {
+        message: initialPrompt,
+        conversation_id: conversationId,
+        user_id: userId || "default-user",
       })
 
-      const data = await response.json()
-
-      if (data.error) {
+      if (!ok || data.error) {
         toast.error(data.error)
         return
       }
@@ -177,23 +204,13 @@ Continue guiding step by step. Each response should:
     setIsLoading(true)
 
     try {
-      const response = await fetch("/api/dify-chat", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        // 传完整会话给后端，避免上下文丢失导致问句跳回第一步
-        // （后端仍会使用 conversation_id 维持 Dify 线程）
-        body: JSON.stringify({
-          message: messageText,
-          conversation_id: conversationId,
-          user_id: userId || "default-user",
-        }),
+      const { data, ok } = await postJsonWithRetry("/api/dify-chat", {
+        message: messageText,
+        conversation_id: conversationId,
+        user_id: userId || "default-user",
       })
 
-      const data = await response.json()
-
-      if (data.error) {
+      if (!ok || data.error) {
         toast.error(data.error)
         setIsLoading(false)
         return
@@ -283,19 +300,15 @@ Continue guiding step by step. Each response should:
 
       console.log("Calling plot summary API with", conversationHistory.length, "messages")
 
-      const response = await fetch("/api/dify-plot-summary", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
+      const { data } = await postJsonWithRetry(
+        "/api/dify-plot-summary",
+        {
           conversation_history: conversationHistory,
           conversation_id: summaryConversationId || undefined,
           user_id: userId || "default-user",
-        }),
-      })
-
-      const data = await response.json()
+        },
+        2
+      )
 
       console.log("Plot summary API response:", data)
 
