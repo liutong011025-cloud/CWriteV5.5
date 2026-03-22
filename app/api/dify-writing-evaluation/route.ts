@@ -9,6 +9,7 @@ const DIFY_BASE_URL = 'https://api.dify.ai/v1'
 const GOOD_ENOUGH_CODE = process.env.CAGENT_GOOD_ENOUGH_CODE || "CAGENTGOODENOUGH"
 const RETRYABLE_STATUS = new Set([429, 500, 502, 503, 504])
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+const GIBBERISH_THRESHOLD = 0.45
 
 /** 延长 Serverless 等待 Dify blocking 回复的时间（长文 + 多句评语易超时） */
 export const maxDuration = 120
@@ -81,8 +82,8 @@ const computeQualityScores = (
 
   const pass =
     semanticFluency >= 40 &&
-    contentMatch >= 40 &&
-    structureCompleteness >= 40 &&
+    contentMatch >= 35 &&
+    structureCompleteness >= 20 &&
     gibberishRatio < 0.35
 
   return {
@@ -96,6 +97,16 @@ const computeQualityScores = (
 
 const buildLocalEvaluation = (text: string, level: number, currentSectionName: string) => {
   const quality = computeQualityScores(text, null, null, currentSectionName)
+  const gibberishDetected = quality.gibberishRatio >= GIBBERISH_THRESHOLD
+  if (gibberishDetected) {
+    return {
+      evaluation:
+        "I cannot understand this text yet. It looks like random letters. Please rewrite 2-3 clear English sentences for this section.",
+      done: false,
+      quality,
+      gibberishDetected,
+    }
+  }
   const done = quality.pass
   const firstSentence = text.split(/[.!?。\n]/).map((s) => s.trim()).filter(Boolean)[0] || "your sentence"
   const lines = [
@@ -115,6 +126,7 @@ const buildLocalEvaluation = (text: string, level: number, currentSectionName: s
     evaluation: lines.join("\n"),
     done,
     quality,
+    gibberishDetected,
   }
 }
 
@@ -134,6 +146,7 @@ export async function POST(request: NextRequest) {
         secretCode: local.done ? GOOD_ENOUGH_CODE : null,
         source: "fallback_local_no_config",
         quality: local.quality,
+        gibberishDetected: local.gibberishDetected,
       })
     }
     
@@ -251,6 +264,7 @@ ${levelSuffix}`
           secretCode: local.done ? GOOD_ENOUGH_CODE : null,
           source: "fallback_local_http_error",
           quality: local.quality,
+          gibberishDetected: local.gibberishDetected,
         })
       }
       data = result.data
@@ -277,6 +291,7 @@ ${levelSuffix}`
         secretCode: local.done ? GOOD_ENOUGH_CODE : null,
         source: 'fallback_local_empty_answer',
         quality: local.quality,
+        gibberishDetected: local.gibberishDetected,
       })
     }
     
@@ -284,8 +299,9 @@ ${levelSuffix}`
     const modelDone = /\bdone\b/i.test(evaluation)
     const modelHasSecretCode = evaluation.includes(GOOD_ENOUGH_CODE)
     const quality = computeQualityScores(String(text || ""), character, plot, currentSectionName)
-    const hasDone = quality.pass
-    const hasSecretCode = modelHasSecretCode || hasDone
+    const gibberishDetected = quality.gibberishRatio >= GIBBERISH_THRESHOLD
+    const hasDone = quality.pass && !gibberishDetected
+    const hasSecretCode = (modelHasSecretCode || hasDone) && !gibberishDetected
     
     // 移除控制信号，避免直接展示在前端反馈文本中
     const cleanEvaluation = evaluation
@@ -294,8 +310,9 @@ ${levelSuffix}`
       .trim()
     const doneHint = "You can move on to the next part of your writing!"
     const baseEvaluation = cleanEvaluation || "Please continue improving this section."
-    const displayEvaluation =
-      hasDone && !baseEvaluation.includes(doneHint)
+    const displayEvaluation = gibberishDetected
+      ? "I cannot understand this text yet. It looks like random letters. Please rewrite 2-3 clear English sentences for this section."
+      : hasDone && !baseEvaluation.includes(doneHint)
         ? `${baseEvaluation}\n${doneHint}`
         : baseEvaluation
 
@@ -310,6 +327,7 @@ ${levelSuffix}`
         done: hasDone,
         secretCodeDetected: hasSecretCode,
         quality,
+        gibberishDetected,
       }
     )
 
@@ -319,6 +337,7 @@ ${levelSuffix}`
       secretCodeDetected: hasSecretCode,
       secretCode: hasDone ? GOOD_ENOUGH_CODE : null,
       quality,
+      gibberishDetected,
     })
   } catch (error) {
     console.error('Error calling Dify Writing Evaluation API:', error)
