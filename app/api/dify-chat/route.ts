@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { logApiCall } from '@/lib/log-api-call'
 import { getLevelPromptSuffix } from '@/lib/level-details'
+import { extractDifyAnswer } from '@/lib/extract-dify-answer'
 
 // 使用环境变量中的 DIFY_API_KEY（这是真正的 API Key）
 const DIFY_API_KEY = process.env.DIFY_API_KEY || ''
@@ -58,7 +59,18 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const data = await response.json()
+    const data = (await response.json()) as Record<string, unknown>
+    const answerText = extractDifyAnswer(data)
+    const conversationId =
+      (typeof data.conversation_id === 'string' && data.conversation_id) ||
+      (typeof (data.data as Record<string, unknown> | undefined)?.conversation_id === 'string'
+        ? ((data.data as Record<string, unknown>).conversation_id as string)
+        : '')
+    const messageId =
+      (typeof data.id === 'string' && data.id) ||
+      (typeof (data.data as Record<string, unknown> | undefined)?.id === 'string'
+        ? ((data.data as Record<string, unknown>).id as string)
+        : '')
     
     // 记录API调用
     await logApiCall(
@@ -66,13 +78,13 @@ export async function POST(request: NextRequest) {
       'plot',
       '/api/dify-chat',
       { message, conversation_id },
-      { answer: data.answer, conversation_id: data.conversation_id, message_id: data.id }
+      { answer: answerText, conversation_id: conversationId, message_id: messageId }
     )
     
     return NextResponse.json({
-      answer: data.answer || '',
-      conversation_id: data.conversation_id,
-      message_id: data.id,
+      answer: answerText || '',
+      conversation_id: conversationId || null,
+      message_id: messageId || null,
     })
   } catch (error) {
     console.error('Error calling Dify API:', error)
