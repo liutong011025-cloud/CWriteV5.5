@@ -6,6 +6,8 @@ import { extractDifyAnswer } from '@/lib/extract-dify-answer'
 const DIFY_API_KEY = process.env.DIFY_API_KEY || ''
 const DIFY_PLOT_SUMMARY_APP_ID = 'app-HgMPyyxKQNPk2ZZP6znDalkp'
 const DIFY_BASE_URL = 'https://api.dify.ai/v1'
+const RETRYABLE_STATUS = new Set([429, 500, 502, 503, 504])
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
 export async function POST(request: NextRequest) {
   try {
@@ -97,24 +99,44 @@ Only output "done" when setting/conflict/goal are all clearly present (none is u
       conversation_length: conversationText.length,
     }, null, 2))
 
-    const response = await fetch(url, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(requestBody),
-      signal: AbortSignal.timeout(110_000),
-    })
-
-    if (!response.ok) {
-      const errorText = await response.text()
-      console.error('Dify Plot Summary API error:', errorText)
-      return NextResponse.json(
-        { error: `Dify API error: ${response.statusText}` },
-        { status: response.status }
-      )
+    const callDify = async () => {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(requestBody),
+        signal: AbortSignal.timeout(45_000),
+      })
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error('Dify Plot Summary API error:', errorText)
+        return { ok: false as const, status: response.status, statusText: response.statusText, data: null as Record<string, unknown> | null }
+      }
+      const data = (await response.json()) as Record<string, unknown>
+      return { ok: true as const, status: 200, statusText: 'OK', data }
     }
 
-    const data = (await response.json()) as Record<string, unknown>
-    const summaryText = extractDifyAnswer(data)
+    let data: Record<string, unknown> = {}
+    let summaryText = ''
+    const maxAttempts = 2
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      const result = await callDify()
+      if (!result.ok || !result.data) {
+        if (attempt < maxAttempts && RETRYABLE_STATUS.has(result.status)) {
+          await sleep(attempt * 700)
+          continue
+        }
+        return NextResponse.json(
+          { error: `Dify API error: ${result.statusText}` },
+          { status: result.status }
+        )
+      }
+      data = result.data
+      summaryText = extractDifyAnswer(data)
+      if (summaryText) break
+      if (attempt < maxAttempts) {
+        await sleep(attempt * 700)
+      }
+    }
     console.log('Plot Summary - AI Response:', summaryText)
     
     // 记录API调用
@@ -126,8 +148,16 @@ Only output "done" when setting/conflict/goal are all clearly present (none is u
       { summary: summaryText, conversation_id: data.conversation_id }
     )
     
+    if (!summaryText) {
+      return NextResponse.json({
+        summary: '',
+        conversation_id: data.conversation_id || conversation_id,
+        needsMoreConversation: true,
+      })
+    }
+
     return NextResponse.json({
-      summary: summaryText || '',
+      summary: summaryText,
       conversation_id: data.conversation_id, // 返回conversation_id，以便后续调用使用
     })
   } catch (error) {
