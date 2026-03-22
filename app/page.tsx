@@ -1133,7 +1133,7 @@ export default function Home() {
     return () => window.removeEventListener("headerRefreshUserInfo", onRefresh)
   }, [user?.username])
 
-  const currentLevel = writingAssessment?.level ?? 1
+  const currentLevel = journeySelection?.difficulty ?? writingAssessment?.level ?? 1
   useEffect(() => {
     try {
       if (typeof window !== "undefined") {
@@ -1498,6 +1498,11 @@ export default function Home() {
           }}
           onStart={({ type, difficulty }) => {
             setJourneySelection({ type, difficulty })
+            setWritingAssessment((prev) => ({
+              score: prev?.score ?? planTestResult?.score ?? 0,
+              level: difficulty,
+              mapImageStatus: prev?.mapImageStatus ?? "idle",
+            }))
             setJourneyActive(true)
             setLevelBadgeUnlocked(true)
             if (type === "story") {
