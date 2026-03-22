@@ -44,6 +44,7 @@ function GuidedWriting({ language, storyState, onStoryWrite, onBack, userId, onD
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null)
   const textareaRefs = useRef<Record<number, HTMLTextAreaElement | null>>({})
   const [writingMood, setWritingMood] = useState<"sit" | "like" | "angry" | "hang">("sit")
+  const [angryReason, setAngryReason] = useState<"offensive" | "gibberish" | null>(null)
   const [isHoveringHang, setIsHoveringHang] = useState(false)
   const hangTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   // 只有「完全沒輸入」才開始 hang 計時；一旦檢測到輸入就歸零
@@ -97,8 +98,10 @@ function GuidedWriting({ language, storyState, onStoryWrite, onBack, userId, onD
     const loveWords = ["love", "admire", "peace", "like"]
     if (dangerWords.some((w) => lower.includes(w))) {
       setWritingMood("angry")
+      setAngryReason("offensive")
     } else if (loveWords.some((w) => lower.includes(w))) {
       setWritingMood("like")
+      setAngryReason(null)
     }
   }
 
@@ -202,9 +205,11 @@ function GuidedWriting({ language, storyState, onStoryWrite, onBack, userId, onD
           setAiEvaluation(evalText || "")
           if (isGibberish) {
             setWritingMood("angry")
+            setAngryReason("gibberish")
           } else if (data.secretCodeDetected && data.secretCode) {
             setGoodEnoughSecret(data.secretCode)
             setWritingMood("like")
+            setAngryReason(null)
           }
 
           const hasMoveOnSentence = /you can move on to the next part of your writing!/i.test(evalText)
@@ -421,7 +426,9 @@ function GuidedWriting({ language, storyState, onStoryWrite, onBack, userId, onD
                       )}
                       {writingMood === "angry" && (
                         <div className="absolute left-1/2 top-full z-[70] mt-[4.5rem] w-[min(320px,85vw)] -translate-x-1/2 rounded-2xl border border-red-300 bg-white/95 px-3 py-2 text-xs text-red-700 shadow-xl">
-                          This text contains offensive words. Please revise with respectful language.
+                          {angryReason === "gibberish"
+                            ? "I cannot understand this text yet. Please rewrite 2-3 clear English sentences."
+                            : "This text contains offensive words. Please revise with respectful language."}
                         </div>
                       )}
                     </div>
