@@ -9,16 +9,45 @@ const DIFY_BASE_URL = 'https://api.dify.ai/v1'
 const RETRYABLE_STATUS = new Set([429, 500, 502, 503, 504])
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
+const SETTING_WORDS = new Set([
+  'school', 'park', 'forest', 'beach', 'city', 'village', 'castle', 'home', 'library', 'mountain', 'spaceship',
+])
+const CONFLICT_WORDS = new Set([
+  'storm', 'danger', 'dangerous', 'thief', 'monster', 'fire', 'trouble', 'broken', 'lost', 'noise', 'dark', 'sick',
+])
+const GOAL_WORDS = new Set([
+  'save', 'help', 'find', 'protect', 'escape', 'win', 'discover', 'investigate', 'hide', 'fix', 'ask', 'call', 'tell',
+])
+
+const normalizeWord = (input: string) =>
+  input
+    .toLowerCase()
+    .replace(/[^a-z\s]/g, ' ')
+    .trim()
+
+const extractByVocabulary = (studentMessages: string[]) => {
+  let setting = 'unknown'
+  let conflict = 'unknown'
+  let goal = 'unknown'
+
+  for (const raw of studentMessages) {
+    const words = normalizeWord(raw).split(/\s+/).filter(Boolean)
+    if (words.length === 0) continue
+    for (const w of words) {
+      if (setting === 'unknown' && SETTING_WORDS.has(w)) setting = w
+      if (conflict === 'unknown' && CONFLICT_WORDS.has(w)) conflict = w
+      if (goal === 'unknown' && GOAL_WORDS.has(w)) goal = w
+    }
+  }
+
+  const done = setting !== 'unknown' && conflict !== 'unknown' && goal !== 'unknown'
+  const summary = `setting: ${setting}\nconflict: ${conflict}\ngoal: ${goal}${done ? '\ndone' : ''}`
+  return { summary, setting, conflict, goal, done }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { conversation_history, conversation_id, user_id } = await request.json()
-
-    if (!DIFY_API_KEY) {
-      return NextResponse.json(
-        { error: 'DIFY_API_KEY not configured' },
-        { status: 500 }
-      )
-    }
 
     // 只使用学生的回答，忽略AI的回答（AI的回答是问句还带有六个单词，不是学生的想法）
     const studentMessages = conversation_history
@@ -58,26 +87,32 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // 构建提示词（严格证据提取）
-    const queryMessage = `You are analyzing a student's plot brainstorming conversation. The student has had ${studentMessageCount} exchanges with the AI.
+    // 本地兜底抽取：Dify 为空或超时时仍可返回结构化结果
+    const localFallback = extractByVocabulary(studentMessages)
 
-Student's conversation:
+    if (!DIFY_API_KEY) {
+      return NextResponse.json({
+        summary: localFallback.summary,
+        conversation_id: conversation_id,
+        source: 'local_fallback_no_api_key',
+      })
+    }
+
+    // 简化提示词，减少重复长提示导致的空回复概率
+    const queryMessage = `Extract plot fields from student's words only.
+Student messages:
 ${conversationText}
 
-REQUIREMENTS:
-1) Extract ONLY what the student explicitly mentioned in their own words.
-2) Do NOT infer, invent, or fill missing details.
-3) If a field is not clearly mentioned, output exactly "unknown" for that field.
-4) Keep each extracted value short (1-8 words), preserving student meaning.
-5) Use the whole conversation context to decide meaning (not only the latest line).
+Output exactly:
+setting: [value or unknown]
+conflict: [value or unknown]
+goal: [value or unknown]
+[optional] done
 
-Format your response exactly as:
-setting: [setting or unknown]
-conflict: [conflict or unknown]
-goal: [goal or unknown]
-[optional line: done only when all three are NOT unknown]
-
-Only output "done" when setting/conflict/goal are all clearly present (none is unknown).`
+Rules:
+- No inference.
+- unknown when not explicit.
+- done only if all three are not unknown.`
     
     const scopedUser = `${user_id || 'default-user'}::plot-summary`
 
@@ -87,7 +122,7 @@ Only output "done" when setting/conflict/goal are all clearly present (none is u
       },
       query: queryMessage, // 查询消息包含完整对话，确保AI能看到
       response_mode: 'blocking',
-      conversation_id: conversation_id || undefined, // 使用conversation_id保持总结机器人的对话上下文
+      conversation_id: undefined, // 总结改为无状态，避免线程污染导致空回复
       user: scopedUser,
       app_id: DIFY_PLOT_SUMMARY_APP_ID, // 指定使用正确的机器人
     }
@@ -125,10 +160,11 @@ Only output "done" when setting/conflict/goal are all clearly present (none is u
           await sleep(attempt * 700)
           continue
         }
-        return NextResponse.json(
-          { error: `Dify API error: ${result.statusText}` },
-          { status: result.status }
-        )
+        return NextResponse.json({
+          summary: localFallback.summary,
+          conversation_id: conversation_id,
+          source: `local_fallback_http_${result.status}`,
+        })
       }
       data = result.data
       summaryText = extractDifyAnswer(data)
@@ -150,9 +186,9 @@ Only output "done" when setting/conflict/goal are all clearly present (none is u
     
     if (!summaryText) {
       return NextResponse.json({
-        summary: '',
-        conversation_id: data.conversation_id || conversation_id,
-        needsMoreConversation: true,
+        summary: localFallback.summary,
+        conversation_id: conversation_id,
+        source: 'local_fallback_empty_summary',
       })
     }
 
@@ -163,8 +199,10 @@ Only output "done" when setting/conflict/goal are all clearly present (none is u
   } catch (error) {
     console.error('Error calling Dify Plot Summary API:', error)
     return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
+      {
+        summary: 'setting: unknown\nconflict: unknown\ngoal: unknown',
+        source: 'local_fallback_exception',
+      }
     )
   }
 }
