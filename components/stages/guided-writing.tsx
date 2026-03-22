@@ -33,7 +33,7 @@ const countWords = (text: string): number => {
 }
 
 const STORY_BEAR_POSITION = { x: 82.1, y: 5.5, scale: 1.27 }
-const STORY_HANG_POSITION = { x: 83.2, y: 23.2, scale: 1.27 }
+const STORY_HANG_POSITION = { x: 83.2, y: 21.8, scale: 1.27 }
 
 function GuidedWriting({ language, storyState, onStoryWrite, onBack, userId, onDraftChange }: GuidedWritingProps) {
   const [currentSection, setCurrentSection] = useState(0)
@@ -92,9 +92,6 @@ function GuidedWriting({ language, storyState, onStoryWrite, onBack, userId, onD
   }, [sectionTexts, onDraftChange])
 
   const updateWritingMoodFromText = (text: string) => {
-    if (writingMood === "hang") {
-      setWritingMood("sit")
-    }
     const lower = text.toLowerCase()
     const dangerWords = ["kill", "murder", "fuck", "shit", "asshole"]
     const loveWords = ["love", "admire", "peace", "like"]
@@ -102,8 +99,6 @@ function GuidedWriting({ language, storyState, onStoryWrite, onBack, userId, onD
       setWritingMood("angry")
     } else if (loveWords.some((w) => lower.includes(w))) {
       setWritingMood("like")
-    } else {
-      setWritingMood("sit")
     }
   }
 
