@@ -139,6 +139,9 @@ export default function PlotBrainstorm({ language, character, onPlotCreate, onBa
     return []
   }
 
+  const isWhereQuestion = (text: string) =>
+    /where does .*story take place\?/i.test(text.trim()) || /where does the story take place\?/i.test(text.trim())
+
   const sendInitialMessage = async () => {
     setIsLoading(true)
     try {
@@ -270,7 +273,9 @@ Options (CRITICAL):
         { role: "ai", content: finalContent, suggestions: finalSuggestions, grammarIssue },
       ]
       setMessages(initialMessages)
-      setConversationId(data.conversation_id)
+      if (data.conversation_id) {
+        setConversationId(data.conversation_id)
+      }
       
       // 初始消息是AI说的，不调用总结API
       // 只有在学生回答后才会调用总结API
@@ -319,9 +324,19 @@ Options (CRITICAL):
       const { words: suggestions, cleanedText } = extractLastSixWords(cleaned)
       const finalSuggestions = suggestions.length > 0 ? suggestions : getFallbackSuggestions(cleanedText || cleaned || strippedAiMessage)
 
-      const updatedMessages = [...messages, userMessage, { role: "ai" as const, content: cleanedText || cleaned || strippedAiMessage, suggestions: finalSuggestions, grammarIssue }]
+      const aiContentRaw = (cleanedText || cleaned || strippedAiMessage).trim()
+      const lastAiMessage = [...messages].reverse().find((m) => m.role === "ai")?.content?.trim() || ""
+      const shouldAvoidRepeatedWhereQuestion =
+        isWhereQuestion(aiContentRaw) && isWhereQuestion(lastAiMessage) && messageText.trim().length > 0
+      const aiContent = shouldAvoidRepeatedWhereQuestion
+        ? (character?.name ? `What problem does ${character.name} face there?` : "What problem happens there?")
+        : aiContentRaw
+
+      const updatedMessages = [...messages, userMessage, { role: "ai" as const, content: aiContent, suggestions: finalSuggestions, grammarIssue }]
       setMessages(updatedMessages)
-      setConversationId(data.conversation_id)
+      if (data.conversation_id) {
+        setConversationId(data.conversation_id)
+      }
 
       // 保存对话内容到interactions API
       if (userId) {
