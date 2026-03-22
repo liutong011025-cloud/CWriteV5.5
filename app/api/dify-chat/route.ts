@@ -98,10 +98,15 @@ export async function POST(request: NextRequest) {
       { answer: answerText, conversation_id: responseConversationId, message_id: messageId }
     )
 
+    if (!answerText) {
+      return NextResponse.json(
+        { error: 'Dify chat returned empty text. Please retry.' },
+        { status: 502 }
+      )
+    }
+
     return NextResponse.json({
-      answer:
-        answerText ||
-        'Could you answer in one short phrase? I will use it to continue your story plan.',
+      answer: answerText,
       conversation_id: responseConversationId,
       message_id: messageId,
     })
