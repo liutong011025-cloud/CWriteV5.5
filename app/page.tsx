@@ -308,6 +308,7 @@ export type TreeGrowthDetail = {
   workType: "story" | "review" | "letter"
   excerpt: string
   triggerSentence?: string
+  overallEvidence?: string
   reason?: string
   timestamp: number
 }
@@ -337,6 +338,10 @@ function readLocalTreeGrowthDetails(username: string): Record<number, TreeGrowth
             triggerSentence:
               typeof (x as { triggerSentence?: unknown }).triggerSentence === "string"
                 ? (x as { triggerSentence?: string }).triggerSentence
+                : undefined,
+            overallEvidence:
+              typeof (x as { overallEvidence?: unknown }).overallEvidence === "string"
+                ? (x as { overallEvidence?: string }).overallEvidence
                 : undefined,
             reason:
               typeof (x as { reason?: unknown }).reason === "string"
@@ -1138,15 +1143,16 @@ export default function Home() {
         workType: "story" | "review" | "letter"
         excerpt: string
         triggerSentence?: string
-        evidenceByDimension?: Record<number, { sentence?: string; reason?: string }>
+        evidenceByDimension?: Record<number, { sentence?: string; overallEvidence?: string; reason?: string }>
       }
     ) => {
       if (!user) return
       const hasStrictEvidence = (id: number) => {
         const evidence = payload?.evidenceByDimension?.[id]
         const sentence = String(evidence?.sentence || "").trim()
+        const overall = String(evidence?.overallEvidence || "").trim()
         const reason = String(evidence?.reason || "").trim()
-        return !!sentence && !!reason
+        return (!!sentence || !!overall) && !!reason
       }
       const evidenceMatchedDimensions = payload?.evidenceByDimension
         ? matchedDimensions.filter((n) => hasStrictEvidence(Number(n)))
@@ -1188,14 +1194,15 @@ export default function Home() {
             const list = next[id] ?? []
             const evidence = payload.evidenceByDimension?.[id]
             const evidenceSentence = (evidence?.sentence || "").trim()
+            const overallEvidence = (evidence?.overallEvidence || "").trim()
             const evidenceReason = (evidence?.reason || "").trim()
-            if (!evidenceSentence || !evidenceReason) return
-            const recordSentence = evidenceSentence || payload.triggerSentence || payload.excerpt
+            if ((!evidenceSentence && !overallEvidence) || !evidenceReason) return
             next[id] = [
               ...list,
               {
                 ...detail,
-                triggerSentence: recordSentence,
+                ...(evidenceSentence ? { triggerSentence: evidenceSentence } : {}),
+                ...(overallEvidence ? { overallEvidence } : {}),
                 reason: evidenceReason,
               },
             ]
@@ -1243,7 +1250,7 @@ export default function Home() {
           : []
         const evidenceByDimension =
           valuesJson?.evidenceByDimension && typeof valuesJson.evidenceByDimension === "object"
-            ? (valuesJson.evidenceByDimension as Record<number, { sentence?: string; reason?: string }>)
+            ? (valuesJson.evidenceByDimension as Record<number, { sentence?: string; overallEvidence?: string; reason?: string }>)
             : {}
         await applyTreeGrowthFromMetrics(matchedDimensions, {
           workTitle: title,
