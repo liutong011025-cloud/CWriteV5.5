@@ -601,8 +601,8 @@ Options (CRITICAL):
     plotData.goal && 
     plotData.goal.toLowerCase() !== "unknown"
 
-  // 以 AI 总结完成（done 信号）为准才允许跳转
-  const canProceed = !!canContinue && summaryDone
+  // 只要三个要素都有明确内容，就允许进入下一步
+  const canProceed = !!canContinue
 
   const progressCount = [plotData.setting, plotData.conflict, plotData.goal].reduce((acc, v) => {
     const ok = !!v && v.trim() !== "" && v.toLowerCase() !== "unknown"
@@ -611,11 +611,9 @@ Options (CRITICAL):
   const progressPct = Math.round((progressCount / 3) * 100)
 
   const handleContinue = () => {
-    // Check if summary is done and all fields are not unknown
+    // 只检查三要素是否齐全且不是 unknown
     if (canProceed) {
       onPlotCreate(plotData)
-    } else if (!summaryDone) {
-      toast.error("Please wait for the plot summary to complete")
     } else {
       toast.error("Please complete all plot fields (Setting, Conflict, Goal) before continuing")
     }
