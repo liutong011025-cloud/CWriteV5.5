@@ -80,6 +80,8 @@ goal: [goal or unknown]
 
 Only output "done" when setting/conflict/goal are all clearly present (none is unknown).${levelSuffix}`
     
+    const scopedUser = `${user_id || 'default-user'}::plot-summary`
+
     const requestBody: any = {
       inputs: {
         conversation: conversationText, // 对话历史作为输入变量（如果Dify机器人需要）
@@ -87,7 +89,7 @@ Only output "done" when setting/conflict/goal are all clearly present (none is u
       query: queryMessage, // 查询消息包含完整对话，确保AI能看到
       response_mode: 'blocking',
       conversation_id: conversation_id || undefined, // 使用conversation_id保持总结机器人的对话上下文
-      user: user_id || 'default-user',
+      user: scopedUser,
       app_id: DIFY_PLOT_SUMMARY_APP_ID, // 指定使用正确的机器人
     }
     
