@@ -5,6 +5,8 @@ import { extractDifyAnswer } from '@/lib/extract-dify-answer'
 const DIFY_API_KEY = process.env.DIFY_API_KEY || ''
 const DIFY_CHAT_APP_ID = 'app-TFDykrjN8LpJROY6eTRNjwo5'
 const DIFY_BASE_URL = 'https://api.dify.ai/v1'
+const RETRYABLE_STATUS = new Set([429, 500, 502, 503, 504])
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
 export async function POST(request: NextRequest) {
   try {
@@ -52,7 +54,7 @@ export async function POST(request: NextRequest) {
         method: 'POST',
         headers,
         body: JSON.stringify(requestBody),
-        signal: AbortSignal.timeout(110_000),
+        signal: AbortSignal.timeout(45_000),
       })
       if (!response.ok) {
         const errorText = await response.text()
@@ -63,22 +65,32 @@ export async function POST(request: NextRequest) {
       return { ok: true as const, status: 200, statusText: 'OK', data }
     }
 
-    let firstTry = await callDify()
-    if (!firstTry.ok || !firstTry.data) {
-      return NextResponse.json(
-        { error: `Dify API error: ${firstTry.statusText}` },
-        { status: firstTry.status }
-      )
-    }
+    let data: Record<string, unknown> = {}
+    let answerText = ''
+    let lastStatus = 502
+    let lastStatusText = 'Bad Gateway'
+    const maxAttempts = 3
 
-    let data = firstTry.data
-    let answerText = extractDifyAnswer(data)
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      const result = await callDify()
+      if (!result.ok || !result.data) {
+        lastStatus = result.status
+        lastStatusText = result.statusText || lastStatusText
+        if (attempt < maxAttempts && RETRYABLE_STATUS.has(result.status)) {
+          await sleep(attempt * 700)
+          continue
+        }
+        return NextResponse.json(
+          { error: `Dify API error: ${result.statusText}` },
+          { status: result.status }
+        )
+      }
 
-    if (!answerText) {
-      const secondTry = await callDify()
-      if (secondTry.ok && secondTry.data) {
-        data = secondTry.data
-        answerText = extractDifyAnswer(data)
+      data = result.data
+      answerText = extractDifyAnswer(data)
+      if (answerText) break
+      if (attempt < maxAttempts) {
+        await sleep(attempt * 700)
       }
     }
 
@@ -100,7 +112,7 @@ export async function POST(request: NextRequest) {
 
     if (!answerText) {
       return NextResponse.json(
-        { error: 'Dify chat returned empty text. Please retry.' },
+        { error: `Dify chat returned empty text after retries (${lastStatus} ${lastStatusText}). Please retry in 2-3 seconds.` },
         { status: 502 }
       )
     }
