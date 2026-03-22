@@ -19,9 +19,80 @@ const countWords = (text: string) =>
     .split(/\s+/)
     .filter(Boolean).length
 
+const tokenizeWords = (text: string) => (text.toLowerCase().match(/[a-z']+/g) || [])
+
+const stopwords = new Set([
+  "a","an","the","is","am","are","was","were","be","been","being","to","of","in","on","at","for","with","and","or","but","so","if","then","that","this","it","he","she","they","we","i","you","my","our","your","his","her","their",
+])
+
+const hasVowel = (word: string) => /[aeiou]/i.test(word)
+
+const computeQualityScores = (
+  textRaw: string,
+  character: any,
+  plot: any,
+  currentSectionName: string
+) => {
+  const text = String(textRaw || "").trim()
+  const words = tokenizeWords(text)
+  const wordCount = words.length
+  const sentenceCount = text.split(/[.!?。！？\n]+/).map((s) => s.trim()).filter(Boolean).length
+  const gibberishWords = words.filter((w) => w.length >= 4 && !hasVowel(w))
+  const gibberishRatio = wordCount > 0 ? gibberishWords.length / wordCount : 1
+
+  const uniqueRatio = wordCount > 0 ? new Set(words).size / wordCount : 0
+  let semanticFluency = 0
+  if (wordCount >= 12) semanticFluency += 35
+  if (sentenceCount >= 2) semanticFluency += 25
+  if (uniqueRatio >= 0.45) semanticFluency += 20
+  if (gibberishRatio <= 0.2) semanticFluency += 20
+  semanticFluency = Math.min(100, semanticFluency)
+
+  const textLower = text.toLowerCase()
+  const characterName = String(character?.name || "").toLowerCase().trim()
+  const settingTokens = tokenizeWords(String(plot?.setting || "")).filter((w) => !stopwords.has(w))
+  const conflictTokens = tokenizeWords(String(plot?.conflict || "")).filter((w) => !stopwords.has(w))
+  const goalTokens = tokenizeWords(String(plot?.goal || "")).filter((w) => !stopwords.has(w))
+  const section = currentSectionName.toLowerCase()
+
+  let contentMatch = 0
+  if (characterName && textLower.includes(characterName)) contentMatch += 30
+  if (settingTokens.some((w) => textLower.includes(w))) contentMatch += 25
+  if (section.includes("setup") && (characterName || settingTokens.length > 0)) contentMatch += 10
+  if (section.includes("confront") && conflictTokens.some((w) => textLower.includes(w))) contentMatch += 25
+  if (section.includes("resol") && goalTokens.some((w) => textLower.includes(w))) contentMatch += 25
+  if (!section.includes("confront") && !section.includes("resol") && conflictTokens.some((w) => textLower.includes(w))) contentMatch += 10
+  if (!section.includes("confront") && !section.includes("resol") && goalTokens.some((w) => textLower.includes(w))) contentMatch += 10
+  contentMatch = Math.min(100, contentMatch)
+
+  const actionVerbs = ["go","went","find","found","help","helped","save","saved","run","ran","look","looked","say","said","hold","held","climb","climbed","read","remember","decide","decided"]
+  const hasAction = actionVerbs.some((v) => new RegExp(`\\b${v}\\b`, "i").test(text))
+  const hasConnector = /\b(then|because|so|when|after|before|finally|next)\b/i.test(text)
+  let structureCompleteness = 0
+  if (sentenceCount >= 2) structureCompleteness += 35
+  if (hasAction) structureCompleteness += 35
+  if (hasConnector) structureCompleteness += 15
+  if (wordCount >= 15) structureCompleteness += 15
+  structureCompleteness = Math.min(100, structureCompleteness)
+
+  const pass =
+    semanticFluency >= 70 &&
+    contentMatch >= 60 &&
+    structureCompleteness >= 65 &&
+    gibberishRatio < 0.35
+
+  return {
+    semanticFluency,
+    contentMatch,
+    structureCompleteness,
+    gibberishRatio,
+    pass,
+  }
+}
+
 const buildLocalEvaluation = (text: string, level: number, currentSectionName: string) => {
-  const wordCount = countWords(text)
-  const done = wordCount > 10
+  const quality = computeQualityScores(text, null, null, currentSectionName)
+  const done = quality.pass
   const firstSentence = text.split(/[.!?。\n]/).map((s) => s.trim()).filter(Boolean)[0] || "your sentence"
   const lines = [
     `I like this detail: "${firstSentence.slice(0, 60)}". It shows clear feeling.`,
@@ -33,8 +104,14 @@ const buildLocalEvaluation = (text: string, level: number, currentSectionName: s
   ]
   if (done) {
     lines.push("You can move on to the next part of your writing!")
+  } else {
+    lines.push("Please improve clarity and section match before moving on.")
   }
-  return { evaluation: lines.join("\n"), done }
+  return {
+    evaluation: lines.join("\n"),
+    done,
+    quality,
+  }
 }
 
 export async function POST(request: NextRequest) {
@@ -44,10 +121,16 @@ export async function POST(request: NextRequest) {
     const levelSuffix = getLevelPromptSuffix(level, 'story')
 
     if (!DIFY_API_KEY) {
-      return NextResponse.json(
-        { error: 'DIFY_API_KEY not configured' },
-        { status: 500 }
-      )
+      const currentSectionName = structure?.outline?.[current_section] || 'Unknown'
+      const local = buildLocalEvaluation(String(text || ""), level, currentSectionName)
+      return NextResponse.json({
+        evaluation: local.evaluation,
+        done: local.done,
+        secretCodeDetected: local.done,
+        secretCode: local.done ? GOOD_ENOUGH_CODE : null,
+        source: "fallback_local_no_config",
+        quality: local.quality,
+      })
     }
     
     console.log('Luna Writing Evaluation API - Using app ID:', DIFY_WRITING_EVAL_APP_ID)
@@ -96,7 +179,8 @@ Use clear, child-friendly English. No long paragraph.
 
 VERY IMPORTANT:
 - If text is nonsense or too short, do NOT write "done".
-- If writing is complete enough OR total word count > 10, add "done" on a NEW LINE.
+- Only write "done" when ALL are good: semantic fluency, content match to character/plot/section, and section completeness.
+- Do NOT use word count alone to decide done.
 - If and only if you wrote "done", add on next NEW LINE: "${GOOD_ENOUGH_CODE}".
 - If done, include this exact sentence in feedback: "You can move on to the next part of your writing!"
 
@@ -162,6 +246,7 @@ ${levelSuffix}`
           secretCodeDetected: local.done,
           secretCode: local.done ? GOOD_ENOUGH_CODE : null,
           source: "fallback_local_http_error",
+          quality: local.quality,
         })
       }
       data = result.data
@@ -187,19 +272,25 @@ ${levelSuffix}`
         secretCodeDetected: local.done,
         secretCode: local.done ? GOOD_ENOUGH_CODE : null,
         source: 'fallback_local_empty_answer',
+        quality: local.quality,
       })
     }
     
     // 检查是否包含"done"（不区分大小写）
-    const hasDone = /\bdone\b/i.test(evaluation)
+    const modelDone = /\bdone\b/i.test(evaluation)
     const hasSecretCode = evaluation.includes(GOOD_ENOUGH_CODE)
+    const quality = computeQualityScores(String(text || ""), character, plot, currentSectionName)
+    const hasDone = modelDone && quality.pass
     
     // 移除控制信号，避免直接展示在前端反馈文本中
     const cleanEvaluation = evaluation
       .replace(/\bdone\b/gi, '')
       .replace(new RegExp(GOOD_ENOUGH_CODE.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), '')
       .trim()
-    const displayEvaluation = cleanEvaluation || "You can move on to the next part of your writing!"
+    const gateNote = !quality.pass
+      ? `\n\nBefore passing this section, improve these scores: semantic fluency ${quality.semanticFluency}/100, content match ${quality.contentMatch}/100, structure completeness ${quality.structureCompleteness}/100.`
+      : ""
+    const displayEvaluation = (cleanEvaluation || "Please continue improving this section.") + gateNote
 
     // 记录API调用
     await logApiCall(
@@ -207,14 +298,20 @@ ${levelSuffix}`
       'writing',
       '/api/dify-writing-evaluation',
       { text, character, plot, structure, current_section },
-      { evaluation: displayEvaluation, done: hasDone, secretCodeDetected: hasSecretCode }
+      {
+        evaluation: displayEvaluation,
+        done: hasDone,
+        secretCodeDetected: hasSecretCode,
+        quality,
+      }
     )
 
     return NextResponse.json({
       evaluation: displayEvaluation,
       done: hasDone,
       secretCodeDetected: hasSecretCode,
-      secretCode: hasSecretCode ? GOOD_ENOUGH_CODE : null,
+      secretCode: hasDone && hasSecretCode ? GOOD_ENOUGH_CODE : null,
+      quality,
     })
   } catch (error) {
     console.error('Error calling Dify Writing Evaluation API:', error)
