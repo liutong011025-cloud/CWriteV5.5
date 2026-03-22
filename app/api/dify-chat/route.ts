@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { logApiCall } from '@/lib/log-api-call'
-import { getLevelPromptSuffix } from '@/lib/level-details'
 import { extractDifyAnswer } from '@/lib/extract-dify-answer'
 
 // 使用环境变量中的 DIFY_API_KEY（这是真正的 API Key）
@@ -10,9 +9,7 @@ const DIFY_BASE_URL = 'https://api.dify.ai/v1'
 
 export async function POST(request: NextRequest) {
   try {
-    const { message, conversation_id, user_id, level: levelRaw } = await request.json()
-    const level = Math.min(5, Math.max(1, Number(levelRaw) || 1))
-    const levelSuffix = getLevelPromptSuffix(level, 'story')
+    const { message, conversation_id, user_id } = await request.json()
 
     if (!DIFY_API_KEY) {
       return NextResponse.json(
@@ -35,11 +32,10 @@ export async function POST(request: NextRequest) {
       typeof conversation_id === 'string' && conversation_id.trim().length > 0
         ? conversation_id
         : undefined
-    const queryText = normalizedConversationId ? message : `${message}${levelSuffix}`
 
     const requestBody: any = {
       inputs: {},
-      query: queryText,
+      query: message,
       response_mode: 'blocking',
       conversation_id: normalizedConversationId,
       user: scopedUser,
@@ -52,23 +48,41 @@ export async function POST(request: NextRequest) {
       has_conversation_id: !!conversation_id,
     }, null, 2))
 
-    const response = await fetch(url, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(requestBody),
-    })
+    const callDify = async () => {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(requestBody),
+      })
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error('Dify API error:', errorText)
+        return { ok: false as const, status: response.status, statusText: response.statusText, data: null as Record<string, unknown> | null }
+      }
+      const data = (await response.json()) as Record<string, unknown>
+      return { ok: true as const, status: 200, statusText: 'OK', data }
+    }
 
-    if (!response.ok) {
-      const errorText = await response.text()
-      console.error('Dify API error:', errorText)
+    let firstTry = await callDify()
+    if (!firstTry.ok || !firstTry.data) {
       return NextResponse.json(
-        { error: `Dify API error: ${response.statusText}` },
-        { status: response.status }
+        { error: `Dify API error: ${firstTry.statusText}` },
+        { status: firstTry.status }
       )
     }
 
-    const data = (await response.json()) as Record<string, unknown>
-    const answerText = extractDifyAnswer(data)
+    let data = firstTry.data
+    let answerText = extractDifyAnswer(data)
+
+    // Dify 偶发空回复：自动重试一次，避免前端出现“无回答”
+    if (!answerText) {
+      const secondTry = await callDify()
+      if (secondTry.ok && secondTry.data) {
+        data = secondTry.data
+        answerText = extractDifyAnswer(data)
+      }
+    }
+
     const conversationId =
       (typeof data.conversation_id === 'string' && data.conversation_id) ||
       (typeof (data.data as Record<string, unknown> | undefined)?.conversation_id === 'string'
@@ -90,7 +104,7 @@ export async function POST(request: NextRequest) {
     )
     
     return NextResponse.json({
-      answer: answerText || '',
+      answer: answerText || "I did not catch that. Please answer in one short phrase.",
       conversation_id: conversationId || null,
       message_id: messageId || null,
     })
