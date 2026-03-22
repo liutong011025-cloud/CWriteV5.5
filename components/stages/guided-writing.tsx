@@ -45,7 +45,6 @@ function GuidedWriting({ language, storyState, onStoryWrite, onBack, userId, onD
   const textareaRefs = useRef<Record<number, HTMLTextAreaElement | null>>({})
   const [writingMood, setWritingMood] = useState<"sit" | "like" | "angry" | "hang">("sit")
   const [isHoveringHang, setIsHoveringHang] = useState(false)
-  const [hangYOffset, setHangYOffset] = useState(0)
   const hangTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   // 只有「完全沒輸入」才開始 hang 計時；一旦檢測到輸入就歸零
   const [lastInputAt, setLastInputAt] = useState(() => Date.now())
@@ -70,13 +69,7 @@ function GuidedWriting({ language, storyState, onStoryWrite, onBack, userId, onD
   // 對話框可關閉；學生繼續寫、收到新評語時會再次顯示
   const [showEvaluationBubble, setShowEvaluationBubble] = useState(true)
 
-  const activeBearPosition =
-    writingMood === "hang"
-      ? {
-          ...STORY_HANG_POSITION,
-          y: Math.max(-5, Math.min(40, STORY_HANG_POSITION.y + hangYOffset)),
-        }
-      : STORY_BEAR_POSITION
+  const activeBearPosition = writingMood === "hang" ? STORY_HANG_POSITION : STORY_BEAR_POSITION
 
   useEffect(() => {
     setAiEvaluation("Start your writing now!")
@@ -401,34 +394,6 @@ function GuidedWriting({ language, storyState, onStoryWrite, onBack, userId, onD
                       {writingMood === "hang" && isHoveringHang && (
                         <div className="absolute left-1/2 top-full z-[70] mt-2 -translate-x-1/2 whitespace-nowrap rounded-full bg-black/80 px-4 py-1 text-xs text-white shadow-lg">
                           Save me!
-                        </div>
-                      )}
-                      {writingMood === "hang" && (
-                        <div className="absolute left-1/2 top-full z-[72] mt-10 -translate-x-1/2 rounded-xl border border-blue-300 bg-white/95 px-2 py-1 shadow-lg">
-                          <div className="flex items-center gap-1 text-[11px] text-blue-700">
-                            <span>Hang Y</span>
-                            <button
-                              type="button"
-                              className="rounded bg-blue-100 px-2 py-0.5 font-bold hover:bg-blue-200"
-                              onClick={() => setHangYOffset((v) => Math.max(-20, v - 1))}
-                            >
-                              ↑
-                            </button>
-                            <button
-                              type="button"
-                              className="rounded bg-blue-100 px-2 py-0.5 font-bold hover:bg-blue-200"
-                              onClick={() => setHangYOffset((v) => Math.min(20, v + 1))}
-                            >
-                              ↓
-                            </button>
-                            <button
-                              type="button"
-                              className="rounded bg-gray-100 px-2 py-0.5 font-semibold hover:bg-gray-200"
-                              onClick={() => setHangYOffset(0)}
-                            >
-                              reset
-                            </button>
-                          </div>
                         </div>
                       )}
                       {writingMood !== "hang" && showEvaluationBubble && (isLoadingEvaluation || aiEvaluation) && (
