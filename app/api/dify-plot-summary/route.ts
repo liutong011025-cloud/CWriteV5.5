@@ -26,17 +26,23 @@ const normalizeWord = (input: string) =>
     .trim()
 
 const extractByVocabulary = (studentMessages: string[]) => {
-  let setting = 'unknown'
-  let conflict = 'unknown'
-  let goal = 'unknown'
+  const normalizedMessages = studentMessages
+    .map((m) => normalizeWord(m))
+    .map((m) => m.split(/\s+/).filter(Boolean).slice(0, 4).join(' '))
+    .filter(Boolean)
 
-  for (const raw of studentMessages) {
-    const words = normalizeWord(raw).split(/\s+/).filter(Boolean)
-    if (words.length === 0) continue
+  let setting = normalizedMessages[0] || 'unknown'
+  let conflict = normalizedMessages[1] || 'unknown'
+  let goal = normalizedMessages[2] || 'unknown'
+
+  for (let i = 0; i < normalizedMessages.length; i++) {
+    const words = normalizedMessages[i].split(/\s+/).filter(Boolean)
     for (const w of words) {
       if (setting === 'unknown' && SETTING_WORDS.has(w)) setting = w
       if (conflict === 'unknown' && CONFLICT_WORDS.has(w)) conflict = w
       if (goal === 'unknown' && GOAL_WORDS.has(w)) goal = w
+      if (i > 0 && conflict === normalizedMessages[1] && CONFLICT_WORDS.has(w)) conflict = w
+      if (i > 1 && goal === normalizedMessages[2] && GOAL_WORDS.has(w)) goal = w
     }
   }
 
