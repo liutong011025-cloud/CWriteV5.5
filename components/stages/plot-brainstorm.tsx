@@ -84,12 +84,14 @@ export default function PlotBrainstorm({ language, character, onPlotCreate, onBa
       }
     }
 
-    // 2) 兜底：如果最后一行“恰好 6 个纯字母单词”，就当它是 options（但要避免把问题句子也当 options）
+    // 2) 兜底：最后一行必须是「仅字母与空格」的 6 词列表（如 school park home …），
+    //    避免把 "Hello! Let's start brainstorming your plot." 去标点后当成 6 个按钮词。
     const lines = normalizedAll.split(/\r?\n/).map((l) => l.trim()).filter(Boolean)
     const lastLine = lines.length > 0 ? lines[lines.length - 1] : normalizedAll
+    const lastLineForBareOptions = lastLine.replace(/[.!?。！？]+$/g, "").trim()
+    const looksLikeBareSixWordList = /^[A-Za-z]+(?:\s+[A-Za-z]+){5}\s*$/.test(lastLineForBareOptions)
 
-    const lastLineTokens = lastLine
-      .replace(/[.!?。！？]+$/g, "")
+    const lastLineTokens = lastLineForBareOptions
       .split(/\s+/)
       .map((t) => t.replace(/[^A-Za-z]/g, "").trim())
       .filter(Boolean)
@@ -97,7 +99,7 @@ export default function PlotBrainstorm({ language, character, onPlotCreate, onBa
 
     const QUESTION_WORDS = new Set(["where", "does", "take", "place", "story"])
     const looksLikeQuestion = lastLineTokens.some((t) => QUESTION_WORDS.has(t))
-    if (lastLineTokens.length === 6 && !looksLikeQuestion) {
+    if (lastLineTokens.length === 6 && !looksLikeQuestion && looksLikeBareSixWordList) {
       const cleanedText = normalizedAll.replace(new RegExp(`${lastLine.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\\\$&")}\\s*$`), "").trim()
       return { words: lastLineTokens, cleanedText }
     }
