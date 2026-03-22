@@ -49,9 +49,6 @@ export default function GuidedWriting({ language, storyState, onStoryWrite, onBa
   // 只有「完全沒輸入」才開始 hang 計時；一旦檢測到輸入就歸零
   const [lastInputAt, setLastInputAt] = useState(() => Date.now())
   const [goodEnoughSecret, setGoodEnoughSecret] = useState<string | null>(null)
-  const [sitPosition, setSitPosition] = useState(STORY_BEAR_POSITION)
-  const [hangPosition, setHangPosition] = useState(STORY_HANG_POSITION)
-  const [showBearTuner, setShowBearTuner] = useState(true)
 
   const sections = storyState.structure?.outline || []
   
@@ -72,7 +69,7 @@ export default function GuidedWriting({ language, storyState, onStoryWrite, onBa
   // 對話框可關閉；學生繼續寫、收到新評語時會再次顯示
   const [showEvaluationBubble, setShowEvaluationBubble] = useState(true)
 
-  const activeBearPosition = writingMood === "hang" ? hangPosition : sitPosition
+  const activeBearPosition = writingMood === "hang" ? STORY_HANG_POSITION : STORY_BEAR_POSITION
 
   useEffect(() => {
     setAiEvaluation("Start your writing now!")
@@ -320,7 +317,7 @@ export default function GuidedWriting({ language, storyState, onStoryWrite, onBa
 
         <div className="grid lg:grid-cols-12 gap-6 mt-8">
           <div className="lg:col-span-8">
-            <div className="bg-gradient-to-br from-white via-blue-50 to-purple-50 rounded-3xl p-8 border-4 border-blue-300 shadow-2xl backdrop-blur-sm relative overflow-hidden">
+            <div className="bg-gradient-to-br from-white via-blue-50 to-purple-50 rounded-3xl p-8 border-4 border-blue-300 shadow-2xl backdrop-blur-sm relative overflow-visible">
               {/* 纸张纹理效果 */}
               <div className="absolute inset-0 opacity-5 pointer-events-none" style={{
                 backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px)',
@@ -519,59 +516,6 @@ export default function GuidedWriting({ language, storyState, onStoryWrite, onBa
           </div>
 
           <div className="lg:col-span-4 space-y-4">
-            {/* 小熊位置/大小调整工具：用于和设计稿对齐后回传参数 */}
-            <div className="bg-gradient-to-br from-violet-50 via-purple-50 to-fuchsia-50 rounded-2xl p-4 border-2 border-violet-200 shadow-xl">
-              <button
-                type="button"
-                onClick={() => setShowBearTuner((v) => !v)}
-                className="w-full flex items-center justify-between text-left"
-              >
-                <span className="font-bold text-violet-800">Cagent Position & Size Tuner</span>
-                <span className="text-violet-700 text-sm">{showBearTuner ? "Hide" : "Show"}</span>
-              </button>
-              {showBearTuner && (
-                <div className="mt-3 space-y-3 text-xs text-violet-900">
-                  <p className="font-semibold">Sit</p>
-                  <div className="grid grid-cols-[22px_1fr_48px] items-center gap-2">
-                    <span>X</span>
-                    <input type="range" min={70} max={92} step={0.1} value={sitPosition.x} onChange={(e) => setSitPosition((p) => ({ ...p, x: Number(e.target.value) }))} />
-                    <span>{sitPosition.x.toFixed(1)}</span>
-                  </div>
-                  <div className="grid grid-cols-[22px_1fr_48px] items-center gap-2">
-                    <span>Y</span>
-                    <input type="range" min={-5} max={25} step={0.1} value={sitPosition.y} onChange={(e) => setSitPosition((p) => ({ ...p, y: Number(e.target.value) }))} />
-                    <span>{sitPosition.y.toFixed(1)}</span>
-                  </div>
-                  <div className="grid grid-cols-[22px_1fr_48px] items-center gap-2">
-                    <span>S</span>
-                    <input type="range" min={0.7} max={1.5} step={0.01} value={sitPosition.scale} onChange={(e) => setSitPosition((p) => ({ ...p, scale: Number(e.target.value) }))} />
-                    <span>{sitPosition.scale.toFixed(2)}</span>
-                  </div>
-
-                  <p className="font-semibold pt-1">Hang</p>
-                  <div className="grid grid-cols-[22px_1fr_48px] items-center gap-2">
-                    <span>X</span>
-                    <input type="range" min={70} max={92} step={0.1} value={hangPosition.x} onChange={(e) => setHangPosition((p) => ({ ...p, x: Number(e.target.value) }))} />
-                    <span>{hangPosition.x.toFixed(1)}</span>
-                  </div>
-                  <div className="grid grid-cols-[22px_1fr_48px] items-center gap-2">
-                    <span>Y</span>
-                    <input type="range" min={-5} max={40} step={0.1} value={hangPosition.y} onChange={(e) => setHangPosition((p) => ({ ...p, y: Number(e.target.value) }))} />
-                    <span>{hangPosition.y.toFixed(1)}</span>
-                  </div>
-                  <div className="grid grid-cols-[22px_1fr_48px] items-center gap-2">
-                    <span>S</span>
-                    <input type="range" min={0.7} max={1.5} step={0.01} value={hangPosition.scale} onChange={(e) => setHangPosition((p) => ({ ...p, scale: Number(e.target.value) }))} />
-                    <span>{hangPosition.scale.toFixed(2)}</span>
-                  </div>
-
-                  <div className="mt-2 rounded-lg bg-white/80 border border-violet-200 p-2">
-                    <p className="font-semibold mb-1">Send me these values:</p>
-                    <pre className="whitespace-pre-wrap break-all text-[11px] leading-snug">{`STORY_BEAR_POSITION = { x: ${sitPosition.x.toFixed(1)}, y: ${sitPosition.y.toFixed(1)}, scale: ${sitPosition.scale.toFixed(2)} }\nSTORY_HANG_POSITION = { x: ${hangPosition.x.toFixed(1)}, y: ${hangPosition.y.toFixed(1)}, scale: ${hangPosition.scale.toFixed(2)} }`}</pre>
-                  </div>
-                </div>
-              )}
-            </div>
             {/* 故事上下文卡片 */}
             <div className="bg-gradient-to-br from-indigo-50 via-blue-50 to-cyan-50 rounded-3xl p-6 border-4 border-indigo-300 shadow-2xl backdrop-blur-sm relative overflow-hidden">
               {/* 装饰背景 */}
