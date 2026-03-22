@@ -104,24 +104,39 @@ ${levelSuffix}`
       current_section: currentSectionName,
     }, null, 2))
 
-    const response = await fetch(url, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(requestBody),
-      signal: AbortSignal.timeout(110_000),
-    })
+    const callDify = async () => {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(requestBody),
+        signal: AbortSignal.timeout(110_000),
+      })
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error('Dify Writing Evaluation API error:', errorText)
+        return { ok: false as const, status: response.status, statusText: response.statusText, data: null as Record<string, unknown> | null }
+      }
+      const data = (await response.json()) as Record<string, unknown>
+      return { ok: true as const, status: 200, statusText: 'OK', data }
+    }
 
-    if (!response.ok) {
-      const errorText = await response.text()
-      console.error('Dify Writing Evaluation API error:', errorText)
+    const firstTry = await callDify()
+    if (!firstTry.ok || !firstTry.data) {
       return NextResponse.json(
-        { error: `Dify API error: ${response.statusText}` },
-        { status: response.status }
+        { error: `Dify API error: ${firstTry.statusText}` },
+        { status: firstTry.status }
       )
     }
 
-    const data = (await response.json()) as Record<string, unknown>
-    const evaluation = extractDifyAnswer(data)
+    let data = firstTry.data
+    let evaluation = extractDifyAnswer(data)
+    if (!evaluation) {
+      const secondTry = await callDify()
+      if (secondTry.ok && secondTry.data) {
+        data = secondTry.data
+        evaluation = extractDifyAnswer(data)
+      }
+    }
     console.log('Luna API Response:', JSON.stringify({
       has_answer: !!evaluation,
       answer_length: evaluation.length,
@@ -151,6 +166,11 @@ ${levelSuffix}`
       .replace(/\bdone\b/gi, '')
       .replace(new RegExp(GOOD_ENOUGH_CODE.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), '')
       .trim()
+    const displayEvaluation =
+      cleanEvaluation ||
+      (hasDone
+        ? "You can move on to the next part of your writing!"
+        : "I could not read the feedback this time. Please keep writing 1-2 more clear sentences, then I will check again.")
 
     // 记录API调用
     await logApiCall(
@@ -158,11 +178,11 @@ ${levelSuffix}`
       'writing',
       '/api/dify-writing-evaluation',
       { text, character, plot, structure, current_section },
-      { evaluation: cleanEvaluation, done: hasDone, secretCodeDetected: hasSecretCode }
+      { evaluation: displayEvaluation, done: hasDone, secretCodeDetected: hasSecretCode }
     )
 
     return NextResponse.json({
-      evaluation: cleanEvaluation,
+      evaluation: displayEvaluation,
       done: hasDone,
       secretCodeDetected: hasSecretCode,
       secretCode: hasSecretCode ? GOOD_ENOUGH_CODE : null,
