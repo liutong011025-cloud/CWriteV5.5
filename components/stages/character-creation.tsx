@@ -424,9 +424,9 @@ export default function CharacterCreation({ language, onCharacterCreate, onBack,
         <div className="flex-1 flex items-stretch justify-center gap-4 px-8 min-h-0">
           {/* Left: 配料表 */}
           {showIngredientList && (
-            <div className="flex flex-col items-center w-[min(300px,92vw)] flex-shrink-0 py-4 relative">
-              {/* Paper：固定宽高比 + 内容用百分比 inset，随缩放保持与纸张相对位置 */}
-              <div className="relative w-full max-w-[300px] aspect-[3/4] mx-auto">
+            <div className="flex flex-col items-center w-[min(420px,94vw)] flex-shrink-0 py-4 relative">
+              {/* Paper：更大尺寸 + 略增高比例，内容无滚动条、靠紧凑排版落在纸内 */}
+              <div className="relative w-full max-w-[420px] aspect-[2/3] mx-auto">
                 <div
                   aria-hidden
                   className="absolute inset-0 bg-no-repeat bg-center pointer-events-none"
@@ -435,9 +435,9 @@ export default function CharacterCreation({ language, onCharacterCreate, onBack,
                     backgroundSize: "contain",
                   }}
                 />
-                <div className="absolute inset-[11%_12%_15%_12%] flex flex-col min-h-0 overflow-hidden">
+                <div className="absolute inset-[10%_11%_14%_11%] flex flex-col min-h-0 overflow-hidden">
                 {/* 配料列表 */}
-                <div className="flex flex-col gap-4 sm:gap-5 w-full flex-1 min-h-0 overflow-y-auto overflow-x-hidden pr-1 pt-1 [scrollbar-width:thin]">
+                <div className="flex flex-col gap-2 sm:gap-2.5 w-full flex-1 min-h-0 justify-evenly overflow-hidden">
                   {allFields.map((fieldId, index) => {
                     const cfg = FIELD_CONFIG[fieldId as keyof typeof FIELD_CONFIG]
                     if (!cfg) return null
@@ -446,16 +446,16 @@ export default function CharacterCreation({ language, onCharacterCreate, onBack,
                     return (
                       <div
                         key={fieldId}
-                        className="flex items-start justify-between cursor-pointer group transition-all duration-300 gap-3"
+                        className="flex items-start justify-between cursor-pointer group transition-all duration-300 gap-2 shrink-0"
                         onClick={() => !isCompleted && setCurrentField(fieldId)}
                         style={{
                           pointerEvents: isCompleted ? 'none' : 'auto',
                           opacity: isCompleted ? 0.6 : 1,
                         }}
                       >
-                        <div className="flex-1">
+                        <div className="flex-1 min-w-0">
                           <span
-                            className="font-handwriting text-2xl font-bold text-amber-900 group-hover:text-3xl transition-all duration-300"
+                            className="font-handwriting text-lg sm:text-xl font-bold text-amber-900 group-hover:text-2xl transition-all duration-300 block leading-tight"
                             style={{
                               fontFamily: '"Kalam", "Comic Sans MS", cursive',
                               textShadow: '1px 1px 2px rgba(0,0,0,0.2)',
@@ -464,13 +464,13 @@ export default function CharacterCreation({ language, onCharacterCreate, onBack,
                             {cfg.label}
                           </span>
                           {(cfg as any).hint && (
-                            <p className="mt-1 text-xs text-amber-800/80 leading-relaxed">
+                            <p className="mt-0.5 text-[11px] sm:text-xs text-amber-800/80 leading-snug line-clamp-2">
                               {(cfg as any).hint}
                             </p>
                           )}
                         </div>
                         {isCompleted && (
-                          <span className="text-3xl text-green-600 font-bold ml-2">✓</span>
+                          <span className="text-2xl text-green-600 font-bold ml-1 shrink-0">✓</span>
                         )}
                       </div>
                     )
@@ -479,10 +479,10 @@ export default function CharacterCreation({ language, onCharacterCreate, onBack,
 
                 {/* 生成按钮 - 所有字段完成后显示在单词下面 */}
                 {allFieldsComplete && (
-                  <div className="mt-4 w-full flex-shrink-0">
+                  <div className="mt-2 sm:mt-3 w-full flex-shrink-0">
                     <Button
                       onClick={handleStartGenerate}
-                      className="w-full font-ancient text-lg py-4 shadow-lg"
+                      className="w-full font-ancient text-base sm:text-lg py-2.5 sm:py-3 shadow-lg"
                       style={{
                         background: `
                           linear-gradient(135deg, rgba(139, 90, 43, 0.95) 0%, rgba(101, 67, 33, 0.95) 50%, rgba(139, 90, 43, 0.95) 100%),
