@@ -2,6 +2,7 @@ import type React from 'react'
 import type { Metadata } from 'next'
 import { Geist, Geist_Mono, Comic_Neue, Patrick_Hand, Caveat, Baloo_2 } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
+import { SpeedInsights } from '@vercel/speed-insights/next'
 import { Toaster } from '@/components/ui/sonner'
 import HeaderWrapper from '@/components/header-wrapper'
 import Footer from '@/components/footer'
@@ -63,6 +64,7 @@ export default function RootLayout({
         <Footer />
         <Toaster />
         <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   )
