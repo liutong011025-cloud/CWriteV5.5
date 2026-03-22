@@ -1,98 +1,106 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { logApiCall } from '@/lib/log-api-call'
-import { extractDifyAnswer } from '@/lib/extract-dify-answer'
 
-// 使用环境变量中的 DIFY_API_KEY（这是真正的 API Key）
-const DIFY_API_KEY = process.env.DIFY_API_KEY || ''
-const DIFY_CHAT_APP_ID = 'app-TFDykrjN8LpJROY6eTRNjwo5' // Plot Brainstorm API
-const DIFY_BASE_URL = 'https://api.dify.ai/v1'
+const DEEPSEEK_API_KEY =
+  process.env.DEEPSEEK_API_KEY ||
+  'sk-1101bd83b9f647588cb786372e68f441'
+const DEEPSEEK_BASE_URL = 'https://api.deepseek.com'
+
+type ChatMsg = { role: 'system' | 'user' | 'assistant'; content: string }
 
 export async function POST(request: NextRequest) {
   try {
-    const { message, conversation_id, user_id } = await request.json()
+    const { message, conversation_id, user_id, conversation_history } = await request.json()
 
-    if (!DIFY_API_KEY) {
+    if (!DEEPSEEK_API_KEY) {
       return NextResponse.json(
-        { error: 'DIFY_API_KEY not configured' },
+        { error: 'DEEPSEEK_API_KEY not configured' },
         { status: 500 }
       )
     }
 
-    // Dify API configuration
-    const url = `${DIFY_BASE_URL}/chat-messages`
+    const url = `${DEEPSEEK_BASE_URL}/chat/completions`
     
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${DIFY_API_KEY}`,
+      'Authorization': `Bearer ${DEEPSEEK_API_KEY}`,
     }
-    
-    const scopedUser = `${user_id || 'default-user'}::plot-chat`
 
     const normalizedConversationId =
       typeof conversation_id === 'string' && conversation_id.trim().length > 0
         ? conversation_id
-        : undefined
+        : crypto.randomUUID()
 
-    const requestBody: any = {
-      inputs: {},
-      query: message,
-      response_mode: 'blocking',
-      conversation_id: normalizedConversationId,
-      user: scopedUser,
-      app_id: DIFY_CHAT_APP_ID, // 指定使用正确的机器人 (Plot Brainstorm)
-    }
+    const mappedHistory: ChatMsg[] = Array.isArray(conversation_history)
+      ? conversation_history
+          .map((m: any) => {
+            if (!m || typeof m.content !== 'string') return null
+            if (m.role === 'user') return { role: 'user' as const, content: m.content }
+            if (m.role === 'ai' || m.role === 'assistant') return { role: 'assistant' as const, content: m.content }
+            if (m.role === 'system') return { role: 'system' as const, content: m.content }
+            return null
+          })
+          .filter(Boolean) as ChatMsg[]
+      : []
+
+    const requestMessages: ChatMsg[] =
+      mappedHistory.length > 0
+        ? mappedHistory
+        : [{ role: 'user', content: typeof message === 'string' ? message : '' }]
 
     console.log('Dify Chat API Request:', JSON.stringify({
       url,
-      app_id: DIFY_CHAT_APP_ID,
+      model: 'deepseek-chat',
       has_conversation_id: !!conversation_id,
     }, null, 2))
 
-    const callDify = async () => {
+    const callDeepSeek = async () => {
       const response = await fetch(url, {
         method: 'POST',
         headers,
-        body: JSON.stringify(requestBody),
+        body: JSON.stringify({
+          model: 'deepseek-chat',
+          messages: requestMessages,
+          stream: false,
+          temperature: 0.7,
+        }),
       })
       if (!response.ok) {
         const errorText = await response.text()
-        console.error('Dify API error:', errorText)
+        console.error('DeepSeek API error:', errorText)
         return { ok: false as const, status: response.status, statusText: response.statusText, data: null as Record<string, unknown> | null }
       }
       const data = (await response.json()) as Record<string, unknown>
       return { ok: true as const, status: 200, statusText: 'OK', data }
     }
 
-    let firstTry = await callDify()
+    let firstTry = await callDeepSeek()
     if (!firstTry.ok || !firstTry.data) {
       return NextResponse.json(
-        { error: `Dify API error: ${firstTry.statusText}` },
+        { error: `DeepSeek API error: ${firstTry.statusText}` },
         { status: firstTry.status }
       )
     }
 
     let data = firstTry.data
-    let answerText = extractDifyAnswer(data)
+    const choices = Array.isArray(data.choices) ? data.choices : []
+    const firstChoice = choices[0] as Record<string, unknown> | undefined
+    const msgObj = firstChoice?.message as Record<string, unknown> | undefined
+    let answerText = typeof msgObj?.content === 'string' ? msgObj.content.trim() : ''
 
-    // Dify 偶发空回复：自动重试一次，避免前端出现“无回答”
+    // 偶发空回复：自动重试一次，避免前端出现“无回答”
     if (!answerText) {
-      const secondTry = await callDify()
+      const secondTry = await callDeepSeek()
       if (secondTry.ok && secondTry.data) {
         data = secondTry.data
-        answerText = extractDifyAnswer(data)
+        const retryChoices = Array.isArray(data.choices) ? data.choices : []
+        const retryFirst = retryChoices[0] as Record<string, unknown> | undefined
+        const retryMsg = retryFirst?.message as Record<string, unknown> | undefined
+        answerText = typeof retryMsg?.content === 'string' ? retryMsg.content.trim() : ''
       }
     }
 
-    const conversationId =
-      (typeof data.conversation_id === 'string' && data.conversation_id) ||
-      (typeof (data.data as Record<string, unknown> | undefined)?.conversation_id === 'string'
-        ? ((data.data as Record<string, unknown>).conversation_id as string)
-        : '')
-    const messageId =
-      (typeof data.id === 'string' && data.id) ||
-      (typeof (data.data as Record<string, unknown> | undefined)?.id === 'string'
-        ? ((data.data as Record<string, unknown>).id as string)
-        : '')
+    const messageId = typeof data.id === 'string' ? data.id : ''
     
     // 记录API调用
     await logApiCall(
@@ -100,12 +108,12 @@ export async function POST(request: NextRequest) {
       'plot',
       '/api/dify-chat',
       { message, conversation_id },
-      { answer: answerText, conversation_id: conversationId, message_id: messageId }
+      { answer: answerText, conversation_id: normalizedConversationId, message_id: messageId }
     )
     
     return NextResponse.json({
       answer: answerText || "I did not catch that. Please answer in one short phrase.",
-      conversation_id: conversationId || null,
+      conversation_id: normalizedConversationId,
       message_id: messageId || null,
     })
   } catch (error) {
