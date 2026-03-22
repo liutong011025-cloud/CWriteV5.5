@@ -12,7 +12,7 @@ interface StageHeaderProps {
 
 export default function StageHeader({ stage, title, onBack, character, className }: StageHeaderProps) {
   return (
-    <div className={`flex items-center justify-between mb-8 mt-8 pl-16 lg:pl-20 ${className || ""}`}>
+    <div className={`flex items-center justify-between mb-8 mt-8 pl-20 lg:pl-24 ${className || ""}`}>
       <BackButton onClick={onBack} variant="default" />
       <div className="flex items-center gap-4 flex-1 min-w-0">
         <div>
