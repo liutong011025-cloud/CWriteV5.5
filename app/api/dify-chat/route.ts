@@ -31,11 +31,17 @@ export async function POST(request: NextRequest) {
     
     const scopedUser = `${user_id || 'default-user'}::plot-chat`
 
+    const normalizedConversationId =
+      typeof conversation_id === 'string' && conversation_id.trim().length > 0
+        ? conversation_id
+        : undefined
+    const queryText = normalizedConversationId ? message : `${message}${levelSuffix}`
+
     const requestBody: any = {
       inputs: {},
-      query: message + levelSuffix,
+      query: queryText,
       response_mode: 'blocking',
-      conversation_id: conversation_id || undefined,
+      conversation_id: normalizedConversationId,
       user: scopedUser,
       app_id: DIFY_CHAT_APP_ID, // 指定使用正确的机器人 (Plot Brainstorm)
     }
