@@ -16,6 +16,15 @@ type GrammarIssue = {
   issue: string
 }
 
+const normalizeToken = (value: string) =>
+  value
+    .trim()
+    .toLowerCase()
+    .replace(/[.,!?;:'"(){}\[\]-]/g, '')
+
+const isSpacingIssue = (issue: string) =>
+  /\b(space|spacing|whitespace|missing\s*space|extra\s*space)\b/i.test(issue)
+
 const buildLocalGrammarErrors = (content: string): GrammarIssue[] => {
   const fallback: GrammarIssue[] = []
   const push = (original: string, corrected: string, issue: string) => {
@@ -99,6 +108,7 @@ IMPORTANT: You must return a JSON array of errors in the following exact format:
 
 Rules:
 1. Only include actual errors (grammar, spelling, punctuation)
+1.1 Do NOT report spacing-only issues (missing/extra spaces) or formatting-only issues.
 2. CRITICAL: You must identify the PROBLEM WORD only, NOT the position.
    - original: The incorrect word ONLY (no spaces, no punctuation, just the word)
    - corrected: The corrected word ONLY (no spaces, no punctuation, just the word)
@@ -239,7 +249,19 @@ Example format:
     }
 
     // 不去重，保留所有错误（因为AI可能为不同位置的相同单词返回多个错误）
-    const validErrors = errors.filter((error: any) => error.original && error.corrected)
+    const validErrors = errors.filter((error: any) => {
+      if (!error?.original || !error?.corrected) return false
+      const original = String(error.original).trim()
+      const corrected = String(error.corrected).trim()
+      const issue = String(error.issue || "").trim()
+      if (!original || !corrected) return false
+      // Ignore phrase-level entries and spacing-only pseudo-errors.
+      if (/\s/.test(original) || /\s/.test(corrected)) return false
+      if (isSpacingIssue(issue)) return false
+      // Ignore suggestions that do not change the token meaningfully.
+      if (normalizeToken(original) === normalizeToken(corrected)) return false
+      return true
+    })
 
     // 处理错误：根据单词在文本中查找位置并扩展为完整单词
     // 如果AI返回了多个相同的错误，为每个错误标记不同的位置
