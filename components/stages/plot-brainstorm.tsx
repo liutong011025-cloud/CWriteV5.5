@@ -48,6 +48,15 @@ export default function PlotBrainstorm({ language, character, onPlotCreate, onBa
     return withoutChinese.replace(/\s+/g, " ").trim()
   }
 
+  const stripCompletionBoilerplate = (text: string): string => {
+    if (!text) return text
+    return text
+      .replace(/great choice!?\s*now you have a story plan(?:\s*for\s*[a-z0-9_' -]+)?\.?/gi, "")
+      .replace(/you can now move on to the next step\.?/gi, "")
+      .replace(/\s{2,}/g, " ")
+      .trim()
+  }
+
   useEffect(() => {
     sendInitialMessage()
   }, [])
@@ -170,6 +179,10 @@ After the student answers setting:
 After the student answers conflict:
 - Briefly acknowledge their answer, then ask ONLY the goal/want.
 
+After setting + conflict + goal are all available:
+- DO NOT end with any completion/congratulation sentence (for example: "Great choice! Now you have a story plan ...").
+- Keep chatting and ask ONE short refinement question to improve clarity (setting detail / conflict cause / goal action), still in 1 short sentence.
+
 Options (CRITICAL):
 - Output EXACTLY TWO LINES:
   Line 1: your question (one short sentence, ends with ?)
@@ -196,6 +209,10 @@ After the student answers setting:
 
 After the student answers conflict:
 - Briefly acknowledge their answer, then ask ONLY the goal/want.
+
+After setting + conflict + goal are all available:
+- DO NOT end with any completion/congratulation sentence (for example: "Great choice! Now you have a story plan ...").
+- Keep chatting and ask ONE short refinement question to improve clarity (setting detail / conflict cause / goal action), still in 1 short sentence.
 
 Options (CRITICAL):
 - Output EXACTLY TWO LINES:
@@ -231,14 +248,15 @@ Options (CRITICAL):
 
       const aiMessage = data.answer || "Hello! Let's start brainstorming your plot."
       const sanitizedAiMessage = sanitizeAiToEnglishOnly(aiMessage)
-      const { grammarIssue, cleaned } = extractGrammarIssue(sanitizedAiMessage)
+      const strippedInitialMessage = stripCompletionBoilerplate(sanitizedAiMessage)
+      const { grammarIssue, cleaned } = extractGrammarIssue(strippedInitialMessage)
       const { words: suggestions, cleanedText } = extractLastSixWords(cleaned)
-      const normalizedInitial = (cleanedText || cleaned || sanitizedAiMessage).trim().toLowerCase()
+      const normalizedInitial = (cleanedText || cleaned || strippedInitialMessage).trim().toLowerCase()
       const isOnlyWelcomeLine = normalizedInitial === "hello! let's start brainstorming your plot.".toLowerCase()
       const defaultOpeningQuestion = character?.name
         ? `Where does ${character.name}'s story take place?`
         : "Where does the story take place?"
-      const finalContent = isOnlyWelcomeLine ? defaultOpeningQuestion : (cleanedText || cleaned || sanitizedAiMessage)
+      const finalContent = isOnlyWelcomeLine ? defaultOpeningQuestion : (cleanedText || cleaned || strippedInitialMessage)
       const finalSuggestions =
         suggestions.length > 0
           ? suggestions
@@ -292,11 +310,12 @@ Options (CRITICAL):
 
       const aiMessage = data.answer || ""
       const sanitizedAiMessage = sanitizeAiToEnglishOnly(aiMessage)
-      const { grammarIssue, cleaned } = extractGrammarIssue(sanitizedAiMessage)
+      const strippedAiMessage = stripCompletionBoilerplate(sanitizedAiMessage)
+      const { grammarIssue, cleaned } = extractGrammarIssue(strippedAiMessage)
       const { words: suggestions, cleanedText } = extractLastSixWords(cleaned)
-      const finalSuggestions = suggestions.length > 0 ? suggestions : getFallbackSuggestions(cleanedText || cleaned || sanitizedAiMessage)
+      const finalSuggestions = suggestions.length > 0 ? suggestions : getFallbackSuggestions(cleanedText || cleaned || strippedAiMessage)
 
-      const updatedMessages = [...messages, userMessage, { role: "ai" as const, content: cleanedText || cleaned || sanitizedAiMessage, suggestions: finalSuggestions, grammarIssue }]
+      const updatedMessages = [...messages, userMessage, { role: "ai" as const, content: cleanedText || cleaned || strippedAiMessage, suggestions: finalSuggestions, grammarIssue }]
       setMessages(updatedMessages)
       setConversationId(data.conversation_id)
 
@@ -357,55 +376,17 @@ Options (CRITICAL):
         return
       }
 
-      // 本地快速抽取：直接把前三次学生输入视为 setting/conflict/goal。
-      // 这样可以保证 Plot Progress 不会因为 summary 抽取失败而一直显示 unknown。
-      const studentValues = messagesToUse
-        .filter((msg) => msg.role === "user")
-        .map((msg) => msg.content.trim())
-        .filter(Boolean)
-
-      const normalizeByField = (value: string, field: "setting" | "conflict" | "goal"): string => {
-        const cleaned = value
-          .replace(new RegExp(`^(${field === "setting" ? "setting|location|place" : field === "conflict" ? "conflict|confilc|problem|challenge" : "goal|objective|aim|want"})[：:]\\s*`, "i"), "")
-          .trim()
-        return cleaned
-      }
-
-      if (studentValues.length >= 1) {
-        const localSetting = normalizeByField(studentValues[0], "setting")
-        if (localSetting && (!plotData.setting || plotData.setting.toLowerCase() === "unknown")) {
-          setUpdatingFields((prev) => new Set([...prev, "setting"]))
-          setPlotData((prev) => ({ ...prev, setting: localSetting }))
-          setTimeout(() => setUpdatingFields((prev) => {
-            const newSet = new Set(prev)
-            newSet.delete("setting")
-            return newSet
-          }), 1000)
-        }
-      }
-      if (studentValues.length >= 2) {
-        const localConflict = normalizeByField(studentValues[1], "conflict")
-        if (localConflict && (!plotData.conflict || plotData.conflict.toLowerCase() === "unknown")) {
-          setUpdatingFields((prev) => new Set([...prev, "conflict"]))
-          setPlotData((prev) => ({ ...prev, conflict: localConflict }))
-          setTimeout(() => setUpdatingFields((prev) => {
-            const newSet = new Set(prev)
-            newSet.delete("conflict")
-            return newSet
-          }), 1000)
-        }
-      }
-      if (studentValues.length >= 3) {
-        const localGoal = normalizeByField(studentValues[2], "goal")
-        if (localGoal && (!plotData.goal || plotData.goal.toLowerCase() === "unknown")) {
-          setUpdatingFields((prev) => new Set([...prev, "goal"]))
-          setPlotData((prev) => ({ ...prev, goal: localGoal }))
-          setTimeout(() => setUpdatingFields((prev) => {
-            const newSet = new Set(prev)
-            newSet.delete("goal")
-            return newSet
-          }), 1000)
-        }
+      const summarizeFieldValue = (field: "setting" | "conflict" | "goal", rawValue: string) => {
+        const normalized = rawValue.trim().replace(/\s+/g, " ")
+        if (!normalized) return normalized
+        const wordCount = normalized.split(/\s+/).length
+        const startsLikeSentence =
+          /^[A-Z]/.test(normalized) ||
+          /^(in|at|on|inside|during|while|because|when|to)\b/i.test(normalized)
+        if (wordCount >= 3 || startsLikeSentence) return normalized
+        if (field === "setting") return `in a ${normalized}`
+        if (field === "conflict") return `faces ${normalized}`
+        return `to ${normalized}`
       }
       
       // 构建对话历史（包含所有对话内容）
@@ -513,6 +494,7 @@ Options (CRITICAL):
       if (settingValue && settingValue.trim()) {
         // 去掉可能的"setting:"前缀和多余空格（兼容偶发输出）
         let newSetting = settingValue.trim().replace(/^setting[：:]\s*/i, "").trim()
+        newSetting = summarizeFieldValue("setting", newSetting)
         // Setting 允许单个单词，不进行长度检查
         if (newSetting && newSetting.toLowerCase() !== "unknown" && newSetting !== plotData.setting) {
           setUpdatingFields((prev) => new Set([...prev, "setting"]))
@@ -537,6 +519,7 @@ Options (CRITICAL):
           .replace(/^(conflict|confilc|problem|challenge)[：:]\s*/i, "")
           .replace(/\s+/g, " ")
           .trim()
+        newConflict = summarizeFieldValue("conflict", newConflict)
 
         // Dify 有时只抽取到不完整片段（例如 "is lost"），这里做轻量“补句式”让展示更顺。
         if (/^(is|are)\s+lost$/i.test(newConflict)) {
@@ -563,6 +546,7 @@ Options (CRITICAL):
       if (goalValue && goalValue.trim()) {
         // 去掉可能的"goal:"前缀和多余空格（兼容偶发输出）
         let newGoal = goalValue.trim().replace(/^(goal|objective|aim|want)[：:]\s*/i, "").trim()
+        newGoal = summarizeFieldValue("goal", newGoal)
         // 如果提取到内容且不是 "unknown"，就使用它（允许单个词或短句）
         if (newGoal && newGoal.toLowerCase() !== "unknown" && newGoal !== plotData.goal) {
           setUpdatingFields((prev) => new Set([...prev, "goal"]))
