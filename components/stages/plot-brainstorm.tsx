@@ -20,7 +20,6 @@ interface Message {
   role: "ai" | "user"
   content: string
   suggestions?: string[]
-  grammarIssue?: string | null
 }
 
 export default function PlotBrainstorm({ language, character, onPlotCreate, onBack, userId }: PlotBrainstormProps) {
@@ -39,22 +38,6 @@ export default function PlotBrainstorm({ language, character, onPlotCreate, onBa
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const chatContainerRef = useRef<HTMLDivElement>(null)
   const summaryNonceRef = useRef(0)
-
-  const sanitizeAiToEnglishOnly = (text: string): string => {
-    // 去掉中文字符块，避免出现 “... (in Chinese: ...)” 或中英混排
-    // 仅保留 ASCII 英文与常见英文标点/空白。
-    const withoutChinese = text.replace(/[\u4e00-\u9fff]+[，。、！？]?\s*/g, " ")
-    return withoutChinese.replace(/\s+/g, " ").trim()
-  }
-
-  const stripCompletionBoilerplate = (text: string): string => {
-    if (!text) return text
-    return text
-      .replace(/great choice!?\s*now you have a story plan(?:\s*for\s*[a-z0-9_' -]+)?\.?/gi, "")
-      .replace(/you can now move on to the next step\.?/gi, "")
-      .replace(/\s{2,}/g, " ")
-      .trim()
-  }
 
   useEffect(() => {
     sendInitialMessage()
@@ -75,87 +58,34 @@ export default function PlotBrainstorm({ language, character, onPlotCreate, onBa
   }
 
   const extractLastSixWords = (text: string): { words: string[]; cleanedText: string } => {
-    const normalizedAll = text.trim()
+    const lastPunctuationIndex = Math.max(
+      text.lastIndexOf("."),
+      text.lastIndexOf("?"),
+      text.lastIndexOf("!"),
+      text.lastIndexOf("。"),
+      text.lastIndexOf("？"),
+      text.lastIndexOf("！")
+    )
+    const textAfterPunctuation =
+      lastPunctuationIndex >= 0 ? text.substring(lastPunctuationIndex + 1).trim() : text.trim()
 
-    // 1) 优先解析 OPTIONS: ...（强约束：按钮必须是 6 个单词）
-    const optionsMatch = normalizedAll.match(/OPTIONS\s*:\s*([^\n\r]+)\s*$/i)
-    if (optionsMatch) {
-      const optionsBody = optionsMatch[1] || ""
-      const tokens = (optionsBody.match(/[A-Za-z]+/g) || []).map((t) => t.toLowerCase())
-      if (tokens.length >= 6) {
-        const cleanedText = normalizedAll.replace(optionsMatch[0], "").trim()
-        // 若模型多给了词，按“结尾六词”取值，保证满足“六个单词结尾”
-        return { words: tokens.slice(-6), cleanedText }
-      }
+    const words = textAfterPunctuation
+      .split(/\s+|[,，、]/)
+      .map((word) => word.replace(/[,，、]/g, "").trim())
+      .filter((word) => word.length > 0)
+
+    if (words.length <= 6) {
+      const cleanedText = lastPunctuationIndex >= 0 ? text.substring(0, lastPunctuationIndex + 1).trim() : ""
+      return { words, cleanedText }
     }
 
-    // 2) 兜底：整段文本以“6个英文单词结尾”时，抽出这6个做按钮
-    const lines = normalizedAll.split(/\r?\n/).map((l) => l.trim()).filter(Boolean)
-    const lastLine = lines.length > 0 ? lines[lines.length - 1] : normalizedAll
-    const lastLineForBareOptions = lastLine.replace(/[.!?。！？]+$/g, "").trim()
-    const trailingSixMatch = lastLineForBareOptions.match(/([A-Za-z]+(?:\s+[A-Za-z]+){5})\s*$/)
-    const bareSixTail = trailingSixMatch ? trailingSixMatch[1] : ""
+    const lastSix = words.slice(-6)
+    const cleanedText =
+      lastPunctuationIndex >= 0
+        ? `${text.substring(0, lastPunctuationIndex + 1).trim()} ${words.slice(0, -6).join(" ").trim()}`
+        : words.slice(0, -6).join(" ").trim()
 
-    const lastLineTokens = bareSixTail
-      .split(/\s+/)
-      .map((t) => t.replace(/[^A-Za-z]/g, "").trim())
-      .filter(Boolean)
-      .map((t) => t.toLowerCase())
-
-    const QUESTION_WORDS = new Set(["where", "does", "take", "place", "story"])
-    const looksLikeQuestionTail = lastLineTokens.some((t) => QUESTION_WORDS.has(t))
-    if (lastLineTokens.length === 6 && !looksLikeQuestionTail) {
-      const cleanedText = normalizedAll.replace(
-        new RegExp(`${bareSixTail.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\\\$&")}\\s*$`),
-        ""
-      ).trim()
-      return { words: lastLineTokens, cleanedText }
-    }
-
-    // 3) 不符合 options 格式：为了不把“问题句子”当按钮，直接返回空按钮
-    return { words: [], cleanedText: normalizedAll }
-  }
-
-  const extractGrammarIssue = (text: string): { grammarIssue: string | null; cleaned: string } => {
-    const match = text.match(/\[GRAMMAR_ERROR\]([\s\S]*?)\[\/GRAMMAR_ERROR\]/i)
-    if (!match) return { grammarIssue: null, cleaned: text }
-    const issue = (match[1] || "").trim()
-    const cleaned = text.replace(match[0], "").trim()
-    return { grammarIssue: issue || "There is a grammar or spelling issue.", cleaned }
-  }
-
-  const getFallbackSuggestions = (questionText: string): string[] => {
-    const q = questionText.toLowerCase()
-    if (q.includes("where") || q.includes("place") || q.includes("setting")) {
-      return ["school", "park", "forest", "beach", "city", "village"]
-    }
-    if (q.includes("conflict") || q.includes("problem") || q.includes("challenge")) {
-      return ["storm", "danger", "thief", "monster", "fire", "trouble"]
-    }
-    if (q.includes("goal") || q.includes("want") || q.includes("plan")) {
-      return ["save", "help", "find", "protect", "escape", "win"]
-    }
-    return []
-  }
-
-  const normalizeAiTurn = (rawContent: string, rawSuggestions: string[]) => {
-    const defaultOpeningQuestion = character?.name
-      ? `Where does ${character.name}'s story take place?`
-      : "Where does the story take place?"
-    const content = rawContent.trim() || defaultOpeningQuestion
-    const suggestions = rawSuggestions
-      .map((s) => s.trim().toLowerCase())
-      .filter((s) => /^[a-z]+$/.test(s))
-      .slice(0, 6)
-    const fallback = getFallbackSuggestions(content)
-    const finalSuggestions =
-      suggestions.length === 6
-        ? suggestions
-        : fallback.length === 6
-          ? fallback
-          : ["school", "park", "forest", "beach", "city", "village"]
-
-    return { content, suggestions: finalSuggestions }
+    return { words: lastSix, cleanedText: cleanedText.trim() }
   }
 
   const sendInitialMessage = async () => {
@@ -163,90 +93,42 @@ export default function PlotBrainstorm({ language, character, onPlotCreate, onBa
     try {
       let initialPrompt = ""
       if (character) {
-        // 构建详细的角色信息
         const characterInfo = [
           `Character name: ${character.name}`,
           character.species ? `Species: ${character.species}` : "",
+          character.traits && character.traits.length > 0 ? `Traits: ${character.traits.join(", ")}` : "",
           character.description ? `Description: ${character.description}` : "",
         ].filter(Boolean).join("\n")
 
-        // Cap prompt size to keep the first Dify response fast.
-        const characterInfoCapped = characterInfo.length > 420 ? `${characterInfo.slice(0, 420)}...` : characterInfo
-        
-        // 新的设定：脑图机器人，面向小学生，六个单词收尾（保留标点符号，单词不用逗号）
         const characterName = character.name || "the character"
         const characterSpecies = character.species ? ` (a ${character.species})` : ""
-        const characterReference = `${characterName}${characterSpecies}`
-        
-        initialPrompt = `You help elementary students brainstorm a plot mind map. Answer in English only.
 
-Character info:
-${characterInfoCapped}
+        initialPrompt = `You are a mind map robot helping elementary school students with plot writing. Use simple, kid-friendly language with proper punctuation.
 
-Rules:
-- Always use "${characterName}"${characterSpecies ? ` (a ${character.species})` : ""} in your questions.
-- Never invent setting/conflict/goal the student did not say.
-- Keep order: setting → conflict → goal.
-- Be short and calm (1-2 sentences). No extra worldbuilding.
+Here's the character information the student created:
+${characterInfo}
 
-First message (before the student replies):
-- Ask ONLY this question (no specific place): "Where does ${characterName}'s story take place?"
+IMPORTANT: Always refer to the character by their name "${characterName}"${characterSpecies ? ` (a ${character.species})` : ""}, NOT "your character" or "the character". Use "${characterName}" in your questions.
 
-After the student answers setting:
-- Briefly acknowledge their answer naturally, then ask the next useful question about the problem/challenge.
-- The question must clearly build on what the student just said (same place, same character context), not feel like a template jump.
+Start by asking: "Where does ${characterName}'s story take place?" Then end your response with exactly six SINGLE WORDS related to story settings (like: school home forest park beach library). Each word must be a single word, not a phrase. Don't use commas between the six words - just space them. Keep proper punctuation in your question (question marks, periods, etc.).
 
-After the student answers conflict:
-- Briefly acknowledge naturally, then ask the next useful question about what the character wants to do.
-- Keep the flow connected to the previous answer so the chat feels like one conversation.
+Continue guiding the student step by step. Each response should:
+- Always use "${characterName}"${characterSpecies ? ` (the ${character.species})` : ""} in your questions, NOT "your character"
+- Use proper punctuation (question marks, periods, etc.) in your questions - DO NOT remove punctuation
+- End with exactly six SINGLE WORDS related to the current topic (space-separated, no commas)
+- Each word must be a single word, not a phrase (e.g., "school home forest" not "magic school enchanted forest")
+- When the conversation can fully describe a complete story, say: "The plot is getting clearer! Anything else you'd like to talk about?" (in Chinese: 故事情节已经比较清晰了，还想再聊些什么吗？)
 
-After setting + conflict + goal are all available:
-- DO NOT end with any completion/congratulation sentence (for example: "Great choice! Now you have a story plan ...").
-- Keep chatting and ask ONE short refinement question to improve clarity (setting detail / conflict cause / goal action), still in 1 short sentence.
-
-Options (CRITICAL):
-- Output EXACTLY TWO LINES:
-  Line 1: your question (one short sentence, ends with ?)
-  Line 2: OPTIONS: w1 w2 w3 w4 w5 w6
-- Each wi must be a single English word (letters only, no spaces inside).
-- These 6 words must be valid answer options for the question you just asked:
-  - setting question: location words
-  - conflict question: problem/challenge words
-  - goal question: want/action words
-- After w6, end immediately (no punctuation, no extra text).`
+CRITICAL: Always use "${characterName}" in your questions. Always keep proper punctuation in your questions. End with exactly six SINGLE WORDS (space-separated, no commas).`
       } else {
-        initialPrompt = `You help elementary students brainstorm a plot mind map. Answer in English only.
+        initialPrompt = `You are a mind map robot helping elementary school students with plot writing. Use simple, kid-friendly language with proper punctuation.
 
-Rules:
-- Never invent setting/conflict/goal the student did not say.
-- Keep order: setting → conflict → goal.
-- Be short and calm (1-2 sentences). No extra worldbuilding.
+Start by asking: "Where does this story take place?" (in Chinese: 这个故事发生在哪呢？) Then end your response with exactly six SINGLE WORDS related to story settings (like: school home forest park beach library). Each word must be a single word, not a phrase. Don't use commas between the six words - just space them. Keep proper punctuation in your question (question marks, periods, etc.).
 
-First message (before the student replies):
-- Ask ONLY this question (no specific place): "Where does the story take place?"
-
-After the student answers setting:
-- Briefly acknowledge their answer naturally, then ask the next useful question about the problem/challenge.
-- The question must clearly build on what the student just said, not feel like a template jump.
-
-After the student answers conflict:
-- Briefly acknowledge naturally, then ask the next useful question about what the character wants to do.
-- Keep the flow connected to the previous answer so the chat feels like one conversation.
-
-After setting + conflict + goal are all available:
-- DO NOT end with any completion/congratulation sentence (for example: "Great choice! Now you have a story plan ...").
-- Keep chatting and ask ONE short refinement question to improve clarity (setting detail / conflict cause / goal action), still in 1 short sentence.
-
-Options (CRITICAL):
-- Output EXACTLY TWO LINES:
-  Line 1: your question (one short sentence, ends with ?)
-  Line 2: OPTIONS: w1 w2 w3 w4 w5 w6
-- Each wi must be a single English word (letters only, no spaces inside).
-- These 6 words must be valid answer options for the question you just asked:
-  - setting question: location words
-  - conflict question: problem/challenge words
-  - goal question: want/action words
-- After w6, end immediately (no punctuation, no extra text).`
+Continue guiding step by step. Each response should:
+- Use proper punctuation (question marks, periods, etc.) - DO NOT remove punctuation
+- End with exactly six SINGLE WORDS (space-separated, no commas)
+- Each word must be a single word, not a phrase`
       }
 
       const response = await fetch("/api/dify-chat", {
@@ -258,7 +140,6 @@ Options (CRITICAL):
           message: initialPrompt,
           conversation_id: conversationId,
           user_id: userId || "default-user",
-          conversation_history: [{ role: "user", content: initialPrompt }],
         }),
       })
 
@@ -270,25 +151,8 @@ Options (CRITICAL):
       }
 
       const aiMessage = data.answer || "Hello! Let's start brainstorming your plot."
-      const sanitizedAiMessage = sanitizeAiToEnglishOnly(aiMessage)
-      const strippedInitialMessage = stripCompletionBoilerplate(sanitizedAiMessage)
-      const { grammarIssue, cleaned } = extractGrammarIssue(strippedInitialMessage)
-      const { words: suggestions, cleanedText } = extractLastSixWords(cleaned)
-      const normalizedInitial = (cleanedText || cleaned || strippedInitialMessage).trim().toLowerCase()
-      const isOnlyWelcomeLine = normalizedInitial === "hello! let's start brainstorming your plot.".toLowerCase()
-      const defaultOpeningQuestion = character?.name
-        ? `Where does ${character.name}'s story take place?`
-        : "Where does the story take place?"
-      const finalContent = isOnlyWelcomeLine ? defaultOpeningQuestion : (cleanedText || cleaned || strippedInitialMessage)
-      const finalSuggestions =
-        suggestions.length > 0
-          ? suggestions
-          : getFallbackSuggestions(finalContent)
-      const normalizedInitialTurn = normalizeAiTurn(finalContent, finalSuggestions)
-
-      const initialMessages: Message[] = [
-        { role: "ai", content: normalizedInitialTurn.content, suggestions: normalizedInitialTurn.suggestions, grammarIssue },
-      ]
+      const { words: suggestions, cleanedText } = extractLastSixWords(aiMessage)
+      const initialMessages: Message[] = [{ role: "ai", content: cleanedText || aiMessage, suggestions }]
       setMessages(initialMessages)
       if (data.conversation_id) {
         setConversationId(data.conversation_id)
@@ -324,7 +188,6 @@ Options (CRITICAL):
           message: messageText,
           conversation_id: conversationId,
           user_id: userId || "default-user",
-          conversation_history: [...messages, { role: "user", content: messageText }],
         }),
       })
 
@@ -337,15 +200,8 @@ Options (CRITICAL):
       }
 
       const aiMessage = data.answer || ""
-      const sanitizedAiMessage = sanitizeAiToEnglishOnly(aiMessage)
-      const strippedAiMessage = stripCompletionBoilerplate(sanitizedAiMessage)
-      const { grammarIssue, cleaned } = extractGrammarIssue(strippedAiMessage)
-      const { words: suggestions, cleanedText } = extractLastSixWords(cleaned)
-      const finalSuggestions = suggestions.length > 0 ? suggestions : getFallbackSuggestions(cleanedText || cleaned || strippedAiMessage)
-
-      const normalizedTurn = normalizeAiTurn(cleanedText || cleaned || strippedAiMessage, finalSuggestions)
-
-      const updatedMessages = [...messages, userMessage, { role: "ai" as const, content: normalizedTurn.content, suggestions: normalizedTurn.suggestions, grammarIssue }]
+      const { words: suggestions, cleanedText } = extractLastSixWords(aiMessage)
+      const updatedMessages = [...messages, userMessage, { role: "ai" as const, content: cleanedText || aiMessage, suggestions }]
       setMessages(updatedMessages)
       if (data.conversation_id) {
         setConversationId(data.conversation_id)
@@ -383,10 +239,7 @@ Options (CRITICAL):
       
       // 只在达到一定轮数时才总结
       if (studentMessageCount >= 1) {
-        // 异步触发总结，避免用户感知聊天“变慢”
-        summarizePlot(updatedMessages).catch((e) => {
-          console.error("Plot summary failed:", e)
-        })
+        await summarizePlot(updatedMessages)
       }
     } catch (error) {
       console.error("Error sending message:", error)
@@ -423,10 +276,10 @@ Options (CRITICAL):
       }
       
       // 构建对话历史（包含所有对话内容）
-      // 后端只会读取 role==='user 的消息，但这里先裁掉 ai 消息可以减少 payload 加速
-      const conversationHistory = messagesToUse
-        .filter((msg) => msg.role === "user")
-        .map((msg) => ({ role: msg.role, content: msg.content }))
+      const conversationHistory = messagesToUse.map((msg) => ({
+        role: msg.role,
+        content: msg.content,
+      }))
 
       console.log("Calling plot summary API with", conversationHistory.length, "messages")
 
@@ -658,19 +511,12 @@ Options (CRITICAL):
                       className={`max-w-[80%] rounded-2xl p-4 ${
                         message.role === "user"
                           ? "bg-gradient-to-r from-blue-600 to-cyan-600 text-white"
-                          : message.grammarIssue
-                          ? "bg-red-100 border-2 border-red-400 text-red-800 animate-pulse"
                           : "bg-gradient-to-r from-purple-100 to-pink-100 text-gray-800 border-2 border-purple-200"
                       }`}
                     >
                       <p className="text-base leading-relaxed">
                         {message.content}
                       </p>
-                      {message.role === "ai" && message.grammarIssue && (
-                        <p className="mt-2 text-sm font-semibold">
-                          {message.grammarIssue}
-                        </p>
-                      )}
                       {message.suggestions && message.suggestions.length > 0 && message.role === "ai" && (
                         <div className="mt-4 flex flex-nowrap gap-2">
                           {message.suggestions.map((suggestion, i) => {
