@@ -28,6 +28,37 @@ const stopwords = new Set([
 
 const hasVowel = (word: string) => /[aeiou]/i.test(word)
 
+const buildFailGuidance = (
+  quality: { semanticFluency: number; contentMatch: number; structureCompleteness: number },
+  sectionName: string
+) => {
+  const reasons: string[] = []
+  const tips: string[] = []
+  if (quality.semanticFluency < 40) {
+    reasons.push("some sentences are unclear")
+    tips.push("rewrite 1-2 sentences with clear subject + action")
+  }
+  if (quality.contentMatch < 35) {
+    reasons.push("this part is not close enough to the section goal")
+    const lower = sectionName.toLowerCase()
+    if (lower.includes("confront")) {
+      tips.push("add one clear problem sentence and one action to face the problem")
+    } else if (lower.includes("resol")) {
+      tips.push("add one sentence about how the problem is solved")
+    } else {
+      tips.push("add one sentence that shows where and what is happening")
+    }
+  }
+  if (quality.structureCompleteness < 20) {
+    reasons.push("story steps are still too thin")
+    tips.push("add a connector like 'then' or 'because' to link events")
+  }
+  if (reasons.length === 0) return ""
+  const reasonText = reasons.slice(0, 2).join(" and ")
+  const tipText = tips.slice(0, 2).join("; ")
+  return `\nNot passed yet: ${reasonText}.\nHow to improve: ${tipText}.`
+}
+
 const computeQualityScores = (
   textRaw: string,
   character: any,
@@ -64,7 +95,14 @@ const computeQualityScores = (
     if (wordCount >= 20) contentMatch += 20
     if (/\b(in|at|on|inside|near)\b/i.test(text)) contentMatch += 10
   }
-  if (section.includes("confront") && conflictTokens.some((w) => textLower.includes(w))) contentMatch += 25
+  if (section.includes("confront")) {
+    if (conflictTokens.some((w) => textLower.includes(w))) contentMatch += 25
+    const hasConflictCue =
+      /\b(problem|danger|trouble|sad|worried|afraid|hard|difficult|fall|broken|storm|drought)\b/i.test(text) ||
+      /\b(because|but|however)\b/i.test(text)
+    if (hasConflictCue) contentMatch += 20
+    if (sentenceCount >= 3) contentMatch += 10
+  }
   if (section.includes("resol") && goalTokens.some((w) => textLower.includes(w))) contentMatch += 25
   if (!section.includes("confront") && !section.includes("resol") && conflictTokens.some((w) => textLower.includes(w))) contentMatch += 10
   if (!section.includes("confront") && !section.includes("resol") && goalTokens.some((w) => textLower.includes(w))) contentMatch += 10
@@ -198,8 +236,9 @@ VERY IMPORTANT:
 - If text is nonsense or too short, do NOT write "done".
 - Only write "done" when ALL are good: semantic fluency, content match to character/plot/section, and section completeness.
 - Do NOT use word count alone to decide done.
+- If quality is good enough, you MUST include the exact pass sentence: "You can move on to the next part of your writing!"
 - If and only if you wrote "done", add on next NEW LINE: "${GOOD_ENOUGH_CODE}".
-- If done, include this exact sentence in feedback: "You can move on to the next part of your writing!"
+- If not done, you MUST explain why not passed and give 1-2 concrete improvement steps.
 
 ${levelSuffix}`
 
@@ -296,7 +335,6 @@ ${levelSuffix}`
     }
     
     // 检查是否包含"done"（不区分大小写）
-    const modelDone = /\bdone\b/i.test(evaluation)
     const modelHasSecretCode = evaluation.includes(GOOD_ENOUGH_CODE)
     const quality = computeQualityScores(String(text || ""), character, plot, currentSectionName)
     const gibberishDetected = quality.gibberishRatio >= GIBBERISH_THRESHOLD
@@ -310,11 +348,12 @@ ${levelSuffix}`
       .trim()
     const doneHint = "You can move on to the next part of your writing!"
     const baseEvaluation = cleanEvaluation || "Please continue improving this section."
+    const failGuidance = !hasDone ? buildFailGuidance(quality, currentSectionName) : ""
     const displayEvaluation = gibberishDetected
       ? "I cannot understand this text yet. It looks like random letters. Please rewrite 2-3 clear English sentences for this section."
       : hasDone && !baseEvaluation.includes(doneHint)
         ? `${baseEvaluation}\n${doneHint}`
-        : baseEvaluation
+        : `${baseEvaluation}${failGuidance}`
 
     // 记录API调用
     await logApiCall(
