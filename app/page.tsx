@@ -381,14 +381,6 @@ function getBestGrowthSentence(text: string, maxLen = 180): string {
   return sentence.length > maxLen ? `${sentence.slice(0, maxLen)}…` : sentence
 }
 
-function buildGrowthReason(dimensionId: number, sentence: string): string {
-  const name = VALUES_DIMENSION_NAMES[dimensionId - 1] || `Value ${dimensionId}`
-  if (!sentence) {
-    return `This writing supports ${name} because it shows the student's positive attitude and action.`
-  }
-  return `This line reflects ${name} because it shows a clear attitude or action that matches this value.`
-}
-
 type AppUser = {
   username: string
   role: "teacher" | "student"
@@ -1146,12 +1138,24 @@ export default function Home() {
         workType: "story" | "review" | "letter"
         excerpt: string
         triggerSentence?: string
+        evidenceByDimension?: Record<number, { sentence?: string; reason?: string }>
       }
     ) => {
       if (!user) return
+      const hasStrictEvidence = (id: number) => {
+        const evidence = payload?.evidenceByDimension?.[id]
+        const sentence = String(evidence?.sentence || "").trim()
+        const reason = String(evidence?.reason || "").trim()
+        return !!sentence && !!reason
+      }
+      const evidenceMatchedDimensions = payload?.evidenceByDimension
+        ? matchedDimensions.filter((n) => hasStrictEvidence(Number(n)))
+        : matchedDimensions
+      if (evidenceMatchedDimensions.length === 0) return
+
       const currentTrees = normalizeValuesTrees(trees)
       const growthCounter = new Map<number, number>()
-      matchedDimensions
+      evidenceMatchedDimensions
         .map((n) => Number(n))
         .filter((n) => Number.isFinite(n) && n >= 1 && n <= VALUES_DIMENSION_COUNT)
         .map((n) => Math.round(n))
@@ -1182,11 +1186,17 @@ export default function Home() {
           const next = { ...prev }
           matchedIds.forEach((id) => {
             const list = next[id] ?? []
+            const evidence = payload.evidenceByDimension?.[id]
+            const evidenceSentence = (evidence?.sentence || "").trim()
+            const evidenceReason = (evidence?.reason || "").trim()
+            if (!evidenceSentence || !evidenceReason) return
+            const recordSentence = evidenceSentence || payload.triggerSentence || payload.excerpt
             next[id] = [
               ...list,
               {
                 ...detail,
-                reason: buildGrowthReason(id, payload.triggerSentence || ""),
+                triggerSentence: recordSentence,
+                reason: evidenceReason,
               },
             ]
           })
@@ -1231,11 +1241,16 @@ export default function Home() {
         const matchedDimensions = Array.isArray(valuesJson?.matchedDimensions)
           ? valuesJson.matchedDimensions
           : []
+        const evidenceByDimension =
+          valuesJson?.evidenceByDimension && typeof valuesJson.evidenceByDimension === "object"
+            ? (valuesJson.evidenceByDimension as Record<number, { sentence?: string; reason?: string }>)
+            : {}
         await applyTreeGrowthFromMetrics(matchedDimensions, {
           workTitle: title,
           workType: type,
           excerpt: excerpt || text.slice(0, 120) + (text.length > 120 ? "…" : ""),
           triggerSentence,
+          evidenceByDimension,
         })
       } catch (error) {
         console.error("Error evaluating values growth:", error)
