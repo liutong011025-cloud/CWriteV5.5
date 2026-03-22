@@ -243,6 +243,7 @@ Options (CRITICAL):
           conversation_id: conversationId,
           user_id: userId || "default-user",
           level: getCurrentLevel(),
+          conversation_history: [{ role: "user", content: initialPrompt }],
         }),
       })
 
@@ -301,11 +302,14 @@ Options (CRITICAL):
         headers: {
           "Content-Type": "application/json",
         },
+        // 传完整会话给后端，DeepSeek 才能稳定延续上下文
+        // （不再依赖第三方 conversation_id 的黑盒记忆）
         body: JSON.stringify({
           message: messageText,
           conversation_id: conversationId,
           user_id: userId || "default-user",
           level: getCurrentLevel(),
+          conversation_history: [...messages, { role: "user", content: messageText }],
         }),
       })
 
