@@ -331,8 +331,11 @@ Options (CRITICAL):
       const aiContent = shouldAvoidRepeatedWhereQuestion
         ? (character?.name ? `What problem does ${character.name} face there?` : "What problem happens there?")
         : aiContentRaw
+      const aiSuggestions = shouldAvoidRepeatedWhereQuestion
+        ? getFallbackSuggestions(aiContent)
+        : finalSuggestions
 
-      const updatedMessages = [...messages, userMessage, { role: "ai" as const, content: aiContent, suggestions: finalSuggestions, grammarIssue }]
+      const updatedMessages = [...messages, userMessage, { role: "ai" as const, content: aiContent, suggestions: aiSuggestions, grammarIssue }]
       setMessages(updatedMessages)
       if (data.conversation_id) {
         setConversationId(data.conversation_id)
@@ -398,6 +401,7 @@ Options (CRITICAL):
       const summarizeFieldValue = (field: "setting" | "conflict" | "goal", rawValue: string) => {
         const normalized = rawValue.trim().replace(/\s+/g, " ")
         if (!normalized) return normalized
+        if (normalized.toLowerCase() === "unknown") return "unknown"
         const wordCount = normalized.split(/\s+/).length
         const startsLikeSentence =
           /^[A-Z]/.test(normalized) ||
