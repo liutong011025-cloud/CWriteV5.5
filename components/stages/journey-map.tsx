@@ -218,9 +218,9 @@ export default function JourneyMap({
               type="button"
               variant="ghost"
               onClick={onNextChapter}
-              className="absolute right-10 top-6 z-20 rounded-2xl border border-white/10 bg-white/0 text-white hover:bg-white/10"
+              className="absolute right-10 top-6 z-20 rounded-2xl border-2 border-yellow-200/90 bg-gradient-to-r from-amber-500 via-orange-500 to-pink-500 px-6 py-5 text-base font-extrabold text-white shadow-2xl animate-pulse hover:scale-105 hover:from-amber-600 hover:via-orange-600 hover:to-pink-600"
             >
-              move to next chapter
+              ✨ Move to Next Chapter →
             </Button>
           )}
 
