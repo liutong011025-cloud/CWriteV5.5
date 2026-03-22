@@ -7,7 +7,6 @@ import type { Language, StoryState } from "@/app/page"
 import StageHeader from "@/components/stage-header"
 import { Loader2, Send } from "lucide-react"
 import { toast } from "sonner"
-import { getCurrentLevel } from "@/lib/current-level"
 
 interface PlotBrainstormProps {
   language: Language
@@ -139,49 +138,25 @@ export default function PlotBrainstorm({ language, character, onPlotCreate, onBa
     return []
   }
 
-  const buildStructuredAiTurn = (rawContent: string, rawSuggestions: string[]) => {
-    const content = rawContent.trim()
-    const suggestions = rawSuggestions.map((s) => s.trim()).filter(Boolean).slice(0, 6)
-    const hasQuestion = content.includes("?")
-    const isTooLong = content.length > 220
-    const hasGoodOptions = suggestions.length === 6
-    const characterName = character?.name || "the character"
+  const normalizeAiTurn = (rawContent: string, rawSuggestions: string[]) => {
+    const defaultOpeningQuestion = character?.name
+      ? `Where does ${character.name}'s story take place?`
+      : "Where does the story take place?"
+    const content = rawContent.trim() || defaultOpeningQuestion
+    const suggestions = rawSuggestions
+      .map((s) => s.trim().toLowerCase())
+      .filter((s) => /^[a-z]+$/.test(s))
+      .slice(0, 6)
+    const fallback = getFallbackSuggestions(content)
+    const finalSuggestions =
+      suggestions.length === 6
+        ? suggestions
+        : fallback.length === 6
+          ? fallback
+          : ["school", "park", "forest", "beach", "city", "village"]
 
-    // 若模型跑偏（长段落/无问题/无6个选项），回到固定分步问答流程
-    if (!hasQuestion || !hasGoodOptions || isTooLong) {
-      const settingKnown = !!plotData.setting && plotData.setting.toLowerCase() !== "unknown"
-      const conflictKnown = !!plotData.conflict && plotData.conflict.toLowerCase() !== "unknown"
-      const goalKnown = !!plotData.goal && plotData.goal.toLowerCase() !== "unknown"
-
-      if (!settingKnown) {
-        return {
-          content: `Where does ${characterName}'s story take place?`,
-          suggestions: ["school", "park", "forest", "beach", "city", "village"],
-        }
-      }
-      if (!conflictKnown) {
-        return {
-          content: `What problem does ${characterName} face there?`,
-          suggestions: ["storm", "danger", "thief", "monster", "fire", "trouble"],
-        }
-      }
-      if (!goalKnown) {
-        return {
-          content: `What does ${characterName} want to do?`,
-          suggestions: ["save", "help", "find", "protect", "escape", "win"],
-        }
-      }
-      return {
-        content: `Which detail should we refine next for ${characterName}'s plot?`,
-        suggestions: ["setting", "conflict", "goal", "cause", "action", "ending"],
-      }
-    }
-
-    return { content, suggestions }
+    return { content, suggestions: finalSuggestions }
   }
-
-  const isWhereQuestion = (text: string) =>
-    /where does .*story take place\?/i.test(text.trim()) || /where does the story take place\?/i.test(text.trim())
 
   const sendInitialMessage = async () => {
     setIsLoading(true)
@@ -283,7 +258,6 @@ Options (CRITICAL):
           message: initialPrompt,
           conversation_id: conversationId,
           user_id: userId || "default-user",
-          level: getCurrentLevel(),
           conversation_history: [{ role: "user", content: initialPrompt }],
         }),
       })
@@ -310,7 +284,7 @@ Options (CRITICAL):
         suggestions.length > 0
           ? suggestions
           : getFallbackSuggestions(finalContent)
-      const normalizedInitialTurn = buildStructuredAiTurn(finalContent, finalSuggestions)
+      const normalizedInitialTurn = normalizeAiTurn(finalContent, finalSuggestions)
 
       const initialMessages: Message[] = [
         { role: "ai", content: normalizedInitialTurn.content, suggestions: normalizedInitialTurn.suggestions, grammarIssue },
@@ -344,13 +318,12 @@ Options (CRITICAL):
         headers: {
           "Content-Type": "application/json",
         },
-        // 传完整会话给后端，DeepSeek 才能稳定延续上下文
-        // （不再依赖第三方 conversation_id 的黑盒记忆）
+        // 传完整会话给后端，避免上下文丢失导致问句跳回第一步
+        // （后端仍会使用 conversation_id 维持 Dify 线程）
         body: JSON.stringify({
           message: messageText,
           conversation_id: conversationId,
           user_id: userId || "default-user",
-          level: getCurrentLevel(),
           conversation_history: [...messages, { role: "user", content: messageText }],
         }),
       })
@@ -370,17 +343,7 @@ Options (CRITICAL):
       const { words: suggestions, cleanedText } = extractLastSixWords(cleaned)
       const finalSuggestions = suggestions.length > 0 ? suggestions : getFallbackSuggestions(cleanedText || cleaned || strippedAiMessage)
 
-      const aiContentRaw = (cleanedText || cleaned || strippedAiMessage).trim()
-      const lastAiMessage = [...messages].reverse().find((m) => m.role === "ai")?.content?.trim() || ""
-      const shouldAvoidRepeatedWhereQuestion =
-        isWhereQuestion(aiContentRaw) && isWhereQuestion(lastAiMessage) && messageText.trim().length > 0
-      const aiContent = shouldAvoidRepeatedWhereQuestion
-        ? (character?.name ? `What problem does ${character.name} face there?` : "What problem happens there?")
-        : aiContentRaw
-      const aiSuggestions = shouldAvoidRepeatedWhereQuestion
-        ? getFallbackSuggestions(aiContent)
-        : finalSuggestions
-      const normalizedTurn = buildStructuredAiTurn(aiContent, aiSuggestions)
+      const normalizedTurn = normalizeAiTurn(cleanedText || cleaned || strippedAiMessage, finalSuggestions)
 
       const updatedMessages = [...messages, userMessage, { role: "ai" as const, content: normalizedTurn.content, suggestions: normalizedTurn.suggestions, grammarIssue }]
       setMessages(updatedMessages)
@@ -476,7 +439,6 @@ Options (CRITICAL):
           conversation_history: conversationHistory,
           conversation_id: summaryConversationId || undefined,
           user_id: userId || "default-user",
-          level: getCurrentLevel(),
         }),
       })
 
