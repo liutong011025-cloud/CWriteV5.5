@@ -77,8 +77,8 @@ const computeQualityScores = (
 
   const pass =
     semanticFluency >= 70 &&
-    contentMatch >= 60 &&
-    structureCompleteness >= 65 &&
+    contentMatch >= 70 &&
+    structureCompleteness >= 70 &&
     gibberishRatio < 0.35
 
   return {
@@ -287,10 +287,7 @@ ${levelSuffix}`
       .replace(/\bdone\b/gi, '')
       .replace(new RegExp(GOOD_ENOUGH_CODE.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), '')
       .trim()
-    const gateNote = !quality.pass
-      ? `\n\nBefore passing this section, improve these scores: semantic fluency ${quality.semanticFluency}/100, content match ${quality.contentMatch}/100, structure completeness ${quality.structureCompleteness}/100.`
-      : ""
-    const displayEvaluation = (cleanEvaluation || "Please continue improving this section.") + gateNote
+    const displayEvaluation = cleanEvaluation || "Please continue improving this section."
 
     // 记录API调用
     await logApiCall(
