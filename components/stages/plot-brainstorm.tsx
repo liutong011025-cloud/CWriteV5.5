@@ -139,6 +139,47 @@ export default function PlotBrainstorm({ language, character, onPlotCreate, onBa
     return []
   }
 
+  const buildStructuredAiTurn = (rawContent: string, rawSuggestions: string[]) => {
+    const content = rawContent.trim()
+    const suggestions = rawSuggestions.map((s) => s.trim()).filter(Boolean).slice(0, 6)
+    const hasQuestion = content.includes("?")
+    const isTooLong = content.length > 220
+    const hasGoodOptions = suggestions.length === 6
+    const characterName = character?.name || "the character"
+
+    // 若模型跑偏（长段落/无问题/无6个选项），回到固定分步问答流程
+    if (!hasQuestion || !hasGoodOptions || isTooLong) {
+      const settingKnown = !!plotData.setting && plotData.setting.toLowerCase() !== "unknown"
+      const conflictKnown = !!plotData.conflict && plotData.conflict.toLowerCase() !== "unknown"
+      const goalKnown = !!plotData.goal && plotData.goal.toLowerCase() !== "unknown"
+
+      if (!settingKnown) {
+        return {
+          content: `Where does ${characterName}'s story take place?`,
+          suggestions: ["school", "park", "forest", "beach", "city", "village"],
+        }
+      }
+      if (!conflictKnown) {
+        return {
+          content: `What problem does ${characterName} face there?`,
+          suggestions: ["storm", "danger", "thief", "monster", "fire", "trouble"],
+        }
+      }
+      if (!goalKnown) {
+        return {
+          content: `What does ${characterName} want to do?`,
+          suggestions: ["save", "help", "find", "protect", "escape", "win"],
+        }
+      }
+      return {
+        content: `Which detail should we refine next for ${characterName}'s plot?`,
+        suggestions: ["setting", "conflict", "goal", "cause", "action", "ending"],
+      }
+    }
+
+    return { content, suggestions }
+  }
+
   const isWhereQuestion = (text: string) =>
     /where does .*story take place\?/i.test(text.trim()) || /where does the story take place\?/i.test(text.trim())
 
@@ -269,9 +310,10 @@ Options (CRITICAL):
         suggestions.length > 0
           ? suggestions
           : getFallbackSuggestions(finalContent)
+      const normalizedInitialTurn = buildStructuredAiTurn(finalContent, finalSuggestions)
 
       const initialMessages: Message[] = [
-        { role: "ai", content: finalContent, suggestions: finalSuggestions, grammarIssue },
+        { role: "ai", content: normalizedInitialTurn.content, suggestions: normalizedInitialTurn.suggestions, grammarIssue },
       ]
       setMessages(initialMessages)
       if (data.conversation_id) {
@@ -338,8 +380,9 @@ Options (CRITICAL):
       const aiSuggestions = shouldAvoidRepeatedWhereQuestion
         ? getFallbackSuggestions(aiContent)
         : finalSuggestions
+      const normalizedTurn = buildStructuredAiTurn(aiContent, aiSuggestions)
 
-      const updatedMessages = [...messages, userMessage, { role: "ai" as const, content: aiContent, suggestions: aiSuggestions, grammarIssue }]
+      const updatedMessages = [...messages, userMessage, { role: "ai" as const, content: normalizedTurn.content, suggestions: normalizedTurn.suggestions, grammarIssue }]
       setMessages(updatedMessages)
       if (data.conversation_id) {
         setConversationId(data.conversation_id)
