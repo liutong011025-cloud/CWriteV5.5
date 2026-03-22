@@ -59,6 +59,20 @@ export default function PlotBrainstorm({ language, character, onPlotCreate, onBa
 
   const extractLastSixWords = (text: string): { words: string[]; cleanedText: string } => {
     const normalized = text.replace(/\r/g, "").trim()
+    const normalizeOptionWords = (tokens: string[]) => {
+      if (tokens.length === 0) return []
+      if (tokens.length === 6) return tokens
+
+      // If model outputs six two-word phrases (12 tokens), keep the first word of each pair.
+      if (tokens.length >= 12 && tokens.length % 2 === 0) {
+        const pairFirstWords = tokens.filter((_, index) => index % 2 === 0).slice(0, 6)
+        if (pairFirstWords.length === 6) return pairFirstWords
+      }
+
+      // Otherwise keep the first six tokens to avoid trailing noisy words.
+      return tokens.slice(0, 6)
+    }
+
     const trimQuestionTail = (input: string) => {
       const qIndex = input.indexOf("?")
       if (qIndex >= 0) return input.slice(0, qIndex + 1).trim()
@@ -68,9 +82,10 @@ export default function PlotBrainstorm({ language, character, onPlotCreate, onBa
     const optionsMatch = normalized.match(/(?:^|\n)\s*OPTIONS\s*:\s*([^\n]+)/i)
     if (optionsMatch) {
       const optionTokens = (optionsMatch[1].match(/[A-Za-z]+/g) || []).map((w) => w.toLowerCase())
+      const singleWordOptions = normalizeOptionWords(optionTokens)
       const cleanedText = trimQuestionTail(normalized.replace(optionsMatch[0], "").trim())
-      if (optionTokens.length > 0) {
-        return { words: optionTokens.slice(-6), cleanedText }
+      if (singleWordOptions.length > 0) {
+        return { words: singleWordOptions, cleanedText }
       }
       return { words: [], cleanedText }
     }
