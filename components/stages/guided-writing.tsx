@@ -33,7 +33,7 @@ const countWords = (text: string): number => {
 }
 
 const STORY_BEAR_POSITION = { x: 82.1, y: 5.5, scale: 1.27 }
-const STORY_HANG_POSITION = { x: 83.2, y: 19.8, scale: 1.27 }
+const STORY_HANG_POSITION = { x: 83.2, y: 23.2, scale: 1.27 }
 
 function GuidedWriting({ language, storyState, onStoryWrite, onBack, userId, onDraftChange }: GuidedWritingProps) {
   const [currentSection, setCurrentSection] = useState(0)
@@ -197,13 +197,24 @@ function GuidedWriting({ language, storyState, onStoryWrite, onBack, userId, onD
             return
           }
 
-          setAiEvaluation(data.evaluation || "")
-          if (data.secretCodeDetected && data.secretCode) {
+          const evalText = typeof data.evaluation === "string" ? data.evaluation : ""
+          const gibberishRatio =
+            data?.quality && typeof data.quality === "object" && typeof data.quality.gibberishRatio === "number"
+              ? data.quality.gibberishRatio
+              : 0
+          const isGibberish = Boolean(data.gibberishDetected) || gibberishRatio >= 0.45
+
+          setAiEvaluation(evalText || "")
+          if (isGibberish) {
+            setWritingMood("angry")
+          } else if (data.secretCodeDetected && data.secretCode) {
             setGoodEnoughSecret(data.secretCode)
             setWritingMood("like")
           }
 
-          if (data.done) {
+          const hasMoveOnSentence = /you can move on to the next part of your writing!/i.test(evalText)
+          const canMarkDone = !isGibberish && (Boolean(data.done) || Boolean(data.secretCodeDetected) || hasMoveOnSentence)
+          if (canMarkDone) {
             setSectionDone((prev) => ({
               ...prev,
               [currentSection]: true,
