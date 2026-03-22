@@ -58,35 +58,68 @@ export default function PlotBrainstorm({ language, character, onPlotCreate, onBa
   }
 
   const extractLastSixWords = (text: string): { words: string[]; cleanedText: string } => {
+    const normalized = text.replace(/\r/g, "").trim()
+    const trimQuestionTail = (input: string) => {
+      const qIndex = input.indexOf("?")
+      if (qIndex >= 0) return input.slice(0, qIndex + 1).trim()
+      return input.trim()
+    }
+
+    const optionsMatch = normalized.match(/(?:^|\n)\s*OPTIONS\s*:\s*([^\n]+)/i)
+    if (optionsMatch) {
+      const optionTokens = (optionsMatch[1].match(/[A-Za-z]+/g) || []).map((w) => w.toLowerCase())
+      const cleanedText = trimQuestionTail(normalized.replace(optionsMatch[0], "").trim())
+      if (optionTokens.length > 0) {
+        return { words: optionTokens.slice(-6), cleanedText }
+      }
+      return { words: [], cleanedText }
+    }
+
     const lastPunctuationIndex = Math.max(
-      text.lastIndexOf("."),
-      text.lastIndexOf("?"),
-      text.lastIndexOf("!"),
-      text.lastIndexOf("。"),
-      text.lastIndexOf("？"),
-      text.lastIndexOf("！")
+      normalized.lastIndexOf("."),
+      normalized.lastIndexOf("?"),
+      normalized.lastIndexOf("!"),
+      normalized.lastIndexOf("。"),
+      normalized.lastIndexOf("？"),
+      normalized.lastIndexOf("！")
     )
+    const punctuationChar = lastPunctuationIndex >= 0 ? normalized[lastPunctuationIndex] : ""
     const textAfterPunctuation =
-      lastPunctuationIndex >= 0 ? text.substring(lastPunctuationIndex + 1).trim() : text.trim()
+      lastPunctuationIndex >= 0 ? normalized.substring(lastPunctuationIndex + 1).trim() : normalized.trim()
 
     const words = textAfterPunctuation
       .split(/\s+|[,，、]/)
       .map((word) => word.replace(/[,，、]/g, "").trim())
       .filter((word) => word.length > 0)
 
+    if (lastPunctuationIndex >= 0 && punctuationChar === "?") {
+      return {
+        words: words.slice(-6),
+        cleanedText: trimQuestionTail(normalized.substring(0, lastPunctuationIndex + 1)),
+      }
+    }
+
     if (words.length <= 6) {
-      const cleanedText = lastPunctuationIndex >= 0 ? text.substring(0, lastPunctuationIndex + 1).trim() : ""
+      const cleanedText = lastPunctuationIndex >= 0 ? normalized.substring(0, lastPunctuationIndex + 1).trim() : ""
       return { words, cleanedText }
     }
 
     const lastSix = words.slice(-6)
     const cleanedText =
       lastPunctuationIndex >= 0
-        ? `${text.substring(0, lastPunctuationIndex + 1).trim()} ${words.slice(0, -6).join(" ").trim()}`
+        ? `${normalized.substring(0, lastPunctuationIndex + 1).trim()} ${words.slice(0, -6).join(" ").trim()}`
         : words.slice(0, -6).join(" ").trim()
 
     return { words: lastSix, cleanedText: cleanedText.trim() }
   }
+
+  const cleanAiDisplayText = (text: string) =>
+    text
+      .replace(/The plot is getting clearer![\s\S]*?talk about\?/gi, "")
+      .replace(/故事情节已经比较清晰了[，,]?\s*还想再聊些什么吗[？?]?/g, "")
+      .replace(/Great choice!?/gi, "")
+      .replace(/\s{2,}/g, " ")
+      .trim()
 
   const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
@@ -139,31 +172,42 @@ export default function PlotBrainstorm({ language, character, onPlotCreate, onBa
         const characterSpecies = character.species ? ` (a ${character.species})` : ""
 
         initialPrompt = `You are a mind map robot helping elementary school students with plot writing. Use simple, kid-friendly language with proper punctuation.
+Answer in English only.
 
 Here's the character information the student created:
 ${characterInfo}
 
 IMPORTANT: Always refer to the character by their name "${characterName}"${characterSpecies ? ` (a ${character.species})` : ""}, NOT "your character" or "the character". Use "${characterName}" in your questions.
 
-Start by asking: "Where does ${characterName}'s story take place?" Then end your response with exactly six SINGLE WORDS related to story settings (like: school home forest park beach library). Each word must be a single word, not a phrase. Don't use commas between the six words - just space them. Keep proper punctuation in your question (question marks, periods, etc.).
+Start by asking: "Where does ${characterName}'s story take place?"
 
 Continue guiding the student step by step. Each response should:
 - Always use "${characterName}"${characterSpecies ? ` (the ${character.species})` : ""} in your questions, NOT "your character"
 - Use proper punctuation (question marks, periods, etc.) in your questions - DO NOT remove punctuation
-- End with exactly six SINGLE WORDS related to the current topic (space-separated, no commas)
+- Output exactly two lines:
+  Line 1: one short question ending with "?"
+  Line 2: OPTIONS: w1 w2 w3 w4 w5 w6
+- End with exactly six SINGLE WORDS related to the current topic (space-separated, no commas, letters only)
 - Each word must be a single word, not a phrase (e.g., "school home forest" not "magic school enchanted forest")
-- When the conversation can fully describe a complete story, say: "The plot is getting clearer! Anything else you'd like to talk about?" (in Chinese: 故事情节已经比较清晰了，还想再聊些什么吗？)
+- Do NOT output completion/congratulation sentences.
+- Do NOT output Chinese.
 
 CRITICAL: Always use "${characterName}" in your questions. Always keep proper punctuation in your questions. End with exactly six SINGLE WORDS (space-separated, no commas).`
       } else {
         initialPrompt = `You are a mind map robot helping elementary school students with plot writing. Use simple, kid-friendly language with proper punctuation.
+Answer in English only.
 
-Start by asking: "Where does this story take place?" (in Chinese: 这个故事发生在哪呢？) Then end your response with exactly six SINGLE WORDS related to story settings (like: school home forest park beach library). Each word must be a single word, not a phrase. Don't use commas between the six words - just space them. Keep proper punctuation in your question (question marks, periods, etc.).
+Start by asking: "Where does this story take place?"
 
 Continue guiding step by step. Each response should:
 - Use proper punctuation (question marks, periods, etc.) - DO NOT remove punctuation
+- Output exactly two lines:
+  Line 1: one short question ending with "?"
+  Line 2: OPTIONS: w1 w2 w3 w4 w5 w6
 - End with exactly six SINGLE WORDS (space-separated, no commas)
-- Each word must be a single word, not a phrase`
+- Each word must be a single word, not a phrase
+- Do NOT output completion/congratulation sentences.
+- Do NOT output Chinese.`
       }
 
       const { data, ok } = await postJsonWithRetry("/api/dify-chat", {
@@ -177,7 +221,7 @@ Continue guiding step by step. Each response should:
         return
       }
 
-      const aiMessage = data.answer || "Hello! Let's start brainstorming your plot."
+      const aiMessage = cleanAiDisplayText(data.answer || "Hello! Let's start brainstorming your plot.")
       const { words: suggestions, cleanedText } = extractLastSixWords(aiMessage)
       const initialMessages: Message[] = [{ role: "ai", content: cleanedText || aiMessage, suggestions }]
       setMessages(initialMessages)
@@ -216,7 +260,7 @@ Continue guiding step by step. Each response should:
         return
       }
 
-      const aiMessage = data.answer || ""
+      const aiMessage = cleanAiDisplayText(data.answer || "")
       const { words: suggestions, cleanedText } = extractLastSixWords(aiMessage)
       const updatedMessages = [...messages, userMessage, { role: "ai" as const, content: cleanedText || aiMessage, suggestions }]
       setMessages(updatedMessages)
@@ -283,14 +327,46 @@ Continue guiding step by step. Each response should:
         const normalized = rawValue.trim().replace(/\s+/g, " ")
         if (!normalized) return normalized
         if (normalized.toLowerCase() === "unknown") return "unknown"
+        const lower = normalized.toLowerCase()
+        const tokens = lower.split(/\s+/).filter(Boolean)
         const wordCount = normalized.split(/\s+/).length
         const startsLikeSentence =
           /^[A-Z]/.test(normalized) ||
-          /^(in|at|on|inside|during|while|because|when|to)\b/i.test(normalized)
+          /^(in|at|on|inside|during|while|because|when|to|wants?|needs?|tries?)\b/i.test(normalized)
         if (wordCount >= 3 || startsLikeSentence) return normalized
         if (field === "setting") return `in a ${normalized}`
-        if (field === "conflict") return `faces ${normalized}`
-        return `to ${normalized}`
+        if (field === "conflict") {
+          if (wordCount === 1) {
+            const c = tokens[0]
+            const mapped: Record<string, string> = {
+              danger: "is in danger",
+              dangerous: "is in danger",
+              trouble: "is in trouble",
+              thief: "is chased by a thief",
+              monster: "is threatened by a monster",
+              fire: "must escape a fire",
+              storm: "gets trapped in a storm",
+              noise: "is bothered by loud noise",
+              dark: "is lost in the dark",
+              sick: "gets sick",
+              broken: "finds something broken",
+              lost: "gets lost",
+            }
+            return mapped[c] || `has a problem with ${normalized}`
+          }
+          return `has a problem with ${normalized}`
+        }
+        // goal
+        if (wordCount === 1) {
+          const g = tokens[0]
+          const actionWords = new Set(["find", "save", "help", "protect", "escape", "win", "discover", "investigate", "hide", "fix", "ask", "call", "tell", "learn", "solve", "rescue"])
+          if (actionWords.has(g)) return `wants to ${g}`
+          return `wants ${normalized}`
+        }
+        if (/^(a|an|the|this|that|these|those)\b/i.test(normalized)) {
+          return `wants ${normalized}`
+        }
+        return `wants to ${normalized}`
       }
       
       // 构建对话历史（包含所有对话内容）
