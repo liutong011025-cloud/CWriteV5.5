@@ -1,10 +1,17 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, type ChangeEvent } from "react";
 import { useDramaStore } from "@/lib/drama-store";
 import { PlacedCharacterComponent } from "./placed-character";
 import { Button } from "@/components/ui/button";
-import { Loader2, ImageIcon, Sparkles, StickyNote } from "lucide-react";
+import {
+  Loader2,
+  ImageIcon,
+  Sparkles,
+  StickyNote,
+  Upload,
+  X,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { GlowCard } from "@/components/ui/glow-card";
 
@@ -18,7 +25,9 @@ export function SceneCanvas() {
   const updateSceneNotes = useDramaStore((s) => s.updateSceneNotes);
 
   const containerRef = useRef<HTMLDivElement>(null);
+  const bgFileInputRef = useRef<HTMLInputElement>(null);
   const [bgInputValue, setBgInputValue] = useState("");
+  const [bgUploadBusy, setBgUploadBusy] = useState(false);
 
   const scene = scenes[activeSceneIndex];
   if (!scene) return null;
@@ -51,6 +60,21 @@ export function SceneCanvas() {
     }
   };
 
+  const handleBgFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file || !file.type.startsWith("image/")) return;
+    setBgUploadBusy(true);
+    const reader = new FileReader();
+    reader.onload = () => {
+      const url = typeof reader.result === "string" ? reader.result : null;
+      if (url) setSceneBgImage(scene.id, url);
+      setBgUploadBusy(false);
+    };
+    reader.onerror = () => setBgUploadBusy(false);
+    reader.readAsDataURL(file);
+  };
+
   return (
     <div className="flex flex-col gap-4">
       <GlowCard
@@ -77,6 +101,29 @@ export function SceneCanvas() {
             placeholder="Describe the scene... (e.g. A forest at night with fireflies)"
             className="flex-1 bg-transparent font-hand text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
           />
+          <input
+            ref={bgFileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleBgFileChange}
+          />
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={bgUploadBusy || scene.isGeneratingBg}
+            onClick={() => bgFileInputRef.current?.click()}
+            className="shrink-0 rounded-lg border-slate-200 font-hand"
+            title="Use your own background image"
+          >
+            {bgUploadBusy ? (
+              <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+            ) : (
+              <Upload className="mr-1.5 h-4 w-4" />
+            )}
+            Upload
+          </Button>
           <Button
             onClick={handleGenerateBg}
             disabled={scene.isGeneratingBg || !scene.backgroundPrompt.trim()}
@@ -128,7 +175,7 @@ export function SceneCanvas() {
                   <ImageIcon className="h-10 w-10" />
                 </div>
                 <p className="font-hand text-lg text-muted-foreground">
-                  Describe your scene above and click Create!
+                  Describe and Create!, or upload your own background
                 </p>
                 <p className="font-hand text-xs text-muted-foreground/60">
                   Then add characters from the panel on the right
@@ -146,6 +193,21 @@ export function SceneCanvas() {
               <p className="font-hand text-lg text-foreground">
                 Painting your scene...
               </p>
+            </div>
+          )}
+
+          {scene.backgroundImageUrl && !scene.isGeneratingBg && (
+            <div className="absolute right-2 top-2 z-10">
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                className="h-8 gap-1 rounded-lg px-2 font-hand text-xs shadow-md"
+                onClick={() => setSceneBgImage(scene.id, null)}
+              >
+                <X className="h-3.5 w-3.5" />
+                Clear bg
+              </Button>
             </div>
           )}
 
