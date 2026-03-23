@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useCallback, useEffect } from "react";
 import { useDramaStore } from "@/lib/drama-store";
-import type { PlacedCharacter, Character } from "@/lib/types";
+import type { PlacedCharacter, Character } from "@/lib/drama-types";
 import { cn } from "@/lib/utils";
 import {
   MessageCircle,
@@ -23,7 +23,7 @@ interface PlacedCharacterProps {
 }
 
 const BASE_SIZE = 80;
-/** 底部小名字条占位高度（用于气泡锚点） */
+/** 底部名字条占位高度（名字已缩小，用于气泡锚点） */
 const NAME_TAG_H = 14;
 
 export function PlacedCharacterComponent({
@@ -52,22 +52,19 @@ export function PlacedCharacterComponent({
   const scale = placed.scale ?? 1;
   const size = BASE_SIZE * scale;
 
-  // Bubble sizing: font, padding, max-width all scale with character
   const bFont = Math.max(10, Math.min(18, 12 * scale));
   const bPadX = Math.max(8, Math.round(12 * scale));
   const bPadY = Math.max(4, Math.round(6 * scale));
   const bMaxW = Math.max(120, Math.round(220 * scale));
 
-  // Bubble positioning: the root div is translate(-50%,-50%) so its own
-  // natural height = character image (size) + name tag (NAME_TAG_H) + margin (4px).
-  // CSS `bottom` is measured from the parent's bottom edge (bottom of name tag).
-  // To place bubble bottom at the image's top edge:
-  //   bottom = size + NAME_TAG_H + 4(mt) + gap
-  const aboveTop = size + NAME_TAG_H + 10;
-  // When BOTH bubbles exist, stagger thought higher so they don't overlap
+  // `bottom` 越大气泡越高；额外留白避免遮挡立绘与尾巴
+  const gapAboveSprite = Math.round(24 + size * 0.08);
+  const aboveTop = size + NAME_TAG_H + gapAboveSprite;
   const hasBoth = !!placed.dialogue && !!placed.thought;
-  const bubbleH = bFont + bPadY * 2 + 10; // approximate single bubble height
-  const thoughtAboveTop = hasBoth ? aboveTop + bubbleH : aboveTop;
+  const bubbleH = bFont + bPadY * 2 + 10;
+  const thoughtAboveTop = hasBoth
+    ? aboveTop + bubbleH + 16
+    : aboveTop + 16;
 
   useEffect(() => {
     setDialogueVal(placed.dialogue);
@@ -76,7 +73,6 @@ export function PlacedCharacterComponent({
     setThoughtVal(placed.thought);
   }, [placed.thought]);
 
-  // Click outside to deselect
   useEffect(() => {
     if (!isSelected) return;
     const handler = (e: MouseEvent) => {
@@ -116,7 +112,6 @@ export function PlacedCharacterComponent({
     updatePlacedCharacter(sceneId, character.id, { thought: thoughtVal });
   };
 
-  // ---- Drag: mouse ----
   const handleMouseDown = useCallback(
     (e: React.MouseEvent) => {
       e.preventDefault();
@@ -166,7 +161,6 @@ export function PlacedCharacterComponent({
     ],
   );
 
-  // ---- Drag: touch ----
   const handleTouchStart = useCallback(
     (e: React.TouchEvent) => {
       e.stopPropagation();
@@ -227,7 +221,6 @@ export function PlacedCharacterComponent({
     }
   };
 
-  // Popover position: avoid going off canvas edges
   const getPopoverSide = (): "right" | "left" | "bottom" => {
     if (placed.x > 65) return "left";
     if (placed.x < 35) return "right";
@@ -257,7 +250,6 @@ export function PlacedCharacterComponent({
     }
   })();
 
-  // Tail dot size for thought bubble
   const dotSize1 = Math.max(6, 8 * scale);
   const dotSize2 = Math.max(4, 5 * scale);
 
@@ -272,13 +264,10 @@ export function PlacedCharacterComponent({
         zIndex: isDragging ? 50 : isSelected ? 40 : 10,
       }}
     >
-      {/* ======== Thought bubble: upper-LEFT of the character image ======== */}
       {placed.thought && !isSelected && (
         <div
           className="bubble-thought pointer-events-none absolute z-30 rounded-2xl font-hand animate-fade-in-up"
           style={{
-            // Anchor: right edge aligns near center, positioned above image
-            // Uses thoughtAboveTop which is staggered higher when dialogue also exists
             right: `${Math.round(size * 0.1)}px`,
             bottom: `${thoughtAboveTop}px`,
             fontSize: `${bFont}px`,
@@ -286,7 +275,6 @@ export function PlacedCharacterComponent({
             maxWidth: `${bMaxW}px`,
           }}
         >
-          {/* Cloud trail dot 1 */}
           <div
             className="absolute rounded-full"
             style={{
@@ -298,7 +286,6 @@ export function PlacedCharacterComponent({
               border: "2px dashed hsl(270 30% 72%)",
             }}
           />
-          {/* Cloud trail dot 2 */}
           <div
             className="absolute rounded-full"
             style={{
@@ -324,12 +311,10 @@ export function PlacedCharacterComponent({
         </div>
       )}
 
-      {/* ======== Dialogue bubble: upper-RIGHT of the character image ======== */}
       {placed.dialogue && !isSelected && (
         <div
           className="bubble-dialogue pointer-events-none absolute z-30 rounded-2xl font-hand animate-fade-in-up"
           style={{
-            // Anchor: left edge aligns near center, positioned above image
             left: `${Math.round(size * 0.1)}px`,
             bottom: `${aboveTop}px`,
             fontSize: `${bFont}px`,
@@ -337,7 +322,6 @@ export function PlacedCharacterComponent({
             maxWidth: `${bMaxW}px`,
           }}
         >
-          {/* Speech triangle tail pointing down-left toward character */}
           <svg
             className="absolute"
             style={{
@@ -371,7 +355,6 @@ export function PlacedCharacterComponent({
         </div>
       )}
 
-      {/* ======== Character image ======== */}
       <div
         onMouseDown={handleMouseDown}
         onTouchStart={handleTouchStart}
@@ -396,7 +379,7 @@ export function PlacedCharacterComponent({
               src={character.imageUrl || "/placeholder.svg"}
               alt={character.name}
               crossOrigin="anonymous"
-              className="object-contain drop-shadow-[0_4px_16px_rgba(0,0,0,0.25)]"
+              className="object-contain drop-shadow-[0_10px_26px_rgba(0,0,0,0.50)]"
               style={{ width: size, height: size }}
               draggable={false}
             />
@@ -423,7 +406,6 @@ export function PlacedCharacterComponent({
         )}
       </div>
 
-      {/* ======== Popover editor ======== */}
       {isSelected && (
         <div
           ref={popoverRef}
@@ -431,7 +413,6 @@ export function PlacedCharacterComponent({
           style={popoverStyle}
           onMouseDown={(e) => e.stopPropagation()}
         >
-          {/* Header */}
           <div className="mb-2.5 flex items-center justify-between border-b border-border pb-2">
             <span className="font-hand text-sm font-bold text-foreground">
               {character.name}
@@ -449,7 +430,6 @@ export function PlacedCharacterComponent({
             </button>
           </div>
 
-          {/* Size controls */}
           <div className="mb-3 flex items-center justify-between rounded-xl bg-muted/60 px-2.5 py-2">
             <span className="font-hand text-xs font-bold text-muted-foreground">
               Size
@@ -485,7 +465,6 @@ export function PlacedCharacterComponent({
             </div>
           </div>
 
-          {/* Dialogue input */}
           <div className="mb-2.5">
             <label className="mb-1 flex items-center gap-1 font-hand text-xs font-bold text-foreground">
               <MessageCircle className="h-3 w-3 text-primary" />
@@ -504,7 +483,6 @@ export function PlacedCharacterComponent({
             />
           </div>
 
-          {/* Thought input */}
           <div>
             <label className="mb-1 flex items-center gap-1 font-hand text-xs font-bold text-foreground">
               <Cloud className="h-3 w-3 text-muted-foreground" />
