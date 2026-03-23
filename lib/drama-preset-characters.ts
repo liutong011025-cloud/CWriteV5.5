@@ -6,3 +6,10 @@ export interface DramaPresetCharacter {
   species: string;
   imageUrl: string;
 }
+
+/**
+ * 已废弃：角色列表由 `GET /api/drama-presets` 扫描 `public/dramacharacter/` 提供。
+ * 保留空数组仅兼容仍 `import { DRAMA_PRESET_CHARACTERS }` 的旧代码，避免构建报错。
+ * Toy box 请使用接口返回的数据（见 `components/drama/character-panel.tsx`）。
+ */
+export const DRAMA_PRESET_CHARACTERS: DramaPresetCharacter[] = [];
