@@ -57,11 +57,14 @@ export function PlacedCharacterComponent({
   const bPadY = Math.max(4, Math.round(6 * scale));
   const bMaxW = Math.max(120, Math.round(220 * scale));
 
-  // Lift bubbles further up so they won't cover the character sprite.
-  const aboveTop = size + NAME_TAG_H + 18;
+  // `bottom` 越大气泡越高；额外留白避免遮挡立绘与尾巴
+  const gapAboveSprite = Math.round(24 + size * 0.08);
+  const aboveTop = size + NAME_TAG_H + gapAboveSprite;
   const hasBoth = !!placed.dialogue && !!placed.thought;
   const bubbleH = bFont + bPadY * 2 + 10;
-  const thoughtAboveTop = hasBoth ? aboveTop + bubbleH + 10 : aboveTop + 10;
+  const thoughtAboveTop = hasBoth
+    ? aboveTop + bubbleH + 16
+    : aboveTop + 16;
 
   useEffect(() => {
     setDialogueVal(placed.dialogue);
