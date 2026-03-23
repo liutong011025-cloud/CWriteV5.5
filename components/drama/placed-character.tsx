@@ -23,7 +23,8 @@ interface PlacedCharacterProps {
 }
 
 const BASE_SIZE = 80;
-const NAME_TAG_H = 20;
+/** 底部名字条占位高度（名字已缩小，用于气泡锚点） */
+const NAME_TAG_H = 14;
 
 export function PlacedCharacterComponent({
   placed,
@@ -388,8 +389,8 @@ export function PlacedCharacterComponent({
             </div>
           )}
           <span
-            className="mt-1 max-w-32 truncate rounded-full bg-foreground/80 px-2.5 py-0.5 font-hand font-bold text-background shadow-md"
-            style={{ fontSize: `${Math.max(8, 10 * scale)}px` }}
+            className="mt-0.5 max-w-[5.5rem] truncate rounded-full bg-foreground/75 px-1 py-px font-hand font-semibold leading-none text-background shadow-sm"
+            style={{ fontSize: "8px" }}
           >
             {character.name}
           </span>
@@ -452,7 +453,7 @@ export function PlacedCharacterComponent({
                   e.stopPropagation();
                   resizeCharacterInScene(sceneId, character.id, scale + 0.15);
                 }}
-                disabled={scale >= 3.0}
+                disabled={scale >= 6.0}
                 className="flex h-7 w-7 items-center justify-center rounded-lg bg-background text-muted-foreground shadow-sm transition-colors hover:bg-primary/10 hover:text-foreground disabled:opacity-30"
                 aria-label="Bigger"
               >
