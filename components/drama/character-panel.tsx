@@ -128,8 +128,8 @@ function PresetCharacterCell({
       )}
       title={preset.species}
     >
-      <div className="pointer-events-none absolute left-1/2 top-0 z-20 w-max max-w-[240px] -translate-x-1/2 -translate-y-2 opacity-0 transition-all duration-150 group-hover:opacity-100 group-hover:translate-y-0">
-        <div className="rounded-xl border border-white/55 bg-white/90 px-3 py-1.5 text-center font-hand text-[12px] font-bold leading-tight text-[#2b1b12] shadow-[0_14px_30px_rgba(0,0,0,0.32)]">
+      <div className="pointer-events-none absolute left-1/2 top-0 z-20 w-max max-w-[320px] -translate-x-1/2 -translate-y-3 opacity-0 transition-all duration-150 group-hover:opacity-100 group-hover:translate-y-0">
+        <div className="rounded-2xl border border-white/60 bg-white/92 px-4 py-2 text-center font-hand text-[14px] font-bold leading-snug text-[#2b1b12] shadow-[0_16px_34px_rgba(0,0,0,0.34)] sm:text-[15px]">
           {greeting}
         </div>
       </div>
