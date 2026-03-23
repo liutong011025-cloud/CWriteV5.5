@@ -168,7 +168,7 @@ export const useDramaStore = create<DramaState>((set, get) => ({
               characterId,
               x: 30 + Math.random() * 40,
               y: 40 + Math.random() * 30,
-              scale: 1.0,
+              scale: 2.0,
               dialogue: "",
               thought: "",
             },
@@ -227,7 +227,7 @@ export const useDramaStore = create<DramaState>((set, get) => ({
               ...s,
               characters: s.characters.map((c) =>
                 c.characterId === characterId
-                  ? { ...c, scale: Math.max(0.3, Math.min(3.0, scale)) }
+                  ? { ...c, scale: Math.max(0.3, Math.min(6.0, scale)) }
                   : c
               ),
             }
