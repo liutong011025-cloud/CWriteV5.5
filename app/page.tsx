@@ -1318,7 +1318,7 @@ export default function Home() {
         stage !== "userProfile" &&
         stage !== "otherFarm" &&
         stage !== "navigation" &&
-        !["writing", "bookReviewWriting", "bookReviewWritingNoAi", "letterGame"].includes(stage) && (
+        !["character", "writing", "bookReviewWriting", "bookReviewWritingNoAi", "letterGame"].includes(stage) && (
         <Cagent
           stage={stage}
           contextSummary={cagentContextSummary}
