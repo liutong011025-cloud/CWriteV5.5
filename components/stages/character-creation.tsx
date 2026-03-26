@@ -33,6 +33,18 @@ const SPECIES = [
   { name: "Panda", icon: "🐼" },
 ]
 
+const TRAIT_STYLE_CLASSES = [
+  { idle: "bg-rose-100 border-rose-300 text-rose-900 hover:bg-rose-200", selected: "bg-rose-500 border-rose-600 text-white ring-2 ring-rose-300" },
+  { idle: "bg-amber-100 border-amber-300 text-amber-900 hover:bg-amber-200", selected: "bg-amber-500 border-amber-600 text-white ring-2 ring-amber-300" },
+  { idle: "bg-lime-100 border-lime-300 text-lime-900 hover:bg-lime-200", selected: "bg-lime-500 border-lime-600 text-white ring-2 ring-lime-300" },
+  { idle: "bg-emerald-100 border-emerald-300 text-emerald-900 hover:bg-emerald-200", selected: "bg-emerald-500 border-emerald-600 text-white ring-2 ring-emerald-300" },
+  { idle: "bg-cyan-100 border-cyan-300 text-cyan-900 hover:bg-cyan-200", selected: "bg-cyan-500 border-cyan-600 text-white ring-2 ring-cyan-300" },
+  { idle: "bg-sky-100 border-sky-300 text-sky-900 hover:bg-sky-200", selected: "bg-sky-500 border-sky-600 text-white ring-2 ring-sky-300" },
+  { idle: "bg-indigo-100 border-indigo-300 text-indigo-900 hover:bg-indigo-200", selected: "bg-indigo-500 border-indigo-600 text-white ring-2 ring-indigo-300" },
+  { idle: "bg-violet-100 border-violet-300 text-violet-900 hover:bg-violet-200", selected: "bg-violet-500 border-violet-600 text-white ring-2 ring-violet-300" },
+  { idle: "bg-fuchsia-100 border-fuchsia-300 text-fuchsia-900 hover:bg-fuchsia-200", selected: "bg-fuchsia-500 border-fuchsia-600 text-white ring-2 ring-fuchsia-300" },
+]
+
 type DrawMode = "pen" | "eraser"
 
 export default function CharacterCreation({ onCharacterCreate, onBack, userId, level = 1 }: CharacterCreationProps) {
@@ -65,9 +77,11 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
     bearScale: 1,
     bubbleX: 0,
     bubbleY: 0,
+    bubbleScale: 1,
     sketchX: 0,
     sketchY: 0,
-    sketchWidth: 980,
+    sketchWidth: 1120,
+    sketchHeight: 500,
   })
 
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -320,9 +334,11 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
       bearScale: 1,
       bubbleX: 0,
       bubbleY: 0,
+      bubbleScale: 1,
       sketchX: 0,
       sketchY: 0,
-      sketchWidth: 980,
+      sketchWidth: 1120,
+      sketchHeight: 500,
     })
   }
 
@@ -338,32 +354,78 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
           {showLayoutTool ? "Hide Layout Tool" : "Show Layout Tool"}
         </Button>
         {showLayoutTool && (
-          <div className="mt-2 w-72 rounded-2xl border border-slate-300 bg-white/95 p-3 shadow-2xl backdrop-blur">
+          <div className="mt-2 w-80 rounded-2xl border border-slate-300 bg-white/95 p-3 shadow-2xl backdrop-blur">
             <p className="text-sm font-bold text-slate-800 mb-2">Layout Tuner</p>
             <div className="space-y-2 text-xs text-slate-700">
-              <label className="block">Bear X
-                <input type="range" min={-220} max={220} value={layoutConfig.bearX} onChange={(e) => updateLayout("bearX", Number(e.target.value))} className="w-full" />
+              <label className="block">
+                <div className="flex items-center justify-between">
+                  <span>Bear X</span>
+                  <span className="font-semibold">{layoutConfig.bearX}</span>
+                </div>
+                <input type="range" min={-320} max={320} value={layoutConfig.bearX} onChange={(e) => updateLayout("bearX", Number(e.target.value))} className="w-full" />
               </label>
-              <label className="block">Bear Y
-                <input type="range" min={-220} max={220} value={layoutConfig.bearY} onChange={(e) => updateLayout("bearY", Number(e.target.value))} className="w-full" />
+              <label className="block">
+                <div className="flex items-center justify-between">
+                  <span>Bear Y</span>
+                  <span className="font-semibold">{layoutConfig.bearY}</span>
+                </div>
+                <input type="range" min={-320} max={320} value={layoutConfig.bearY} onChange={(e) => updateLayout("bearY", Number(e.target.value))} className="w-full" />
               </label>
-              <label className="block">Bear Scale
-                <input type="range" min={70} max={180} value={Math.round(layoutConfig.bearScale * 100)} onChange={(e) => updateLayout("bearScale", Number(e.target.value) / 100)} className="w-full" />
+              <label className="block">
+                <div className="flex items-center justify-between">
+                  <span>Bear Scale</span>
+                  <span className="font-semibold">{Math.round(layoutConfig.bearScale * 100)}%</span>
+                </div>
+                <input type="range" min={60} max={220} value={Math.round(layoutConfig.bearScale * 100)} onChange={(e) => updateLayout("bearScale", Number(e.target.value) / 100)} className="w-full" />
               </label>
-              <label className="block">Bubble X
-                <input type="range" min={-220} max={220} value={layoutConfig.bubbleX} onChange={(e) => updateLayout("bubbleX", Number(e.target.value))} className="w-full" />
+              <label className="block">
+                <div className="flex items-center justify-between">
+                  <span>Bubble X</span>
+                  <span className="font-semibold">{layoutConfig.bubbleX}</span>
+                </div>
+                <input type="range" min={-320} max={320} value={layoutConfig.bubbleX} onChange={(e) => updateLayout("bubbleX", Number(e.target.value))} className="w-full" />
               </label>
-              <label className="block">Bubble Y
-                <input type="range" min={-220} max={220} value={layoutConfig.bubbleY} onChange={(e) => updateLayout("bubbleY", Number(e.target.value))} className="w-full" />
+              <label className="block">
+                <div className="flex items-center justify-between">
+                  <span>Bubble Y</span>
+                  <span className="font-semibold">{layoutConfig.bubbleY}</span>
+                </div>
+                <input type="range" min={-320} max={320} value={layoutConfig.bubbleY} onChange={(e) => updateLayout("bubbleY", Number(e.target.value))} className="w-full" />
               </label>
-              <label className="block">Sketch Width
-                <input type="range" min={760} max={1320} value={layoutConfig.sketchWidth} onChange={(e) => updateLayout("sketchWidth", Number(e.target.value))} className="w-full" />
+              <label className="block">
+                <div className="flex items-center justify-between">
+                  <span>Bubble Size</span>
+                  <span className="font-semibold">{Math.round(layoutConfig.bubbleScale * 100)}%</span>
+                </div>
+                <input type="range" min={70} max={180} value={Math.round(layoutConfig.bubbleScale * 100)} onChange={(e) => updateLayout("bubbleScale", Number(e.target.value) / 100)} className="w-full" />
               </label>
-              <label className="block">Sketch X
-                <input type="range" min={-280} max={280} value={layoutConfig.sketchX} onChange={(e) => updateLayout("sketchX", Number(e.target.value))} className="w-full" />
+              <label className="block">
+                <div className="flex items-center justify-between">
+                  <span>Sketch Width</span>
+                  <span className="font-semibold">{layoutConfig.sketchWidth}px</span>
+                </div>
+                <input type="range" min={900} max={1700} value={layoutConfig.sketchWidth} onChange={(e) => updateLayout("sketchWidth", Number(e.target.value))} className="w-full" />
               </label>
-              <label className="block">Sketch Y
-                <input type="range" min={-180} max={180} value={layoutConfig.sketchY} onChange={(e) => updateLayout("sketchY", Number(e.target.value))} className="w-full" />
+              <label className="block">
+                <div className="flex items-center justify-between">
+                  <span>Sketch Height</span>
+                  <span className="font-semibold">{layoutConfig.sketchHeight}px</span>
+                </div>
+                <input type="range" min={360} max={620} value={layoutConfig.sketchHeight} onChange={(e) => updateLayout("sketchHeight", Number(e.target.value))} className="w-full" />
+              </label>
+              <label className="block">
+                <div className="flex items-center justify-between">
+                  <span>Sketch X</span>
+                  <span className="font-semibold">{layoutConfig.sketchX}</span>
+                </div>
+                <input type="range" min={-420} max={420} value={layoutConfig.sketchX} onChange={(e) => updateLayout("sketchX", Number(e.target.value))} className="w-full" />
+              </label>
+              <label className="block">
+                <div className="flex items-center justify-between">
+                  <span>Sketch Y</span>
+                  <span className="font-semibold">{layoutConfig.sketchY}</span>
+                </div>
+                <input type="range" min={-260} max={260} value={layoutConfig.sketchY} onChange={(e) => updateLayout("sketchY", Number(e.target.value))} className="w-full" />
               </label>
             </div>
             <Button type="button" size="sm" variant="outline" onClick={resetLayout} className="mt-2 w-full">
@@ -584,9 +646,8 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
 
               <div
                 ref={containerRef}
-                className={`relative rounded-2xl overflow-hidden border-2 border-violet-200 bg-white transition-all duration-500 ${
-                  showDetailsPanel ? "h-[440px]" : "h-[560px]"
-                }`}
+                className="relative rounded-2xl overflow-hidden border-2 border-violet-200 bg-white transition-all duration-500"
+                style={{ height: `${showDetailsPanel ? Math.max(300, layoutConfig.sketchHeight - 100) : layoutConfig.sketchHeight}px` }}
               >
                 <canvas
                   ref={canvasRef}
@@ -624,9 +685,6 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
                 </Button>
               </div>
 
-              <p className="mt-2 text-xs text-violet-700">
-                Image generation may take a while. You can continue filling character details on the right panel.
-              </p>
             </div>
           </section>
 
@@ -642,7 +700,7 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
             >
               <div
                 className="absolute top-10 left-1/2 -translate-x-1/2 w-[380px] rounded-2xl border-2 border-amber-200 bg-white/95 px-4 py-3 text-center text-[15px] font-bold text-amber-700 shadow-xl leading-snug"
-                style={{ transform: `translate(calc(-50% + ${layoutConfig.bubbleX}px), ${layoutConfig.bubbleY}px)` }}
+                style={{ transform: `translate(calc(-50% + ${layoutConfig.bubbleX}px), ${layoutConfig.bubbleY}px) scale(${layoutConfig.bubbleScale})` }}
               >
                 After determining the species of your story characters, you can draw them on the drawing board. Let's see who can draw it more Realistic !
               </div>
@@ -685,8 +743,9 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
               <div>
                 <label className="block text-sm font-semibold text-cyan-700 mb-1">Traits * (choose up to 3)</label>
                 <div className="flex flex-wrap gap-2">
-                  {EOB_TRAITS.map((trait) => {
+                  {EOB_TRAITS.map((trait, traitIndex) => {
                     const selected = selectedTraits.includes(trait.name)
+                    const styleSet = TRAIT_STYLE_CLASSES[traitIndex % TRAIT_STYLE_CLASSES.length]
                     return (
                       <button
                         key={trait.name}
@@ -696,7 +755,7 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
                           setTraitDialogOpen(true)
                         }}
                         className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition ${
-                          selected ? "bg-cyan-500 text-white border-cyan-500" : "bg-white text-cyan-700 border-cyan-200 hover:border-cyan-400"
+                          selected ? styleSet.selected : styleSet.idle
                         }`}
                       >
                         {trait.name}
@@ -757,9 +816,28 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
 
             <div className="mt-5 rounded-2xl border border-cyan-200 bg-cyan-50 p-4">
               <h3 className="text-sm font-bold text-cyan-800 mb-2">Generation Preview</h3>
+              {isGenerating && (
+                <div className="mb-3 rounded-xl border border-cyan-300 bg-white px-3 py-2">
+                  <div className="flex items-center gap-2 text-cyan-700 text-sm font-semibold mb-2">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Generating image...
+                  </div>
+                  <div className="h-2 w-full overflow-hidden rounded-full bg-cyan-100">
+                    <div className="h-full w-1/2 bg-gradient-to-r from-cyan-400 via-fuchsia-400 to-amber-400 animate-pulse" />
+                  </div>
+                  <div className="mt-2 flex items-center gap-1.5">
+                    <span className="h-2.5 w-2.5 rounded-full bg-cyan-500 animate-bounce" />
+                    <span className="h-2.5 w-2.5 rounded-full bg-fuchsia-500 animate-bounce" style={{ animationDelay: "120ms" }} />
+                    <span className="h-2.5 w-2.5 rounded-full bg-amber-500 animate-bounce" style={{ animationDelay: "240ms" }} />
+                    <span className="h-2.5 w-2.5 rounded-full bg-violet-500 animate-bounce" style={{ animationDelay: "360ms" }} />
+                  </div>
+                </div>
+              )}
               {imageUrl ? (
                 <div className="space-y-3">
-                  <img src={imageUrl} alt="Generated character" className="w-full rounded-xl border border-cyan-200 bg-white object-contain max-h-64" />
+                  <div className="h-[360px] w-full rounded-xl border border-cyan-200 bg-white p-1">
+                    <img src={imageUrl} alt="Generated character" className="h-full w-full rounded-lg object-contain" />
+                  </div>
                   <Button
                     type="button"
                     variant="outline"
