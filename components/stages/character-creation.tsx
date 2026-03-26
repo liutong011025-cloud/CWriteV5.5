@@ -732,7 +732,11 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
                 </div>
               ) : (
                 <div className={`rounded-xl border bg-white p-4 ${isGenerating ? "preview-loading-glow border-fuchsia-300" : "border-cyan-200"}`}>
-                  <p className="text-sm text-cyan-700">No generated image yet. Draw your sketch and click "Generate from Sketch".</p>
+                  <div className="flex items-center justify-center gap-2 py-2">
+                    <span className="h-2.5 w-2.5 rounded-full bg-cyan-500 animate-bounce" />
+                    <span className="h-2.5 w-2.5 rounded-full bg-fuchsia-500 animate-bounce" style={{ animationDelay: "120ms" }} />
+                    <span className="h-2.5 w-2.5 rounded-full bg-amber-500 animate-bounce" style={{ animationDelay: "240ms" }} />
+                  </div>
                 </div>
               )}
             </div>
