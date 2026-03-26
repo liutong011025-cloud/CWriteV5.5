@@ -128,7 +128,8 @@ Rules:
       },
       query: queryMessage, // 查询消息包含完整对话，确保AI能看到
       response_mode: 'blocking',
-      conversation_id: undefined, // 总结改为无状态，避免线程污染导致空回复
+      // 复用同一个总结会话，避免每次请求都新建对话导致上下文断裂
+      conversation_id: conversation_id || undefined,
       user: scopedUser,
       app_id: DIFY_PLOT_SUMMARY_APP_ID, // 指定使用正确的机器人
     }
