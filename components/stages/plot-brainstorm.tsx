@@ -313,8 +313,9 @@ Continue guiding step by step. Each response should:
       // 计算学生消息数量
       const studentMessageCount = updatedMessages.filter(msg => msg.role === 'user').length
       
-      // 降低请求频率，减少重复提示词触发的空回复
-      const shouldSummarizeNow = studentMessageCount <= 3 || studentMessageCount % 2 === 0
+      // 前6轮每轮都总结，确保尽快收敛出 Setting / Conflict / Goal；
+      // 6轮后再降频到偶数轮，控制请求量。
+      const shouldSummarizeNow = studentMessageCount <= 6 || studentMessageCount % 2 === 0
       if (shouldSummarizeNow) {
         await summarizePlot(updatedMessages)
       }
