@@ -119,10 +119,12 @@ Style target:
 - Cute and premium children's story illustration
 - Soft but rich lighting, clean details, elegant rendering
 - Keep one main character as visual focus
+- Use a clean pure white background only (solid #FFFFFF)
 
 Output rules:
 - Use the uploaded sketch image as the base reference
 - Do not add text, logos, watermark, or UI
+- No transparent background, no scene/background elements, white backdrop only
 - Return one final character image only
 `.trim()
 
