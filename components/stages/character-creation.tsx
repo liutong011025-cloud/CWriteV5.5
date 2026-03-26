@@ -47,10 +47,13 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
 
   const [imageUrl, setImageUrl] = useState("")
   const [isGenerating, setIsGenerating] = useState(false)
+  const [showDetailsPanel, setShowDetailsPanel] = useState(false)
+  const [showGenerationHint, setShowGenerationHint] = useState(false)
   const [hasSketchStroke, setHasSketchStroke] = useState(false)
   const [drawMode, setDrawMode] = useState<DrawMode>("pen")
   const [brushSize, setBrushSize] = useState(5)
   const [strokeHex, setStrokeHex] = useState("#1f2937")
+  const colorInputRef = useRef<HTMLInputElement>(null)
 
   const [traitDialogOpen, setTraitDialogOpen] = useState(false)
   const [traitDialogTrait, setTraitDialogTrait] = useState<EobTrait | null>(null)
@@ -89,6 +92,45 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
     return { x, y }
   }
 
+  const resizeCanvas = (preserveDrawing: boolean) => {
+    const canvas = canvasRef.current
+    const host = containerRef.current
+    if (!canvas || !host) return
+
+    let snapshotDataUrl: string | null = null
+    if (preserveDrawing && hasInitializedCanvasRef.current) {
+      try {
+        snapshotDataUrl = canvas.toDataURL("image/png")
+      } catch {
+        snapshotDataUrl = null
+      }
+    }
+
+    const dpr = Math.max(1, window.devicePixelRatio || 1)
+    const cssWidth = Math.max(320, host.clientWidth)
+    const cssHeight = Math.max(320, host.clientHeight)
+
+    canvas.width = Math.floor(cssWidth * dpr)
+    canvas.height = Math.floor(cssHeight * dpr)
+    canvas.style.width = `${cssWidth}px`
+    canvas.style.height = `${cssHeight}px`
+
+    const ctx = canvas.getContext("2d")
+    if (!ctx) return
+    ctx.setTransform(1, 0, 0, 1, 0, 0)
+    fillCanvasBase()
+
+    if (snapshotDataUrl) {
+      const img = new Image()
+      img.onload = () => {
+        const redrawCtx = canvas.getContext("2d")
+        if (!redrawCtx) return
+        redrawCtx.drawImage(img, 0, 0, canvas.width, canvas.height)
+      }
+      img.src = snapshotDataUrl
+    }
+  }
+
   const fillCanvasBase = () => {
     const canvas = canvasRef.current
     if (!canvas) return
@@ -101,30 +143,18 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
   }
 
   useEffect(() => {
-    const canvas = canvasRef.current
-    const host = containerRef.current
-    if (!canvas || !host) return
-
-    const dpr = Math.max(1, window.devicePixelRatio || 1)
-    const cssWidth = host.clientWidth
-    const cssHeight = host.clientHeight
-
-    canvas.width = Math.max(320, Math.floor(cssWidth * dpr))
-    canvas.height = Math.max(320, Math.floor(cssHeight * dpr))
-    canvas.style.width = `${cssWidth}px`
-    canvas.style.height = `${cssHeight}px`
-
-    const ctx = canvas.getContext("2d")
-    if (!ctx) return
-    ctx.scale(dpr, dpr)
-    canvas.width = Math.floor(cssWidth * dpr)
-    canvas.height = Math.floor(cssHeight * dpr)
-    ctx.setTransform(1, 0, 0, 1, 0, 0)
-
-    fillCanvasBase()
+    resizeCanvas(false)
     hasInitializedCanvasRef.current = true
     setHasSketchStroke(false)
   }, [])
+
+  useEffect(() => {
+    if (!hasInitializedCanvasRef.current) return
+    const timer = window.setTimeout(() => {
+      resizeCanvas(true)
+    }, 220)
+    return () => window.clearTimeout(timer)
+  }, [showDetailsPanel])
 
   const clearSketch = () => {
     fillCanvasBase()
@@ -182,41 +212,6 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
     )
   }
 
-  const buildPrompt = () => {
-    const traitsText = selectedTraits.length > 0 ? selectedTraits.join(", ") : "friendly"
-    const detailBlocks: string[] = []
-    if (age.trim()) detailBlocks.push(`Age: ${age.trim()}`)
-    if (background.trim()) detailBlocks.push(`Background detail: ${background.trim()}`)
-    if (emotional.trim()) detailBlocks.push(`Emotional tone: ${emotional.trim()}`)
-    if (symbolic.trim()) detailBlocks.push(`Symbolic objects: ${symbolic.trim()}`)
-
-    return `
-You are editing a student's hand-drawn character sketch into a polished illustration.
-
-Goal:
-- Keep the student sketch's core silhouette and pose.
-- Turn it into a cute but premium children's story character portrait.
-- Make the character clean, expressive, and visually appealing.
-
-Character profile:
-- Species: ${finalSpecies || "unknown"}
-- Name: ${name.trim() || "Unnamed"}
-- Personality traits: ${traitsText}
-${detailBlocks.map((line) => `- ${line}`).join("\n")}
-
-Style:
-- High-quality children's book illustration
-- Soft lighting, rich but gentle colors
-- Refined details, modern and elegant
-- Keep focus on one character, minimal distraction
-
-Output rules:
-- Preserve the sketch idea and composition.
-- Do not add text, logo, UI, or watermark.
-- Return one final character image.
-`.trim()
-  }
-
   const handleGenerateImage = async () => {
     if (!canGenerate) {
       if (!finalSpecies.trim()) {
@@ -237,6 +232,10 @@ Output rules:
     }
 
     setIsGenerating(true)
+    setShowGenerationHint(true)
+    if (!showDetailsPanel) {
+      window.setTimeout(() => setShowDetailsPanel(true), 600)
+    }
     toast.info("Generating image... This can take some time. You can continue filling details while waiting.")
 
     try {
@@ -265,6 +264,7 @@ Output rules:
 
       if (data.imageUrl) {
         setImageUrl(data.imageUrl as string)
+        setShowGenerationHint(false)
         toast.success("Character image generated!")
       } else {
         toast.error("No image returned. Please try again.")
@@ -297,7 +297,16 @@ Output rules:
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-cyan-50 via-fuchsia-50 to-amber-50 px-6 py-8" style={{ paddingTop: "120px", paddingBottom: "120px" }}>
+    <div className="min-h-screen bg-gradient-to-br from-cyan-50 via-fuchsia-50 to-amber-50 px-6 py-8 relative overflow-hidden" style={{ paddingTop: "120px", paddingBottom: "120px" }}>
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute -top-16 -left-16 h-64 w-64 rounded-full bg-fuchsia-200/50 blur-3xl animate-pulse" />
+        <div className="absolute top-1/3 -right-16 h-72 w-72 rounded-full bg-cyan-200/50 blur-3xl animate-pulse" style={{ animationDelay: "300ms" }} />
+        <div className="absolute bottom-0 left-1/3 h-72 w-72 rounded-full bg-amber-200/45 blur-3xl animate-pulse" style={{ animationDelay: "700ms" }} />
+      </div>
+      <div className="pointer-events-none absolute top-[140px] left-10 text-4xl animate-bounce" style={{ animationDuration: "2.6s" }}>🎨</div>
+      <div className="pointer-events-none absolute top-[210px] right-14 text-3xl animate-bounce" style={{ animationDelay: "0.7s", animationDuration: "2.9s" }}>🖍️</div>
+      <div className="pointer-events-none absolute bottom-[120px] left-16 text-3xl animate-bounce" style={{ animationDelay: "1.1s", animationDuration: "3.2s" }}>✨</div>
+      <div className="pointer-events-none absolute bottom-[170px] right-10 text-4xl animate-bounce" style={{ animationDelay: "1.5s", animationDuration: "2.8s" }}>🌈</div>
       <Dialog
         open={traitDialogOpen}
         onOpenChange={(open) => {
@@ -360,11 +369,21 @@ Output rules:
         </DialogContent>
       </Dialog>
 
-      <div className="max-w-7xl mx-auto">
+      <div className="max-w-7xl mx-auto relative z-10">
         <StageHeader stage={1} title="Create Your Character" onBack={onBack} />
 
-        <div className="mt-8 grid grid-cols-1 xl:grid-cols-12 gap-6">
-          <section className="xl:col-span-7 rounded-3xl border-2 border-violet-200 bg-white/80 backdrop-blur-sm shadow-xl p-6">
+        {showGenerationHint && (
+          <div className="mt-6 mx-auto max-w-3xl rounded-2xl border border-fuchsia-300 bg-white/90 px-5 py-3 text-sm font-semibold text-fuchsia-700 shadow-lg">
+            This may take some time. You can continue filling in your character details while the image is generating.
+          </div>
+        )}
+
+        <div className={`mt-8 ${showDetailsPanel ? "grid grid-cols-1 xl:grid-cols-12 gap-6" : "flex justify-center"}`}>
+          <section
+            className={`rounded-3xl border-2 border-violet-200 bg-white/80 backdrop-blur-sm shadow-xl p-6 transition-all duration-500 ${
+              showDetailsPanel ? "xl:col-span-7" : "w-full max-w-[980px]"
+            }`}
+          >
             <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
               <h2 className="text-2xl font-bold text-violet-700">Sketch Board</h2>
               <p className="text-sm text-violet-600">1) Choose species, 2) Draw, 3) Generate</p>
@@ -443,18 +462,32 @@ Output rules:
                     onChange={(e) => setBrushSize(Number(e.target.value))}
                     className="w-28 accent-violet-600"
                   />
+                  <button
+                    type="button"
+                    onClick={() => colorInputRef.current?.click()}
+                    className="relative h-10 w-10 rounded-full border-2 border-violet-200 shadow-sm disabled:opacity-50"
+                    style={{ backgroundColor: strokeHex }}
+                    disabled={drawMode === "eraser"}
+                    aria-label="Choose stroke color"
+                  />
                   <input
+                    ref={colorInputRef}
                     type="color"
                     value={strokeHex}
                     onChange={(e) => setStrokeHex(e.target.value)}
-                    className="h-9 w-9 rounded-md border border-violet-200 bg-white"
+                    className="sr-only"
                     disabled={drawMode === "eraser"}
-                    aria-label="Stroke color"
+                    aria-label="Stroke color picker"
                   />
                 </div>
               </div>
 
-              <div ref={containerRef} className="relative h-[440px] rounded-2xl overflow-hidden border-2 border-violet-200 bg-white">
+              <div
+                ref={containerRef}
+                className={`relative rounded-2xl overflow-hidden border-2 border-violet-200 bg-white transition-all duration-500 ${
+                  showDetailsPanel ? "h-[440px]" : "h-[560px]"
+                }`}
+              >
                 <canvas
                   ref={canvasRef}
                   className="absolute inset-0 touch-none"
@@ -497,7 +530,11 @@ Output rules:
             </div>
           </section>
 
-          <section className="xl:col-span-5 rounded-3xl border-2 border-cyan-200 bg-white/85 backdrop-blur-sm shadow-xl p-6">
+          <section
+            className={`xl:col-span-5 rounded-3xl border-2 border-cyan-200 bg-white/85 backdrop-blur-sm shadow-xl p-6 transition-all duration-500 ${
+              showDetailsPanel ? "opacity-100 translate-x-0" : "opacity-0 translate-x-8 pointer-events-none hidden xl:block"
+            }`}
+          >
             <h2 className="text-2xl font-bold text-cyan-700 mb-4">Character Details</h2>
             <div className="space-y-4">
               <div>
@@ -629,6 +666,7 @@ Output rules:
               </Button>
             </div>
           </section>
+          {!showDetailsPanel && <div className="hidden xl:block xl:col-span-5" />}
         </div>
       </div>
     </div>
