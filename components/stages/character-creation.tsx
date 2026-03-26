@@ -62,7 +62,6 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
   const [showDetailsPanel, setShowDetailsPanel] = useState(false)
   const [showGenerationHint, setShowGenerationHint] = useState(false)
   const [introMascotFading, setIntroMascotFading] = useState(false)
-  const [showLayoutTool, setShowLayoutTool] = useState(false)
   const [hasSketchStroke, setHasSketchStroke] = useState(false)
   const [drawMode, setDrawMode] = useState<DrawMode>("pen")
   const [brushSize, setBrushSize] = useState(5)
@@ -71,18 +70,18 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
 
   const [traitDialogOpen, setTraitDialogOpen] = useState(false)
   const [traitDialogTrait, setTraitDialogTrait] = useState<EobTrait | null>(null)
-  const [layoutConfig, setLayoutConfig] = useState({
-    bearX: 0,
-    bearY: 0,
-    bearScale: 1,
-    bubbleX: 0,
-    bubbleY: 0,
-    bubbleScale: 1,
+  const layoutConfig = {
+    bearX: 127,
+    bearY: -54,
+    bearScale: 1.67,
+    bubbleX: 229,
+    bubbleY: 249,
+    bubbleScale: 0.81,
     sketchX: 0,
-    sketchY: 0,
-    sketchWidth: 1120,
-    sketchHeight: 500,
-  })
+    sketchY: -12,
+    sketchWidth: 1700,
+    sketchHeight: 480,
+  } as const
 
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -323,118 +322,8 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
     })
   }
 
-  const updateLayout = (key: keyof typeof layoutConfig, value: number) => {
-    setLayoutConfig((prev) => ({ ...prev, [key]: value }))
-  }
-
-  const resetLayout = () => {
-    setLayoutConfig({
-      bearX: 0,
-      bearY: 0,
-      bearScale: 1,
-      bubbleX: 0,
-      bubbleY: 0,
-      bubbleScale: 1,
-      sketchX: 0,
-      sketchY: 0,
-      sketchWidth: 1120,
-      sketchHeight: 500,
-    })
-  }
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-cyan-50 via-fuchsia-50 to-amber-50 px-6 py-8 relative overflow-hidden" style={{ paddingTop: "120px", paddingBottom: "120px" }}>
-      <div className="fixed top-24 right-4 z-[120]">
-        <Button
-          type="button"
-          size="sm"
-          onClick={() => setShowLayoutTool((prev) => !prev)}
-          className="bg-slate-800 hover:bg-slate-900 text-white"
-        >
-          {showLayoutTool ? "Hide Layout Tool" : "Show Layout Tool"}
-        </Button>
-        {showLayoutTool && (
-          <div className="mt-2 w-80 rounded-2xl border border-slate-300 bg-white/95 p-3 shadow-2xl backdrop-blur">
-            <p className="text-sm font-bold text-slate-800 mb-2">Layout Tuner</p>
-            <div className="space-y-2 text-xs text-slate-700">
-              <label className="block">
-                <div className="flex items-center justify-between">
-                  <span>Bear X</span>
-                  <span className="font-semibold">{layoutConfig.bearX}</span>
-                </div>
-                <input type="range" min={-320} max={320} value={layoutConfig.bearX} onChange={(e) => updateLayout("bearX", Number(e.target.value))} className="w-full" />
-              </label>
-              <label className="block">
-                <div className="flex items-center justify-between">
-                  <span>Bear Y</span>
-                  <span className="font-semibold">{layoutConfig.bearY}</span>
-                </div>
-                <input type="range" min={-320} max={320} value={layoutConfig.bearY} onChange={(e) => updateLayout("bearY", Number(e.target.value))} className="w-full" />
-              </label>
-              <label className="block">
-                <div className="flex items-center justify-between">
-                  <span>Bear Scale</span>
-                  <span className="font-semibold">{Math.round(layoutConfig.bearScale * 100)}%</span>
-                </div>
-                <input type="range" min={60} max={220} value={Math.round(layoutConfig.bearScale * 100)} onChange={(e) => updateLayout("bearScale", Number(e.target.value) / 100)} className="w-full" />
-              </label>
-              <label className="block">
-                <div className="flex items-center justify-between">
-                  <span>Bubble X</span>
-                  <span className="font-semibold">{layoutConfig.bubbleX}</span>
-                </div>
-                <input type="range" min={-320} max={320} value={layoutConfig.bubbleX} onChange={(e) => updateLayout("bubbleX", Number(e.target.value))} className="w-full" />
-              </label>
-              <label className="block">
-                <div className="flex items-center justify-between">
-                  <span>Bubble Y</span>
-                  <span className="font-semibold">{layoutConfig.bubbleY}</span>
-                </div>
-                <input type="range" min={-320} max={320} value={layoutConfig.bubbleY} onChange={(e) => updateLayout("bubbleY", Number(e.target.value))} className="w-full" />
-              </label>
-              <label className="block">
-                <div className="flex items-center justify-between">
-                  <span>Bubble Size</span>
-                  <span className="font-semibold">{Math.round(layoutConfig.bubbleScale * 100)}%</span>
-                </div>
-                <input type="range" min={70} max={180} value={Math.round(layoutConfig.bubbleScale * 100)} onChange={(e) => updateLayout("bubbleScale", Number(e.target.value) / 100)} className="w-full" />
-              </label>
-              <label className="block">
-                <div className="flex items-center justify-between">
-                  <span>Sketch Width</span>
-                  <span className="font-semibold">{layoutConfig.sketchWidth}px</span>
-                </div>
-                <input type="range" min={900} max={1700} value={layoutConfig.sketchWidth} onChange={(e) => updateLayout("sketchWidth", Number(e.target.value))} className="w-full" />
-              </label>
-              <label className="block">
-                <div className="flex items-center justify-between">
-                  <span>Sketch Height</span>
-                  <span className="font-semibold">{layoutConfig.sketchHeight}px</span>
-                </div>
-                <input type="range" min={360} max={620} value={layoutConfig.sketchHeight} onChange={(e) => updateLayout("sketchHeight", Number(e.target.value))} className="w-full" />
-              </label>
-              <label className="block">
-                <div className="flex items-center justify-between">
-                  <span>Sketch X</span>
-                  <span className="font-semibold">{layoutConfig.sketchX}</span>
-                </div>
-                <input type="range" min={-420} max={420} value={layoutConfig.sketchX} onChange={(e) => updateLayout("sketchX", Number(e.target.value))} className="w-full" />
-              </label>
-              <label className="block">
-                <div className="flex items-center justify-between">
-                  <span>Sketch Y</span>
-                  <span className="font-semibold">{layoutConfig.sketchY}</span>
-                </div>
-                <input type="range" min={-260} max={260} value={layoutConfig.sketchY} onChange={(e) => updateLayout("sketchY", Number(e.target.value))} className="w-full" />
-              </label>
-            </div>
-            <Button type="button" size="sm" variant="outline" onClick={resetLayout} className="mt-2 w-full">
-              Reset Layout
-            </Button>
-          </div>
-        )}
-      </div>
-
       <div className="pointer-events-none absolute inset-0">
         <div className="absolute -top-16 -left-16 h-64 w-64 rounded-full bg-fuchsia-200/50 blur-3xl animate-pulse" />
         <div className="absolute top-1/3 -right-16 h-72 w-72 rounded-full bg-cyan-200/50 blur-3xl animate-pulse" style={{ animationDelay: "300ms" }} />
@@ -531,7 +420,7 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
 
         <div className={`mt-8 ${showDetailsPanel ? "grid grid-cols-1 xl:grid-cols-12 gap-6" : "flex justify-center items-center min-h-[72vh] w-full gap-8"}`}>
           <section
-            className={`rounded-3xl border-2 border-violet-200 bg-white/80 backdrop-blur-sm shadow-xl p-6 transition-all duration-700 ${
+            className={`self-start rounded-3xl border-2 border-violet-200 bg-white/80 backdrop-blur-sm shadow-xl p-6 transition-all duration-700 ${
               showDetailsPanel
                 ? "xl:col-span-7"
                 : "scale-100"
@@ -702,7 +591,9 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
                 className="absolute top-10 left-1/2 -translate-x-1/2 w-[380px] rounded-2xl border-2 border-amber-200 bg-white/95 px-4 py-3 text-center text-[15px] font-bold text-amber-700 shadow-xl leading-snug"
                 style={{ transform: `translate(calc(-50% + ${layoutConfig.bubbleX}px), ${layoutConfig.bubbleY}px) scale(${layoutConfig.bubbleScale})` }}
               >
-                After determining the species of your story characters, you can draw them on the drawing board. Let's see who can draw it more Realistic !
+                After determining the species of your story characters, you can draw them on the drawing board.
+                <br />
+                Let's see who can draw it more Realistic !
               </div>
               <img
                 src="/Cagentdraw.png"
@@ -819,23 +710,13 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
               {isGenerating && (
                 <div className="mb-3 rounded-xl border border-cyan-300 bg-white px-3 py-2">
                   <div className="flex items-center gap-2 text-cyan-700 text-sm font-semibold mb-2">
-                    <Loader2 className="h-4 w-4 animate-spin" />
                     Generating image...
-                  </div>
-                  <div className="h-2 w-full overflow-hidden rounded-full bg-cyan-100">
-                    <div className="h-full w-1/2 bg-gradient-to-r from-cyan-400 via-fuchsia-400 to-amber-400 animate-pulse" />
-                  </div>
-                  <div className="mt-2 flex items-center gap-1.5">
-                    <span className="h-2.5 w-2.5 rounded-full bg-cyan-500 animate-bounce" />
-                    <span className="h-2.5 w-2.5 rounded-full bg-fuchsia-500 animate-bounce" style={{ animationDelay: "120ms" }} />
-                    <span className="h-2.5 w-2.5 rounded-full bg-amber-500 animate-bounce" style={{ animationDelay: "240ms" }} />
-                    <span className="h-2.5 w-2.5 rounded-full bg-violet-500 animate-bounce" style={{ animationDelay: "360ms" }} />
                   </div>
                 </div>
               )}
               {imageUrl ? (
                 <div className="space-y-3">
-                  <div className="h-[360px] w-full rounded-xl border border-cyan-200 bg-white p-1">
+                  <div className={`h-[360px] w-full rounded-xl border bg-white p-1 ${isGenerating ? "preview-loading-glow border-fuchsia-300" : "border-cyan-200"}`}>
                     <img src={imageUrl} alt="Generated character" className="h-full w-full rounded-lg object-contain" />
                   </div>
                   <Button
@@ -845,12 +726,14 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
                     disabled={!finalSpecies.trim() || !hasSketchStroke || isGenerating}
                     className="w-full border-cyan-300 text-cyan-700"
                   >
-                    {isGenerating ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+                    {!isGenerating && <RefreshCw className="h-4 w-4 mr-2" />}
                     Regenerate Image
                   </Button>
                 </div>
               ) : (
-                <p className="text-sm text-cyan-700">No generated image yet. Draw your sketch and click "Generate from Sketch".</p>
+                <div className={`rounded-xl border bg-white p-4 ${isGenerating ? "preview-loading-glow border-fuchsia-300" : "border-cyan-200"}`}>
+                  <p className="text-sm text-cyan-700">No generated image yet. Draw your sketch and click "Generate from Sketch".</p>
+                </div>
               )}
             </div>
 
@@ -870,6 +753,25 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
           </section>
         </div>
       </div>
+      <style jsx global>{`
+        @keyframes previewBorderGlow {
+          0% {
+            box-shadow: 0 0 0 0 rgba(236, 72, 153, 0.15), 0 0 0 0 rgba(6, 182, 212, 0.1);
+            border-color: rgba(236, 72, 153, 0.45);
+          }
+          50% {
+            box-shadow: 0 0 0 2px rgba(236, 72, 153, 0.2), 0 0 24px 3px rgba(6, 182, 212, 0.2);
+            border-color: rgba(14, 165, 233, 0.7);
+          }
+          100% {
+            box-shadow: 0 0 0 0 rgba(236, 72, 153, 0.15), 0 0 0 0 rgba(6, 182, 212, 0.1);
+            border-color: rgba(236, 72, 153, 0.45);
+          }
+        }
+        .preview-loading-glow {
+          animation: previewBorderGlow 1.2s ease-in-out infinite;
+        }
+      `}</style>
     </div>
   )
 }
