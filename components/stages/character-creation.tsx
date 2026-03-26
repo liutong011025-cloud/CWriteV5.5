@@ -305,8 +305,14 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
       </div>
       <div className="pointer-events-none absolute top-[140px] left-10 text-4xl animate-bounce" style={{ animationDuration: "2.6s" }}>🎨</div>
       <div className="pointer-events-none absolute top-[210px] right-14 text-3xl animate-bounce" style={{ animationDelay: "0.7s", animationDuration: "2.9s" }}>🖍️</div>
+      <div className="pointer-events-none absolute top-[110px] left-1/3 text-3xl animate-bounce" style={{ animationDelay: "0.2s", animationDuration: "3.1s" }}>🧁</div>
+      <div className="pointer-events-none absolute top-[180px] right-1/3 text-3xl animate-bounce" style={{ animationDelay: "1.2s", animationDuration: "2.7s" }}>🪄</div>
       <div className="pointer-events-none absolute bottom-[120px] left-16 text-3xl animate-bounce" style={{ animationDelay: "1.1s", animationDuration: "3.2s" }}>✨</div>
       <div className="pointer-events-none absolute bottom-[170px] right-10 text-4xl animate-bounce" style={{ animationDelay: "1.5s", animationDuration: "2.8s" }}>🌈</div>
+      <div className="pointer-events-none absolute bottom-[100px] left-1/3 text-3xl animate-bounce" style={{ animationDelay: "0.9s", animationDuration: "3.4s" }}>🎀</div>
+      <div className="pointer-events-none absolute bottom-[220px] right-1/4 text-3xl animate-bounce" style={{ animationDelay: "0.4s", animationDuration: "2.5s" }}>🧸</div>
+      <div className="pointer-events-none absolute top-[300px] left-[8%] text-2xl animate-bounce" style={{ animationDelay: "1.8s", animationDuration: "3.2s" }}>⭐</div>
+      <div className="pointer-events-none absolute top-[330px] right-[10%] text-2xl animate-bounce" style={{ animationDelay: "1.4s", animationDuration: "3s" }}>💫</div>
       <Dialog
         open={traitDialogOpen}
         onOpenChange={(open) => {
@@ -373,12 +379,12 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
         <StageHeader stage={1} title="Create Your Character" onBack={onBack} />
 
         {showGenerationHint && (
-          <div className="mt-6 mx-auto max-w-3xl rounded-2xl border border-fuchsia-300 bg-white/90 px-5 py-3 text-sm font-semibold text-fuchsia-700 shadow-lg">
+          <div className="mt-6 mx-auto max-w-4xl rounded-2xl border-2 border-fuchsia-300 bg-white/95 px-7 py-4 text-lg font-bold text-fuchsia-700 shadow-xl">
             This may take some time. You can continue filling in your character details while the image is generating.
           </div>
         )}
 
-        <div className={`mt-8 ${showDetailsPanel ? "grid grid-cols-1 xl:grid-cols-12 gap-6" : "flex justify-center"}`}>
+        <div className={`mt-8 ${showDetailsPanel ? "grid grid-cols-1 xl:grid-cols-12 gap-6" : "flex justify-center items-center min-h-[72vh]"}`}>
           <section
             className={`rounded-3xl border-2 border-violet-200 bg-white/80 backdrop-blur-sm shadow-xl p-6 transition-all duration-500 ${
               showDetailsPanel ? "xl:col-span-7" : "w-full max-w-[980px]"
