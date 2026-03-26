@@ -1,20 +1,14 @@
 "use client"
 
-import { useState, useCallback, useRef } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import type { Language, StoryState } from "@/app/page"
 import StageHeader from "@/components/stage-header"
-import { Loader2, Sparkles } from "lucide-react"
+import { Loader2, Sparkles, Trash2, Eraser, PencilLine, RefreshCw } from "lucide-react"
 import { toast } from "sonner"
 import { EOB_TRAITS, type EobTrait } from "@/lib/character-eob-traits"
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 
 interface CharacterCreationProps {
   language: Language
@@ -22,83 +16,6 @@ interface CharacterCreationProps {
   onBack: () => void
   userId?: string
   level?: number
-}
-
-const FIELD_CONFIG = {
-  name: {
-    label: "Name",
-    hint: "What is your character called?",
-    color: "from-purple-400 to-purple-600",
-    borderColor: "border-purple-400",
-    bgColor: "bg-amber-50/95",
-    textColor: "text-purple-800",
-    hex: "#a855f7",
-    hexFrom: "#c084fc",
-    hexTo: "#9333ea",
-  },
-  species: {
-    label: "Species/Type",
-    hint: "Is your character a boy, a dragon, a cat...?",
-    color: "from-blue-400 to-blue-600",
-    borderColor: "border-blue-400",
-    bgColor: "bg-amber-50/95",
-    textColor: "text-blue-800",
-    hex: "#60a5fa",
-    hexFrom: "#93c5fd",
-    hexTo: "#2563eb",
-  },
-  age: {
-    label: "Age",
-    hint: "How old is your character?",
-    color: "from-green-400 to-green-600",
-    borderColor: "border-green-400",
-    bgColor: "bg-amber-50/95",
-    textColor: "text-green-800",
-    hex: "#4ade80",
-    hexFrom: "#86efac",
-    hexTo: "#16a34a",
-  },
-  traits: {
-    label: "Primary traits",
-    hint: "What kind of person or creature is your character? (brave, shy...)",
-    color: "from-orange-400 to-orange-600",
-    borderColor: "border-orange-400",
-    bgColor: "bg-amber-50/95",
-    textColor: "text-orange-800",
-    hex: "#fb923c",
-    hexFrom: "#fdba74",
-    hexTo: "#ea580c",
-  },
-  background: {
-    label: "Background of the character",
-    color: "from-pink-400 to-pink-600",
-    borderColor: "border-pink-400",
-    bgColor: "bg-amber-50/95",
-    textColor: "text-pink-800",
-    hex: "#f472b6",
-    hexFrom: "#f9a8d4",
-    hexTo: "#db2777",
-  },
-  emotional: {
-    label: "Emotional experiences",
-    color: "from-indigo-400 to-indigo-600",
-    borderColor: "border-indigo-400",
-    bgColor: "bg-amber-50/95",
-    textColor: "text-indigo-800",
-    hex: "#818cf8",
-    hexFrom: "#a5b4fc",
-    hexTo: "#4f46e5",
-  },
-  symbolic: {
-    label: "Symbolic objects",
-    color: "from-cyan-400 to-cyan-600",
-    borderColor: "border-cyan-400",
-    bgColor: "bg-amber-50/95",
-    textColor: "text-cyan-800",
-    hex: "#22d3ee",
-    hexFrom: "#67e8f9",
-    hexTo: "#0891b2",
-  },
 }
 
 const SPECIES = [
@@ -116,261 +33,279 @@ const SPECIES = [
   { name: "Panda", icon: "🐼" },
 ]
 
-type FlyingItem = { fieldId: string; text: string; color: string; hex: string }
+type DrawMode = "pen" | "eraser"
 
-export default function CharacterCreation({ language, onCharacterCreate, onBack, userId, level = 1 }: CharacterCreationProps) {
-  const [name, setName] = useState("")
+export default function CharacterCreation({ onCharacterCreate, onBack, userId, level = 1 }: CharacterCreationProps) {
   const [species, setSpecies] = useState("")
   const [customSpecies, setCustomSpecies] = useState("")
+  const [name, setName] = useState("")
   const [age, setAge] = useState("")
   const [selectedTraits, setSelectedTraits] = useState<string[]>([])
-  const [customTraits, setCustomTraits] = useState("")
-  const [showCustomTraits, setShowCustomTraits] = useState(false)
   const [background, setBackground] = useState("")
   const [emotional, setEmotional] = useState("")
   const [symbolic, setSymbolic] = useState("")
 
-  const [imageUrl, setImageUrl] = useState<string>("")
+  const [imageUrl, setImageUrl] = useState("")
   const [isGenerating, setIsGenerating] = useState(false)
-  const [cupShake, setCupShake] = useState(false)
+  const [hasSketchStroke, setHasSketchStroke] = useState(false)
+  const [drawMode, setDrawMode] = useState<DrawMode>("pen")
+  const [brushSize, setBrushSize] = useState(5)
+  const [strokeHex, setStrokeHex] = useState("#1f2937")
 
-  const [completedFields, setCompletedFields] = useState<Set<string>>(new Set())
-  const [cupColors, setCupColors] = useState<Array<{ color: string; hexFrom: string; hexTo: string }>>([])
-  const [flyingItems, setFlyingItems] = useState<FlyingItem[]>([])
-  const [currentField, setCurrentField] = useState<string | null>(null) // 当前选中的字段
-  const [showIngredientList, setShowIngredientList] = useState(true) // 是否显示配料表
   const [traitDialogOpen, setTraitDialogOpen] = useState(false)
   const [traitDialogTrait, setTraitDialogTrait] = useState<EobTrait | null>(null)
 
-  const cupRef = useRef<HTMLDivElement>(null)
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
+  const isDrawingRef = useRef(false)
+  const lastPointRef = useRef<{ x: number; y: number } | null>(null)
+  const hasInitializedCanvasRef = useRef(false)
 
+  const finalSpecies = species === "Custom" ? customSpecies.trim() : species
   const isHighLevel = level >= 4
-  const baseFields = ["name", "species", "age", "traits"]
-  const advancedFields = ["background", "emotional", "symbolic"]
-  const allFields = isHighLevel ? [...baseFields, ...advancedFields] : baseFields
 
-  const getFieldValue = (fieldId: string): string => {
-    switch (fieldId) {
-      case "name": return name.trim()
-      case "species": return species === "Custom" ? customSpecies.trim() : species
-      case "age": return age.trim()
-      case "traits": {
-        const traits = [...selectedTraits]
-        if (showCustomTraits && customTraits.trim()) {
-          traits.push(customTraits.trim())
-        }
-        return traits.join(", ")
+  const requiredTextComplete = useMemo(() => {
+    if (!finalSpecies.trim()) return false
+    if (!name.trim()) return false
+    if (!age.trim()) return false
+    if (selectedTraits.length === 0) return false
+    if (isHighLevel) {
+      if (!background.trim()) return false
+      if (!emotional.trim()) return false
+      if (!symbolic.trim()) return false
+    }
+    return true
+  }, [age, background, emotional, finalSpecies, isHighLevel, name, selectedTraits.length, symbolic])
+
+  const canGenerate = !!finalSpecies.trim() && hasSketchStroke && !isGenerating
+  const canContinue = requiredTextComplete && !!imageUrl && !isGenerating
+
+  const getPointFromEvent = (event: React.PointerEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current
+    if (!canvas) return null
+    const rect = canvas.getBoundingClientRect()
+    const x = ((event.clientX - rect.left) / rect.width) * canvas.width
+    const y = ((event.clientY - rect.top) / rect.height) * canvas.height
+    return { x, y }
+  }
+
+  const fillCanvasBase = () => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const ctx = canvas.getContext("2d")
+    if (!ctx) return
+    ctx.fillStyle = "#ffffff"
+    ctx.fillRect(0, 0, canvas.width, canvas.height)
+    ctx.lineCap = "round"
+    ctx.lineJoin = "round"
+  }
+
+  useEffect(() => {
+    const canvas = canvasRef.current
+    const host = containerRef.current
+    if (!canvas || !host) return
+
+    const dpr = Math.max(1, window.devicePixelRatio || 1)
+    const cssWidth = host.clientWidth
+    const cssHeight = host.clientHeight
+
+    canvas.width = Math.max(320, Math.floor(cssWidth * dpr))
+    canvas.height = Math.max(320, Math.floor(cssHeight * dpr))
+    canvas.style.width = `${cssWidth}px`
+    canvas.style.height = `${cssHeight}px`
+
+    const ctx = canvas.getContext("2d")
+    if (!ctx) return
+    ctx.scale(dpr, dpr)
+    canvas.width = Math.floor(cssWidth * dpr)
+    canvas.height = Math.floor(cssHeight * dpr)
+    ctx.setTransform(1, 0, 0, 1, 0, 0)
+
+    fillCanvasBase()
+    hasInitializedCanvasRef.current = true
+    setHasSketchStroke(false)
+  }, [])
+
+  const clearSketch = () => {
+    fillCanvasBase()
+    setHasSketchStroke(false)
+  }
+
+  const startDrawing = (event: React.PointerEvent<HTMLCanvasElement>) => {
+    const point = getPointFromEvent(event)
+    if (!point) return
+    isDrawingRef.current = true
+    lastPointRef.current = point
+    event.currentTarget.setPointerCapture(event.pointerId)
+  }
+
+  const endDrawing = (event?: React.PointerEvent<HTMLCanvasElement>) => {
+    if (event) {
+      try {
+        event.currentTarget.releasePointerCapture(event.pointerId)
+      } catch {
+        // Ignore release failures when pointer is not captured.
       }
-      case "background": return background.trim()
-      case "emotional": return emotional.trim()
-      case "symbolic": return symbolic.trim()
-      default: return ""
     }
+    isDrawingRef.current = false
+    lastPointRef.current = null
   }
 
-  const canImport = (fieldId: string): boolean => {
-    const v = getFieldValue(fieldId)
-    if (fieldId === "traits") return selectedTraits.length > 0 || (showCustomTraits && customTraits.trim() !== "")
-    return v !== ""
-  }
+  const draw = (event: React.PointerEvent<HTMLCanvasElement>) => {
+    if (!isDrawingRef.current) return
+    const canvas = canvasRef.current
+    const point = getPointFromEvent(event)
+    if (!canvas || !point) return
+    const ctx = canvas.getContext("2d")
+    if (!ctx) return
 
-  const handleImportToDish = useCallback((fieldId: string) => {
-    if (completedFields.has(fieldId)) return
-    const value = getFieldValue(fieldId)
-    if (!canImport(fieldId)) {
-      toast.error("Please fill in this field first.")
-      return
+    const last = lastPointRef.current || point
+    ctx.beginPath()
+    ctx.moveTo(last.x, last.y)
+    ctx.lineTo(point.x, point.y)
+    ctx.lineWidth = brushSize
+
+    if (drawMode === "eraser") {
+      ctx.strokeStyle = "#ffffff"
+    } else {
+      ctx.strokeStyle = strokeHex
     }
-    const cfg = FIELD_CONFIG[fieldId as keyof typeof FIELD_CONFIG]
-    if (!cfg) return
 
-    setCompletedFields((prev) => new Set(prev).add(fieldId))
-    setFlyingItems((prev: FlyingItem[]) => [...prev, { fieldId, text: value, color: cfg.color, hex: cfg.hex }])
-    setCurrentField(null) // 倒入后隐藏box
-
-    setTimeout(() => {
-      setFlyingItems((prev: FlyingItem[]) => prev.filter((f: FlyingItem) => f.fieldId !== fieldId))
-      setCupColors((prev) => [...prev, { color: cfg.color, hexFrom: cfg.hexFrom, hexTo: cfg.hexTo }])
-    }, 1200)
-  }, [name, species, customSpecies, age, selectedTraits, background, emotional, symbolic, completedFields])
+    ctx.stroke()
+    lastPointRef.current = point
+    setHasSketchStroke(true)
+  }
 
   const toggleTrait = (traitName: string) => {
-    if (completedFields.has("traits")) return
-    setSelectedTraits((prev: string[]) =>
-      prev.includes(traitName) ? prev.filter((t: string) => t !== traitName) : [...prev, traitName].slice(0, 3)
+    setSelectedTraits((prev) =>
+      prev.includes(traitName) ? prev.filter((t) => t !== traitName) : [...prev, traitName].slice(0, 3)
     )
   }
 
-  const allFieldsComplete = allFields.every((id) => completedFields.has(id))
-  const totalFields = allFields.length
-  const fillPercent = totalFields === 0 ? 0 : (cupColors.length / totalFields) * 100
-  const liquidHeightPercent = Math.min(65, fillPercent * 0.65)
+  const buildPrompt = () => {
+    const traitsText = selectedTraits.length > 0 ? selectedTraits.join(", ") : "friendly"
+    const detailBlocks: string[] = []
+    if (age.trim()) detailBlocks.push(`Age: ${age.trim()}`)
+    if (background.trim()) detailBlocks.push(`Background detail: ${background.trim()}`)
+    if (emotional.trim()) detailBlocks.push(`Emotional tone: ${emotional.trim()}`)
+    if (symbolic.trim()) detailBlocks.push(`Symbolic objects: ${symbolic.trim()}`)
 
-  const generateImage = async () => {
-    const finalSpecies = species === "Custom" ? customSpecies.trim() : species
-    if (!finalSpecies) {
-      toast.error("Please select or enter a species first")
+    return `
+You are editing a student's hand-drawn character sketch into a polished illustration.
+
+Goal:
+- Keep the student sketch's core silhouette and pose.
+- Turn it into a cute but premium children's story character portrait.
+- Make the character clean, expressive, and visually appealing.
+
+Character profile:
+- Species: ${finalSpecies || "unknown"}
+- Name: ${name.trim() || "Unnamed"}
+- Personality traits: ${traitsText}
+${detailBlocks.map((line) => `- ${line}`).join("\n")}
+
+Style:
+- High-quality children's book illustration
+- Soft lighting, rich but gentle colors
+- Refined details, modern and elegant
+- Keep focus on one character, minimal distraction
+
+Output rules:
+- Preserve the sketch idea and composition.
+- Do not add text, logo, UI, or watermark.
+- Return one final character image.
+`.trim()
+  }
+
+  const handleGenerateImage = async () => {
+    if (!canGenerate) {
+      if (!finalSpecies.trim()) {
+        toast.error("Choose a species first so AI can follow your design.")
+        return
+      }
+      if (!hasSketchStroke) {
+        toast.error("Please draw your character sketch first.")
+        return
+      }
       return
     }
 
-    setCupShake(true)
+    const canvas = canvasRef.current
+    if (!canvas || !hasInitializedCanvasRef.current) {
+      toast.error("Drawing board is not ready yet.")
+      return
+    }
+
     setIsGenerating(true)
-    toast.info("Generating character image...")
+    toast.info("Generating image... This can take some time. You can continue filling details while waiting.")
 
     try {
-      let prompt = `A charming cartoon illustration of ${species === "Boy" || species === "Girl" ? `a young ${species.toLowerCase()}` : `a ${finalSpecies.toLowerCase()}`} character named ${name}.`
-      if (age.trim()) prompt += ` The character is ${age} years old.`
-      const allTraits = [...selectedTraits]
-      if (showCustomTraits && customTraits.trim()) {
-        allTraits.push(customTraits.trim())
-      }
-      if (allTraits.length > 0) prompt += ` The character looks ${allTraits.join(", ")}.`
-      if (background.trim()) prompt += ` Background: ${background}.`
-      if (emotional.trim()) prompt += ` Emotional experiences: ${emotional}.`
-      if (symbolic.trim()) prompt += ` Symbolic objects: ${symbolic}.`
-      prompt += " Fun and colorful style suitable for children's stories."
-
-      const response = await fetch("/api/generate-image", {
+      const drawingDataUrl = canvas.toDataURL("image/png")
+      const response = await fetch("/api/character-image-edit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt, user_id: userId, stage: "character" }),
+        body: JSON.stringify({
+          drawingDataUrl,
+          species: finalSpecies,
+          name: name.trim() || null,
+          age: age.trim() || null,
+          traits: selectedTraits,
+          background: background.trim() || null,
+          emotional: emotional.trim() || null,
+          symbolic: symbolic.trim() || null,
+          userId: userId || "default-user",
+        }),
       })
-      const data = await response.json()
 
-      if (data.error) {
-        toast.error(data.error || "Failed to generate image, please try again")
+      const data = await response.json()
+      if (!response.ok || data.error) {
+        toast.error(data.message || data.error || "Failed to generate image.")
         return
       }
+
       if (data.imageUrl) {
-        setImageUrl(data.imageUrl)
-        setCupShake(false) // 图片生成完成后停止抖动
-        toast.success("Image generated successfully!")
+        setImageUrl(data.imageUrl as string)
+        toast.success("Character image generated!")
       } else {
-        toast.error("Failed to generate image, please try again")
-        setCupShake(false)
+        toast.error("No image returned. Please try again.")
       }
     } catch (error) {
-      console.error("Error generating image:", error)
-      toast.error("Failed to generate image, please try again")
-      setCupShake(false)
+      console.error("Error generating character image:", error)
+      toast.error("Failed to generate image. Please try again.")
     } finally {
       setIsGenerating(false)
     }
   }
 
-  const handleStartGenerate = () => {
-    setShowIngredientList(false) // 隐藏配料表
-    // 延迟一点再开始生成，让动画更流畅
-    setTimeout(() => {
-      generateImage()
-    }, 300)
-  }
-
-  const finalSpecies = species === "Custom" ? customSpecies.trim() : species
-
   const handleCreate = () => {
-    if (allFieldsComplete && imageUrl) {
-      const defaultAge = age.trim() ? parseInt(age, 10) : (finalSpecies === "Boy" || finalSpecies === "Girl" ? 8 : 0)
-      onCharacterCreate({
-        name,
-        age: defaultAge,
-        traits: selectedTraits,
-        description: background || "",
-        imageUrl,
-        species: finalSpecies,
-      })
+    if (!canContinue) {
+      toast.error("Complete all required details and generate the image before continuing.")
+      return
     }
+
+    const parsedAge = Number.parseInt(age.trim(), 10)
+    const safeAge = Number.isFinite(parsedAge) ? parsedAge : finalSpecies === "Boy" || finalSpecies === "Girl" ? 8 : 0
+
+    onCharacterCreate({
+      name: name.trim(),
+      age: safeAge,
+      traits: selectedTraits,
+      description: background.trim(),
+      imageUrl,
+      species: finalSpecies,
+    })
   }
-
-  const boxClass = "font-ancient rounded-lg border-2 p-6 shadow-lg transition-all duration-300 text-xl min-w-0 break-words overflow-visible relative"
-  const labelClass = "block text-lg font-bold mb-1 font-ancient whitespace-normal break-words text-amber-200"
-  const inputClass = "font-ancient text-xl rounded border bg-white/95 px-5 py-3 w-full min-w-0 text-amber-900 font-semibold"
-
-  const renderField = (
-    fieldId: string,
-    label: string,
-    borderColor: string,
-    textColor: string,
-    children: React.ReactNode,
-    importDisabled: boolean
-  ) => (
-    <div 
-      className={`${boxClass} ${borderColor}`}
-      style={{
-        background: `
-          linear-gradient(135deg, rgba(139, 90, 43, 0.95) 0%, rgba(101, 67, 33, 0.95) 50%, rgba(139, 90, 43, 0.95) 100%),
-          repeating-linear-gradient(
-            0deg,
-            transparent,
-            transparent 2px,
-            rgba(101, 67, 33, 0.3) 2px,
-            rgba(101, 67, 33, 0.3) 4px
-          ),
-          repeating-linear-gradient(
-            90deg,
-            transparent,
-            transparent 2px,
-            rgba(101, 67, 33, 0.2) 2px,
-            rgba(101, 67, 33, 0.2) 4px
-          )
-        `,
-        borderColor: '#8B5A2B',
-        boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.3), 0 4px 8px rgba(0,0,0,0.4)',
-      }}
-    >
-      <div className="mb-3">
-        <label
-          className={labelClass}
-          style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.5), 0 0 4px rgba(255, 215, 0, 0.5)' }}
-        >
-          {label}
-        </label>
-        {"hint" in FIELD_CONFIG && (FIELD_CONFIG as any)[fieldId]?.hint && (
-          <p className="text-sm font-ancient text-amber-100/90">
-            {(FIELD_CONFIG as any)[fieldId].hint}
-          </p>
-        )}
-      </div>
-      {children}
-      <Button
-        type="button"
-        size="sm"
-        onClick={() => handleImportToDish(fieldId)}
-        disabled={importDisabled}
-        className="mt-4 w-full font-ancient text-lg py-3 bg-amber-900/90 hover:bg-amber-950 text-amber-200 border-2 border-amber-800 shadow-lg"
-        style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.5)' }}
-      >
-        Add
-      </Button>
-    </div>
-  )
 
   return (
-    <div
-      className="flex flex-col relative overflow-hidden font-ancient"
-      style={{
-        paddingTop: "80px",
-        paddingBottom: "120px",
-        minHeight: "100vh",
-        height: "100vh",
-        maxHeight: "100vh",
-      }}
-    >
-      {/* 背景：宽度铺满左右，高度自适应，不随缩放变化 */}
-      <div
-        className="fixed inset-0 bg-no-repeat bg-center"
-        style={{
-          backgroundImage: "url(/magictable.png)",
-          backgroundSize: "100% auto",
-          backgroundColor: "rgb(253, 246, 236)",
-          backgroundAttachment: "fixed",
-          zIndex: 0,
+    <div className="min-h-screen bg-gradient-to-br from-cyan-50 via-fuchsia-50 to-amber-50 px-6 py-8" style={{ paddingTop: "120px", paddingBottom: "120px" }}>
+      <Dialog
+        open={traitDialogOpen}
+        onOpenChange={(open) => {
+          setTraitDialogOpen(open)
+          if (!open) setTraitDialogTrait(null)
         }}
-      />
-      <div className="absolute inset-0 bg-black/5 z-[1]" />
-
-      <Dialog open={traitDialogOpen} onOpenChange={(open) => { setTraitDialogOpen(open); if (!open) setTraitDialogTrait(null) }}>
-        <DialogContent className="sm:max-w-md font-ancient">
+      >
+        <DialogContent className="sm:max-w-md">
           {traitDialogTrait && (
             <>
               <DialogHeader>
@@ -391,18 +326,32 @@ export default function CharacterCreation({ language, onCharacterCreate, onBack,
                 {selectedTraits.includes(traitDialogTrait.name) ? (
                   <Button
                     variant="outline"
-                    onClick={() => { toggleTrait(traitDialogTrait.name); setTraitDialogOpen(false); setTraitDialogTrait(null) }}
+                    onClick={() => {
+                      toggleTrait(traitDialogTrait.name)
+                      setTraitDialogOpen(false)
+                      setTraitDialogTrait(null)
+                    }}
                   >
                     Unselect
                   </Button>
                 ) : (
                   <Button
-                    onClick={() => { toggleTrait(traitDialogTrait.name); setTraitDialogOpen(false); setTraitDialogTrait(null) }}
+                    onClick={() => {
+                      toggleTrait(traitDialogTrait.name)
+                      setTraitDialogOpen(false)
+                      setTraitDialogTrait(null)
+                    }}
                   >
                     Select this trait
                   </Button>
                 )}
-                <Button variant="outline" onClick={() => { setTraitDialogOpen(false); setTraitDialogTrait(null) }}>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setTraitDialogOpen(false)
+                    setTraitDialogTrait(null)
+                  }}
+                >
                   Close
                 </Button>
               </DialogFooter>
@@ -411,465 +360,278 @@ export default function CharacterCreation({ language, onCharacterCreate, onBack,
         </DialogContent>
       </Dialog>
 
-      <div className="relative z-10 flex flex-col flex-1 min-h-0">
-        <div className="flex-shrink-0 px-4 pt-12 pb-4">
-          <StageHeader 
-            stage={1} 
-            title="Create Your Character" 
-            onBack={onBack}
-            className="[&_h1]:text-white [&_.text-muted-foreground]:text-white/80"
-          />
-        </div>
+      <div className="max-w-7xl mx-auto">
+        <StageHeader stage={1} title="Create Your Character" onBack={onBack} />
 
-        <div className="flex-1 flex items-stretch justify-center gap-4 px-8 min-h-0">
-          {/* Left: 配料表 */}
-          {showIngredientList && (
-            <div className="flex flex-col items-center w-[min(420px,94vw)] flex-shrink-0 py-4 relative">
-              {/* Paper：更大尺寸 + 略增高比例，内容无滚动条、靠紧凑排版落在纸内 */}
-              <div className="relative w-full max-w-[420px] aspect-[2/3] mx-auto">
-                <div
-                  aria-hidden
-                  className="absolute inset-0 bg-no-repeat bg-center pointer-events-none"
-                  style={{
-                    backgroundImage: "url(/paper.png)",
-                    backgroundSize: "contain",
-                  }}
+        <div className="mt-8 grid grid-cols-1 xl:grid-cols-12 gap-6">
+          <section className="xl:col-span-7 rounded-3xl border-2 border-violet-200 bg-white/80 backdrop-blur-sm shadow-xl p-6">
+            <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
+              <h2 className="text-2xl font-bold text-violet-700">Sketch Board</h2>
+              <p className="text-sm text-violet-600">1) Choose species, 2) Draw, 3) Generate</p>
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-sm font-semibold text-violet-700 mb-2">Species (Required first)</label>
+              <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-2">
+                {SPECIES.map((spec) => {
+                  const selected = species === spec.name
+                  return (
+                    <button
+                      key={spec.name}
+                      type="button"
+                      onClick={() => setSpecies(spec.name)}
+                      className={`rounded-xl border-2 px-3 py-2 text-sm font-semibold transition ${
+                        selected ? "border-violet-500 bg-violet-100 text-violet-800" : "border-violet-100 bg-white text-slate-700 hover:border-violet-300"
+                      }`}
+                    >
+                      <span className="mr-1">{spec.icon}</span>
+                      {spec.name}
+                    </button>
+                  )
+                })}
+                <button
+                  type="button"
+                  onClick={() => setSpecies("Custom")}
+                  className={`rounded-xl border-2 px-3 py-2 text-sm font-semibold transition ${
+                    species === "Custom"
+                      ? "border-violet-500 bg-violet-100 text-violet-800"
+                      : "border-violet-100 bg-white text-slate-700 hover:border-violet-300"
+                  }`}
+                >
+                  ✏️ Custom
+                </button>
+              </div>
+              {species === "Custom" && (
+                <Input
+                  value={customSpecies}
+                  onChange={(e) => setCustomSpecies(e.target.value)}
+                  placeholder="Enter custom species..."
+                  className="mt-3 border-violet-200 focus-visible:ring-violet-400"
                 />
-                <div className="absolute inset-[10%_11%_14%_11%] flex flex-col min-h-0 overflow-hidden">
-                {/* 配料列表 */}
-                <div className="flex flex-col gap-2 sm:gap-2.5 w-full flex-1 min-h-0 justify-evenly overflow-hidden">
-                  {allFields.map((fieldId, index) => {
-                    const cfg = FIELD_CONFIG[fieldId as keyof typeof FIELD_CONFIG]
-                    if (!cfg) return null
-                    const isCompleted = completedFields.has(fieldId)
-                    
+              )}
+            </div>
+
+            <div className="rounded-2xl border border-violet-200 bg-violet-50/70 p-4">
+              <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    variant={drawMode === "pen" ? "default" : "outline"}
+                    onClick={() => setDrawMode("pen")}
+                    className={drawMode === "pen" ? "bg-violet-600 hover:bg-violet-700" : "border-violet-300 text-violet-700"}
+                  >
+                    <PencilLine className="h-4 w-4 mr-1" />
+                    Pen
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={drawMode === "eraser" ? "default" : "outline"}
+                    onClick={() => setDrawMode("eraser")}
+                    className={drawMode === "eraser" ? "bg-violet-600 hover:bg-violet-700" : "border-violet-300 text-violet-700"}
+                  >
+                    <Eraser className="h-4 w-4 mr-1" />
+                    Eraser
+                  </Button>
+                </div>
+                <div className="flex items-center gap-3">
+                  <label className="text-xs text-violet-700 font-semibold">Size</label>
+                  <input
+                    type="range"
+                    min={2}
+                    max={20}
+                    value={brushSize}
+                    onChange={(e) => setBrushSize(Number(e.target.value))}
+                    className="w-28 accent-violet-600"
+                  />
+                  <input
+                    type="color"
+                    value={strokeHex}
+                    onChange={(e) => setStrokeHex(e.target.value)}
+                    className="h-9 w-9 rounded-md border border-violet-200 bg-white"
+                    disabled={drawMode === "eraser"}
+                    aria-label="Stroke color"
+                  />
+                </div>
+              </div>
+
+              <div ref={containerRef} className="relative h-[440px] rounded-2xl overflow-hidden border-2 border-violet-200 bg-white">
+                <canvas
+                  ref={canvasRef}
+                  className="absolute inset-0 touch-none"
+                  onPointerDown={startDrawing}
+                  onPointerMove={draw}
+                  onPointerUp={endDrawing}
+                  onPointerCancel={endDrawing}
+                  onPointerLeave={endDrawing}
+                />
+              </div>
+
+              <div className="mt-3 flex items-center justify-between gap-2 flex-wrap">
+                <Button type="button" variant="outline" onClick={clearSketch} className="border-violet-300 text-violet-700">
+                  <Trash2 className="h-4 w-4 mr-1" />
+                  Clear Board
+                </Button>
+                <Button
+                  type="button"
+                  onClick={handleGenerateImage}
+                  disabled={!canGenerate}
+                  className="bg-gradient-to-r from-violet-600 via-fuchsia-600 to-pink-600 hover:from-violet-700 hover:via-fuchsia-700 hover:to-pink-700 text-white"
+                >
+                  {isGenerating ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="h-4 w-4 mr-2" />
+                      Generate from Sketch
+                    </>
+                  )}
+                </Button>
+              </div>
+
+              <p className="mt-2 text-xs text-violet-700">
+                Image generation may take a while. You can continue filling character details on the right panel.
+              </p>
+            </div>
+          </section>
+
+          <section className="xl:col-span-5 rounded-3xl border-2 border-cyan-200 bg-white/85 backdrop-blur-sm shadow-xl p-6">
+            <h2 className="text-2xl font-bold text-cyan-700 mb-4">Character Details</h2>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-cyan-700 mb-1">Name *</label>
+                <Input
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="e.g., Lumi"
+                  className="border-cyan-200 focus-visible:ring-cyan-400"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-cyan-700 mb-1">Age *</label>
+                <Input
+                  type="number"
+                  value={age}
+                  onChange={(e) => setAge(e.target.value)}
+                  placeholder="e.g., 8"
+                  className="border-cyan-200 focus-visible:ring-cyan-400"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-cyan-700 mb-1">Traits * (choose up to 3)</label>
+                <div className="flex flex-wrap gap-2">
+                  {EOB_TRAITS.map((trait) => {
+                    const selected = selectedTraits.includes(trait.name)
                     return (
-                      <div
-                        key={fieldId}
-                        className="flex items-start justify-between cursor-pointer group transition-all duration-300 gap-2 shrink-0"
-                        onClick={() => !isCompleted && setCurrentField(fieldId)}
-                        style={{
-                          pointerEvents: isCompleted ? 'none' : 'auto',
-                          opacity: isCompleted ? 0.6 : 1,
+                      <button
+                        key={trait.name}
+                        type="button"
+                        onClick={() => {
+                          setTraitDialogTrait(trait)
+                          setTraitDialogOpen(true)
                         }}
+                        className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition ${
+                          selected ? "bg-cyan-500 text-white border-cyan-500" : "bg-white text-cyan-700 border-cyan-200 hover:border-cyan-400"
+                        }`}
                       >
-                        <div className="flex-1 min-w-0">
-                          <span
-                            className="font-handwriting text-lg sm:text-xl font-bold text-amber-900 group-hover:text-2xl transition-all duration-300 block leading-tight"
-                            style={{
-                              fontFamily: '"Kalam", "Comic Sans MS", cursive',
-                              textShadow: '1px 1px 2px rgba(0,0,0,0.2)',
-                            }}
-                          >
-                            {cfg.label}
-                          </span>
-                          {(cfg as any).hint && (
-                            <p className="mt-0.5 text-[11px] sm:text-xs text-amber-800/80 leading-snug line-clamp-2">
-                              {(cfg as any).hint}
-                            </p>
-                          )}
-                        </div>
-                        {isCompleted && (
-                          <span className="text-2xl text-green-600 font-bold ml-1 shrink-0">✓</span>
-                        )}
-                      </div>
+                        {trait.name}
+                      </button>
                     )
                   })}
                 </div>
-
-                {/* 生成按钮 - 所有字段完成后显示在单词下面 */}
-                {allFieldsComplete && (
-                  <div className="mt-2 sm:mt-3 w-full flex-shrink-0">
-                    <Button
-                      onClick={handleStartGenerate}
-                      className="w-full font-ancient text-base sm:text-lg py-2.5 sm:py-3 shadow-lg"
-                      style={{
-                        background: `
-                          linear-gradient(135deg, rgba(139, 90, 43, 0.95) 0%, rgba(101, 67, 33, 0.95) 50%, rgba(139, 90, 43, 0.95) 100%),
-                          repeating-linear-gradient(
-                            0deg,
-                            transparent,
-                            transparent 2px,
-                            rgba(101, 67, 33, 0.3) 2px,
-                            rgba(101, 67, 33, 0.3) 4px
-                          )
-                        `,
-                        borderColor: '#8B5A2B',
-                        borderWidth: '2px',
-                        color: '#fbbf24',
-                        fontWeight: 'bold',
-                        textShadow: '1px 1px 2px rgba(0,0,0,0.5)',
-                      }}
-                    >
-                      Generate Character
-                    </Button>
-                  </div>
-                )}
-                </div>
               </div>
-            </div>
-          )}
 
-          {/* Center: cup 靠下，固定宽度 */}
-          <div className="flex flex-col items-center justify-end w-[260px] flex-shrink-0 relative pb-4">
-            <div
-              ref={cupRef}
-              className={`relative flex items-end justify-center transition-transform origin-center ${cupShake || isGenerating ? "animate-shake-and-grow-cup" : ""}`}
-              style={{ width: "220px", height: "240px", transform: cupShake || isGenerating ? "scale(1.35)" : "scale(1)" }}
-            >
-              {/* Cup image (behind liquid) */}
-              <img
-                src="/cup.png"
-                alt="Culture dish"
-                className="absolute inset-0 w-full h-full object-contain pointer-events-none"
-                style={{ zIndex: 10 }}
-              />
-
-              {/* Liquid layer ON TOP of cup */}
-              {cupColors.length > 0 && liquidHeightPercent > 0 && (
-                <div
-                  className="absolute left-1/2 -translate-x-1/2 pointer-events-none"
-                  style={{
-                    width: "52%",
-                    bottom: "24%",
-                    height: `${liquidHeightPercent}%`,
-                    zIndex: 20,
-                    borderRadius: "8px 8px 20px 20px",
-                    overflow: "hidden",
-                    display: "flex",
-                    flexDirection: "column-reverse",
-                  }}
-                >
-                  {cupColors.map((seg: { color: string; hexFrom: string; hexTo: string }, i: number) => (
-                    <div
-                      key={i}
-                      className="flex-1 min-h-[4px] transition-all duration-700"
-                      style={{
-                        background: `linear-gradient(to top, ${seg.hexTo}, ${seg.hexFrom})`,
-                        opacity: 0.9,
-                      }}
+              {isHighLevel && (
+                <>
+                  <div>
+                    <label className="block text-sm font-semibold text-cyan-700 mb-1">Background *</label>
+                    <textarea
+                      value={background}
+                      onChange={(e) => setBackground(e.target.value)}
+                      rows={3}
+                      placeholder="Where does this character come from?"
+                      className="w-full rounded-xl border border-cyan-200 bg-white px-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-cyan-400"
                     />
-                  ))}
-                </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-cyan-700 mb-1">Emotional Experience *</label>
+                    <textarea
+                      value={emotional}
+                      onChange={(e) => setEmotional(e.target.value)}
+                      rows={3}
+                      placeholder="What feelings does this character often face?"
+                      className="w-full rounded-xl border border-cyan-200 bg-white px-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-cyan-400"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-cyan-700 mb-1">Symbolic Objects *</label>
+                    <textarea
+                      value={symbolic}
+                      onChange={(e) => setSymbolic(e.target.value)}
+                      rows={3}
+                      placeholder="Any object that represents your character?"
+                      className="w-full rounded-xl border border-cyan-200 bg-white px-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-cyan-400"
+                    />
+                  </div>
+                </>
               )}
 
-              {/* Flying text particles */}
-              {flyingItems.map((item: FlyingItem, idx: number) => (
-                <div
-                  key={`${item.fieldId}-${idx}`}
-                  className="absolute font-ancient text-xs font-bold whitespace-nowrap pointer-events-none fly-to-cup"
-                  style={{
-                    color: item.hex,
-                    left: "50%",
-                    top: "0%",
-                    transform: "translate(-50%, 0)",
-                    zIndex: 30,
-                    textShadow: `0 0 4px ${item.hex}`,
-                  }}
-                >
-                  {item.text.length > 12 ? item.text.slice(0, 12) + "…" : item.text}
-                </div>
-              ))}
-
-              {/* Generated image overlays cup - 更大，但不遮挡按钮 */}
-              {imageUrl && (
-                <div
-                  className="absolute flex items-center justify-center"
-                  style={{ 
-                    zIndex: 40,
-                    width: '140%',
-                    height: '120%',
-                    left: '-20%',
-                    top: '-25%',
-                  }}
-                >
-                  <img
-                    src={imageUrl}
-                    alt="Character"
-                    className="w-full h-full object-contain drop-shadow-2xl"
-                    style={{ filter: 'drop-shadow(0 8px 16px rgba(0,0,0,0.5))' }}
+              {!isHighLevel && (
+                <div>
+                  <label className="block text-sm font-semibold text-cyan-700 mb-1">Background (optional)</label>
+                  <textarea
+                    value={background}
+                    onChange={(e) => setBackground(e.target.value)}
+                    rows={3}
+                    placeholder="Optional story details about your character..."
+                    className="w-full rounded-xl border border-cyan-200 bg-white px-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-cyan-400"
                   />
                 </div>
               )}
             </div>
 
-            {/* Generate button when all imported - 只在配料表隐藏后显示 */}
-            {!showIngredientList && allFieldsComplete && !imageUrl && (
-              <div className="mt-2 w-full max-w-[220px]">
-                <Button
-                  onClick={generateImage}
-                  disabled={isGenerating}
-                  className="w-full font-ancient bg-amber-800 hover:bg-amber-900 text-amber-100 border border-amber-900 py-4"
-                >
-                  {isGenerating ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Generating...
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="mr-2 h-4 w-4" />
-                      Generate Character
-                    </>
-                  )}
-                </Button>
-              </div>
-            )}
-
-            {/* After image: Continue + Regenerate */}
-            {allFieldsComplete && imageUrl && (
-              <div className="mt-16 flex flex-col gap-2 w-full max-w-[220px] relative z-50">
-                <Button onClick={handleCreate} className="w-full font-ancient bg-blue-800 hover:bg-blue-900 text-white">
-                  Continue →
-                </Button>
-                <Button
-                  onClick={generateImage}
-                  disabled={isGenerating}
-                  variant="outline"
-                  className="w-full font-ancient border-amber-700 text-amber-800"
-                >
-                  {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
-                  Regenerate Image
-                </Button>
-              </div>
-            )}
-          </div>
-
-          {/* Right: 动态显示当前选中的box，比现在大 */}
-          {currentField && !completedFields.has(currentField) && (
-            <div
-              className="w-[500px] flex-shrink-0 flex items-start justify-center py-4"
-              style={{
-                paddingTop: currentField === "name" || currentField === "species" ? "64px" : undefined,
-              }}
-            >
-              {(() => {
-                const cfg = FIELD_CONFIG[currentField as keyof typeof FIELD_CONFIG]
-                if (!cfg) return null
-
-                if (currentField === "name") {
-                  return renderField(
-                    currentField,
-                    cfg.label,
-                    cfg.borderColor,
-                    cfg.textColor,
-                    <Input
-                      placeholder="Enter name..."
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      className={inputClass}
-                    />,
-                    !name.trim()
-                  )
-                }
-                if (currentField === "species") {
-                  return renderField(
-                    currentField,
-                    cfg.label,
-                    cfg.borderColor,
-                    cfg.textColor,
-                    <div className="space-y-2">
-                      <div className="grid grid-cols-3 gap-2">
-                        {SPECIES.slice(0, 6).map((spec) => (
-                          <button
-                            key={spec.name}
-                            type="button"
-                            onClick={() => setSpecies(spec.name)}
-                            className={`p-3 rounded text-lg font-ancient border ${
-                              species === spec.name ? "bg-blue-200 border-blue-600" : "bg-white/95 border-gray-400"
-                            }`}
-                            style={{ color: species === spec.name ? '#1e3a8a' : '#8B5A2B', fontWeight: 'bold' }}
-                          >
-                            {spec.icon} {spec.name}
-                          </button>
-                        ))}
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => setSpecies("Custom")}
-                        className={`w-full p-3 rounded text-lg font-ancient border ${species === "Custom" ? "bg-blue-200 border-blue-600" : "bg-white/95 border-gray-400"}`}
-                        style={{ color: species === "Custom" ? '#1e3a8a' : '#8B5A2B', fontWeight: 'bold' }}
-                      >
-                        Custom
-                      </button>
-                      {species === "Custom" && (
-                        <Input
-                          placeholder="Custom species..."
-                          value={customSpecies}
-                          onChange={(e) => setCustomSpecies(e.target.value)}
-                          className={inputClass}
-                        />
-                      )}
-                    </div>,
-                    !canImport("species")
-                  )
-                }
-                if (currentField === "age") {
-                  return renderField(
-                    currentField,
-                    cfg.label,
-                    cfg.borderColor,
-                    cfg.textColor,
-                    <Input
-                      type="number"
-                      placeholder="Age..."
-                      value={age}
-                      onChange={(e) => setAge(e.target.value)}
-                      className={inputClass}
-                    />,
-                    !age.trim()
-                  )
-                }
-                if (currentField === "traits") {
-                  return renderField(
-                    currentField,
-                    cfg.label,
-                    cfg.borderColor,
-                    cfg.textColor,
-                    <div className="space-y-2">
-                      <div className="grid grid-cols-2 gap-2">
-                        {EOB_TRAITS.map((t) => (
-                          <button
-                            key={t.name}
-                            type="button"
-                            onClick={() => {
-                              setTraitDialogTrait(t)
-                              setTraitDialogOpen(true)
-                            }}
-                            className={`p-3 rounded text-lg font-ancient border ${
-                              selectedTraits.includes(t.name) ? "bg-orange-200 border-orange-600" : "bg-white/95 border-gray-400"
-                            }`}
-                            style={{ color: selectedTraits.includes(t.name) ? '#ea580c' : '#8B5A2B', fontWeight: 'bold' }}
-                          >
-                            {t.name}
-                          </button>
-                        ))}
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => setShowCustomTraits(!showCustomTraits)}
-                        className={`w-full p-3 rounded text-lg font-ancient border ${showCustomTraits ? "bg-orange-200 border-orange-600" : "bg-white/95 border-gray-400"}`}
-                        style={{ color: showCustomTraits ? '#ea580c' : '#8B5A2B', fontWeight: 'bold' }}
-                      >
-                        Custom
-                      </button>
-                      {showCustomTraits && (
-                        <Input
-                          placeholder="Enter custom traits..."
-                          value={customTraits}
-                          onChange={(e) => setCustomTraits(e.target.value)}
-                          className={inputClass}
-                        />
-                      )}
-                    </div>,
-                    selectedTraits.length === 0 && !(showCustomTraits && customTraits.trim())
-                  )
-                }
-                if (currentField === "background") {
-                  return renderField(
-                    currentField,
-                    cfg.label,
-                    cfg.borderColor,
-                    cfg.textColor,
-                    <textarea
-                      placeholder="Background..."
-                      value={background}
-                      onChange={(e) => setBackground(e.target.value)}
-                      className={`${inputClass} h-20 resize-none text-amber-900 font-semibold`}
-                      rows={3}
-                    />,
-                    !background.trim()
-                  )
-                }
-                if (currentField === "emotional") {
-                  return renderField(
-                    currentField,
-                    cfg.label,
-                    cfg.borderColor,
-                    cfg.textColor,
-                    <textarea
-                      placeholder="Emotional..."
-                      value={emotional}
-                      onChange={(e) => setEmotional(e.target.value)}
-                      className={`${inputClass} h-20 resize-none text-amber-900 font-semibold`}
-                      rows={3}
-                    />,
-                    !emotional.trim()
-                  )
-                }
-                if (currentField === "symbolic") {
-                  return renderField(
-                    currentField,
-                    cfg.label,
-                    cfg.borderColor,
-                    cfg.textColor,
-                    <textarea
-                      placeholder="Symbolic..."
-                      value={symbolic}
-                      onChange={(e) => setSymbolic(e.target.value)}
-                      className={`${inputClass} h-20 resize-none text-amber-900 font-semibold`}
-                      rows={3}
-                    />,
-                    !symbolic.trim()
-                  )
-                }
-                return null
-              })()}
+            <div className="mt-5 rounded-2xl border border-cyan-200 bg-cyan-50 p-4">
+              <h3 className="text-sm font-bold text-cyan-800 mb-2">Generation Preview</h3>
+              {imageUrl ? (
+                <div className="space-y-3">
+                  <img src={imageUrl} alt="Generated character" className="w-full rounded-xl border border-cyan-200 bg-white object-contain max-h-64" />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleGenerateImage}
+                    disabled={!finalSpecies.trim() || !hasSketchStroke || isGenerating}
+                    className="w-full border-cyan-300 text-cyan-700"
+                  >
+                    {isGenerating ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+                    Regenerate Image
+                  </Button>
+                </div>
+              ) : (
+                <p className="text-sm text-cyan-700">No generated image yet. Draw your sketch and click "Generate from Sketch".</p>
+              )}
             </div>
-          )}
+
+            <div className="mt-6 space-y-2">
+              <p className="text-xs text-slate-600">
+                Continue is unlocked only when all required details are complete and the image has been generated.
+              </p>
+              <Button
+                type="button"
+                onClick={handleCreate}
+                disabled={!canContinue}
+                className="w-full bg-gradient-to-r from-cyan-600 via-blue-600 to-violet-600 hover:from-cyan-700 hover:via-blue-700 hover:to-violet-700 text-white text-base font-bold py-5"
+              >
+                Continue →
+              </Button>
+            </div>
+          </section>
         </div>
       </div>
-
-      <style jsx global>{`
-        .font-ancient {
-          font-family: Georgia, "Times New Roman", "Palatino Linotype", serif;
-        }
-        .font-handwriting {
-          font-family: "Kalam", "Comic Sans MS", "Comic Neue", cursive;
-        }
-        @keyframes flyToCup {
-          0% {
-            transform: translate(-50%, 0) scale(1);
-            opacity: 1;
-          }
-          70% {
-            transform: translate(-50%, 180px) scale(0.4);
-            opacity: 0.9;
-          }
-          100% {
-            transform: translate(-50%, 180px) scale(0);
-            opacity: 0;
-          }
-        }
-        .fly-to-cup {
-          animation: flyToCup 1.2s ease-in forwards;
-        }
-        @keyframes shakeCupContinuous {
-          0%, 100% { transform: translateX(0) scale(1.35); }
-          5% { transform: translateX(-6px) scale(1.35); }
-          10% { transform: translateX(6px) scale(1.35); }
-          15% { transform: translateX(-5px) scale(1.35); }
-          20% { transform: translateX(5px) scale(1.35); }
-          25% { transform: translateX(-4px) scale(1.35); }
-          30% { transform: translateX(4px) scale(1.35); }
-          35% { transform: translateX(-5px) scale(1.35); }
-          40% { transform: translateX(5px) scale(1.35); }
-          45% { transform: translateX(-6px) scale(1.35); }
-          50% { transform: translateX(6px) scale(1.35); }
-          55% { transform: translateX(-4px) scale(1.35); }
-          60% { transform: translateX(4px) scale(1.35); }
-          65% { transform: translateX(-5px) scale(1.35); }
-          70% { transform: translateX(5px) scale(1.35); }
-          75% { transform: translateX(-6px) scale(1.35); }
-          80% { transform: translateX(6px) scale(1.35); }
-          85% { transform: translateX(-4px) scale(1.35); }
-          90% { transform: translateX(4px) scale(1.35); }
-          95% { transform: translateX(-5px) scale(1.35); }
-        }
-        .animate-shake-and-grow-cup {
-          animation: shakeCupContinuous 0.6s ease-in-out infinite;
-        }
-      `}</style>
     </div>
   )
 }
+
