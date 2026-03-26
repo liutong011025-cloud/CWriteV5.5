@@ -49,6 +49,7 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
   const [isGenerating, setIsGenerating] = useState(false)
   const [showDetailsPanel, setShowDetailsPanel] = useState(false)
   const [showGenerationHint, setShowGenerationHint] = useState(false)
+  const [introMascotFading, setIntroMascotFading] = useState(false)
   const [hasSketchStroke, setHasSketchStroke] = useState(false)
   const [drawMode, setDrawMode] = useState<DrawMode>("pen")
   const [brushSize, setBrushSize] = useState(5)
@@ -234,7 +235,8 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
     setIsGenerating(true)
     setShowGenerationHint(true)
     if (!showDetailsPanel) {
-      window.setTimeout(() => setShowDetailsPanel(true), 600)
+      setIntroMascotFading(true)
+      window.setTimeout(() => setShowDetailsPanel(true), 700)
     }
     toast.info("Generating image... This can take some time. You can continue filling details while waiting.")
 
@@ -392,12 +394,12 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
           </div>
         )}
 
-        <div className={`mt-8 ${showDetailsPanel ? "grid grid-cols-1 xl:grid-cols-12 gap-6" : "flex justify-center items-center min-h-[72vh] w-full"}`}>
+        <div className={`mt-8 ${showDetailsPanel ? "grid grid-cols-1 xl:grid-cols-12 gap-6" : "flex justify-center items-center min-h-[72vh] w-full gap-8"}`}>
           <section
             className={`rounded-3xl border-2 border-violet-200 bg-white/80 backdrop-blur-sm shadow-xl p-6 transition-all duration-700 ${
               showDetailsPanel
                 ? "xl:col-span-7 xl:scale-[0.94] xl:-translate-x-3"
-                : "mx-auto w-[min(94vw,1180px)] scale-100 translate-x-0"
+                : "w-[min(72vw,980px)] scale-100 translate-x-0"
             }`}
           >
             <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
@@ -545,6 +547,23 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
               </p>
             </div>
           </section>
+
+          {!showDetailsPanel && (
+            <aside
+              className={`hidden xl:flex relative flex-col items-center justify-end w-[420px] min-h-[620px] transition-all duration-700 ${
+                introMascotFading ? "opacity-0 translate-x-6 scale-95" : "opacity-100 translate-x-0 scale-100"
+              }`}
+            >
+              <div className="absolute top-10 left-1/2 -translate-x-1/2 w-[380px] rounded-2xl border-2 border-amber-200 bg-white/95 px-4 py-3 text-center text-[15px] font-bold text-amber-700 shadow-xl leading-snug">
+                After determining the species of your story characters, you can draw them on the drawing board. Let's see who can draw it more Realistic !
+              </div>
+              <img
+                src="/Cagentdraw.png"
+                alt="Drawing Cagent"
+                className="w-[380px] h-auto object-contain drop-shadow-2xl"
+              />
+            </aside>
+          )}
 
           <section
             className={`xl:col-span-5 rounded-3xl border-2 border-cyan-200 bg-white/85 backdrop-blur-sm shadow-xl p-6 transition-all duration-500 ${
