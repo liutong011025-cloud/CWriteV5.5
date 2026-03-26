@@ -50,6 +50,7 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
   const [showDetailsPanel, setShowDetailsPanel] = useState(false)
   const [showGenerationHint, setShowGenerationHint] = useState(false)
   const [introMascotFading, setIntroMascotFading] = useState(false)
+  const [showLayoutTool, setShowLayoutTool] = useState(false)
   const [hasSketchStroke, setHasSketchStroke] = useState(false)
   const [drawMode, setDrawMode] = useState<DrawMode>("pen")
   const [brushSize, setBrushSize] = useState(5)
@@ -58,6 +59,16 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
 
   const [traitDialogOpen, setTraitDialogOpen] = useState(false)
   const [traitDialogTrait, setTraitDialogTrait] = useState<EobTrait | null>(null)
+  const [layoutConfig, setLayoutConfig] = useState({
+    bearX: 0,
+    bearY: 0,
+    bearScale: 1,
+    bubbleX: 0,
+    bubbleY: 0,
+    sketchX: 0,
+    sketchY: 0,
+    sketchWidth: 980,
+  })
 
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -298,8 +309,70 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
     })
   }
 
+  const updateLayout = (key: keyof typeof layoutConfig, value: number) => {
+    setLayoutConfig((prev) => ({ ...prev, [key]: value }))
+  }
+
+  const resetLayout = () => {
+    setLayoutConfig({
+      bearX: 0,
+      bearY: 0,
+      bearScale: 1,
+      bubbleX: 0,
+      bubbleY: 0,
+      sketchX: 0,
+      sketchY: 0,
+      sketchWidth: 980,
+    })
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-cyan-50 via-fuchsia-50 to-amber-50 px-6 py-8 relative overflow-hidden" style={{ paddingTop: "120px", paddingBottom: "120px" }}>
+      <div className="fixed top-24 right-4 z-[120]">
+        <Button
+          type="button"
+          size="sm"
+          onClick={() => setShowLayoutTool((prev) => !prev)}
+          className="bg-slate-800 hover:bg-slate-900 text-white"
+        >
+          {showLayoutTool ? "Hide Layout Tool" : "Show Layout Tool"}
+        </Button>
+        {showLayoutTool && (
+          <div className="mt-2 w-72 rounded-2xl border border-slate-300 bg-white/95 p-3 shadow-2xl backdrop-blur">
+            <p className="text-sm font-bold text-slate-800 mb-2">Layout Tuner</p>
+            <div className="space-y-2 text-xs text-slate-700">
+              <label className="block">Bear X
+                <input type="range" min={-220} max={220} value={layoutConfig.bearX} onChange={(e) => updateLayout("bearX", Number(e.target.value))} className="w-full" />
+              </label>
+              <label className="block">Bear Y
+                <input type="range" min={-220} max={220} value={layoutConfig.bearY} onChange={(e) => updateLayout("bearY", Number(e.target.value))} className="w-full" />
+              </label>
+              <label className="block">Bear Scale
+                <input type="range" min={70} max={180} value={Math.round(layoutConfig.bearScale * 100)} onChange={(e) => updateLayout("bearScale", Number(e.target.value) / 100)} className="w-full" />
+              </label>
+              <label className="block">Bubble X
+                <input type="range" min={-220} max={220} value={layoutConfig.bubbleX} onChange={(e) => updateLayout("bubbleX", Number(e.target.value))} className="w-full" />
+              </label>
+              <label className="block">Bubble Y
+                <input type="range" min={-220} max={220} value={layoutConfig.bubbleY} onChange={(e) => updateLayout("bubbleY", Number(e.target.value))} className="w-full" />
+              </label>
+              <label className="block">Sketch Width
+                <input type="range" min={760} max={1320} value={layoutConfig.sketchWidth} onChange={(e) => updateLayout("sketchWidth", Number(e.target.value))} className="w-full" />
+              </label>
+              <label className="block">Sketch X
+                <input type="range" min={-280} max={280} value={layoutConfig.sketchX} onChange={(e) => updateLayout("sketchX", Number(e.target.value))} className="w-full" />
+              </label>
+              <label className="block">Sketch Y
+                <input type="range" min={-180} max={180} value={layoutConfig.sketchY} onChange={(e) => updateLayout("sketchY", Number(e.target.value))} className="w-full" />
+              </label>
+            </div>
+            <Button type="button" size="sm" variant="outline" onClick={resetLayout} className="mt-2 w-full">
+              Reset Layout
+            </Button>
+          </div>
+        )}
+      </div>
+
       <div className="pointer-events-none absolute inset-0">
         <div className="absolute -top-16 -left-16 h-64 w-64 rounded-full bg-fuchsia-200/50 blur-3xl animate-pulse" />
         <div className="absolute top-1/3 -right-16 h-72 w-72 rounded-full bg-cyan-200/50 blur-3xl animate-pulse" style={{ animationDelay: "300ms" }} />
@@ -398,9 +471,18 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
           <section
             className={`rounded-3xl border-2 border-violet-200 bg-white/80 backdrop-blur-sm shadow-xl p-6 transition-all duration-700 ${
               showDetailsPanel
-                ? "xl:col-span-7 xl:scale-[0.94] xl:-translate-x-3"
-                : "w-[min(72vw,980px)] scale-100 translate-x-0"
+                ? "xl:col-span-7"
+                : "scale-100"
             }`}
+            style={
+              showDetailsPanel
+                ? { transform: `translate(${layoutConfig.sketchX - 12}px, ${layoutConfig.sketchY}px) scale(0.94)` }
+                : {
+                    width: `${layoutConfig.sketchWidth}px`,
+                    maxWidth: "94vw",
+                    transform: `translate(${layoutConfig.sketchX}px, ${layoutConfig.sketchY}px)`,
+                  }
+            }
           >
             <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
               <h2 className="text-2xl font-bold text-violet-700">Sketch Board</h2>
@@ -448,7 +530,7 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
               )}
             </div>
 
-            <div className="rounded-2xl border border-violet-200 bg-violet-50/70 p-4">
+            <div className="rounded-2xl border border-[#d2b48c] bg-[#f3e7cf] p-4 shadow-inner">
               <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
                 <div className="flex items-center gap-2">
                   <Button
@@ -551,10 +633,17 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
           {!showDetailsPanel && (
             <aside
               className={`hidden xl:flex relative flex-col items-center justify-end w-[420px] min-h-[620px] transition-all duration-700 ${
-                introMascotFading ? "opacity-0 translate-x-6 scale-95" : "opacity-100 translate-x-0 scale-100"
+                introMascotFading ? "opacity-0" : "opacity-100"
               }`}
+              style={{
+                transform: `translate(${layoutConfig.bearX + (introMascotFading ? 24 : 0)}px, ${layoutConfig.bearY}px) scale(${layoutConfig.bearScale * (introMascotFading ? 0.95 : 1)})`,
+                transformOrigin: "bottom center",
+              }}
             >
-              <div className="absolute top-10 left-1/2 -translate-x-1/2 w-[380px] rounded-2xl border-2 border-amber-200 bg-white/95 px-4 py-3 text-center text-[15px] font-bold text-amber-700 shadow-xl leading-snug">
+              <div
+                className="absolute top-10 left-1/2 -translate-x-1/2 w-[380px] rounded-2xl border-2 border-amber-200 bg-white/95 px-4 py-3 text-center text-[15px] font-bold text-amber-700 shadow-xl leading-snug"
+                style={{ transform: `translate(calc(-50% + ${layoutConfig.bubbleX}px), ${layoutConfig.bubbleY}px)` }}
+              >
                 After determining the species of your story characters, you can draw them on the drawing board. Let's see who can draw it more Realistic !
               </div>
               <img
