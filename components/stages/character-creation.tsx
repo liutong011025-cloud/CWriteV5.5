@@ -303,16 +303,24 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
         <div className="absolute top-1/3 -right-16 h-72 w-72 rounded-full bg-cyan-200/50 blur-3xl animate-pulse" style={{ animationDelay: "300ms" }} />
         <div className="absolute bottom-0 left-1/3 h-72 w-72 rounded-full bg-amber-200/45 blur-3xl animate-pulse" style={{ animationDelay: "700ms" }} />
       </div>
-      <div className="pointer-events-none absolute top-[140px] left-10 text-4xl animate-bounce" style={{ animationDuration: "2.6s" }}>🎨</div>
-      <div className="pointer-events-none absolute top-[210px] right-14 text-3xl animate-bounce" style={{ animationDelay: "0.7s", animationDuration: "2.9s" }}>🖍️</div>
-      <div className="pointer-events-none absolute top-[110px] left-1/3 text-3xl animate-bounce" style={{ animationDelay: "0.2s", animationDuration: "3.1s" }}>🧁</div>
-      <div className="pointer-events-none absolute top-[180px] right-1/3 text-3xl animate-bounce" style={{ animationDelay: "1.2s", animationDuration: "2.7s" }}>🪄</div>
-      <div className="pointer-events-none absolute bottom-[120px] left-16 text-3xl animate-bounce" style={{ animationDelay: "1.1s", animationDuration: "3.2s" }}>✨</div>
-      <div className="pointer-events-none absolute bottom-[170px] right-10 text-4xl animate-bounce" style={{ animationDelay: "1.5s", animationDuration: "2.8s" }}>🌈</div>
-      <div className="pointer-events-none absolute bottom-[100px] left-1/3 text-3xl animate-bounce" style={{ animationDelay: "0.9s", animationDuration: "3.4s" }}>🎀</div>
-      <div className="pointer-events-none absolute bottom-[220px] right-1/4 text-3xl animate-bounce" style={{ animationDelay: "0.4s", animationDuration: "2.5s" }}>🧸</div>
-      <div className="pointer-events-none absolute top-[300px] left-[8%] text-2xl animate-bounce" style={{ animationDelay: "1.8s", animationDuration: "3.2s" }}>⭐</div>
-      <div className="pointer-events-none absolute top-[330px] right-[10%] text-2xl animate-bounce" style={{ animationDelay: "1.4s", animationDuration: "3s" }}>💫</div>
+      <div className="pointer-events-none absolute top-[140px] left-10 text-5xl animate-bounce" style={{ animationDuration: "2.6s" }}>🎨</div>
+      <div className="pointer-events-none absolute top-[210px] right-14 text-4xl animate-bounce" style={{ animationDelay: "0.7s", animationDuration: "2.9s" }}>🖍️</div>
+      <div className="pointer-events-none absolute top-[110px] left-1/3 text-4xl animate-bounce" style={{ animationDelay: "0.2s", animationDuration: "3.1s" }}>🧁</div>
+      <div className="pointer-events-none absolute top-[180px] right-1/3 text-4xl animate-bounce" style={{ animationDelay: "1.2s", animationDuration: "2.7s" }}>🪄</div>
+      <div className="pointer-events-none absolute bottom-[120px] left-16 text-4xl animate-bounce" style={{ animationDelay: "1.1s", animationDuration: "3.2s" }}>✨</div>
+      <div className="pointer-events-none absolute bottom-[170px] right-10 text-5xl animate-bounce" style={{ animationDelay: "1.5s", animationDuration: "2.8s" }}>🌈</div>
+      <div className="pointer-events-none absolute bottom-[100px] left-1/3 text-4xl animate-bounce" style={{ animationDelay: "0.9s", animationDuration: "3.4s" }}>🎀</div>
+      <div className="pointer-events-none absolute bottom-[220px] right-1/4 text-4xl animate-bounce" style={{ animationDelay: "0.4s", animationDuration: "2.5s" }}>🧸</div>
+      <div className="pointer-events-none absolute top-[300px] left-[8%] text-3xl animate-bounce" style={{ animationDelay: "1.8s", animationDuration: "3.2s" }}>⭐</div>
+      <div className="pointer-events-none absolute top-[330px] right-[10%] text-3xl animate-bounce" style={{ animationDelay: "1.4s", animationDuration: "3s" }}>💫</div>
+      <div className="pointer-events-none absolute top-[240px] left-[20%] text-4xl animate-bounce" style={{ animationDelay: "0.5s", animationDuration: "3.1s" }}>🦄</div>
+      <div className="pointer-events-none absolute top-[260px] right-[22%] text-4xl animate-bounce" style={{ animationDelay: "1s", animationDuration: "2.6s" }}>🌟</div>
+      <div className="pointer-events-none absolute bottom-[240px] left-[24%] text-4xl animate-bounce" style={{ animationDelay: "1.6s", animationDuration: "3.3s" }}>🍭</div>
+      <div className="pointer-events-none absolute bottom-[260px] right-[18%] text-4xl animate-bounce" style={{ animationDelay: "0.8s", animationDuration: "2.9s" }}>🫧</div>
+      <div className="pointer-events-none absolute top-[380px] left-[6%] text-3xl animate-bounce" style={{ animationDelay: "1.3s", animationDuration: "3.5s" }}>🎈</div>
+      <div className="pointer-events-none absolute top-[410px] right-[6%] text-3xl animate-bounce" style={{ animationDelay: "0.6s", animationDuration: "2.7s" }}>🧠</div>
+      <div className="pointer-events-none absolute bottom-[70px] left-[40%] text-4xl animate-bounce" style={{ animationDelay: "1.9s", animationDuration: "3.2s" }}>🎉</div>
+      <div className="pointer-events-none absolute bottom-[80px] right-[38%] text-4xl animate-bounce" style={{ animationDelay: "1.1s", animationDuration: "2.8s" }}>🎊</div>
       <Dialog
         open={traitDialogOpen}
         onOpenChange={(open) => {
@@ -384,10 +392,12 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
           </div>
         )}
 
-        <div className={`mt-8 ${showDetailsPanel ? "grid grid-cols-1 xl:grid-cols-12 gap-6" : "flex justify-center items-center min-h-[72vh]"}`}>
+        <div className={`mt-8 ${showDetailsPanel ? "grid grid-cols-1 xl:grid-cols-12 gap-6" : "flex justify-center items-center min-h-[72vh] w-full"}`}>
           <section
-            className={`rounded-3xl border-2 border-violet-200 bg-white/80 backdrop-blur-sm shadow-xl p-6 transition-all duration-500 ${
-              showDetailsPanel ? "xl:col-span-7" : "w-full max-w-[980px]"
+            className={`rounded-3xl border-2 border-violet-200 bg-white/80 backdrop-blur-sm shadow-xl p-6 transition-all duration-700 ${
+              showDetailsPanel
+                ? "xl:col-span-7 xl:scale-[0.94] xl:-translate-x-3"
+                : "mx-auto w-[min(94vw,1180px)] scale-100 translate-x-0"
             }`}
           >
             <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
@@ -672,7 +682,6 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
               </Button>
             </div>
           </section>
-          {!showDetailsPanel && <div className="hidden xl:block xl:col-span-5" />}
         </div>
       </div>
     </div>
