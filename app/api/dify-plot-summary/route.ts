@@ -14,6 +14,7 @@ const SETTING_WORDS = new Set([
 ])
 const CONFLICT_WORDS = new Set([
   'storm', 'danger', 'dangerous', 'thief', 'monster', 'fire', 'trouble', 'broken', 'lost', 'noise', 'dark', 'sick',
+  'trap', 'trapped', 'stuck', 'chase', 'chased',
 ])
 const GOAL_WORDS = new Set([
   'save', 'help', 'find', 'protect', 'escape', 'win', 'discover', 'investigate', 'hide', 'fix', 'ask', 'call', 'tell',
@@ -25,25 +26,49 @@ const normalizeWord = (input: string) =>
     .replace(/[^a-z\s]/g, ' ')
     .trim()
 
+const parseSummaryFields = (summaryText: string) => {
+  const getField = (name: string) => {
+    const m = summaryText.match(new RegExp(`^\\s*${name}[：:]\\s*(.+)$`, 'im'))
+    return (m?.[1] || '').trim()
+  }
+  const setting = getField('setting') || 'unknown'
+  const conflict = getField('conflict') || 'unknown'
+  const goal = getField('goal') || 'unknown'
+  const done = /\bdone\b/i.test(summaryText)
+  return { setting, conflict, goal, done }
+}
+
 const extractByVocabulary = (studentMessages: string[]) => {
   const normalizedMessages = studentMessages
     .map((m) => normalizeWord(m))
-    .map((m) => m.split(/\s+/).filter(Boolean).slice(0, 4).join(' '))
+    .map((m) => m.split(/\s+/).filter(Boolean).slice(0, 6).join(' '))
     .filter(Boolean)
 
-  let setting = normalizedMessages[0] || 'unknown'
-  let conflict = normalizedMessages[1] || 'unknown'
-  let goal = normalizedMessages[2] || 'unknown'
+  let setting = 'unknown'
+  let conflict = 'unknown'
+  let goal = 'unknown'
 
   for (let i = 0; i < normalizedMessages.length; i++) {
     const words = normalizedMessages[i].split(/\s+/).filter(Boolean)
-    for (const w of words) {
+    for (let wi = 0; wi < words.length; wi++) {
+      const w = words[wi]
       if (setting === 'unknown' && SETTING_WORDS.has(w)) setting = w
       if (conflict === 'unknown' && CONFLICT_WORDS.has(w)) conflict = w
-      if (goal === 'unknown' && GOAL_WORDS.has(w)) goal = w
-      if (i > 0 && conflict === normalizedMessages[1] && CONFLICT_WORDS.has(w)) conflict = w
-      if (i > 1 && goal === normalizedMessages[2] && GOAL_WORDS.has(w)) goal = w
+      if (goal === 'unknown' && GOAL_WORDS.has(w)) {
+        // 优先保留动词+宾语（例如 "call teacher"）
+        const goalPhrase = [w, words[wi + 1]].filter(Boolean).join(' ').trim()
+        goal = goalPhrase || w
+      }
     }
+  }
+
+  // 兜底：按对话节奏补齐字段，确保6轮内尽量收敛
+  if (setting === 'unknown' && normalizedMessages[0]) setting = normalizedMessages[0]
+  if (conflict === 'unknown' && normalizedMessages.length >= 4) conflict = normalizedMessages[Math.min(3, normalizedMessages.length - 1)]
+  if (goal === 'unknown' && normalizedMessages.length >= 6) {
+    goal = normalizedMessages.slice(-2).join(' ').split(/\s+/).slice(0, 3).join(' ').trim() || 'unknown'
+  } else if (goal === 'unknown' && normalizedMessages.length >= 5) {
+    goal = normalizedMessages[normalizedMessages.length - 1] || 'unknown'
   }
 
   const done = setting !== 'unknown' && conflict !== 'unknown' && goal !== 'unknown'
@@ -104,10 +129,12 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // 简化提示词，减少重复长提示导致的空回复概率
+    // 只发送本轮增量信息，配合 conversation_id 复用上下文，减少重复 token
+    const latestStudentMessage = studentMessages[studentMessages.length - 1] || ''
     const queryMessage = `Extract plot fields from student's words only.
-Student messages:
-${conversationText}
+Latest student message:
+${latestStudentMessage}
+Student message count: ${studentMessageCount}
 
 Output exactly:
 setting: [value or unknown]
@@ -199,8 +226,22 @@ Rules:
       })
     }
 
+    // Dify 若返回 unknown，用本地启发式补齐，避免多轮后仍无法收敛
+    const parsed = parseSummaryFields(summaryText)
+    const resolvedSetting =
+      parsed.setting.toLowerCase() === 'unknown' ? localFallback.setting : parsed.setting
+    const resolvedConflict =
+      parsed.conflict.toLowerCase() === 'unknown' ? localFallback.conflict : parsed.conflict
+    const resolvedGoal =
+      parsed.goal.toLowerCase() === 'unknown' ? localFallback.goal : parsed.goal
+    const resolvedDone =
+      resolvedSetting.toLowerCase() !== 'unknown' &&
+      resolvedConflict.toLowerCase() !== 'unknown' &&
+      resolvedGoal.toLowerCase() !== 'unknown'
+    const resolvedSummary = `setting: ${resolvedSetting}\nconflict: ${resolvedConflict}\ngoal: ${resolvedGoal}${resolvedDone ? '\ndone' : ''}`
+
     return NextResponse.json({
-      summary: summaryText,
+      summary: resolvedSummary,
       conversation_id: data.conversation_id, // 返回conversation_id，以便后续调用使用
     })
   } catch (error) {
