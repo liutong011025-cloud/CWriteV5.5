@@ -72,14 +72,14 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
   const [traitDialogTrait, setTraitDialogTrait] = useState<EobTrait | null>(null)
   const layoutConfig = {
     bearX: 127,
-    bearY: -54,
-    bearScale: 1.17,
-    bubbleX: 229,
-    bubbleY: 309,
-    bubbleScale: 0.81,
+    bearY: 80,
+    bearScale: 0.85,
+    bubbleX: 180,
+    bubbleY: -60,
+    bubbleScale: 0.78,
     sketchX: 0,
     sketchY: -12,
-    sketchWidth: 900,
+    sketchWidth: 1000,
     sketchHeight: 520,
   } as const
 

@@ -49,7 +49,10 @@ const translations = {
 export default function HomePage({ language = "en", onStartPlan }: HomePageProps) {
   const [isLoaded, setIsLoaded] = useState(false)
   const [activeGenre, setActiveGenre] = useState<string | null>(null)
+  const [isPixelating, setIsPixelating] = useState(false)
+  const [pixelOrigin, setPixelOrigin] = useState({ x: 0, y: 0 })
   const shaderContainerRef = useRef<HTMLDivElement>(null)
+  const buttonRef = useRef<HTMLButtonElement>(null)
   const t = translations[language] || translations.en
 
   useEffect(() => {
@@ -89,10 +92,149 @@ export default function HomePage({ language = "en", onStartPlan }: HomePageProps
     setActiveGenre(null)
   }
 
+  const handleStartJourney = () => {
+    if (buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect()
+      setPixelOrigin({
+        x: rect.left + rect.width / 2,
+        y: rect.top + rect.height / 2
+      })
+    }
+    setIsPixelating(true)
+    
+    // After the pixelation animation completes, trigger the actual navigation
+    setTimeout(() => {
+      onStartPlan?.()
+    }, 1200)
+  }
+
   return (
     <main className="relative min-h-screen w-full overflow-x-hidden bg-background cursor-none">
       <CustomCursor />
       <GrainOverlay />
+      
+      {/* Pixel transition overlay */}
+      <AnimatePresence>
+        {isPixelating && (
+          <motion.div
+            className="fixed inset-0 z-[100] pointer-events-none"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            {/* Radial pixel effect expanding from button */}
+            <motion.div
+              className="absolute inset-0"
+              style={{
+                background: `radial-gradient(circle at ${pixelOrigin.x}px ${pixelOrigin.y}px, 
+                  transparent 0%, 
+                  transparent var(--radius), 
+                  rgba(126, 200, 80, 0.3) var(--radius), 
+                  rgba(126, 200, 80, 0.6) calc(var(--radius) + 50px),
+                  rgba(139, 105, 20, 0.8) calc(var(--radius) + 100px),
+                  #5a9a32 calc(var(--radius) + 200px))`,
+                // @ts-ignore
+                "--radius": "0px",
+              }}
+              animate={{
+                // @ts-ignore
+                "--radius": ["0px", "2000px"],
+              }}
+              transition={{ duration: 1, ease: "easeOut" }}
+            />
+            
+            {/* Pixel grid overlay with stepped animation */}
+            <motion.div
+              className="absolute inset-0"
+              style={{
+                backgroundImage: `
+                  linear-gradient(rgba(139, 105, 20, 0.4) 2px, transparent 2px),
+                  linear-gradient(90deg, rgba(139, 105, 20, 0.4) 2px, transparent 2px)
+                `,
+                backgroundSize: "16px 16px",
+                imageRendering: "pixelated",
+              }}
+              initial={{ opacity: 0, scale: 4 }}
+              animate={{ 
+                opacity: [0, 0.3, 0.6, 0.9, 1],
+                scale: [4, 2, 1.5, 1, 1],
+              }}
+              transition={{ 
+                duration: 0.8, 
+                times: [0, 0.2, 0.4, 0.6, 1],
+                ease: "steps(5)"
+              }}
+            />
+            
+            {/* Low frame-rate pixelation effect */}
+            <motion.div
+              className="absolute inset-0"
+              style={{
+                backdropFilter: "blur(0px)",
+              }}
+              animate={{
+                backdropFilter: ["blur(0px)", "blur(2px)", "blur(4px)", "blur(2px)", "blur(0px)"],
+              }}
+              transition={{ 
+                duration: 0.6,
+                times: [0, 0.25, 0.5, 0.75, 1],
+                ease: "steps(4)"
+              }}
+            />
+            
+            {/* Final pixel-style fill */}
+            <motion.div
+              className="absolute inset-0"
+              style={{
+                background: `linear-gradient(180deg, 
+                  #b8e4f9 0%, 
+                  #87ceeb 25%, 
+                  #7ec850 65%, 
+                  #5a9a32 100%)`,
+              }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: [0, 0, 0, 0.5, 1] }}
+              transition={{ 
+                duration: 1,
+                times: [0, 0.3, 0.6, 0.8, 1],
+                ease: "steps(5)"
+              }}
+            />
+            
+            {/* Pixel decorative elements appearing */}
+            <motion.div
+              className="absolute inset-0 overflow-hidden"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: [0, 0, 1] }}
+              transition={{ duration: 1, times: [0, 0.7, 1] }}
+            >
+              {/* Pixel clouds */}
+              <div className="absolute top-16 left-[10%] w-24 h-12 bg-white opacity-80" style={{
+                clipPath: "polygon(0% 60%, 15% 40%, 30% 50%, 45% 20%, 60% 40%, 75% 30%, 90% 50%, 100% 60%, 100% 100%, 0% 100%)"
+              }} />
+              <div className="absolute top-24 right-[15%] w-32 h-14 bg-white opacity-70" style={{
+                clipPath: "polygon(0% 60%, 15% 40%, 30% 50%, 45% 20%, 60% 40%, 75% 30%, 90% 50%, 100% 60%, 100% 100%, 0% 100%)"
+              }} />
+              
+              {/* Pixel grass at bottom */}
+              <div className="absolute bottom-0 left-0 right-0 h-20">
+                {[...Array(30)].map((_, i) => (
+                  <div
+                    key={`pixel-grass-${i}`}
+                    className="absolute bottom-0"
+                    style={{
+                      left: `${i * 3.3}%`,
+                      width: "8px",
+                      height: `${16 + (i % 3) * 8}px`,
+                      background: i % 2 === 0 ? "#5a9a32" : "#7ec850",
+                    }}
+                  />
+                ))}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <div
         ref={shaderContainerRef}
@@ -196,7 +338,11 @@ export default function HomePage({ language = "en", onStartPlan }: HomePageProps
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 2.5 }}
             >
-              <button onClick={() => onStartPlan?.()} className="rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70">
+              <button 
+                ref={buttonRef}
+                onClick={handleStartJourney} 
+                disabled={isPixelating}
+                className="rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70 disabled:cursor-not-allowed">
                 <GlassSurface width="auto" height="auto" borderRadius={50} borderWidth={0.08} brightness={55} opacity={0.85} blur={12} displace={0.3}>
                   <span className="flex items-center gap-3 px-12 py-5 text-xl font-bold whitespace-nowrap text-white md:px-16 md:py-6 md:text-2xl lg:text-3xl">
                     {t.startButton}
