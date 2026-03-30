@@ -593,56 +593,91 @@ Continue guiding step by step. Each response should:
 
   return (
     <div
-      className="relative min-h-screen py-8 px-6 bg-gradient-to-br from-blue-100 via-cyan-50 via-purple-50 to-pink-50 overflow-hidden"
+      className="relative min-h-screen py-8 px-6 overflow-hidden pixel-theme"
       style={{ paddingTop: "120px", paddingBottom: "120px" }}
     >
-      <div className="pointer-events-none absolute inset-0">
-        <div className="absolute -top-24 -left-24 h-72 w-72 rounded-full bg-fuchsia-200/50 blur-3xl animate-pulse" />
-        <div className="absolute top-1/3 -right-24 h-72 w-72 rounded-full bg-cyan-200/50 blur-3xl animate-pulse" style={{ animationDelay: "500ms" }} />
+      {/* Pixel art background */}
+      <div className="fixed inset-0 z-0" style={{
+        background: `linear-gradient(180deg, 
+          #b8e4f9 0%, 
+          #87ceeb 25%, 
+          #7ec850 65%, 
+          #5a9a32 100%)`
+      }}>
+        {/* Pixel clouds */}
+        <div className="absolute top-16 left-[10%] w-24 h-12 bg-white opacity-80" style={{
+          clipPath: "polygon(0% 60%, 15% 40%, 30% 50%, 45% 20%, 60% 40%, 75% 30%, 90% 50%, 100% 60%, 100% 100%, 0% 100%)"
+        }} />
+        <div className="absolute top-24 right-[15%] w-32 h-14 bg-white opacity-70" style={{
+          clipPath: "polygon(0% 60%, 15% 40%, 30% 50%, 45% 20%, 60% 40%, 75% 30%, 90% 50%, 100% 60%, 100% 100%, 0% 100%)"
+        }} />
+        <div className="absolute top-32 left-[40%] w-20 h-10 bg-white opacity-75" style={{
+          clipPath: "polygon(0% 60%, 20% 30%, 50% 50%, 80% 25%, 100% 60%, 100% 100%, 0% 100%)"
+        }} />
+        
+        {/* Pixel grass at bottom */}
+        <div className="absolute bottom-0 left-0 right-0 h-32 pointer-events-none">
+          {[...Array(20)].map((_, i) => (
+            <div
+              key={`grass-${i}`}
+              className="absolute bottom-0"
+              style={{
+                left: `${i * 5 + Math.random() * 2}%`,
+                width: "8px",
+                height: `${20 + Math.random() * 16}px`,
+                background: i % 3 === 0 ? "#5a9a32" : "#7ec850",
+              }}
+            />
+          ))}
+        </div>
       </div>
 
-      <div className="relative max-w-7xl mx-auto">
+      <div className="relative max-w-7xl mx-auto z-10">
         <StageHeader stage={2} title="Brainstorm Your Plot" onBack={onBack} character={character?.name} />
 
         <div className="grid lg:grid-cols-12 gap-6 mt-8">
           <div className="lg:col-span-9">
-            <div className="bg-gradient-to-br from-white to-purple-50 rounded-2xl p-8 border-2 border-purple-200 shadow-2xl transition-all duration-300 hover:shadow-[0_24px_80px_rgba(167,139,250,0.35)] hover:-translate-y-0.5">
-              <div ref={chatContainerRef} className="h-[600px] overflow-y-auto mb-6 space-y-4 pr-4">
+            <div className="pixel-panel p-6">
+              <div ref={chatContainerRef} className="h-[600px] overflow-y-auto mb-6 space-y-4 pr-4" style={{ background: "#f5e6c8" }}>
                 {messages.map((message, index) => (
                   <div
                     key={index}
                     className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
                   >
                     <div
-                      className={`max-w-[80%] rounded-2xl p-4 ${
+                      className={`max-w-[80%] p-4 ${
                         message.role === "user"
-                          ? "bg-gradient-to-r from-blue-600 to-cyan-600 text-white"
-                          : "bg-gradient-to-r from-purple-100 to-pink-100 text-gray-800 border-2 border-purple-200"
+                          ? "pixel-btn-green"
+                          : "pixel-card"
                       }`}
+                      style={{
+                        border: message.role === "user" ? "3px solid #3d8a3d" : "3px solid #8b6914",
+                        boxShadow: "3px 3px 0 rgba(0,0,0,0.2)",
+                        color: message.role === "user" ? "#fff" : "#5a4a2a",
+                        background: message.role === "user" ? undefined : "#fff"
+                      }}
                     >
                       <p className="text-base leading-relaxed">
                         {message.content}
                       </p>
                       {message.suggestions && message.suggestions.length > 0 && message.role === "ai" && (
-                        <div className="mt-4 flex flex-nowrap gap-2">
+                        <div className="mt-4 flex flex-wrap gap-2">
                           {message.suggestions.map((suggestion, i) => {
-                            // 去除单词中的逗号和其他标点
                             const cleanSuggestion = suggestion.replace(/[,，、。.!?！？;；:：]/g, '').trim()
                             return (
                               <button
                                 key={i}
                                 onClick={() => handleSuggestionClick(cleanSuggestion)}
-                                className="px-3 py-2 bg-gradient-to-r from-purple-400 via-pink-400 to-purple-500 hover:from-purple-500 hover:via-pink-500 hover:to-purple-600 border-2 border-purple-400 rounded-xl text-xs font-bold text-white transition-all duration-200 hover:scale-110 active:scale-95 shadow-lg hover:shadow-2xl relative overflow-hidden group flex-shrink-0"
+                                className="px-3 py-2 text-xs font-bold transition-all duration-200 hover:scale-105 active:scale-95 flex-shrink-0"
                                 style={{
-                                  animationDelay: `${i * 100}ms`,
-                                  animationFillMode: "forwards",
+                                  background: "linear-gradient(180deg, #7ec850 0%, #5a9a32 100%)",
+                                  border: "3px solid #3d8a3d",
+                                  boxShadow: "inset -2px -2px 0 rgba(0,0,0,0.2), inset 2px 2px 0 rgba(255,255,255,0.2), 2px 2px 0 rgba(0,0,0,0.25)",
+                                  color: "#fff",
+                                  textShadow: "1px 1px 0 #3d8a3d"
                                 }}
                               >
-                                {/* 背景光效 */}
-                                <span className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/30 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></span>
-                                <span className="relative z-10 whitespace-nowrap">
-                                  {cleanSuggestion}
-                                </span>
+                                {cleanSuggestion}
                               </button>
                             )
                           })}
