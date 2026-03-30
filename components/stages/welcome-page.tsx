@@ -14,203 +14,269 @@ interface WelcomePageProps {
 
 const translations = {
   en: {
+    welcomeBack: "Welcome Back!",
+    question: "Would you like to start a new writing project or continue with your previous work?",
+    startNew: "Start New Writing Project",
+    continueWork: "Continue Your Previous Work",
     title: "Story",
     subtitle: "Create magical stories with help from your AI mentor",
-    startButton: "🚀 Start Creating",
+    startButton: "Start Creating",
     features: [
-      { icon: "🎭", title: "Create Characters", desc: "Design unique story characters", gradient: "from-purple-500 to-pink-500" },
-      { icon: "🧠", title: "Brainstorm Ideas", desc: "Develop your plot with AI help", gradient: "from-blue-500 to-cyan-500" },
-      { icon: "📖", title: "Write Stories", desc: "Bring your imagination to life", gradient: "from-orange-500 to-red-500" },
+      { icon: "scroll", title: "Create Characters", desc: "Design unique story characters" },
+      { icon: "star", title: "Brainstorm Ideas", desc: "Develop your plot with AI help" },
+      { icon: "book", title: "Write Stories", desc: "Bring your imagination to life" },
     ]
   },
   zh: {
+    welcomeBack: "欢迎回来！",
+    question: "您想开始新的写作项目还是继续之前的作品？",
+    startNew: "开始新写作",
+    continueWork: "继续之前的作品",
     title: "故事",
     subtitle: "在AI導師的幫助下創造魔法故事",
-    startButton: "🚀 開始創作",
+    startButton: "開始創作",
     features: [
-      { icon: "🎭", title: "創造角色", desc: "設計獨特的故事角色", gradient: "from-purple-500 to-pink-500" },
-      { icon: "🧠", title: "頭腦風暴", desc: "在AI幫助下開發你的情節", gradient: "from-blue-500 to-cyan-500" },
-      { icon: "📖", title: "編寫故事", desc: "讓你的想象力成真", gradient: "from-orange-500 to-red-500" },
+      { icon: "scroll", title: "創造角色", desc: "設計獨特的故事角色" },
+      { icon: "star", title: "頭腦風暴", desc: "在AI幫助下開發你的情節" },
+      { icon: "book", title: "編寫故事", desc: "讓你的想象力成真" },
     ]
   }
+}
+
+// Pixel art icons as inline SVG components
+const PixelIcons = {
+  scroll: (
+    <svg width="48" height="48" viewBox="0 0 16 16" className="mx-auto">
+      <rect x="3" y="2" width="10" height="12" fill="#f5e6c8"/>
+      <rect x="3" y="2" width="10" height="2" fill="#c4a020"/>
+      <rect x="3" y="12" width="10" height="2" fill="#c4a020"/>
+      <rect x="5" y="5" width="6" height="1" fill="#5a4a2a"/>
+      <rect x="5" y="7" width="6" height="1" fill="#5a4a2a"/>
+      <rect x="5" y="9" width="4" height="1" fill="#5a4a2a"/>
+    </svg>
+  ),
+  star: (
+    <svg width="48" height="48" viewBox="0 0 16 16" className="mx-auto">
+      <polygon points="8,1 10,6 15,6 11,9 13,15 8,11 3,15 5,9 1,6 6,6" fill="#e8c547"/>
+      <polygon points="8,3 9,6 12,6 10,8 11,12 8,10 5,12 6,8 4,6 7,6" fill="#f5d75a"/>
+    </svg>
+  ),
+  book: (
+    <svg width="48" height="48" viewBox="0 0 16 16" className="mx-auto">
+      <rect x="2" y="2" width="12" height="12" fill="#8b6914"/>
+      <rect x="3" y="3" width="10" height="10" fill="#f5e6c8"/>
+      <rect x="7" y="3" width="2" height="10" fill="#c4a020"/>
+      <rect x="4" y="5" width="2" height="1" fill="#5a4a2a"/>
+      <rect x="4" y="7" width="2" height="1" fill="#5a4a2a"/>
+      <rect x="10" y="5" width="2" height="1" fill="#5a4a2a"/>
+      <rect x="10" y="7" width="2" height="1" fill="#5a4a2a"/>
+    </svg>
+  ),
+  potion: (
+    <svg width="32" height="32" viewBox="0 0 16 16" className="inline-block">
+      <rect x="6" y="1" width="4" height="3" fill="#8b6914"/>
+      <rect x="5" y="4" width="6" height="2" fill="#5bc0de"/>
+      <rect x="4" y="6" width="8" height="8" fill="#87ceeb"/>
+      <rect x="5" y="7" width="2" height="2" fill="#b8e4f9"/>
+    </svg>
+  ),
+  coin: (
+    <svg width="24" height="24" viewBox="0 0 16 16" className="inline-block">
+      <circle cx="8" cy="8" r="6" fill="#e8c547"/>
+      <circle cx="8" cy="8" r="4" fill="#f5d75a"/>
+      <rect x="7" y="5" width="2" height="6" fill="#c4a020"/>
+    </svg>
+  ),
 }
 
 export default function WelcomePage({ language, onLanguageChange, onStart, onBack, userId }: WelcomePageProps) {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null)
   const [currentAction, setCurrentAction] = useState<string>("")
-  // 确保 language 值有效，如果不在 translations 中则使用默认值 "en"
   const validLanguage = (language && language in translations) ? language : "en"
   const t = translations[validLanguage as keyof typeof translations]
   const features = t?.features || []
-
-  const handleLanguageChange = (lang: Language) => {
-    setCurrentAction(`Changed language to ${lang}`)
-    onLanguageChange(lang)
-  }
 
   const handleStart = () => {
     setCurrentAction("Clicked Start Creating button")
     onStart()
   }
 
-  const handleBack = () => {
-    if (onBack) {
-      setCurrentAction("Clicked back to home")
-      onBack()
-    }
-  }
-
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-indigo-100 via-purple-50 via-pink-50 to-orange-50 relative" style={{ paddingTop: '120px', paddingBottom: '120px' }}>
-      {/* 高级背景装饰元素 */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-20 left-10 w-96 h-96 bg-purple-300 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-pulse"></div>
-        <div className="absolute top-40 right-10 w-96 h-96 bg-yellow-300 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-pulse" style={{ animationDelay: '2s' }}></div>
-        <div className="absolute -bottom-8 left-1/2 w-96 h-96 bg-pink-300 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-pulse" style={{ animationDelay: '4s' }}></div>
-        {/* 额外的装饰元素 */}
-        <div className="absolute top-1/2 left-1/4 w-64 h-64 bg-blue-300 rounded-full mix-blend-multiply filter blur-2xl opacity-20 animate-pulse" style={{ animationDelay: '1s' }}></div>
-        <div className="absolute bottom-20 right-1/4 w-64 h-64 bg-orange-300 rounded-full mix-blend-multiply filter blur-2xl opacity-20 animate-pulse" style={{ animationDelay: '3s' }}></div>
+    <div className="min-h-screen flex flex-col relative overflow-hidden pixel-theme" style={{ paddingTop: '120px', paddingBottom: '120px' }}>
+      {/* Pixel art background */}
+      <div className="fixed inset-0 z-0" style={{
+        background: `linear-gradient(180deg, 
+          #b8e4f9 0%, 
+          #87ceeb 25%, 
+          #7ec850 65%, 
+          #5a9a32 100%)`
+      }}>
+        {/* Pixel clouds */}
+        <div className="absolute top-16 left-[10%] w-32 h-16 bg-white opacity-80" style={{
+          clipPath: "polygon(0% 60%, 15% 40%, 30% 50%, 45% 20%, 60% 40%, 75% 30%, 90% 50%, 100% 60%, 100% 100%, 0% 100%)"
+        }} />
+        <div className="absolute top-24 right-[15%] w-40 h-18 bg-white opacity-70" style={{
+          clipPath: "polygon(0% 60%, 15% 40%, 30% 50%, 45% 20%, 60% 40%, 75% 30%, 90% 50%, 100% 60%, 100% 100%, 0% 100%)"
+        }} />
+        <div className="absolute top-40 left-[45%] w-24 h-12 bg-white opacity-75" style={{
+          clipPath: "polygon(0% 60%, 20% 30%, 50% 50%, 80% 25%, 100% 60%, 100% 100%, 0% 100%)"
+        }} />
         
-        {/* 创意元素：画笔 */}
-        <div className="absolute top-32 right-32 text-6xl opacity-20 animate-paint-brush" style={{ animationDelay: '0.5s' }}>🖌️</div>
-        <div className="absolute top-48 left-48 text-5xl opacity-15 animate-paint-brush" style={{ animationDelay: '1.5s' }}>🎨</div>
+        {/* Pixel sun */}
+        <div className="absolute top-20 right-[8%] w-16 h-16" style={{
+          background: "#f5d75a",
+          boxShadow: "0 0 20px #e8c547, 0 0 40px rgba(232, 197, 71, 0.5)"
+        }} />
         
-        {/* 创意元素：音符 */}
-        <div className="absolute top-64 right-64 text-4xl opacity-15 animate-music-note" style={{ animationDelay: '0s' }}>🎵</div>
-        <div className="absolute bottom-32 left-32 text-4xl opacity-15 animate-music-note" style={{ animationDelay: '1s' }}>🎶</div>
-        <div className="absolute top-96 left-96 text-3xl opacity-10 animate-music-note" style={{ animationDelay: '2s' }}>🎼</div>
+        {/* Pixel trees at bottom */}
+        <div className="absolute bottom-0 left-[5%]">
+          <div style={{ width: "16px", height: "40px", background: "#5a3d1a", marginLeft: "12px" }} />
+          <div style={{ width: "40px", height: "20px", background: "#3d8a3d", marginTop: "-50px" }} />
+          <div style={{ width: "32px", height: "16px", background: "#5a9a32", marginTop: "-8px", marginLeft: "4px" }} />
+          <div style={{ width: "24px", height: "12px", background: "#7ec850", marginTop: "-4px", marginLeft: "8px" }} />
+        </div>
+        <div className="absolute bottom-0 right-[8%]">
+          <div style={{ width: "16px", height: "48px", background: "#5a3d1a", marginLeft: "16px" }} />
+          <div style={{ width: "48px", height: "24px", background: "#3d8a3d", marginTop: "-60px" }} />
+          <div style={{ width: "40px", height: "20px", background: "#5a9a32", marginTop: "-10px", marginLeft: "4px" }} />
+          <div style={{ width: "32px", height: "16px", background: "#7ec850", marginTop: "-6px", marginLeft: "8px" }} />
+        </div>
         
-        {/* 创意元素：星星和魔法 */}
-        <div className="absolute top-1/4 right-1/4 text-5xl opacity-20 animate-float" style={{ animationDelay: '0.3s' }}>✨</div>
-        <div className="absolute bottom-1/3 left-1/3 text-4xl opacity-15 animate-float" style={{ animationDelay: '1.2s' }}>⭐</div>
-        <div className="absolute top-1/3 left-1/4 text-4xl opacity-15 animate-float" style={{ animationDelay: '2.1s' }}>💫</div>
+        {/* Pixel grass at bottom */}
+        <div className="absolute bottom-0 left-0 right-0 h-24 pointer-events-none">
+          {[...Array(30)].map((_, i) => (
+            <div
+              key={`grass-${i}`}
+              className="absolute bottom-0"
+              style={{
+                left: `${i * 3.5}%`,
+                width: "8px",
+                height: `${16 + (i % 3) * 8}px`,
+                background: i % 3 === 0 ? "#5a9a32" : i % 3 === 1 ? "#7ec850" : "#3d8a3d",
+              }}
+            />
+          ))}
+        </div>
+
+        {/* Decorative pixel elements */}
+        <div className="absolute top-[30%] left-[5%] animate-bounce" style={{ animationDuration: "2s" }}>
+          {PixelIcons.potion}
+        </div>
+        <div className="absolute top-[40%] right-[10%] animate-bounce" style={{ animationDuration: "2.5s", animationDelay: "0.5s" }}>
+          {PixelIcons.coin}
+        </div>
+        <div className="absolute top-[50%] left-[15%] animate-bounce" style={{ animationDuration: "3s", animationDelay: "1s" }}>
+          {PixelIcons.coin}
+        </div>
       </div>
-      
-      {/* 网格背景 */}
-      <div className="absolute inset-0 opacity-5 pointer-events-none" style={{
-        backgroundImage: 'linear-gradient(rgba(0,0,0,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,0.1) 1px, transparent 1px)',
-        backgroundSize: '50px 50px'
-      }}></div>
-      
-      {/* 创意装饰：流动的线条 */}
-      <svg className="absolute inset-0 opacity-10 pointer-events-none" style={{ zIndex: 0 }}>
-        <defs>
-          <linearGradient id="lineGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#8b5cf6" stopOpacity="0.5" />
-            <stop offset="50%" stopColor="#ec4899" stopOpacity="0.5" />
-            <stop offset="100%" stopColor="#f97316" stopOpacity="0.5" />
-          </linearGradient>
-        </defs>
-        <path d="M 0,200 Q 200,100 400,200 T 800,200" stroke="url(#lineGradient)" strokeWidth="2" fill="none" className="animate-pulse" />
-        <path d="M 0,400 Q 300,300 600,400 T 1200,400" stroke="url(#lineGradient)" strokeWidth="2" fill="none" className="animate-pulse" style={{ animationDelay: '1s' }} />
-      </svg>
 
-
-      {/* 主要内容 */}
+      {/* Main content */}
       <div className="flex-1 flex flex-col items-center justify-center px-4 relative z-10">
         <div className="max-w-4xl w-full text-center">
-          {/* 主图标 - 高级设计 */}
-          <div className="mb-8 relative">
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="w-32 h-32 bg-gradient-to-r from-purple-400 via-pink-400 to-orange-400 rounded-full blur-2xl opacity-50 animate-pulse"></div>
+          
+          {/* Main pixel panel - Welcome Back */}
+          <div className="pixel-panel p-8 mb-8 mx-auto max-w-2xl" style={{ background: "#f5e6c8" }}>
+            {/* Pixel star decoration */}
+            <div className="mb-4">
+              {PixelIcons.star}
             </div>
-            <div className="relative inline-block p-8 bg-gradient-to-br from-purple-400 via-pink-400 to-orange-400 rounded-full shadow-2xl animate-bounce border-4 border-white/30 backdrop-blur-sm">
-              <span className="text-7xl drop-shadow-lg">✨</span>
-            </div>
-          </div>
-
-          {/* 主Logo/标题区域 - 增强设计 */}
-          <div className="mb-8 relative">
-            {/* 标题周围的装饰 */}
-            <div className="absolute -top-4 -left-4 text-4xl opacity-30 animate-float">🎨</div>
-            <div className="absolute -top-4 -right-4 text-4xl opacity-30 animate-float" style={{ animationDelay: '0.5s' }}>✍️</div>
-            <div className="absolute -bottom-4 -left-8 text-4xl opacity-30 animate-float" style={{ animationDelay: '1s' }}>📝</div>
-            <div className="absolute -bottom-4 -right-8 text-4xl opacity-30 animate-float" style={{ animationDelay: '1.5s' }}>🖋️</div>
             
-            {/* 标题 */}
-            <h1 className="text-6xl md:text-7xl font-extrabold mb-4 relative">
-              <span className="bg-gradient-to-r from-purple-600 via-pink-600 to-orange-600 bg-clip-text text-transparent drop-shadow-lg">
-                {t.title}
-              </span>
-              {/* 标题下方的装饰线 */}
-              <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-32 h-1 bg-gradient-to-r from-purple-400 via-pink-400 to-orange-400 rounded-full"></div>
+            {/* Title */}
+            <h1 className="text-4xl md:text-5xl font-extrabold mb-4" style={{ 
+              color: "#5a4a2a",
+              textShadow: "3px 3px 0 #8b6914, -1px -1px 0 #d9c9a6"
+            }}>
+              {t.welcomeBack}
             </h1>
             
-            {/* 副标题 */}
-            <p className="text-2xl md:text-3xl text-gray-700 mb-12 font-medium">
-              {t.subtitle}
+            {/* Question */}
+            <p className="text-lg md:text-xl mb-8 font-bold" style={{ color: "#6b5210" }}>
+              {t.question}
             </p>
+
+            {/* Buttons - Pixel style like PLAY/OPTION buttons */}
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              {/* Start New - Green PLAY style button */}
+              <Button
+                onClick={handleStart}
+                size="lg"
+                className="px-8 py-6 text-lg font-extrabold transition-all duration-200 hover:scale-105 active:scale-95"
+                style={{
+                  background: "linear-gradient(180deg, #7ec850 0%, #5a9a32 100%)",
+                  border: "4px solid #3d8a3d",
+                  boxShadow: "inset -3px -3px 0 rgba(0,0,0,0.2), inset 3px 3px 0 rgba(255,255,255,0.2), 4px 4px 0 rgba(0,0,0,0.3)",
+                  color: "#fff",
+                  textShadow: "2px 2px 0 #3d5a1f",
+                  borderRadius: "0"
+                }}
+              >
+                {t.startNew}
+              </Button>
+              
+              {/* Continue - Orange OPTION style button */}
+              <Button
+                onClick={onBack}
+                size="lg"
+                className="px-8 py-6 text-lg font-extrabold transition-all duration-200 hover:scale-105 active:scale-95"
+                style={{
+                  background: "linear-gradient(180deg, #e8a847 0%, #c4862a 100%)",
+                  border: "4px solid #8b5a1a",
+                  boxShadow: "inset -3px -3px 0 rgba(0,0,0,0.2), inset 3px 3px 0 rgba(255,255,255,0.2), 4px 4px 0 rgba(0,0,0,0.3)",
+                  color: "#fff",
+                  textShadow: "2px 2px 0 #5a3d1a",
+                  borderRadius: "0"
+                }}
+              >
+                {t.continueWork}
+              </Button>
+            </div>
           </div>
 
-          {/* Start按钮 - 增强设计 */}
-          <div className="mb-16 relative">
-            {/* 按钮周围的装饰 */}
-            <div className="absolute -left-8 top-1/2 -translate-y-1/2 text-3xl opacity-20 animate-bounce" style={{ animationDelay: '0.2s' }}>✨</div>
-            <div className="absolute -right-8 top-1/2 -translate-y-1/2 text-3xl opacity-20 animate-bounce" style={{ animationDelay: '0.4s' }}>🌟</div>
-            
-                   <Button
-                     onClick={handleStart}
-                     size="lg"
-                     className="relative bg-gradient-to-r from-purple-600 via-pink-600 to-orange-600 hover:from-purple-700 hover:via-pink-700 hover:to-orange-700 text-white border-0 shadow-2xl py-8 px-12 text-xl font-bold animate-pulse hover:scale-105 transition-transform duration-300"
-                   >
-                     <span className="relative z-10">{t.startButton}</span>
-                     {/* 按钮内部光效 */}
-                     <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent rounded-lg"></div>
-                   </Button>
-          </div>
-
-          {/* 功能卡片 - 高级设计 */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-12 mb-12">
+          {/* Feature cards - Pixel panel style */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
             {features.map((feature, i) => (
               <div
                 key={i}
                 onMouseEnter={() => setHoveredIndex(i)}
                 onMouseLeave={() => setHoveredIndex(null)}
-                className={`relative bg-white/90 backdrop-blur-lg rounded-3xl p-8 border-2 border-gray-200 shadow-xl transition-all duration-500 overflow-hidden ${
-                  hoveredIndex === i 
-                    ? "scale-110 rotate-3 shadow-2xl border-purple-300 transform-gpu" 
-                    : "hover:scale-105 hover:shadow-2xl"
+                className={`pixel-panel p-6 transition-all duration-300 ${
+                  hoveredIndex === i ? "transform -translate-y-2" : ""
                 }`}
-                style={{
-                  animation: hoveredIndex === i ? 'pulse 2s ease-in-out infinite' : undefined,
-                  transform: hoveredIndex === i ? 'perspective(1000px) rotateY(5deg) rotateX(5deg)' : undefined,
+                style={{ 
+                  background: "#f5e6c8",
+                  cursor: "pointer"
                 }}
               >
-                {/* 卡片内部光效 */}
-                <div className={`absolute inset-0 bg-gradient-to-br ${feature.gradient} opacity-0 transition-opacity duration-500 ${
-                  hoveredIndex === i ? "opacity-10" : ""
-                }`}></div>
-                
-                {/* 装饰性边框动画 */}
-                <div className={`absolute inset-0 rounded-3xl border-2 border-transparent bg-gradient-to-r ${feature.gradient} opacity-0 transition-opacity duration-500 ${
-                  hoveredIndex === i ? "opacity-30" : ""
-                }`} style={{ padding: '2px' }}>
-                  <div className="w-full h-full bg-white/90 rounded-3xl"></div>
+                {/* Icon */}
+                <div className="mb-4">
+                  {PixelIcons[feature.icon as keyof typeof PixelIcons]}
                 </div>
                 
-                <div className="relative z-10">
+                {/* Title */}
+                <h3 className="text-xl font-extrabold mb-2" style={{ 
+                  color: "#5a4a2a",
+                  textShadow: "1px 1px 0 rgba(0,0,0,0.2)"
+                }}>
+                  {feature.title}
+                </h3>
+                
+                {/* Description */}
+                <p className="font-bold" style={{ color: "#6b5210" }}>
+                  {feature.desc}
+                </p>
+                
+                {/* Pixel progress bar decoration */}
+                <div className="mt-4 h-3" style={{
+                  background: "#d9c9a6",
+                  border: "2px solid #8b6914"
+                }}>
                   <div 
-                    className={`text-6xl mb-4 transition-all duration-500 animate-float ${
-                      hoveredIndex === i 
-                        ? "animate-bounce scale-125" 
-                        : "hover:scale-110"
-                    }`}
+                    className="h-full transition-all duration-500"
                     style={{
-                      animationDelay: `${i * 0.2}s`
+                      width: hoveredIndex === i ? "100%" : "60%",
+                      background: i === 0 ? "#7ec850" : i === 1 ? "#e8c547" : "#87ceeb"
                     }}
-                  >
-                    {feature.icon}
-                  </div>
-                  <h3 className={`text-xl font-bold mb-3 bg-gradient-to-r ${feature.gradient} bg-clip-text text-transparent transition-all duration-300 ${
-                    hoveredIndex === i ? "scale-110" : ""
-                  }`}>
-                    {feature.title}
-                  </h3>
-                  <p className={`text-gray-600 font-medium transition-all duration-300 ${
-                    hoveredIndex === i ? "text-gray-800 font-semibold" : ""
-                  }`}>
-                    {feature.desc}
-                  </p>
+                  />
                 </div>
               </div>
             ))}
