@@ -82,7 +82,7 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
     bubbleScale: 1.20,
     sketchX: 0,
     sketchY: -12,
-    sketchWidth: 1700,
+    sketchWidth: 2000,
     sketchHeight: 430,
   })
 
@@ -125,8 +125,11 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
     const host = containerRef.current
     if (!canvas || !host) return
 
+    // Store old dimensions and snapshot for proportional scaling
+    const oldWidth = canvas.width
+    const oldHeight = canvas.height
     let snapshotDataUrl: string | null = null
-    if (preserveDrawing && hasInitializedCanvasRef.current) {
+    if (preserveDrawing && hasInitializedCanvasRef.current && oldWidth > 0 && oldHeight > 0) {
       try {
         snapshotDataUrl = canvas.toDataURL("image/png")
       } catch {
@@ -148,12 +151,26 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
     ctx.setTransform(1, 0, 0, 1, 0, 0)
     fillCanvasBase()
 
-    if (snapshotDataUrl) {
+    if (snapshotDataUrl && oldWidth > 0 && oldHeight > 0) {
       const img = new Image()
       img.onload = () => {
         const redrawCtx = canvas.getContext("2d")
         if (!redrawCtx) return
-        redrawCtx.drawImage(img, 0, 0, canvas.width, canvas.height)
+        
+        // Calculate proportional scaling to fit the new canvas while maintaining aspect ratio
+        const scaleX = canvas.width / oldWidth
+        const scaleY = canvas.height / oldHeight
+        const scale = Math.min(scaleX, scaleY) // Use the smaller scale to fit entirely
+        
+        const scaledWidth = oldWidth * scale
+        const scaledHeight = oldHeight * scale
+        
+        // Center the scaled image in the new canvas
+        const offsetX = (canvas.width - scaledWidth) / 2
+        const offsetY = (canvas.height - scaledHeight) / 2
+        
+        // Draw the image with proportional scaling, centered
+        redrawCtx.drawImage(img, offsetX, offsetY, scaledWidth, scaledHeight)
       }
       img.src = snapshotDataUrl
     }
