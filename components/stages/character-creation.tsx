@@ -73,14 +73,14 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
   const layoutConfig = {
     bearX: 127,
     bearY: -54,
-    bearScale: 1.67,
+    bearScale: 1.17,
     bubbleX: 229,
-    bubbleY: 249,
+    bubbleY: 309,
     bubbleScale: 0.81,
     sketchX: 0,
     sketchY: -12,
-    sketchWidth: 1700,
-    sketchHeight: 480,
+    sketchWidth: 900,
+    sketchHeight: 520,
   } as const
 
   const canvasRef = useRef<HTMLCanvasElement>(null)
