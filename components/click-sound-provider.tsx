@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useRef } from "react"
 
 /**
  * 全局點擊音效提供者：
@@ -9,20 +9,44 @@ import { useEffect } from "react"
  * - 播放 /click.MP3（放在 public/click.MP3）
  */
 export default function ClickSoundProvider() {
+  const audioRef = useRef<HTMLAudioElement | null>(null)
+  const isLoadedRef = useRef(false)
+
   useEffect(() => {
     if (typeof window === "undefined") return
 
     const audio = new Audio("/click.MP3")
     audio.preload = "auto"
     audio.volume = 0.25
+    audioRef.current = audio
+
+    // Check if audio can be loaded
+    audio.addEventListener("canplaythrough", () => {
+      isLoadedRef.current = true
+    })
+
+    audio.addEventListener("error", () => {
+      // Audio file not found or not supported - disable sound
+      isLoadedRef.current = false
+    })
 
     const handleClick = () => {
-      try {
-        audio.currentTime = 0
-        void audio.play()
-      } catch {
-        // 忽略播放錯誤（例如瀏覽器還未允許音訊）
-      }
+      if (!isLoadedRef.current || !audioRef.current) return
+      
+      audioRef.current.currentTime = 0
+      audioRef.current.play().catch(() => {
+        // Silently ignore play errors (e.g., browser autoplay policy)
+      })
+    }
+
+    document.addEventListener("click", handleClick)
+    return () => {
+      document.removeEventListener("click", handleClick)
+    }
+  }, [])
+
+  return null
+}
     }
 
     document.addEventListener("click", handleClick)

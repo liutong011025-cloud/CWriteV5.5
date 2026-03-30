@@ -130,7 +130,10 @@ export default function JourneyTicket({
           <h1 className="text-5xl md:text-6xl lg:text-7xl font-black mb-4 bg-gradient-to-r from-purple-600 via-pink-600 to-orange-600 bg-clip-text text-transparent">
             Your Journey Ticket
           </h1>
-          <p className="text-lg md:text-xl text-gray-600">Drag a journey type onto the ticket, then choose your difficulty.</p>
+          <p className="text-lg md:text-xl text-gray-600 mb-2">Drag a journey type onto the ticket, then choose your difficulty.</p>
+          <p className="text-base md:text-lg text-purple-600 font-semibold animate-pulse">
+            Choose one type of article you want to write and drag it to the stamp area on the right ticket
+          </p>
         </div>
 
         <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-8 mb-10">
@@ -155,7 +158,7 @@ export default function JourneyTicket({
                     onClick={() => setSelectedType(option.id)}
                     className={`relative rounded-3xl border-2 ${option.border} bg-gradient-to-br ${option.bg} p-4 shadow-xl transition-all duration-300 cursor-pointer ${
                       isSelected ? "scale-105 ring-4 ring-purple-200" : "hover:scale-102"
-                    }`}
+                    } ${!selectedType ? "animate-ticket-blink" : ""}`}
                   >
                     <div className="flex items-center gap-3">
                       <p className="text-3xl">{option.icon}</p>
@@ -297,7 +300,9 @@ export default function JourneyTicket({
                     className={`w-24 h-24 rounded-2xl border-2 border-dashed flex items-center justify-center text-center text-xs font-semibold transition-all ${
                       dragOver || isDragging
                         ? "border-purple-500 bg-purple-50 text-purple-700 scale-105 animate-pulse ring-4 ring-purple-300 ring-opacity-50"
-                        : "border-purple-200 text-gray-400"
+                        : selectedType 
+                          ? "border-purple-200 text-gray-400"
+                          : "border-purple-300 text-gray-400 animate-ticket-blink"
                     }`}
                     onDragOver={(event) => {
                       event.preventDefault()
