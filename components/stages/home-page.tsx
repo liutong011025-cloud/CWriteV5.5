@@ -50,7 +50,7 @@ export default function HomePage({ language = "en", onStartPlan }: HomePageProps
   const [isLoaded, setIsLoaded] = useState(false)
   const [activeGenre, setActiveGenre] = useState<string | null>(null)
   const [isPixelating, setIsPixelating] = useState(false)
-  const [pixelPhase, setPixelPhase] = useState(0) // 0=none, 1=transform elements, 2=show pixel scene, 3=navigate
+  const [pixelPhase, setPixelPhase] = useState(0) // 0=none, 1=transform elements then navigate
   const [pixelOrigin, setPixelOrigin] = useState({ x: 0, y: 0 })
   const shaderContainerRef = useRef<HTMLDivElement>(null)
   const buttonRef = useRef<HTMLButtonElement>(null)
@@ -103,19 +103,13 @@ export default function HomePage({ language = "en", onStartPlan }: HomePageProps
     }
     setIsPixelating(true)
     
-    // Phase 1: Transform elements to pixel style (0-1200ms)
+    // Phase 1: Transform elements to pixel style (0-1000ms)
     setPixelPhase(1)
     
-    // Phase 2: Show pixel scene overlay (1200-2400ms)
+    // Navigate directly after pixelation effect
     setTimeout(() => {
-      setPixelPhase(2)
-    }, 1200)
-    
-    // Phase 3: Navigate to journey page
-    setTimeout(() => {
-      setPixelPhase(3)
       onStartPlan?.()
-    }, 2400)
+    }, 1200)
   }
 
   return (
@@ -125,7 +119,7 @@ export default function HomePage({ language = "en", onStartPlan }: HomePageProps
       
       {/* Phase 1: Pixelation effect overlay - transforms existing elements */}
       <AnimatePresence>
-        {pixelPhase >= 1 && pixelPhase < 2 && (
+        {pixelPhase >= 1 && (
           <motion.div
             className="fixed inset-0 z-[99] pointer-events-none"
             initial={{ opacity: 0 }}
@@ -212,105 +206,7 @@ export default function HomePage({ language = "en", onStartPlan }: HomePageProps
         )}
       </AnimatePresence>
       
-      {/* Phase 2: Final pixel scene overlay */}
-      <AnimatePresence>
-        {pixelPhase >= 2 && (
-          <motion.div
-            className="fixed inset-0 z-[100] pointer-events-none"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.4 }}
-          >
-            {/* Pixel art background with Stardew palette */}
-            <div
-              className="absolute inset-0"
-              style={{
-                background: `linear-gradient(180deg, 
-                  #b8e4f9 0%, 
-                  #87ceeb 20%, 
-                  #a8d8ea 35%,
-                  #7ec850 55%, 
-                  #6bb843 70%,
-                  #5a9a32 85%,
-                  #4a8528 100%)`,
-              }}
-            />
-            
-            {/* Pixel grid overlay */}
-            <div
-              className="absolute inset-0"
-              style={{
-                backgroundImage: `
-                  linear-gradient(rgba(139, 105, 20, 0.15) 2px, transparent 2px),
-                  linear-gradient(90deg, rgba(139, 105, 20, 0.15) 2px, transparent 2px)
-                `,
-                backgroundSize: "8px 8px",
-                imageRendering: "pixelated",
-              }}
-            />
-            
-            {/* Pixel clouds */}
-            <motion.div 
-              className="absolute top-12 left-[8%] w-32 h-16 bg-white"
-              style={{
-                clipPath: "polygon(0% 70%, 10% 50%, 25% 60%, 40% 30%, 55% 50%, 70% 35%, 85% 55%, 100% 70%, 100% 100%, 0% 100%)",
-              }}
-              initial={{ x: -50, opacity: 0 }}
-              animate={{ x: 0, opacity: 0.9 }}
-              transition={{ delay: 0.1, duration: 0.3 }}
-            />
-            <motion.div 
-              className="absolute top-20 right-[12%] w-40 h-20 bg-white"
-              style={{
-                clipPath: "polygon(0% 65%, 12% 45%, 28% 55%, 45% 25%, 62% 45%, 78% 30%, 92% 50%, 100% 65%, 100% 100%, 0% 100%)",
-              }}
-              initial={{ x: 50, opacity: 0 }}
-              animate={{ x: 0, opacity: 0.85 }}
-              transition={{ delay: 0.15, duration: 0.3 }}
-            />
-            
-            {/* Pixel grass at bottom */}
-            <motion.div 
-              className="absolute bottom-0 left-0 right-0 h-24"
-              initial={{ y: 30, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.2, duration: 0.35 }}
-            >
-              {[...Array(50)].map((_, i) => (
-                <div
-                  key={`grass-${i}`}
-                  className="absolute bottom-0"
-                  style={{
-                    left: `${i * 2}%`,
-                    width: "10px",
-                    height: `${18 + (i % 4) * 6}px`,
-                    background: i % 3 === 0 ? "#4a8528" : i % 3 === 1 ? "#5a9a32" : "#7ec850",
-                  }}
-                />
-              ))}
-            </motion.div>
-            
-            {/* Wooden signpost */}
-            <motion.div
-              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
-              initial={{ scale: 0.5, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ delay: 0.3, duration: 0.25 }}
-            >
-              <div className="px-10 py-5 text-center" style={{
-                background: "linear-gradient(180deg, #c4a574 0%, #9a7b4f 100%)",
-                border: "6px solid #6b5210",
-                boxShadow: "inset -4px -4px 0 rgba(0,0,0,0.2), inset 4px 4px 0 rgba(255,255,255,0.15), 6px 6px 0 rgba(0,0,0,0.3)",
-              }}>
-                <span className="text-white font-bold text-2xl" style={{ textShadow: "3px 3px 0 #6b5210" }}>
-                  Your Journey Ticket
-                </span>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+
 
       <div
         ref={shaderContainerRef}

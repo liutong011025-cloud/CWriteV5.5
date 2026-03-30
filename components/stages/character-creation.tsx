@@ -8,7 +8,7 @@ import StageHeader from "@/components/stage-header"
 import { Loader2, Sparkles, Trash2, Eraser, PencilLine, RefreshCw } from "lucide-react"
 import { toast } from "sonner"
 import { EOB_TRAITS, type EobTrait } from "@/lib/character-eob-traits"
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 
 interface CharacterCreationProps {
   language: Language
@@ -401,15 +401,15 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
           if (!open) setTraitDialogTrait(null)
         }}
       >
-        <DialogContent className="pixel-panel border-0" style={{ background: "#f5e6c8" }}>
+        <DialogContent className="pixel-panel border-0 max-w-md" style={{ background: "#f5e6c8" }}>
           {traitDialogTrait && (
             <>
               <DialogHeader>
-                <DialogTitle className="pixel-title" style={{ color: "#8b6914" }}>{traitDialogTrait.name}</DialogTitle>
+                <DialogTitle className="pixel-title text-xl" style={{ color: "#8b6914" }}>{traitDialogTrait.name}</DialogTitle>
+                <DialogDescription className="text-sm mt-2" style={{ color: "#5a4a2a" }}>
+                  {traitDialogTrait.explanationTemplate.replace(/\{\{name\}\}/g, name.trim() || "your character")}
+                </DialogDescription>
               </DialogHeader>
-              <p className="text-sm" style={{ color: "#5a4a2a" }}>
-                {traitDialogTrait.explanationTemplate.replace(/\{\{name\}\}/g, name.trim() || "your character")}
-              </p>
               <div className="space-y-2">
                 <p className="text-sm font-bold" style={{ color: "#8b6914" }}>When writing, you can use:</p>
                 <ul className="list-disc list-inside space-y-1 text-sm" style={{ color: "#6b5210" }}>
