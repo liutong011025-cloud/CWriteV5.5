@@ -70,18 +70,21 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
 
   const [traitDialogOpen, setTraitDialogOpen] = useState(false)
   const [traitDialogTrait, setTraitDialogTrait] = useState<EobTrait | null>(null)
-  const layoutConfig = {
-    bearX: 127,
-    bearY: 80,
-    bearScale: 0.85,
-    bubbleX: 180,
-    bubbleY: -60,
-    bubbleScale: 0.78,
+  const [showPositionTool, setShowPositionTool] = useState(false)
+  
+  // Position adjustment state - can be tuned with the debug tool
+  const [layoutConfig, setLayoutConfig] = useState({
+    bearX: 60,
+    bearY: 160,
+    bearScale: 0.72,
+    bubbleX: 140,
+    bubbleY: -120,
+    bubbleScale: 0.75,
     sketchX: 0,
     sketchY: -12,
-    sketchWidth: 1000,
-    sketchHeight: 520,
-  } as const
+    sketchWidth: 1100,
+    sketchHeight: 540,
+  })
 
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -439,6 +442,76 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
 
       <div className="max-w-7xl mx-auto relative z-10 px-6 py-8">
         <StageHeader stage={1} title="Create Your Character" onBack={onBack} />
+        
+        {/* Position Adjustment Debug Tool */}
+        <button 
+          type="button"
+          onClick={() => setShowPositionTool(!showPositionTool)}
+          className="fixed bottom-4 right-4 z-50 pixel-btn pixel-btn-wood px-3 py-2 text-xs"
+        >
+          {showPositionTool ? "Hide" : "Adjust"} Layout
+        </button>
+        
+        {showPositionTool && (
+          <div className="fixed bottom-16 right-4 z-50 pixel-panel p-4 w-72 max-h-[70vh] overflow-y-auto text-xs" style={{ background: "#f5e6c8" }}>
+            <h4 className="font-bold mb-3 pixel-title" style={{ color: "#8b6914" }}>Layout Config</h4>
+            <div className="space-y-3">
+              <div>
+                <label className="block mb-1" style={{ color: "#5a4a2a" }}>Sketch Width: {layoutConfig.sketchWidth}</label>
+                <input type="range" min={600} max={1400} value={layoutConfig.sketchWidth} 
+                  onChange={(e) => setLayoutConfig(p => ({...p, sketchWidth: Number(e.target.value)}))}
+                  className="w-full" style={{ accentColor: "#7ec850" }} />
+              </div>
+              <div>
+                <label className="block mb-1" style={{ color: "#5a4a2a" }}>Sketch Height: {layoutConfig.sketchHeight}</label>
+                <input type="range" min={300} max={700} value={layoutConfig.sketchHeight} 
+                  onChange={(e) => setLayoutConfig(p => ({...p, sketchHeight: Number(e.target.value)}))}
+                  className="w-full" style={{ accentColor: "#7ec850" }} />
+              </div>
+              <div className="pixel-divider my-2" />
+              <div>
+                <label className="block mb-1" style={{ color: "#5a4a2a" }}>Bear X: {layoutConfig.bearX}</label>
+                <input type="range" min={-200} max={300} value={layoutConfig.bearX} 
+                  onChange={(e) => setLayoutConfig(p => ({...p, bearX: Number(e.target.value)}))}
+                  className="w-full" style={{ accentColor: "#7ec850" }} />
+              </div>
+              <div>
+                <label className="block mb-1" style={{ color: "#5a4a2a" }}>Bear Y: {layoutConfig.bearY}</label>
+                <input type="range" min={-200} max={300} value={layoutConfig.bearY} 
+                  onChange={(e) => setLayoutConfig(p => ({...p, bearY: Number(e.target.value)}))}
+                  className="w-full" style={{ accentColor: "#7ec850" }} />
+              </div>
+              <div>
+                <label className="block mb-1" style={{ color: "#5a4a2a" }}>Bear Scale: {layoutConfig.bearScale.toFixed(2)}</label>
+                <input type="range" min={30} max={150} value={layoutConfig.bearScale * 100} 
+                  onChange={(e) => setLayoutConfig(p => ({...p, bearScale: Number(e.target.value) / 100}))}
+                  className="w-full" style={{ accentColor: "#7ec850" }} />
+              </div>
+              <div className="pixel-divider my-2" />
+              <div>
+                <label className="block mb-1" style={{ color: "#5a4a2a" }}>Bubble X: {layoutConfig.bubbleX}</label>
+                <input type="range" min={-200} max={400} value={layoutConfig.bubbleX} 
+                  onChange={(e) => setLayoutConfig(p => ({...p, bubbleX: Number(e.target.value)}))}
+                  className="w-full" style={{ accentColor: "#7ec850" }} />
+              </div>
+              <div>
+                <label className="block mb-1" style={{ color: "#5a4a2a" }}>Bubble Y: {layoutConfig.bubbleY}</label>
+                <input type="range" min={-300} max={200} value={layoutConfig.bubbleY} 
+                  onChange={(e) => setLayoutConfig(p => ({...p, bubbleY: Number(e.target.value)}))}
+                  className="w-full" style={{ accentColor: "#7ec850" }} />
+              </div>
+              <div>
+                <label className="block mb-1" style={{ color: "#5a4a2a" }}>Bubble Scale: {layoutConfig.bubbleScale.toFixed(2)}</label>
+                <input type="range" min={40} max={120} value={layoutConfig.bubbleScale * 100} 
+                  onChange={(e) => setLayoutConfig(p => ({...p, bubbleScale: Number(e.target.value) / 100}))}
+                  className="w-full" style={{ accentColor: "#7ec850" }} />
+              </div>
+            </div>
+            <div className="mt-4 p-2 pixel-card text-[10px] font-mono break-all" style={{ background: "#fff", color: "#333" }}>
+              {JSON.stringify(layoutConfig, null, 0)}
+            </div>
+          </div>
+        )}
 
         {showGenerationHint && (
           <div className="mt-6 mx-auto max-w-4xl pixel-panel px-7 py-4">

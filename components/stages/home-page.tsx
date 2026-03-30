@@ -102,10 +102,10 @@ export default function HomePage({ language = "en", onStartPlan }: HomePageProps
     }
     setIsPixelating(true)
     
-    // After the pixelation animation completes, trigger the actual navigation
+    // After the full pixelation animation completes, trigger the actual navigation
     setTimeout(() => {
       onStartPlan?.()
-    }, 1200)
+    }, 1600)
   }
 
   return (
@@ -113,7 +113,7 @@ export default function HomePage({ language = "en", onStartPlan }: HomePageProps
       <CustomCursor />
       <GrainOverlay />
       
-      {/* Pixel transition overlay */}
+      {/* Pixel transition overlay - time-reverse retro effect */}
       <AnimatePresence>
         {isPixelating && (
           <motion.div
@@ -122,115 +122,219 @@ export default function HomePage({ language = "en", onStartPlan }: HomePageProps
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
           >
-            {/* Radial pixel effect expanding from button */}
+            {/* Stage 1: Stepped pixelation filter expanding from button center */}
             <motion.div
               className="absolute inset-0"
               style={{
                 background: `radial-gradient(circle at ${pixelOrigin.x}px ${pixelOrigin.y}px, 
-                  transparent 0%, 
-                  transparent var(--radius), 
-                  rgba(126, 200, 80, 0.3) var(--radius), 
-                  rgba(126, 200, 80, 0.6) calc(var(--radius) + 50px),
-                  rgba(139, 105, 20, 0.8) calc(var(--radius) + 100px),
-                  #5a9a32 calc(var(--radius) + 200px))`,
+                  rgba(255,255,255,0.1) 0%, 
+                  rgba(255,255,255,0.1) var(--radius), 
+                  rgba(245,230,200,0.4) calc(var(--radius) + 20px),
+                  rgba(232,197,71,0.5) calc(var(--radius) + 80px),
+                  rgba(126,200,80,0.6) calc(var(--radius) + 150px),
+                  rgba(90,154,50,0.85) calc(var(--radius) + 250px),
+                  #5a9a32 calc(var(--radius) + 400px))`,
                 // @ts-ignore
                 "--radius": "0px",
               }}
               animate={{
                 // @ts-ignore
-                "--radius": ["0px", "2000px"],
+                "--radius": ["0px", "2500px"],
               }}
-              transition={{ duration: 1, ease: "easeOut" }}
+              transition={{ duration: 1.4, ease: [0.22, 1, 0.36, 1] }}
             />
             
-            {/* Pixel grid overlay with stepped animation */}
+            {/* Stage 2: Low-framerate stepped pixel grid - creates retro CRT/8-bit feel */}
             <motion.div
               className="absolute inset-0"
               style={{
                 backgroundImage: `
-                  linear-gradient(rgba(139, 105, 20, 0.4) 2px, transparent 2px),
-                  linear-gradient(90deg, rgba(139, 105, 20, 0.4) 2px, transparent 2px)
+                  linear-gradient(rgba(139, 105, 20, 0.5) 3px, transparent 3px),
+                  linear-gradient(90deg, rgba(139, 105, 20, 0.5) 3px, transparent 3px)
                 `,
-                backgroundSize: "16px 16px",
+                backgroundSize: "24px 24px",
                 imageRendering: "pixelated",
               }}
-              initial={{ opacity: 0, scale: 4 }}
+              initial={{ opacity: 0 }}
               animate={{ 
-                opacity: [0, 0.3, 0.6, 0.9, 1],
-                scale: [4, 2, 1.5, 1, 1],
+                opacity: [0, 0, 0.4, 0.7, 0.9, 1, 0.8],
+                backgroundSize: ["64px 64px", "48px 48px", "32px 32px", "24px 24px", "16px 16px", "12px 12px", "8px 8px"],
               }}
               transition={{ 
-                duration: 0.8, 
-                times: [0, 0.2, 0.4, 0.6, 1],
-                ease: "steps(5)"
+                duration: 1.2, 
+                times: [0, 0.1, 0.25, 0.4, 0.55, 0.75, 1],
+                ease: "linear"
               }}
             />
             
-            {/* Low frame-rate pixelation effect */}
+            {/* Stage 3: Scanline effect for CRT retro feel */}
             <motion.div
               className="absolute inset-0"
               style={{
-                backdropFilter: "blur(0px)",
+                backgroundImage: `repeating-linear-gradient(
+                  0deg,
+                  transparent 0px,
+                  transparent 2px,
+                  rgba(0, 0, 0, 0.15) 2px,
+                  rgba(0, 0, 0, 0.15) 4px
+                )`,
               }}
-              animate={{
-                backdropFilter: ["blur(0px)", "blur(2px)", "blur(4px)", "blur(2px)", "blur(0px)"],
-              }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: [0, 0, 0.3, 0.5, 0.6] }}
               transition={{ 
-                duration: 0.6,
-                times: [0, 0.25, 0.5, 0.75, 1],
-                ease: "steps(4)"
+                duration: 1,
+                times: [0, 0.3, 0.5, 0.7, 1],
               }}
             />
             
-            {/* Final pixel-style fill */}
+            {/* Stage 4: Color reduction / posterization effect */}
+            <motion.div
+              className="absolute inset-0"
+              style={{
+                backdropFilter: "contrast(1) saturate(1)",
+              }}
+              animate={{
+                backdropFilter: [
+                  "contrast(1) saturate(1)",
+                  "contrast(1.1) saturate(1.2)",
+                  "contrast(1.2) saturate(1.3)",
+                  "contrast(1.3) saturate(1.1)",
+                  "contrast(1.2) saturate(1.0)",
+                ],
+              }}
+              transition={{ 
+                duration: 0.8,
+                times: [0, 0.25, 0.5, 0.75, 1],
+                ease: "linear"
+              }}
+            />
+            
+            {/* Stage 5: Final pixel art background with Stardew palette */}
             <motion.div
               className="absolute inset-0"
               style={{
                 background: `linear-gradient(180deg, 
                   #b8e4f9 0%, 
-                  #87ceeb 25%, 
-                  #7ec850 65%, 
-                  #5a9a32 100%)`,
+                  #87ceeb 20%, 
+                  #a8d8ea 35%,
+                  #7ec850 55%, 
+                  #6bb843 70%,
+                  #5a9a32 85%,
+                  #4a8528 100%)`,
               }}
               initial={{ opacity: 0 }}
-              animate={{ opacity: [0, 0, 0, 0.5, 1] }}
+              animate={{ opacity: [0, 0, 0, 0.3, 0.6, 0.85, 1] }}
               transition={{ 
-                duration: 1,
-                times: [0, 0.3, 0.6, 0.8, 1],
-                ease: "steps(5)"
+                duration: 1.2,
+                times: [0, 0.2, 0.4, 0.55, 0.7, 0.85, 1],
+                ease: "linear"
               }}
             />
             
-            {/* Pixel decorative elements appearing */}
+            {/* Stage 6: Pixel art decorative elements fading in */}
             <motion.div
               className="absolute inset-0 overflow-hidden"
               initial={{ opacity: 0 }}
-              animate={{ opacity: [0, 0, 1] }}
-              transition={{ duration: 1, times: [0, 0.7, 1] }}
+              animate={{ opacity: [0, 0, 0, 0.5, 1] }}
+              transition={{ duration: 1.2, times: [0, 0.5, 0.7, 0.85, 1] }}
             >
-              {/* Pixel clouds */}
-              <div className="absolute top-16 left-[10%] w-24 h-12 bg-white opacity-80" style={{
-                clipPath: "polygon(0% 60%, 15% 40%, 30% 50%, 45% 20%, 60% 40%, 75% 30%, 90% 50%, 100% 60%, 100% 100%, 0% 100%)"
-              }} />
-              <div className="absolute top-24 right-[15%] w-32 h-14 bg-white opacity-70" style={{
-                clipPath: "polygon(0% 60%, 15% 40%, 30% 50%, 45% 20%, 60% 40%, 75% 30%, 90% 50%, 100% 60%, 100% 100%, 0% 100%)"
-              }} />
+              {/* Pixel clouds - chunky 8-bit style */}
+              <motion.div 
+                className="absolute top-12 left-[8%] w-32 h-16 bg-white"
+                style={{
+                  clipPath: "polygon(0% 70%, 10% 50%, 25% 60%, 40% 30%, 55% 50%, 70% 35%, 85% 55%, 100% 70%, 100% 100%, 0% 100%)",
+                  imageRendering: "pixelated",
+                }}
+                initial={{ x: -50, opacity: 0 }}
+                animate={{ x: 0, opacity: 0.9 }}
+                transition={{ delay: 0.8, duration: 0.3, ease: "easeOut" }}
+              />
+              <motion.div 
+                className="absolute top-20 right-[12%] w-40 h-18 bg-white"
+                style={{
+                  clipPath: "polygon(0% 65%, 12% 45%, 28% 55%, 45% 25%, 62% 45%, 78% 30%, 92% 50%, 100% 65%, 100% 100%, 0% 100%)",
+                  imageRendering: "pixelated",
+                }}
+                initial={{ x: 50, opacity: 0 }}
+                animate={{ x: 0, opacity: 0.85 }}
+                transition={{ delay: 0.85, duration: 0.3, ease: "easeOut" }}
+              />
+              <motion.div 
+                className="absolute top-28 left-[35%] w-24 h-12 bg-white"
+                style={{
+                  clipPath: "polygon(0% 60%, 20% 35%, 50% 50%, 80% 30%, 100% 60%, 100% 100%, 0% 100%)",
+                  imageRendering: "pixelated",
+                }}
+                initial={{ y: -30, opacity: 0 }}
+                animate={{ y: 0, opacity: 0.75 }}
+                transition={{ delay: 0.9, duration: 0.25, ease: "easeOut" }}
+              />
               
-              {/* Pixel grass at bottom */}
-              <div className="absolute bottom-0 left-0 right-0 h-20">
-                {[...Array(30)].map((_, i) => (
+              {/* Pixel grass at bottom - stepped in */}
+              <motion.div 
+                className="absolute bottom-0 left-0 right-0 h-24"
+                initial={{ y: 30, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.75, duration: 0.35, ease: "easeOut" }}
+              >
+                {[...Array(40)].map((_, i) => (
                   <div
                     key={`pixel-grass-${i}`}
                     className="absolute bottom-0"
                     style={{
-                      left: `${i * 3.3}%`,
-                      width: "8px",
-                      height: `${16 + (i % 3) * 8}px`,
-                      background: i % 2 === 0 ? "#5a9a32" : "#7ec850",
+                      left: `${i * 2.5}%`,
+                      width: "10px",
+                      height: `${18 + (i % 4) * 6}px`,
+                      background: i % 3 === 0 ? "#4a8528" : i % 3 === 1 ? "#5a9a32" : "#7ec850",
+                      imageRendering: "pixelated",
                     }}
                   />
                 ))}
-              </div>
+              </motion.div>
+              
+              {/* Pixel flowers */}
+              <motion.div 
+                className="absolute bottom-20 left-0 right-0"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.95, duration: 0.2, ease: "easeOut" }}
+              >
+                {[...Array(8)].map((_, i) => (
+                  <div
+                    key={`flower-${i}`}
+                    className="absolute"
+                    style={{
+                      left: `${8 + i * 12}%`,
+                      bottom: `${4 + (i % 2) * 8}px`,
+                    }}
+                  >
+                    <div className="w-4 h-4" style={{
+                      background: ["#ff9999", "#ffcc66", "#ff99cc", "#99ccff", "#ffff99"][i % 5],
+                      clipPath: "polygon(50% 0%, 65% 35%, 100% 35%, 75% 55%, 85% 100%, 50% 75%, 15% 100%, 25% 55%, 0% 35%, 35% 35%)",
+                      imageRendering: "pixelated",
+                    }} />
+                  </div>
+                ))}
+              </motion.div>
+              
+              {/* Wooden signpost hint */}
+              <motion.div
+                className="absolute bottom-32 left-1/2 -translate-x-1/2"
+                initial={{ scale: 0.5, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ delay: 1, duration: 0.15, ease: "easeOut" }}
+              >
+                <div className="px-6 py-3 text-center" style={{
+                  background: "linear-gradient(180deg, #c4a574 0%, #9a7b4f 100%)",
+                  border: "4px solid #6b5210",
+                  boxShadow: "inset -3px -3px 0 rgba(0,0,0,0.2), inset 3px 3px 0 rgba(255,255,255,0.15), 4px 4px 0 rgba(0,0,0,0.3)",
+                  imageRendering: "pixelated",
+                }}>
+                  <span className="text-white font-bold text-lg" style={{ textShadow: "2px 2px 0 #6b5210" }}>
+                    Your Journey Ticket
+                  </span>
+                </div>
+              </motion.div>
             </motion.div>
           </motion.div>
         )}
