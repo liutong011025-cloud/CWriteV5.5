@@ -75,15 +75,15 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
   // Position adjustment state - can be tuned with the debug tool
   const [layoutConfig, setLayoutConfig] = useState({
     bearX: 60,
-    bearY: 160,
-    bearScale: 0.72,
-    bubbleX: 140,
-    bubbleY: -120,
-    bubbleScale: 0.75,
+    bearY: -46,
+    bearScale: 0.90,
+    bubbleX: 155,
+    bubbleY: -114,
+    bubbleScale: 1.20,
     sketchX: 0,
     sketchY: -12,
-    sketchWidth: 1100,
-    sketchHeight: 540,
+    sketchWidth: 1700,
+    sketchHeight: 430,
   })
 
   const canvasRef = useRef<HTMLCanvasElement>(null)
