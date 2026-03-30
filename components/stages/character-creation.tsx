@@ -556,7 +556,7 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
                 ? { transform: `translate(${layoutConfig.sketchX - 12}px, ${layoutConfig.sketchY}px) scale(0.94)` }
                 : {
                     width: "2200px",
-                    maxWidth: "98vw",
+                    maxWidth: "calc(98vw - 110px)",
                     transform: `translate(${layoutConfig.sketchX}px, ${layoutConfig.sketchY}px)`,
                   }
             }
