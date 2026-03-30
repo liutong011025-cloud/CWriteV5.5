@@ -562,12 +562,12 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
             }
           >
             <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
-              <h2 className="text-2xl font-bold pixel-title" style={{ color: "#8b6914" }}>Sketch Board</h2>
-              <p className="text-sm pixel-text" style={{ color: "#6b5210" }}>1) Choose species, 2) Draw, 3) Generate</p>
+              <h2 className="text-2xl font-extrabold pixel-title" style={{ color: "#5a4a2a", textShadow: "1px 1px 0 rgba(0,0,0,0.2)" }}>Sketch Board</h2>
+              <p className="text-sm font-bold pixel-text" style={{ color: "#5a4a2a", textShadow: "1px 1px 0 rgba(0,0,0,0.1)" }}>1) Choose species, 2) Draw, 3) Generate</p>
             </div>
 
             <div className="mb-4">
-              <label className="block text-sm font-bold mb-2 pixel-text" style={{ color: "#8b6914" }}>Species (Required first)</label>
+              <label className="block text-sm font-extrabold mb-2 pixel-text" style={{ color: "#5a4a2a", textShadow: "1px 1px 0 rgba(0,0,0,0.15)" }}>Species (Required first)</label>
               <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-2">
                 {SPECIES.map((spec) => {
                   const selected = species === spec.name
@@ -743,10 +743,10 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
               showDetailsPanel ? "opacity-100 translate-x-0" : "opacity-0 translate-x-8 pointer-events-none hidden xl:block"
             }`}
           >
-            <h2 className="text-2xl font-bold mb-4 pixel-title" style={{ color: "#8b6914" }}>Character Details</h2>
+            <h2 className="text-2xl font-extrabold mb-4 pixel-title" style={{ color: "#5a4a2a", textShadow: "1px 1px 0 rgba(0,0,0,0.2)" }}>Character Details</h2>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-bold mb-1 pixel-text" style={{ color: "#8b6914" }}>Name *</label>
+                <label className="block text-sm font-extrabold mb-1 pixel-text" style={{ color: "#5a4a2a", textShadow: "1px 1px 0 rgba(0,0,0,0.15)" }}>Name *</label>
                 <Input
                   value={name}
                   onChange={(e) => setName(e.target.value)}
@@ -756,7 +756,7 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
               </div>
 
               <div>
-                <label className="block text-sm font-bold mb-1 pixel-text" style={{ color: "#8b6914" }}>Age *</label>
+                <label className="block text-sm font-extrabold mb-1 pixel-text" style={{ color: "#5a4a2a", textShadow: "1px 1px 0 rgba(0,0,0,0.15)" }}>Age *</label>
                 <Input
                   type="number"
                   value={age}
@@ -767,7 +767,7 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
               </div>
 
               <div>
-                <label className="block text-sm font-bold mb-1 pixel-text" style={{ color: "#8b6914" }}>Traits * (choose up to 3)</label>
+                <label className="block text-sm font-extrabold mb-1 pixel-text" style={{ color: "#5a4a2a", textShadow: "1px 1px 0 rgba(0,0,0,0.15)" }}>Traits * (choose up to 3)</label>
                 <div className="flex flex-wrap gap-2">
                   {EOB_TRAITS.map((trait, traitIndex) => {
                     const selected = selectedTraits.includes(trait.name)
@@ -795,7 +795,7 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
               {isHighLevel && (
                 <>
                   <div>
-                    <label className="block text-sm font-bold mb-1 pixel-text" style={{ color: "#8b6914" }}>Background *</label>
+                    <label className="block text-sm font-extrabold mb-1 pixel-text" style={{ color: "#5a4a2a", textShadow: "1px 1px 0 rgba(0,0,0,0.15)" }}>Background *</label>
                     <textarea
                       value={background}
                       onChange={(e) => setBackground(e.target.value)}
@@ -806,7 +806,7 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-bold mb-1 pixel-text" style={{ color: "#8b6914" }}>Emotional Experience *</label>
+                    <label className="block text-sm font-extrabold mb-1 pixel-text" style={{ color: "#5a4a2a", textShadow: "1px 1px 0 rgba(0,0,0,0.15)" }}>Emotional Experience *</label>
                     <textarea
                       value={emotional}
                       onChange={(e) => setEmotional(e.target.value)}
@@ -817,7 +817,7 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-bold mb-1 pixel-text" style={{ color: "#8b6914" }}>Symbolic Objects *</label>
+                    <label className="block text-sm font-extrabold mb-1 pixel-text" style={{ color: "#5a4a2a", textShadow: "1px 1px 0 rgba(0,0,0,0.15)" }}>Symbolic Objects *</label>
                     <textarea
                       value={symbolic}
                       onChange={(e) => setSymbolic(e.target.value)}
@@ -832,7 +832,7 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
 
               {!isHighLevel && (
                 <div>
-                  <label className="block text-sm font-bold mb-1 pixel-text" style={{ color: "#8b6914" }}>Background (optional)</label>
+                  <label className="block text-sm font-extrabold mb-1 pixel-text" style={{ color: "#5a4a2a", textShadow: "1px 1px 0 rgba(0,0,0,0.15)" }}>Background (optional)</label>
                   <textarea
                     value={background}
                     onChange={(e) => setBackground(e.target.value)}
@@ -846,7 +846,7 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
             </div>
 
             <div className="mt-5 pixel-card p-4">
-              <h3 className="text-sm font-bold mb-2 pixel-text" style={{ color: "#8b6914" }}>Generation Preview</h3>
+              <h3 className="text-sm font-extrabold mb-2 pixel-text" style={{ color: "#5a4a2a", textShadow: "1px 1px 0 rgba(0,0,0,0.15)" }}>Generation Preview</h3>
               {isGenerating && (
                 <div className="mb-3 pixel-card px-3 py-2">
                   <div className="flex items-center gap-2 text-sm font-bold" style={{ color: "#7ec850" }}>
