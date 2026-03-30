@@ -135,7 +135,11 @@ export default function JourneyTicket({
 
         <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-8 mb-10">
           {/* BounceCards - 纵向排列在左边 */}
-          <div className="flex justify-center lg:justify-start">
+          <div className="flex flex-col justify-center lg:justify-start">
+            {/* 英文提示文字 */}
+            <p className="text-sm text-gray-600 mb-4 text-center lg:text-left max-w-[280px]">
+              Choose a type of article you want to write and drag it to the stamp area on the right ticket.
+            </p>
             <div className="flex flex-col gap-4">
               {journeyOptions.map((option, idx) => {
                 const isSelected = selectedType === option.id
@@ -153,9 +157,10 @@ export default function JourneyTicket({
                       setDragOver(false)
                     }}
                     onClick={() => setSelectedType(option.id)}
-                    className={`relative rounded-3xl border-2 ${option.border} bg-gradient-to-br ${option.bg} p-4 shadow-xl transition-all duration-300 cursor-pointer ${
+                    className={`relative rounded-3xl border-2 ${option.border} bg-gradient-to-br ${option.bg} p-4 shadow-xl transition-all duration-300 cursor-pointer animate-journey-card-pulse ${
                       isSelected ? "scale-105 ring-4 ring-purple-200" : "hover:scale-102"
                     }`}
+                    style={{ animationDelay: `${idx * 0.15}s` }}
                   >
                     <div className="flex items-center gap-3">
                       <p className="text-3xl">{option.icon}</p>
@@ -297,7 +302,9 @@ export default function JourneyTicket({
                     className={`w-24 h-24 rounded-2xl border-2 border-dashed flex items-center justify-center text-center text-xs font-semibold transition-all ${
                       dragOver || isDragging
                         ? "border-purple-500 bg-purple-50 text-purple-700 scale-105 animate-pulse ring-4 ring-purple-300 ring-opacity-50"
-                        : "border-purple-200 text-gray-400"
+                        : selectedType
+                          ? "border-purple-300 text-purple-600"
+                          : "border-purple-200 text-gray-400 animate-drop-zone-pulse"
                     }`}
                     onDragOver={(event) => {
                       event.preventDefault()

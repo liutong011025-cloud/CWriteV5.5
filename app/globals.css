@@ -909,6 +909,38 @@
   right: -14px;
 }
 
+/* Journey ticket card pulse animation */
+@keyframes journey-card-pulse {
+  0%, 100% {
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 10px 25px -3px rgba(168, 85, 247, 0.3), 0 4px 10px -4px rgba(168, 85, 247, 0.2);
+    transform: scale(1.02);
+  }
+}
+
+.animate-journey-card-pulse {
+  animation: journey-card-pulse 2s ease-in-out infinite;
+}
+
+/* Drop zone pulse animation */
+@keyframes drop-zone-pulse {
+  0%, 100% {
+    border-color: rgba(216, 180, 254, 0.6);
+    box-shadow: 0 0 0 0 rgba(168, 85, 247, 0);
+  }
+  50% {
+    border-color: rgba(168, 85, 247, 0.8);
+    box-shadow: 0 0 15px 3px rgba(168, 85, 247, 0.3);
+  }
+}
+
+.animate-drop-zone-pulse {
+  animation: drop-zone-pulse 1.5s ease-in-out infinite;
+}
+
 @keyframes stamp {
   0% {
     transform: scale(0) rotate(-15deg);
