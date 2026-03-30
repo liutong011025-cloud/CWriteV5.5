@@ -103,13 +103,13 @@ export default function HomePage({ language = "en", onStartPlan }: HomePageProps
     }
     setIsPixelating(true)
     
-    // Phase 1: Transform elements to pixel style (0-1000ms)
+    // Phase 1: Transform elements to pixel style (0-1800ms)
     setPixelPhase(1)
     
-    // Navigate directly after pixelation effect
+    // Navigate directly after pixelation effect completes
     setTimeout(() => {
       onStartPlan?.()
-    }, 1200)
+    }, 2000)
   }
 
   return (
@@ -144,7 +144,7 @@ export default function HomePage({ language = "en", onStartPlan }: HomePageProps
                 // @ts-ignore
                 "--wave-radius": ["0px", "3000px"],
               }}
-              transition={{ duration: 1.2, ease: "easeOut" }}
+              transition={{ duration: 1.8, ease: "easeOut" }}
             />
             
             {/* Progressive pixel grid - starts large, gets finer */}
@@ -164,7 +164,7 @@ export default function HomePage({ language = "en", onStartPlan }: HomePageProps
                 backgroundSize: ["64px 64px", "48px 48px", "32px 32px", "16px 16px", "8px 8px"],
               }}
               transition={{ 
-                duration: 1.0, 
+                duration: 1.6, 
                 times: [0, 0.2, 0.4, 0.7, 1],
                 ease: "linear"
               }}
@@ -183,7 +183,7 @@ export default function HomePage({ language = "en", onStartPlan }: HomePageProps
                   "rgba(90,154,50,0.5)",
                 ]
               }}
-              transition={{ duration: 1.2, ease: "easeIn" }}
+              transition={{ duration: 1.8, ease: "easeIn" }}
             />
             
             {/* Scanline effect */}
@@ -200,7 +200,7 @@ export default function HomePage({ language = "en", onStartPlan }: HomePageProps
               }}
               initial={{ opacity: 0 }}
               animate={{ opacity: [0, 0.2, 0.4, 0.5] }}
-              transition={{ duration: 0.8, ease: "linear" }}
+              transition={{ duration: 1.2, ease: "linear" }}
             />
           </motion.div>
         )}
