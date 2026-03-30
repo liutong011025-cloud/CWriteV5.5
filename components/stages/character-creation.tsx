@@ -480,8 +480,8 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
             <h4 className="font-bold mb-3 pixel-title" style={{ color: "#8b6914" }}>Layout Config</h4>
             <div className="space-y-3">
               <div>
-                <label className="block mb-1" style={{ color: "#5a4a2a" }}>Sketch Width: {layoutConfig.sketchWidth}</label>
-                <input type="range" min={600} max={1400} value={layoutConfig.sketchWidth} 
+<label className="block mb-1" style={{ color: "#5a4a2a" }}>Sketch Width: {layoutConfig.sketchWidth}</label>
+              <input type="range" min={600} max={2400} value={layoutConfig.sketchWidth}
                   onChange={(e) => setLayoutConfig(p => ({...p, sketchWidth: Number(e.target.value)}))}
                   className="w-full" style={{ accentColor: "#7ec850" }} />
               </div>
