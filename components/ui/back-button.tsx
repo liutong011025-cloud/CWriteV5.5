@@ -6,7 +6,9 @@ import Link from "next/link"
 
 const VARIANT_CLASSES: Record<string, string> = {
   default:
-    "border-border bg-background/90 text-foreground hover:bg-muted hover:border-muted-foreground/30 shadow-lg shadow-black/15 ring-2 ring-black/5 hover:shadow-xl hover:ring-black/10",
+    "border-[#6b5210] bg-[#c4a574] text-[#5a4a2a] hover:bg-[#d4b584] shadow-[inset_-3px_-3px_0_rgba(0,0,0,0.2),inset_3px_3px_0_rgba(255,255,255,0.2),4px_4px_0_rgba(0,0,0,0.25)] hover:shadow-[inset_-3px_-3px_0_rgba(0,0,0,0.2),inset_3px_3px_0_rgba(255,255,255,0.2),5px_5px_0_rgba(0,0,0,0.25)] !rounded-none",
+  pixel:
+    "border-[#6b5210] bg-[#c4a574] text-[#5a4a2a] hover:bg-[#d4b584] shadow-[inset_-3px_-3px_0_rgba(0,0,0,0.2),inset_3px_3px_0_rgba(255,255,255,0.2),4px_4px_0_rgba(0,0,0,0.25)] !rounded-none",
   purple:
     "border-purple-300 bg-purple-50/95 text-purple-800 hover:bg-purple-100 hover:border-purple-400 shadow-lg shadow-purple-900/20 ring-2 ring-purple-900/10 hover:shadow-xl",
   amber:
@@ -42,7 +44,8 @@ export function BackButton({
   "aria-label": ariaLabel = "Back",
 }: BackButtonProps) {
   const v = VARIANT_CLASSES[variant] ?? VARIANT_CLASSES.default
-  const baseClass = `rounded-full border-2 p-0 w-16 h-16 sm:w-[4.25rem] sm:h-[4.25rem] transition-transform duration-200 hover:scale-105 active:scale-95 inline-flex items-center justify-center ${v} ${className}`
+  const isPixelVariant = variant === "default" || variant === "pixel"
+  const baseClass = `${isPixelVariant ? "" : "rounded-full"} border-3 p-0 w-14 h-14 sm:w-16 sm:h-16 transition-transform duration-200 hover:scale-105 active:scale-95 inline-flex items-center justify-center ${v} ${className}`
   const icon = <ArrowLeft className="w-8 h-8 sm:w-9 sm:h-9" strokeWidth={2.5} />
   const btn = href ? (
     <Link href={href} aria-label={ariaLabel} className={baseClass}>

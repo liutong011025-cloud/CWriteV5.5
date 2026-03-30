@@ -16,16 +16,33 @@ export default function StageHeader({ stage, title, onBack, character, className
       <BackButton onClick={onBack} variant="default" />
       <div className="flex items-center gap-4 flex-1 min-w-0">
         <div>
-          <div className="text-sm font-medium text-muted-foreground">Stage {stage} of 5</div>
-          <h1 className="text-3xl font-bold text-foreground">
+          <div 
+            className="text-sm font-bold"
+            style={{ color: "#5a4a2a", textShadow: "1px 1px 0 rgba(0,0,0,0.15)" }}
+          >
+            Stage {stage} of 5
+          </div>
+          <h1 
+            className="text-3xl font-extrabold"
+            style={{ color: "#5a4a2a", textShadow: "2px 2px 0 rgba(0,0,0,0.2)" }}
+          >
             {title}
-            {character && <span className="text-primary"> - {character}</span>}
+            {character && <span style={{ color: "#7ec850" }}> - {character}</span>}
           </h1>
         </div>
       </div>
-      <div className="flex gap-2">
+      {/* Pixel-style progress indicator - crop growth stages */}
+      <div className="flex gap-1">
         {[1, 2, 3, 4, 5].map((i) => (
-          <div key={i} className={`w-2 h-2 rounded-full transition-all ${i <= stage ? "bg-primary" : "bg-border"}`} />
+          <div 
+            key={i} 
+            className="w-4 h-4 transition-all"
+            style={{ 
+              background: i <= stage ? "#7ec850" : "#d9c9a6",
+              border: `2px solid ${i <= stage ? "#5a9a32" : "#8b6914"}`,
+              boxShadow: i <= stage ? "inset -1px -1px 0 rgba(0,0,0,0.2), inset 1px 1px 0 rgba(255,255,255,0.3)" : "none"
+            }}
+          />
         ))}
       </div>
     </div>
