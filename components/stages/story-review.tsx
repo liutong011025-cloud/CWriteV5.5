@@ -22,15 +22,13 @@ interface StoryReviewProps {
   onEdit: (stage: "character" | "plot" | "structure" | "writing") => void
   onBack: () => void
   userId?: string
-  workId?: string | null // 如果提供，表示正在编辑已保存的作品
+  workId?: string | null
 }
 
 export default function StoryReview({ storyState, onReset, onEdit, onBack, userId, workId }: StoryReviewProps) {
-  // 使用ref来跟踪是否已经保存过，避免重复保存
   const hasSavedRef = useRef(false)
   const savedStoryRef = useRef<string>("")
   
-  // 语法检查相关状态
   const [isReviewing, setIsReviewing] = useState(false)
   const [grammarErrors, setGrammarErrors] = useState<GrammarError[]>([])
   const [hoveredErrorIndex, setHoveredErrorIndex] = useState<number | null>(null)
@@ -38,9 +36,7 @@ export default function StoryReview({ storyState, onReset, onEdit, onBack, userI
   const [hoveredCorrectionIndex, setHoveredCorrectionIndex] = useState<number | null>(null)
   const [currentStory, setCurrentStory] = useState(storyState.story || "")
 
-  // 保存故事内容到interactions API
   useEffect(() => {
-    // 只有当故事内容改变且还没有保存过时，才保存
     if (storyState.story && userId && (!hasSavedRef.current || savedStoryRef.current !== storyState.story)) {
       hasSavedRef.current = true
       savedStoryRef.current = storyState.story
@@ -61,11 +57,11 @@ export default function StoryReview({ storyState, onReset, onEdit, onBack, userI
           output: {
             story: currentStory,
           },
-          story: currentStory, // 保存完整故事内容（使用修正后的版本）
-          character: storyState.character, // 需要在顶层传递
-          plot: storyState.plot, // 需要在顶层传递
-          structure: storyState.structure, // 需要在顶层传递
-          workId: workId || undefined, // 如果正在编辑，传递 workId
+          story: currentStory,
+          character: storyState.character,
+          plot: storyState.plot,
+          structure: storyState.structure,
+          workId: workId || undefined,
         }),
       })
       .then(res => res.json())
@@ -77,19 +73,16 @@ export default function StoryReview({ storyState, onReset, onEdit, onBack, userI
       })
       .catch((error) => {
         console.error("Error saving story to interactions:", error)
-        // 如果保存失败，重置标记以便重试
         hasSavedRef.current = false
       })
     }
   }, [storyState.story, userId, storyState.character, storyState.plot, storyState.structure])
 
-  // 同步story变化并自动进行语法检查
   useEffect(() => {
     if (storyState.story) {
       setCurrentStory(storyState.story)
       setGrammarErrors([])
       
-      // 自动进行语法检查
       if (storyState.story.trim().length > 0) {
         const handleAutoReview = async () => {
           setIsReviewing(true)
@@ -110,7 +103,7 @@ export default function StoryReview({ storyState, onReset, onEdit, onBack, userI
             if (data.success && data.errors) {
               setGrammarErrors(data.errors)
               if (data.errors.length > 0) {
-                toast.success(`Found ${data.errors.length} potential issue(s) 📝`)
+                toast.success(`Found ${data.errors.length} potential issue(s)`)
               }
             }
           } catch (error) {
@@ -125,16 +118,13 @@ export default function StoryReview({ storyState, onReset, onEdit, onBack, userI
     }
   }, [storyState.story, userId])
 
-  // 应用语法修正
   const handleApplyCorrection = (errorIndex: number) => {
     const error = grammarErrors[errorIndex]
     if (!error) return
 
-    // 使用AI返回的位置（已经是完整单词）
     const actualStart = error.start
     const actualEnd = error.end
 
-    // 直接替换完整单词
     const before = currentStory.substring(0, actualStart)
     const after = currentStory.substring(actualEnd)
     const corrected = error.corrected.trim()
@@ -159,20 +149,18 @@ export default function StoryReview({ storyState, onReset, onEdit, onBack, userI
       .filter((err): err is GrammarError => err !== null)
 
     setGrammarErrors(updatedErrors)
-    setClickedErrorIndex(null) // 关闭修正建议
-    toast.success("Correction applied! ✨")
+    setClickedErrorIndex(null)
+    toast.success("Correction applied!")
   }
 
-  // 渲染带高亮的文本
   const renderHighlightedText = () => {
     if (grammarErrors.length === 0) {
-      return <p className="text-foreground leading-relaxed whitespace-pre-wrap text-base font-serif" style={{ overflowWrap: 'break-word' }}>{currentStory}</p>
+      return <p className="leading-relaxed whitespace-pre-wrap text-base" style={{ overflowWrap: 'break-word', color: "#5a4a2a" }}>{currentStory}</p>
     }
 
     const parts: Array<{ text: string; isError: boolean; errorIndex?: number }> = []
     let lastIndex = 0
     
-    // 使用AI返回的位置（已经是完整单词）
     const sortedErrors = [...grammarErrors]
       .map((error, originalIndex) => {
         return {
@@ -191,7 +179,7 @@ export default function StoryReview({ storyState, onReset, onEdit, onBack, userI
       parts.push({
         text: currentStory.substring(error.start, error.end),
         isError: true,
-        errorIndex: error.originalIndex, // 使用保存的原始索引
+        errorIndex: error.originalIndex,
       })
       lastIndex = error.end
     })
@@ -223,36 +211,46 @@ export default function StoryReview({ storyState, onReset, onEdit, onBack, userI
               onClick={() => setClickedErrorIndex(clickedErrorIndex === part.errorIndex ? null : part.errorIndex!)}
             >
               <span
-                className="bg-red-200 text-red-900 underline decoration-red-500 decoration-2 cursor-pointer rounded px-1"
-                style={{ backgroundColor: isHovered ? '#fecaca' : '#fee2e2' }}
+                className="cursor-pointer px-1"
+                style={{ 
+                  backgroundColor: isHovered ? '#e74c3c' : '#c0392b',
+                  color: '#fff',
+                  textDecoration: 'underline',
+                  textDecorationColor: '#fff'
+                }}
               >
                 {line}
               </span>
-              {/* 悬停提示 */}
               {isHovered && !isClicked && (
-                <div className="absolute z-50 bottom-full left-0 mb-2 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg shadow-lg whitespace-nowrap">
+                <div className="absolute z-50 bottom-full left-0 mb-2 px-3 py-2 text-sm whitespace-nowrap" style={{
+                  background: "#5a4a2a",
+                  color: "#f5e6c8",
+                  border: "3px solid #8b6914"
+                }}>
                   <div>Click to see correction</div>
-                  <div className="absolute bottom-0 left-4 transform translate-y-full w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
                 </div>
               )}
-              {/* 点击后显示错误详情和修正建议 */}
               {isClicked && (
-                <div className="absolute z-50 bottom-full left-0 mb-2 px-4 py-3 bg-gray-900 text-white text-sm rounded-lg shadow-lg max-w-xs">
+                <div className="absolute z-50 bottom-full left-0 mb-2 px-4 py-3 text-sm max-w-xs" style={{
+                  background: "#5a4a2a",
+                  color: "#f5e6c8",
+                  border: "3px solid #8b6914"
+                }}>
                   {error.issue.includes(':') ? (
                     <>
-                      <div className="font-bold mb-1 text-red-300">{error.issue.split(':')[0]}</div>
-                      <div className="text-gray-300 text-xs mb-2">{error.issue.split(':').slice(1).join(':').trim()}</div>
+                      <div className="font-bold mb-1" style={{ color: "#e74c3c" }}>{error.issue.split(':')[0]}</div>
+                      <div className="text-xs mb-2" style={{ color: "#d9c9a6" }}>{error.issue.split(':').slice(1).join(':').trim()}</div>
                     </>
                   ) : (
-                    <div className="font-bold mb-2 text-red-300">Issue: {error.issue}</div>
+                    <div className="font-bold mb-2" style={{ color: "#e74c3c" }}>Issue: {error.issue}</div>
                   )}
                   <div className="mb-2">
-                    <span className="text-gray-400">Original: </span>
-                    <span className="text-gray-300">{error.original}</span>
+                    <span style={{ color: "#8b6914" }}>Original: </span>
+                    <span style={{ color: "#d9c9a6" }}>{error.original}</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-gray-400">Suggestion: </span>
-                    <span className="text-green-400 font-semibold">{error.corrected}</span>
+                    <span style={{ color: "#8b6914" }}>Suggestion: </span>
+                    <span className="font-bold" style={{ color: "#7ec850" }}>{error.corrected}</span>
                     <span
                       className="relative inline-flex items-center cursor-pointer ml-2"
                       onMouseEnter={() => setHoveredCorrectionIndex(part.errorIndex!)}
@@ -263,23 +261,25 @@ export default function StoryReview({ storyState, onReset, onEdit, onBack, userI
                       }}
                     >
                       {hoveredCorrectionIndex === part.errorIndex ? (
-                        <span className="flex items-center gap-1 text-green-400 hover:text-green-300">
+                        <span className="flex items-center gap-1" style={{ color: "#7ec850" }}>
                           <Check className="w-4 h-4" />
                         </span>
                       ) : (
-                        <span className="text-green-500 opacity-70 hover:opacity-100 transition-opacity">
+                        <span style={{ color: "#5a9a32", opacity: 0.7 }}>
                           <Check className="w-4 h-4" />
                         </span>
                       )}
                       {hoveredCorrectionIndex === part.errorIndex && (
-                        <div className="absolute z-50 bottom-full left-0 mb-2 px-3 py-2 bg-green-600 text-white text-sm rounded-lg shadow-lg whitespace-nowrap">
+                        <div className="absolute z-50 bottom-full left-0 mb-2 px-3 py-2 text-sm whitespace-nowrap" style={{
+                          background: "#5a9a32",
+                          color: "#fff",
+                          border: "2px solid #3d8a3d"
+                        }}>
                           <div>Apply correction?</div>
-                          <div className="absolute bottom-0 left-4 transform translate-y-full w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-green-600"></div>
                         </div>
                       )}
                     </span>
                   </div>
-                  <div className="absolute bottom-0 left-4 transform translate-y-full w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
                 </div>
               )}
             </span>
@@ -296,13 +296,11 @@ export default function StoryReview({ storyState, onReset, onEdit, onBack, userI
       })
     })
 
-    return <p className="text-foreground leading-relaxed whitespace-pre-wrap text-base font-serif">{result}</p>
+    return <p className="leading-relaxed whitespace-pre-wrap text-base" style={{ color: "#5a4a2a" }}>{result}</p>
   }
 
-  // 自动生成视频 - 暂时关闭
-  // 已移除自動生成影片功能（界面不再顯示 Story Video 區塊）
   useEffect(() => {
-    // no-op: 保留 hook 以便未來需要時擴展
+    // no-op: preserved for future extension
   }, [storyState.story, userId, storyState.character, storyState.plot])
 
 
@@ -338,67 +336,88 @@ Created with Story Writer
     a.click()
   }
 
-  // 检查是否有有效的图片URL（不是占位符）
   const hasValidImage = storyState.structure?.imageUrl && 
     !storyState.structure.imageUrl.includes('dicebear.com') &&
     !storyState.structure.imageUrl.includes('placeholder')
 
   return (
-    <div className="min-h-screen py-8 px-6 relative" style={{ paddingTop: '120px', paddingBottom: '120px' }}>
-      {/* 背景：如果有有效图片则显示图片，否则显示彩色渐变背景 */}
-      {hasValidImage ? (
-        <div className="fixed inset-0 z-0">
-          <img
-            src={storyState.structure.imageUrl}
-            alt="Story background"
-            className="w-full h-full object-cover"
-            style={{
-              filter: 'blur(8px) brightness(0.85)',
-              transform: 'scale(1.05)',
-            }}
-          />
+    <div className="min-h-screen py-8 px-6 relative overflow-hidden pixel-theme" style={{ paddingTop: '120px', paddingBottom: '120px' }}>
+      {/* Pixel art background */}
+      <div className="fixed inset-0 z-0" style={{
+        background: `linear-gradient(180deg, 
+          #b8e4f9 0%, 
+          #87ceeb 25%, 
+          #7ec850 65%, 
+          #5a9a32 100%)`
+      }}>
+        {/* Pixel clouds */}
+        <div className="absolute top-16 left-[10%] w-24 h-12 bg-white opacity-80" style={{
+          clipPath: "polygon(0% 60%, 15% 40%, 30% 50%, 45% 20%, 60% 40%, 75% 30%, 90% 50%, 100% 60%, 100% 100%, 0% 100%)"
+        }} />
+        <div className="absolute top-24 right-[15%] w-32 h-14 bg-white opacity-70" style={{
+          clipPath: "polygon(0% 60%, 15% 40%, 30% 50%, 45% 20%, 60% 40%, 75% 30%, 90% 50%, 100% 60%, 100% 100%, 0% 100%)"
+        }} />
+        <div className="absolute top-32 left-[40%] w-20 h-10 bg-white opacity-75" style={{
+          clipPath: "polygon(0% 60%, 20% 30%, 50% 50%, 80% 25%, 100% 60%, 100% 100%, 0% 100%)"
+        }} />
+        
+        {/* Pixel grass at bottom */}
+        <div className="absolute bottom-0 left-0 right-0 h-32 pointer-events-none">
+          {[...Array(20)].map((_, i) => (
+            <div
+              key={`grass-${i}`}
+              className="absolute bottom-0"
+              style={{
+                left: `${i * 5 + Math.random() * 2}%`,
+                width: "8px",
+                height: `${20 + Math.random() * 16}px`,
+                background: i % 3 === 0 ? "#5a9a32" : "#7ec850",
+              }}
+            />
+          ))}
         </div>
-      ) : (
-        <div className="fixed inset-0 z-0 bg-gradient-to-br from-indigo-100 via-purple-50 via-pink-50 to-orange-50">
-          {/* 彩色渐变背景装饰 */}
-          <div className="absolute inset-0 overflow-hidden pointer-events-none">
-            <div className="absolute top-20 left-10 w-96 h-96 bg-indigo-300 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-pulse"></div>
-            <div className="absolute top-40 right-10 w-96 h-96 bg-purple-300 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-pulse" style={{ animationDelay: '2s' }}></div>
-            <div className="absolute bottom-20 left-1/2 w-96 h-96 bg-pink-300 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-pulse" style={{ animationDelay: '4s' }}></div>
-            <div className="absolute bottom-40 right-1/4 w-96 h-96 bg-orange-300 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-pulse" style={{ animationDelay: '1s' }}></div>
-          </div>
-        </div>
-      )}
+      </div>
       
       <div className="max-w-7xl mx-auto relative z-10">
         <StageHeader stage={5} title="Your Story is Complete!" onBack={onBack} />
 
         <div className="grid lg:grid-cols-12 gap-6 mt-8">
-          {/* 中间：故事內容（帶語法/拼寫錯誤標註） */}
+          {/* Story content with grammar highlights */}
           <div className="lg:col-span-8 space-y-6">
-            <div className="bg-gradient-to-br from-purple-100/95 via-pink-100/95 to-orange-100/95 backdrop-blur-md rounded-2xl p-10 border-2 border-purple-300 shadow-2xl">
-              <h2 className="text-4xl font-bold mb-4 bg-gradient-to-r from-purple-600 via-pink-600 to-orange-600 bg-clip-text text-transparent">
-                {storyState.character?.name}'s Adventure
+            <div className="pixel-panel p-8">
+              <h2 
+                className="text-3xl font-extrabold mb-4"
+                style={{ 
+                  color: "#5a4a2a",
+                  textShadow: "2px 2px 0 rgba(0,0,0,0.2)"
+                }}
+              >
+                {storyState.character?.name}&apos;s Adventure
               </h2>
-              <p className="text-lg text-gray-700 mb-8 font-semibold">
-                {storyState.plot?.setting} • {storyState.structure?.type}
+              <p className="text-base font-bold mb-6" style={{ color: "#6b5210" }}>
+                {storyState.plot?.setting} | {storyState.structure?.type}
               </p>
-              <div className="bg-white/90 backdrop-blur-sm rounded-xl p-8 border-2 border-purple-200 shadow-inner" style={{ overflowWrap: 'break-word' }}>
+              <div className="p-6" style={{ 
+                background: "#fff",
+                border: "4px solid #8b6914",
+                boxShadow: "inset -3px -3px 0 rgba(0,0,0,0.1), inset 3px 3px 0 rgba(255,255,255,0.3)"
+              }}>
                 {isReviewing ? (
                     <div className="flex flex-col items-center justify-center py-12">
                       <div className="relative mx-auto mb-6 w-16 h-16">
-                        <div className="absolute inset-0 border-4 border-purple-200 rounded-full"></div>
-                        <div className="absolute inset-0 border-4 border-transparent border-t-purple-600 rounded-full animate-spin"></div>
-                        <div className="absolute inset-2 border-4 border-pink-200 rounded-full"></div>
-                        <div className="absolute inset-2 border-4 border-transparent border-t-pink-600 rounded-full animate-spin" style={{ animationDirection: 'reverse', animationDuration: '1.5s' }}></div>
+                        <div className="absolute inset-0" style={{ border: "4px solid #d9c9a6" }}></div>
+                        <div className="absolute inset-0 animate-spin" style={{ 
+                          border: "4px solid transparent",
+                          borderTopColor: "#7ec850"
+                        }}></div>
                         <div className="absolute inset-0 flex items-center justify-center">
-                          <Wand2 className="w-6 h-6 text-purple-600 animate-pulse" />
+                          <Wand2 className="w-6 h-6 animate-pulse" style={{ color: "#7ec850" }} />
                         </div>
                       </div>
-                      <p className="text-purple-700 text-lg font-semibold animate-pulse">
+                      <p className="text-lg font-bold animate-pulse" style={{ color: "#5a4a2a" }}>
                         Loading article...
                       </p>
-                      <p className="text-gray-600 text-sm mt-2">
+                      <p className="text-sm mt-2 font-bold" style={{ color: "#6b5210" }}>
                         Please wait
                       </p>
                     </div>
@@ -412,42 +431,50 @@ Created with Story Writer
               <Button 
                 onClick={handleDownload} 
                 size="lg"
-                className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white border-0 shadow-xl py-6 text-lg font-bold"
+                className="pixel-btn pixel-btn-green py-6 text-lg font-bold"
               >
                 Download Story
               </Button>
               <Button 
                 onClick={() => onEdit("storyEdit")} 
                 size="lg"
-                className="bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 text-white border-0 shadow-xl py-6 text-lg font-bold"
+                className="pixel-btn py-6 text-lg font-bold"
+                style={{
+                  background: "linear-gradient(180deg, #e67e22 0%, #d35400 100%)",
+                  border: "4px solid #c0392b",
+                  color: "#fff",
+                  boxShadow: "inset -2px -2px 0 rgba(0,0,0,0.2), inset 2px 2px 0 rgba(255,255,255,0.2), 4px 4px 0 rgba(0,0,0,0.25)"
+                }}
               >
                 Edit Story
               </Button>
             </div>
           </div>
 
-          {/* 右侧：Story Summary */}
+          {/* Story Summary */}
           <div className="lg:col-span-4 space-y-6">
-            <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-2xl p-5 border-2 border-indigo-200 shadow-xl">
-              <h3 className="text-lg font-bold mb-3 text-indigo-700">Story Summary</h3>
+            <div className="pixel-panel p-5">
+              <h3 className="text-lg font-extrabold mb-3" style={{ color: "#5a4a2a", textShadow: "1px 1px 0 rgba(0,0,0,0.2)" }}>
+                Story Summary
+              </h3>
               <div className="space-y-2">
-                <div className="bg-white/80 rounded-lg p-2.5 border-2 border-indigo-200">
-                  <p className="text-xs text-gray-600 font-semibold mb-0.5">Character</p>
-                  <p className="text-sm font-bold text-indigo-700">{storyState.character?.name}</p>
+                <div className="p-2.5" style={{ background: "#d4e8b4", border: "3px solid #5a9a32" }}>
+                  <p className="text-xs font-bold mb-0.5" style={{ color: "#3d5a1f" }}>Character</p>
+                  <p className="text-sm font-extrabold" style={{ color: "#2d5016" }}>{storyState.character?.name}</p>
                 </div>
                 {storyState.character?.species && (
-                  <div className="bg-white/80 rounded-lg p-2.5 border-2 border-purple-200">
-                    <p className="text-xs text-gray-600 font-semibold mb-0.5">Species</p>
-                    <p className="text-sm font-bold text-purple-700">{storyState.character.species}</p>
+                  <div className="p-2.5" style={{ background: "#c5e4f5", border: "3px solid #5bc0de" }}>
+                    <p className="text-xs font-bold mb-0.5" style={{ color: "#2a5a7a" }}>Species</p>
+                    <p className="text-sm font-extrabold" style={{ color: "#1a4a6a" }}>{storyState.character.species}</p>
                   </div>
                 )}
-                <div className="bg-white/80 rounded-lg p-2.5 border-2 border-pink-200">
-                  <p className="text-xs text-gray-600 font-semibold mb-0.5">Setting</p>
-                  <p className="text-sm font-bold text-pink-700">{storyState.plot?.setting}</p>
+                <div className="p-2.5" style={{ background: "#f5e6c8", border: "3px solid #c4a020" }}>
+                  <p className="text-xs font-bold mb-0.5" style={{ color: "#8b6914" }}>Setting</p>
+                  <p className="text-sm font-extrabold" style={{ color: "#6b5210" }}>{storyState.plot?.setting}</p>
                 </div>
-                <div className="bg-white/80 rounded-lg p-2.5 border-2 border-orange-200">
-                  <p className="text-xs text-gray-600 font-semibold mb-0.5">Type</p>
-                  <p className="text-sm font-bold text-orange-700 capitalize">{storyState.structure?.type}</p>
+                <div className="p-2.5" style={{ background: "#e8d4f5", border: "3px solid #9b59b6" }}>
+                  <p className="text-xs font-bold mb-0.5" style={{ color: "#7b3f96" }}>Type</p>
+                  <p className="text-sm font-extrabold capitalize" style={{ color: "#5a2f76" }}>{storyState.structure?.type}</p>
                 </div>
               </div>
             </div>
@@ -455,7 +482,7 @@ Created with Story Writer
             <Button 
               onClick={() => onReset(currentStory)} 
               size="lg" 
-              className="w-full bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-700 hover:via-purple-700 hover:to-pink-700 text-white border-0 shadow-xl py-4 text-sm font-bold"
+              className="w-full pixel-btn pixel-btn-blue py-4 text-sm font-bold"
             >
               Back to Map
             </Button>
@@ -465,4 +492,3 @@ Created with Story Writer
     </div>
   )
 }
-

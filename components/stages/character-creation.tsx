@@ -538,7 +538,7 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
 
         {showGenerationHint && (
           <div className="mt-6 mx-auto max-w-4xl pixel-panel px-7 py-4">
-            <p className="text-lg font-bold pixel-text" style={{ color: "#8b6914" }}>
+            <p className="text-lg font-bold pixel-text" style={{ color: "#fff", textShadow: "2px 2px 0 rgba(0,0,0,0.3)" }}>
               This may take some time. You can continue filling in your character details while the image is generating.
             </p>
           </div>
