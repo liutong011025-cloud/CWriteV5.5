@@ -593,56 +593,91 @@ Continue guiding step by step. Each response should:
 
   return (
     <div
-      className="relative min-h-screen py-8 px-6 bg-gradient-to-br from-blue-100 via-cyan-50 via-purple-50 to-pink-50 overflow-hidden"
+      className="relative min-h-screen py-8 px-6 overflow-hidden pixel-theme"
       style={{ paddingTop: "120px", paddingBottom: "120px" }}
     >
-      <div className="pointer-events-none absolute inset-0">
-        <div className="absolute -top-24 -left-24 h-72 w-72 rounded-full bg-fuchsia-200/50 blur-3xl animate-pulse" />
-        <div className="absolute top-1/3 -right-24 h-72 w-72 rounded-full bg-cyan-200/50 blur-3xl animate-pulse" style={{ animationDelay: "500ms" }} />
+      {/* Pixel art background */}
+      <div className="fixed inset-0 z-0" style={{
+        background: `linear-gradient(180deg, 
+          #b8e4f9 0%, 
+          #87ceeb 25%, 
+          #7ec850 65%, 
+          #5a9a32 100%)`
+      }}>
+        {/* Pixel clouds */}
+        <div className="absolute top-16 left-[10%] w-24 h-12 bg-white opacity-80" style={{
+          clipPath: "polygon(0% 60%, 15% 40%, 30% 50%, 45% 20%, 60% 40%, 75% 30%, 90% 50%, 100% 60%, 100% 100%, 0% 100%)"
+        }} />
+        <div className="absolute top-24 right-[15%] w-32 h-14 bg-white opacity-70" style={{
+          clipPath: "polygon(0% 60%, 15% 40%, 30% 50%, 45% 20%, 60% 40%, 75% 30%, 90% 50%, 100% 60%, 100% 100%, 0% 100%)"
+        }} />
+        <div className="absolute top-32 left-[40%] w-20 h-10 bg-white opacity-75" style={{
+          clipPath: "polygon(0% 60%, 20% 30%, 50% 50%, 80% 25%, 100% 60%, 100% 100%, 0% 100%)"
+        }} />
+        
+        {/* Pixel grass at bottom */}
+        <div className="absolute bottom-0 left-0 right-0 h-32 pointer-events-none">
+          {[...Array(20)].map((_, i) => (
+            <div
+              key={`grass-${i}`}
+              className="absolute bottom-0"
+              style={{
+                left: `${i * 5 + Math.random() * 2}%`,
+                width: "8px",
+                height: `${20 + Math.random() * 16}px`,
+                background: i % 3 === 0 ? "#5a9a32" : "#7ec850",
+              }}
+            />
+          ))}
+        </div>
       </div>
 
-      <div className="relative max-w-7xl mx-auto">
+      <div className="relative max-w-7xl mx-auto z-10">
         <StageHeader stage={2} title="Brainstorm Your Plot" onBack={onBack} character={character?.name} />
 
         <div className="grid lg:grid-cols-12 gap-6 mt-8">
           <div className="lg:col-span-9">
-            <div className="bg-gradient-to-br from-white to-purple-50 rounded-2xl p-8 border-2 border-purple-200 shadow-2xl transition-all duration-300 hover:shadow-[0_24px_80px_rgba(167,139,250,0.35)] hover:-translate-y-0.5">
-              <div ref={chatContainerRef} className="h-[600px] overflow-y-auto mb-6 space-y-4 pr-4">
+            <div className="pixel-panel p-6">
+              <div ref={chatContainerRef} className="h-[600px] overflow-y-auto mb-6 space-y-4 pr-4" style={{ background: "#f5e6c8" }}>
                 {messages.map((message, index) => (
                   <div
                     key={index}
                     className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
                   >
                     <div
-                      className={`max-w-[80%] rounded-2xl p-4 ${
+                      className={`max-w-[80%] p-4 ${
                         message.role === "user"
-                          ? "bg-gradient-to-r from-blue-600 to-cyan-600 text-white"
-                          : "bg-gradient-to-r from-purple-100 to-pink-100 text-gray-800 border-2 border-purple-200"
+                          ? "pixel-btn-green"
+                          : "pixel-card"
                       }`}
+                      style={{
+                        border: message.role === "user" ? "3px solid #3d8a3d" : "3px solid #8b6914",
+                        boxShadow: "3px 3px 0 rgba(0,0,0,0.2)",
+                        color: message.role === "user" ? "#fff" : "#5a4a2a",
+                        background: message.role === "user" ? undefined : "#fff"
+                      }}
                     >
                       <p className="text-base leading-relaxed">
                         {message.content}
                       </p>
                       {message.suggestions && message.suggestions.length > 0 && message.role === "ai" && (
-                        <div className="mt-4 flex flex-nowrap gap-2">
+                        <div className="mt-4 flex flex-wrap gap-2">
                           {message.suggestions.map((suggestion, i) => {
-                            // 去除单词中的逗号和其他标点
                             const cleanSuggestion = suggestion.replace(/[,，、。.!?！？;；:：]/g, '').trim()
                             return (
                               <button
                                 key={i}
                                 onClick={() => handleSuggestionClick(cleanSuggestion)}
-                                className="px-3 py-2 bg-gradient-to-r from-purple-400 via-pink-400 to-purple-500 hover:from-purple-500 hover:via-pink-500 hover:to-purple-600 border-2 border-purple-400 rounded-xl text-xs font-bold text-white transition-all duration-200 hover:scale-110 active:scale-95 shadow-lg hover:shadow-2xl relative overflow-hidden group flex-shrink-0"
+                                className="px-3 py-2 text-xs font-bold transition-all duration-200 hover:scale-105 active:scale-95 flex-shrink-0"
                                 style={{
-                                  animationDelay: `${i * 100}ms`,
-                                  animationFillMode: "forwards",
+                                  background: "linear-gradient(180deg, #7ec850 0%, #5a9a32 100%)",
+                                  border: "3px solid #3d8a3d",
+                                  boxShadow: "inset -2px -2px 0 rgba(0,0,0,0.2), inset 2px 2px 0 rgba(255,255,255,0.2), 2px 2px 0 rgba(0,0,0,0.25)",
+                                  color: "#fff",
+                                  textShadow: "1px 1px 0 #3d8a3d"
                                 }}
                               >
-                                {/* 背景光效 */}
-                                <span className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/30 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></span>
-                                <span className="relative z-10 whitespace-nowrap">
-                                  {cleanSuggestion}
-                                </span>
+                                {cleanSuggestion}
                               </button>
                             )
                           })}
@@ -653,11 +688,11 @@ Continue guiding step by step. Each response should:
                 ))}
                 {isLoading && (
                   <div className="flex justify-start">
-                    <div className="bg-gradient-to-r from-purple-100 to-pink-100 rounded-2xl p-4 border-2 border-purple-200 shadow-sm">
+                    <div className="pixel-card p-4" style={{ background: "#fff", border: "3px solid #8b6914" }}>
                       <div className="flex items-center gap-2">
-                        <span className="h-2.5 w-2.5 rounded-full bg-purple-500 animate-bounce" />
-                        <span className="h-2.5 w-2.5 rounded-full bg-pink-500 animate-bounce" style={{ animationDelay: "150ms" }} />
-                        <span className="h-2.5 w-2.5 rounded-full bg-cyan-500 animate-bounce" style={{ animationDelay: "300ms" }} />
+                        <span className="h-3 w-3 bg-[#7ec850] animate-bounce" style={{ border: "2px solid #5a9a32" }} />
+                        <span className="h-3 w-3 bg-[#e8c547] animate-bounce" style={{ animationDelay: "150ms", border: "2px solid #c4a020" }} />
+                        <span className="h-3 w-3 bg-[#87ceeb] animate-bounce" style={{ animationDelay: "300ms", border: "2px solid #5bc0de" }} />
                       </div>
                     </div>
                   </div>
@@ -676,13 +711,13 @@ Continue guiding step by step. Each response should:
                     }
                   }}
                   placeholder="Choose one as answer or type your response here..."
-                  className="flex-1 border-2 border-purple-200 focus:border-purple-500 rounded-xl bg-white/70 backdrop-blur-sm"
+                  className="flex-1 pixel-input"
                   disabled={isLoading}
                 />
                 <Button
                   onClick={() => sendMessage(input)}
                   disabled={isLoading || !input.trim()}
-                  className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white border-0 shadow-xl transition-transform duration-150 active:scale-[0.98] hover:scale-[1.02]"
+                  className="pixel-btn pixel-btn-green"
                 >
                   {isLoading ? (
                     <Loader2 className="h-5 w-5 animate-spin" />
@@ -693,17 +728,16 @@ Continue guiding step by step. Each response should:
               </div>
 
               {canProceed && (
-                <div className="mt-6 p-4 bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-300 rounded-xl shadow-lg relative overflow-hidden">
-                  <div className="absolute -top-10 -right-10 h-24 w-24 rounded-full bg-emerald-200/60 blur-2xl animate-pulse" />
-                  <p className="relative text-green-800 font-semibold text-center mb-3">
-                    ✨ You can proceed to the next step, or continue chatting with AI to make your plot more accurate!
+                <div className="mt-6 p-4 pixel-panel" style={{ background: "#d4e8b4", border: "4px solid #5a9a32" }}>
+                  <p className="font-bold text-center mb-3" style={{ color: "#3d5a1f", textShadow: "1px 1px 0 rgba(255,255,255,0.5)" }}>
+                    You can proceed to the next step, or continue chatting with AI to make your plot more accurate!
                   </p>
                   <Button
                     onClick={handleContinue}
                     size="lg"
-                    className="relative w-full border-0 shadow-xl py-6 text-lg font-bold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-700 hover:via-purple-700 hover:to-pink-700 text-white animate-pulse"
+                    className="w-full py-6 text-lg font-bold pixel-btn pixel-btn-green"
                   >
-                    Continue →
+                    Continue
                   </Button>
                 </div>
               )}
@@ -711,20 +745,20 @@ Continue guiding step by step. Each response should:
           </div>
 
           <div className="lg:col-span-3 space-y-4">
-            {/* 角色图片 */}
+            {/* Character panel */}
             {character?.imageUrl && (
-              <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-2xl p-4 border-2 border-indigo-200 shadow-xl transition-all duration-300 hover:-translate-y-0.5">
-                <h3 className="text-lg font-bold mb-3 text-indigo-700">Your Character</h3>
-                <div className="relative overflow-hidden rounded-xl shadow-lg">
+              <div className="pixel-panel p-4">
+                <h3 className="text-lg font-extrabold mb-3" style={{ color: "#5a4a2a", textShadow: "1px 1px 0 rgba(0,0,0,0.2)" }}>Your Character</h3>
+                <div className="relative overflow-hidden" style={{ border: "3px solid #8b6914" }}>
                   <img
                     src={character.imageUrl}
                     alt={character.name}
                     className="w-full h-auto object-cover"
                   />
-                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-3">
-                    <p className="text-white font-bold text-sm">{character.name}</p>
+                  <div className="absolute bottom-0 left-0 right-0 p-2" style={{ background: "rgba(90,74,42,0.85)" }}>
+                    <p className="font-bold text-sm" style={{ color: "#f5e6c8" }}>{character.name}</p>
                     {character.species && (
-                      <p className="text-white/80 text-xs">{character.species}</p>
+                      <p className="text-xs" style={{ color: "#d4c4a0" }}>{character.species}</p>
                     )}
                   </div>
                 </div>
@@ -732,20 +766,19 @@ Continue guiding step by step. Each response should:
             )}
             
             {/* Plot Progress */}
-            <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-2xl p-6 border-2 border-blue-200 shadow-xl">
-              <h3 className="text-lg font-bold mb-4 text-blue-700 flex items-center gap-2">
-                <span>📊</span>
+            <div className="pixel-panel p-6">
+              <h3 className="text-lg font-extrabold mb-4 flex items-center gap-2" style={{ color: "#5a4a2a", textShadow: "1px 1px 0 rgba(0,0,0,0.2)" }}>
                 Plot Progress
               </h3>
 
               <div className="mb-5">
-                <div className="h-2.5 w-full bg-white/60 border border-blue-100 rounded-full overflow-hidden">
+                <div className="h-4 w-full overflow-hidden" style={{ background: "#d9c9a6", border: "3px solid #8b6914" }}>
                   <div
-                    className="h-full bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 rounded-full transition-all duration-500"
-                    style={{ width: `${progressPct}%` }}
+                    className="h-full transition-all duration-500"
+                    style={{ width: `${progressPct}%`, background: "linear-gradient(180deg, #7ec850 0%, #5a9a32 100%)" }}
                   />
                 </div>
-                <p className="mt-2 text-xs text-blue-800/80 text-center font-semibold">
+                <p className="mt-2 text-xs text-center font-bold" style={{ color: "#6b5210" }}>
                   {progressCount}/3 unlocked
                 </p>
               </div>
@@ -753,57 +786,57 @@ Continue guiding step by step. Each response should:
               <div className="space-y-4">
                 <div className={`transition-all duration-500 ${updatingFields.has("setting") ? "animate-pulse scale-105" : ""}`}>
                   <div className="flex items-center gap-2 mb-2">
-                    <span className="text-sm font-semibold text-gray-600">Setting</span>
+                    <span className="text-sm font-bold" style={{ color: "#5a4a2a" }}>Setting</span>
                     {plotData.setting && (
-                      <span className="w-2 h-2 bg-green-500 rounded-full animate-ping"></span>
+                      <span className="w-3 h-3 animate-ping" style={{ background: "#7ec850", border: "2px solid #5a9a32" }}></span>
                     )}
                   </div>
-                  <div className={`p-3 rounded-xl border-2 transition-all duration-500 ${
-                    plotData.setting 
-                      ? "bg-gradient-to-r from-blue-100 to-blue-200 border-blue-300 shadow-lg" 
-                      : "bg-gray-100 border-gray-200"
-                  }`}>
-                    <p className={`text-sm font-bold transition-all duration-500 ${
-                      plotData.setting && plotData.setting.toLowerCase() !== "unknown" ? "text-blue-800" : "text-gray-400"
-                    }`}>
+                  <div className="p-3 transition-all duration-500" style={{
+                    background: plotData.setting ? "#d4e8b4" : "#e8dcc0",
+                    border: `3px solid ${plotData.setting ? "#5a9a32" : "#8b6914"}`,
+                    boxShadow: plotData.setting ? "inset -2px -2px 0 rgba(0,0,0,0.1), inset 2px 2px 0 rgba(255,255,255,0.3)" : "none"
+                  }}>
+                    <p className="text-sm font-bold transition-all duration-500" style={{
+                      color: plotData.setting && plotData.setting.toLowerCase() !== "unknown" ? "#3d5a1f" : "#8b6914"
+                    }}>
                       {plotData.setting && plotData.setting.toLowerCase() !== "unknown" ? plotData.setting : "unknown"}
                     </p>
                   </div>
                 </div>
                 <div className={`transition-all duration-500 ${updatingFields.has("conflict") ? "animate-pulse scale-105" : ""}`}>
                   <div className="flex items-center gap-2 mb-2">
-                    <span className="text-sm font-semibold text-gray-600">Conflict</span>
+                    <span className="text-sm font-bold" style={{ color: "#5a4a2a" }}>Conflict</span>
                     {plotData.conflict && (
-                      <span className="w-2 h-2 bg-purple-500 rounded-full animate-ping"></span>
+                      <span className="w-3 h-3 animate-ping" style={{ background: "#e8c547", border: "2px solid #c4a020" }}></span>
                     )}
                   </div>
-                  <div className={`p-3 rounded-xl border-2 transition-all duration-500 ${
-                    plotData.conflict 
-                      ? "bg-gradient-to-r from-purple-100 to-purple-200 border-purple-300 shadow-lg" 
-                      : "bg-gray-100 border-gray-200"
-                  }`}>
-                    <p className={`text-sm font-bold transition-all duration-500 ${
-                      plotData.conflict && plotData.conflict.toLowerCase() !== "unknown" ? "text-purple-800" : "text-gray-400"
-                    }`}>
+                  <div className="p-3 transition-all duration-500" style={{
+                    background: plotData.conflict ? "#f5e6c8" : "#e8dcc0",
+                    border: `3px solid ${plotData.conflict ? "#c4a020" : "#8b6914"}`,
+                    boxShadow: plotData.conflict ? "inset -2px -2px 0 rgba(0,0,0,0.1), inset 2px 2px 0 rgba(255,255,255,0.3)" : "none"
+                  }}>
+                    <p className="text-sm font-bold transition-all duration-500" style={{
+                      color: plotData.conflict && plotData.conflict.toLowerCase() !== "unknown" ? "#8b6914" : "#a59070"
+                    }}>
                       {plotData.conflict && plotData.conflict.toLowerCase() !== "unknown" ? plotData.conflict : "unknown"}
                     </p>
                   </div>
                 </div>
                 <div className={`transition-all duration-500 ${updatingFields.has("goal") ? "animate-pulse scale-105" : ""}`}>
                   <div className="flex items-center gap-2 mb-2">
-                    <span className="text-sm font-semibold text-gray-600">Goal</span>
+                    <span className="text-sm font-bold" style={{ color: "#5a4a2a" }}>Goal</span>
                     {plotData.goal && (
-                      <span className="w-2 h-2 bg-pink-500 rounded-full animate-ping"></span>
+                      <span className="w-3 h-3 animate-ping" style={{ background: "#87ceeb", border: "2px solid #5bc0de" }}></span>
                     )}
                   </div>
-                  <div className={`p-3 rounded-xl border-2 transition-all duration-500 ${
-                    plotData.goal 
-                      ? "bg-gradient-to-r from-pink-100 to-pink-200 border-pink-300 shadow-lg" 
-                      : "bg-gray-100 border-gray-200"
-                  }`}>
-                    <p className={`text-sm font-bold transition-all duration-500 ${
-                      plotData.goal && plotData.goal.toLowerCase() !== "unknown" ? "text-pink-800" : "text-gray-400"
-                    }`}>
+                  <div className="p-3 transition-all duration-500" style={{
+                    background: plotData.goal ? "#c5e4f5" : "#e8dcc0",
+                    border: `3px solid ${plotData.goal ? "#5bc0de" : "#8b6914"}`,
+                    boxShadow: plotData.goal ? "inset -2px -2px 0 rgba(0,0,0,0.1), inset 2px 2px 0 rgba(255,255,255,0.3)" : "none"
+                  }}>
+                    <p className="text-sm font-bold transition-all duration-500" style={{
+                      color: plotData.goal && plotData.goal.toLowerCase() !== "unknown" ? "#2a5a7a" : "#a59070"
+                    }}>
                       {plotData.goal && plotData.goal.toLowerCase() !== "unknown" ? plotData.goal : "unknown"}
                     </p>
                   </div>

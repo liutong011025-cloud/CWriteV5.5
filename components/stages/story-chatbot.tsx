@@ -873,10 +873,45 @@ Continue guiding step by step. Each response should:
 
   return (
     <div
-      className="min-h-screen py-8 px-6 bg-gradient-to-br from-sky-100 via-cyan-50 via-purple-50 to-orange-50 relative"
+      className="min-h-screen py-8 px-6 relative pixel-theme overflow-hidden"
       style={{ paddingTop: "120px", paddingBottom: "120px" }}
     >
-      <div className="max-w-7xl mx-auto relative z-10">
+      {/* Pixel art background */}
+      <div className="fixed inset-0 z-0" style={{
+        background: `linear-gradient(180deg, 
+          #b8e4f9 0%, 
+          #87ceeb 25%, 
+          #7ec850 65%, 
+          #5a9a32 100%)`
+      }}>
+        {/* Pixel clouds */}
+        <div className="absolute top-16 left-[10%] w-24 h-12 bg-white opacity-80" style={{
+          clipPath: "polygon(0% 60%, 15% 40%, 30% 50%, 45% 20%, 60% 40%, 75% 30%, 90% 50%, 100% 60%, 100% 100%, 0% 100%)"
+        }} />
+        <div className="absolute top-24 right-[15%] w-32 h-14 bg-white opacity-70" style={{
+          clipPath: "polygon(0% 60%, 15% 40%, 30% 50%, 45% 20%, 60% 40%, 75% 30%, 90% 50%, 100% 60%, 100% 100%, 0% 100%)"
+        }} />
+        <div className="absolute top-32 left-[40%] w-20 h-10 bg-white opacity-75" style={{
+          clipPath: "polygon(0% 60%, 20% 30%, 50% 50%, 80% 25%, 100% 60%, 100% 100%, 0% 100%)"
+        }} />
+        
+        {/* Pixel grass at bottom */}
+        <div className="absolute bottom-0 left-0 right-0 h-32 pointer-events-none">
+          {[...Array(20)].map((_, i) => (
+            <div
+              key={`grass-${i}`}
+              className="absolute bottom-0"
+              style={{
+                left: `${i * 5 + Math.random() * 2}%`,
+                width: "8px",
+                height: `${20 + Math.random() * 16}px`,
+                background: i % 3 === 0 ? "#5a9a32" : "#7ec850",
+              }}
+            />
+          ))}
+        </div>
+      </div>
+      <div className="max-w-7xl mx-auto relative z-10 px-2">
         <StageHeader
           stage={stageNumber}
           title={phaseTitle}
@@ -886,19 +921,20 @@ Continue guiding step by step. Each response should:
 
         <div className="grid lg:grid-cols-12 gap-6 mt-8">
           <div className="lg:col-span-8">
-            <div className="rounded-3xl border-4 border-white/60 bg-white/85 backdrop-blur-sm shadow-2xl overflow-hidden">
-              <div ref={chatContainerRef} className="h-[440px] overflow-y-auto p-6 space-y-4 bg-gradient-to-b from-white via-white to-purple-50/60">
+            <div className="pixel-panel overflow-hidden">
+              <div ref={chatContainerRef} className="h-[440px] overflow-y-auto p-6 space-y-4" style={{ background: "#f5e6c8" }}>
                 {messages.map((message) => (
                   <div key={message.id} className={cn("flex", message.role === "user" ? "justify-end" : "justify-start")}>
                     <div
                       className={cn(
-                        "max-w-[82%] rounded-2xl px-4 py-3 shadow-sm",
+                        "max-w-[82%] px-4 py-3",
                         message.role === "user"
-                          ? "bg-gradient-to-r from-sky-600 to-cyan-600 text-white"
-                          : "bg-gradient-to-r from-purple-100 to-orange-100 text-slate-800 border border-purple-200",
+                          ? "pixel-btn-green"
+                          : "pixel-card",
                       )}
+                      style={message.role === "user" ? { color: "#fff" } : { color: "#5a4a2a", background: "#fff" }}
                     >
-                      <div className="prose prose-sm max-w-none prose-p:my-1 prose-headings:text-inherit prose-p:text-inherit prose-ul:text-inherit prose-ol:text-inherit prose-strong:text-inherit prose-em:text-inherit prose-code:text-inherit [&_pre]:bg-slate-800 [&_pre]:text-slate-100 [&_pre]:rounded-lg [&_pre]:p-3 [&_pre]:text-xs [&_code]:bg-slate-100 [&_code]:text-slate-800 [&_code]:rounded [&_code]:px-1 [&_code]:py-0.5 [&_code]:text-xs [&_code]:before:content-none [&_code]:after:content-none">
+                      <div className="prose prose-sm max-w-none prose-p:my-1 prose-headings:text-inherit prose-p:text-inherit prose-ul:text-inherit prose-ol:text-inherit prose-strong:text-inherit prose-em:text-inherit prose-code:text-inherit [&_pre]:bg-[#5a4a2a] [&_pre]:text-[#f5e6c8] [&_pre]:p-3 [&_pre]:text-xs [&_code]:bg-[#e8c547]/30 [&_code]:text-[#5a4a2a] [&_code]:px-1 [&_code]:py-0.5 [&_code]:text-xs [&_code]:before:content-none [&_code]:after:content-none">
                         <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.content}</ReactMarkdown>
                       </div>
                       {phase === "plot" && message.role === "assistant" && message.suggestions && message.suggestions.length > 0 && (
@@ -908,7 +944,7 @@ Continue guiding step by step. Each response should:
                               key={`${message.id}-${suggestion}`}
                               type="button"
                               onClick={() => void handleSendPlotMessage(suggestion)}
-                              className="rounded-full border border-purple-300 bg-white/90 px-3 py-1 text-xs font-semibold text-purple-700 transition hover:border-purple-500 hover:bg-white"
+                              className="pixel-btn pixel-btn-wood px-3 py-1 text-xs font-bold"
                             >
                               {suggestion}
                             </button>
@@ -921,14 +957,14 @@ Continue guiding step by step. Each response should:
 
                 {(plotLoading || structureExamplesLoading || writingLoading) && (
                   <div className="flex justify-start">
-                    <div className="rounded-2xl border border-purple-200 bg-white px-4 py-3 shadow-sm">
-                      <Loader2 className="h-5 w-5 animate-spin text-purple-600" />
+                    <div className="pixel-card px-4 py-3" style={{ background: "#fff" }}>
+                      <Loader2 className="h-5 w-5 animate-spin" style={{ color: "#7ec850" }} />
                     </div>
                   </div>
                 )}
               </div>
 
-              <div className="border-t border-purple-100 bg-white p-6">
+              <div className="p-6" style={{ background: "#e8d4a8", borderTop: "4px solid #8b6914" }}>
                 {phase === "plot" && (
                   <div className="space-y-4">
                     {mode === "ai" && (
@@ -944,13 +980,13 @@ Continue guiding step by step. Each response should:
                           }}
                           placeholder={plotReplyPlaceholder}
                           disabled={plotLoading}
-                          className="flex-1 border-purple-200 focus-visible:border-purple-400"
+                          className="flex-1 pixel-input"
                         />
                         <Button
                           type="button"
                           onClick={() => void handleSendPlotMessage()}
                           disabled={plotLoading || !plotInput.trim()}
-                          className="bg-gradient-to-r from-purple-600 to-pink-600 text-white"
+                          className="pixel-btn pixel-btn-green"
                         >
                           <Send className="h-4 w-4" />
                         </Button>
@@ -959,27 +995,30 @@ Continue guiding step by step. Each response should:
 
                     <div className="grid md:grid-cols-3 gap-4">
                       <div className="space-y-2">
-                        <label className="text-sm font-semibold text-slate-700">Setting</label>
+                        <label className="text-sm font-extrabold" style={{ color: "#5a4a2a", textShadow: "1px 1px 0 rgba(0,0,0,0.15)" }}>Setting</label>
                         <Input
                           value={plotData.setting}
                           onChange={(event) => setPlotData((prev) => ({ ...prev, setting: event.target.value }))}
                           placeholder={settingPlaceholder}
+                          className="pixel-input"
                         />
                       </div>
                       <div className="space-y-2">
-                        <label className="text-sm font-semibold text-slate-700">Conflict</label>
+                        <label className="text-sm font-extrabold" style={{ color: "#5a4a2a", textShadow: "1px 1px 0 rgba(0,0,0,0.15)" }}>Conflict</label>
                         <Input
                           value={plotData.conflict}
                           onChange={(event) => setPlotData((prev) => ({ ...prev, conflict: event.target.value }))}
                           placeholder={conflictPlaceholder}
+                          className="pixel-input"
                         />
                       </div>
                       <div className="space-y-2">
-                        <label className="text-sm font-semibold text-slate-700">Goal</label>
+                        <label className="text-sm font-extrabold" style={{ color: "#5a4a2a", textShadow: "1px 1px 0 rgba(0,0,0,0.15)" }}>Goal</label>
                         <Input
                           value={plotData.goal}
                           onChange={(event) => setPlotData((prev) => ({ ...prev, goal: event.target.value }))}
                           placeholder={goalPlaceholder}
+                          className="pixel-input"
                         />
                       </div>
                     </div>
@@ -988,7 +1027,7 @@ Continue guiding step by step. Each response should:
                       type="button"
                       onClick={handleConfirmPlot}
                       disabled={!plotComplete}
-                      className="w-full bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white"
+                      className="w-full pixel-btn pixel-btn-green"
                     >
                       Continue To Structure
                     </Button>
@@ -999,15 +1038,15 @@ Continue guiding step by step. Each response should:
                   <div className="space-y-5">
                     <div className="flex items-center justify-between gap-3">
                       <div>
-                        <p className="text-sm font-semibold text-purple-700">Pick the structure that best fits your plot.</p>
-                        <p className="text-xs text-slate-500">You can choose directly, or ask AI to show examples first.</p>
+                        <p className="text-sm font-extrabold" style={{ color: "#5a4a2a", textShadow: "1px 1px 0 rgba(0,0,0,0.15)" }}>Pick the structure that best fits your plot.</p>
+                        <p className="text-xs font-bold" style={{ color: "#8b6914" }}>You can choose directly, or ask AI to show examples first.</p>
                       </div>
                       {mode === "ai" && (
                         <Button
                           type="button"
-                          variant="outline"
                           onClick={() => void handleGenerateStructureExamples()}
                           disabled={structureExamplesLoading}
+                          className="pixel-btn pixel-btn-blue"
                         >
                           <Sparkles className="h-4 w-4" />
                           Show Examples
@@ -1025,17 +1064,19 @@ Continue guiding step by step. Each response should:
                             type="button"
                             onClick={() => handleSelectStructure(structure.type)}
                             className={cn(
-                              "rounded-2xl border-2 p-5 text-left transition hover:-translate-y-0.5 hover:shadow-lg",
-                              selected ? "border-purple-500 bg-purple-50 shadow-lg" : "border-purple-200 bg-white",
+                              "pixel-card p-5 text-left transition hover:-translate-y-0.5",
+                              selected ? "pixel-selected" : "",
                             )}
+                            style={{ background: selected ? "#e8c547" : "#fff" }}
                           >
-                            <h3 className="text-lg font-bold text-purple-800">{structure.name}</h3>
-                            <p className="mt-2 text-sm text-slate-600">{structure.desc}</p>
+                            <h3 className="text-lg font-extrabold" style={{ color: "#5a4a2a", textShadow: "1px 1px 0 rgba(0,0,0,0.15)" }}>{structure.name}</h3>
+                            <p className="mt-2 text-sm" style={{ color: "#6b5210" }}>{structure.desc}</p>
                             <div className="mt-4 flex flex-wrap gap-2">
                               {structure.outline.map((step) => (
                                 <span
                                   key={`${structure.type}-${step}`}
-                                  className="rounded-full bg-purple-100 px-3 py-1 text-xs font-semibold text-purple-700"
+                                  className="px-3 py-1 text-xs font-bold"
+                                  style={{ background: "#7ec850", color: "#fff", border: "2px solid #5a9a32" }}
                                 >
                                   {step}
                                 </span>
@@ -1046,9 +1087,10 @@ Continue guiding step by step. Each response should:
                                 <img
                                   src={example.imageUrl}
                                   alt={`${structure.name} example`}
-                                  className="h-32 w-full rounded-xl object-cover border border-purple-200"
+                                  className="h-32 w-full object-cover"
+                                  style={{ border: "3px solid #8b6914" }}
                                 />
-                                <p className="text-xs leading-relaxed text-slate-600">{example.story}</p>
+                                <p className="text-xs leading-relaxed" style={{ color: "#6b5210" }}>{example.story}</p>
                               </div>
                             )}
                           </button>
@@ -1067,12 +1109,12 @@ Continue guiding step by step. Each response should:
                           type="button"
                           onClick={() => handleSectionNavigate(index)}
                           className={cn(
-                            "rounded-full px-4 py-2 text-sm font-semibold transition",
+                            "px-4 py-2 text-sm font-bold transition pixel-btn",
                             currentSection === index
-                              ? "bg-gradient-to-r from-sky-600 to-cyan-600 text-white"
+                              ? "pixel-btn-green"
                               : sectionDone[index]
-                                ? "bg-emerald-100 text-emerald-700"
-                                : "bg-slate-100 text-slate-700",
+                                ? "pixel-btn-blue"
+                                : "pixel-btn-wood",
                           )}
                         >
                           {section}
@@ -1081,7 +1123,7 @@ Continue guiding step by step. Each response should:
                     </div>
 
                     <div className="space-y-2">
-                      <label className="text-sm font-semibold text-slate-700">
+                      <label className="text-sm font-extrabold" style={{ color: "#5a4a2a", textShadow: "1px 1px 0 rgba(0,0,0,0.15)" }}>
                         {sections[currentSection] ? `Write: ${sections[currentSection]}` : "Write your story"}
                       </label>
                       <Textarea
@@ -1092,13 +1134,13 @@ Continue guiding step by step. Each response should:
                             ? `Write the "${sections[currentSection]}" section here...`
                             : "Choose a structure first."
                         }
-                        className="min-h-[220px] border-purple-200 focus-visible:border-purple-400"
+                        className="min-h-[220px] pixel-input"
                         disabled={sections.length === 0}
                       />
                     </div>
 
                     {currentFeedback && (
-                      <div className="rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm whitespace-pre-wrap text-sky-900">
+                      <div className="pixel-card px-4 py-3 text-sm whitespace-pre-wrap" style={{ background: "#87ceeb", color: "#2a4a5a", border: "3px solid #5bc0de" }}>
                         {currentFeedback}
                       </div>
                     )}
@@ -1108,15 +1150,15 @@ Continue guiding step by step. Each response should:
                         type="button"
                         onClick={() => void handleCheckCurrentSection()}
                         disabled={writingLoading || sections.length === 0}
-                        className="bg-gradient-to-r from-sky-600 to-cyan-600 text-white"
+                        className="pixel-btn pixel-btn-blue"
                       >
                         {mode === "ai" ? "Check This Section" : "Mark Section Ready"}
                       </Button>
                       <Button
                         type="button"
-                        variant="outline"
                         onClick={handleAdvanceSection}
                         disabled={currentSection >= sections.length - 1}
+                        className="pixel-btn pixel-btn-wood"
                       >
                         Next Section
                       </Button>
@@ -1124,7 +1166,7 @@ Continue guiding step by step. Each response should:
                         type="button"
                         onClick={handleFinishStory}
                         disabled={sections.length === 0}
-                        className="ml-auto bg-gradient-to-r from-emerald-600 to-teal-600 text-white"
+                        className="ml-auto pixel-btn pixel-btn-green"
                       >
                         Finish Story
                       </Button>
@@ -1136,48 +1178,48 @@ Continue guiding step by step. Each response should:
           </div>
 
           <div className="lg:col-span-4 space-y-4">
-            <div className="rounded-3xl border-4 border-white/70 bg-white/85 p-6 shadow-xl">
-              <h3 className="text-lg font-bold text-slate-800">Story Snapshot</h3>
+            <div className="pixel-panel p-6">
+              <h3 className="text-lg font-extrabold" style={{ color: "#5a4a2a", textShadow: "1px 1px 0 rgba(0,0,0,0.2)" }}>Story Snapshot</h3>
               <div className="mt-4 space-y-4">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Character</p>
-                  <p className="mt-1 text-sm font-semibold text-slate-800">{storyState.character?.name || "Not set"}</p>
+                  <p className="text-xs font-bold uppercase tracking-wide" style={{ color: "#8b6914" }}>Character</p>
+                  <p className="mt-1 text-sm font-bold" style={{ color: "#5a4a2a" }}>{storyState.character?.name || "Not set"}</p>
                 </div>
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Setting</p>
-                  <p className="mt-1 text-sm text-slate-700">{plotData.setting || "Waiting for idea..."}</p>
+                  <p className="text-xs font-bold uppercase tracking-wide" style={{ color: "#8b6914" }}>Setting</p>
+                  <p className="mt-1 text-sm" style={{ color: "#6b5210" }}>{plotData.setting || "Waiting for idea..."}</p>
                 </div>
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Conflict</p>
-                  <p className="mt-1 text-sm text-slate-700">{plotData.conflict || "Waiting for idea..."}</p>
+                  <p className="text-xs font-bold uppercase tracking-wide" style={{ color: "#8b6914" }}>Conflict</p>
+                  <p className="mt-1 text-sm" style={{ color: "#6b5210" }}>{plotData.conflict || "Waiting for idea..."}</p>
                 </div>
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Goal</p>
-                  <p className="mt-1 text-sm text-slate-700">{plotData.goal || "Waiting for idea..."}</p>
+                  <p className="text-xs font-bold uppercase tracking-wide" style={{ color: "#8b6914" }}>Goal</p>
+                  <p className="mt-1 text-sm" style={{ color: "#6b5210" }}>{plotData.goal || "Waiting for idea..."}</p>
                 </div>
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Structure</p>
-                  <p className="mt-1 text-sm text-slate-700">{activeStructureDefinition?.name || "Not chosen yet"}</p>
+                  <p className="text-xs font-bold uppercase tracking-wide" style={{ color: "#8b6914" }}>Structure</p>
+                  <p className="mt-1 text-sm" style={{ color: "#6b5210" }}>{activeStructureDefinition?.name || "Not chosen yet"}</p>
                 </div>
               </div>
             </div>
 
-            <div className="rounded-3xl border-4 border-white/70 bg-white/85 p-6 shadow-xl">
-              <h3 className="text-lg font-bold text-slate-800">Progress</h3>
+            <div className="pixel-panel p-6">
+              <h3 className="text-lg font-extrabold" style={{ color: "#5a4a2a", textShadow: "1px 1px 0 rgba(0,0,0,0.2)" }}>Progress</h3>
               {phase === "plot" && (
                 <div className="mt-4 space-y-3">
-                  <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100">
+                  <div className="h-3 w-full overflow-hidden" style={{ background: "#d9c9a6", border: "2px solid #8b6914" }}>
                     <div
-                      className="h-full rounded-full bg-gradient-to-r from-sky-500 via-purple-500 to-pink-500 transition-all"
-                      style={{ width: `${Math.round((plotProgressCount / 3) * 100)}%` }}
+                      className="h-full transition-all"
+                      style={{ width: `${Math.round((plotProgressCount / 3) * 100)}%`, background: "#7ec850" }}
                     />
                   </div>
-                  <p className="text-sm text-slate-600">{plotProgressCount}/3 plot slots ready</p>
+                  <p className="text-sm font-bold" style={{ color: "#6b5210" }}>{plotProgressCount}/3 plot slots ready</p>
                 </div>
               )}
 
               {phase === "structure" && (
-                <div className="mt-4 space-y-3 text-sm text-slate-600">
+                <div className="mt-4 space-y-3 text-sm" style={{ color: "#6b5210" }}>
                   <p>Select one structure card to unlock the writing phase.</p>
                   {structureExamples.length > 0 && <p>{structureExamples.length} example sets loaded.</p>}
                 </div>
@@ -1185,17 +1227,17 @@ Continue guiding step by step. Each response should:
 
               {phase === "writing" && (
                 <div className="mt-4 space-y-3">
-                  <p className="text-sm text-slate-600">
+                  <p className="text-sm font-bold" style={{ color: "#6b5210" }}>
                     Sections ready: {sections.filter((_, index) => sectionDone[index]).length}/{sections.length}
                   </p>
-                  <p className="text-sm text-slate-600">
+                  <p className="text-sm font-bold" style={{ color: "#6b5210" }}>
                     Word count: {draftWordCount}/{minimumWords} minimum
                   </p>
                   <div className="space-y-2">
                     {sections.map((section, index) => (
                       <div key={`${section}-progress`} className="flex items-center justify-between text-sm">
-                        <span className="text-slate-700">{section}</span>
-                        <span className={cn("font-semibold", sectionDone[index] ? "text-emerald-600" : "text-slate-400")}>
+                        <span style={{ color: "#5a4a2a" }}>{section}</span>
+                        <span className="font-bold" style={{ color: sectionDone[index] ? "#7ec850" : "#8b6914" }}>
                           {sectionDone[index] ? "Ready" : "Pending"}
                         </span>
                       </div>
@@ -1206,9 +1248,9 @@ Continue guiding step by step. Each response should:
             </div>
 
             {mode === "ai" && (
-              <div className="rounded-3xl border-4 border-white/70 bg-gradient-to-br from-purple-100 to-orange-100 p-6 shadow-xl">
-                <h3 className="text-lg font-bold text-purple-900">AI Mode</h3>
-                <p className="mt-2 text-sm text-purple-900/80">
+              <div className="pixel-panel p-6" style={{ background: "#e8c547" }}>
+                <h3 className="text-lg font-extrabold" style={{ color: "#5a4a2a", textShadow: "1px 1px 0 rgba(0,0,0,0.2)" }}>AI Mode</h3>
+                <p className="mt-2 text-sm font-bold" style={{ color: "#6b5210" }}>
                   The chatbot helps collect plot ideas, can show structure examples, and checks each writing section before you move on.
                 </p>
               </div>

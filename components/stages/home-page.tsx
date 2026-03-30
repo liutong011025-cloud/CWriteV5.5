@@ -49,7 +49,11 @@ const translations = {
 export default function HomePage({ language = "en", onStartPlan }: HomePageProps) {
   const [isLoaded, setIsLoaded] = useState(false)
   const [activeGenre, setActiveGenre] = useState<string | null>(null)
+  const [isPixelating, setIsPixelating] = useState(false)
+  const [pixelPhase, setPixelPhase] = useState(0) // 0=none, 1=transform elements then navigate
+  const [pixelOrigin, setPixelOrigin] = useState({ x: 0, y: 0 })
   const shaderContainerRef = useRef<HTMLDivElement>(null)
+  const buttonRef = useRef<HTMLButtonElement>(null)
   const t = translations[language] || translations.en
 
   useEffect(() => {
@@ -89,10 +93,120 @@ export default function HomePage({ language = "en", onStartPlan }: HomePageProps
     setActiveGenre(null)
   }
 
+  const handleStartJourney = () => {
+    if (buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect()
+      setPixelOrigin({
+        x: rect.left + rect.width / 2,
+        y: rect.top + rect.height / 2
+      })
+    }
+    setIsPixelating(true)
+    
+    // Phase 1: Transform elements to pixel style (0-800ms)
+    setPixelPhase(1)
+    
+    // Navigate directly after pixelation effect completes
+    setTimeout(() => {
+      onStartPlan?.()
+    }, 900)
+  }
+
   return (
     <main className="relative min-h-screen w-full overflow-x-hidden bg-background cursor-none">
       <CustomCursor />
       <GrainOverlay />
+      
+      {/* Phase 1: Pixelation effect overlay - transforms existing elements */}
+      <AnimatePresence>
+        {pixelPhase >= 1 && (
+          <motion.div
+            className="fixed inset-0 z-[99] pointer-events-none"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            {/* Radial pixelation wave from button center */}
+            <motion.div
+              className="absolute inset-0"
+              style={{
+                background: `radial-gradient(circle at ${pixelOrigin.x}px ${pixelOrigin.y}px, 
+                  transparent 0%, 
+                  transparent var(--wave-radius), 
+                  rgba(245,230,200,0.2) calc(var(--wave-radius) + 50px),
+                  rgba(126,200,80,0.3) calc(var(--wave-radius) + 150px),
+                  rgba(90,154,50,0.5) calc(var(--wave-radius) + 300px))`,
+                // @ts-ignore
+                "--wave-radius": "0px",
+              }}
+              animate={{
+                // @ts-ignore
+                "--wave-radius": ["0px", "3000px"],
+              }}
+              transition={{ duration: 0.8, ease: "easeOut" }}
+            />
+            
+            {/* Progressive pixel grid - starts large, gets finer */}
+            <motion.div
+              className="absolute inset-0"
+              style={{
+                backgroundImage: `
+                  linear-gradient(rgba(139, 105, 20, 0.4) 4px, transparent 4px),
+                  linear-gradient(90deg, rgba(139, 105, 20, 0.4) 4px, transparent 4px)
+                `,
+                backgroundSize: "32px 32px",
+                imageRendering: "pixelated",
+              }}
+              initial={{ opacity: 0 }}
+              animate={{ 
+                opacity: [0, 0.3, 0.5, 0.7, 0.9],
+                backgroundSize: ["64px 64px", "48px 48px", "32px 32px", "16px 16px", "8px 8px"],
+              }}
+              transition={{ 
+                duration: 0.7, 
+                times: [0, 0.2, 0.4, 0.7, 1],
+                ease: "linear"
+              }}
+            />
+            
+            {/* Color shift towards Stardew palette */}
+            <motion.div
+              className="absolute inset-0"
+              initial={{ backgroundColor: "rgba(0,0,0,0)" }}
+              animate={{ 
+                backgroundColor: [
+                  "rgba(0,0,0,0)",
+                  "rgba(245,230,200,0.1)",
+                  "rgba(232,197,71,0.2)",
+                  "rgba(126,200,80,0.3)",
+                  "rgba(90,154,50,0.5)",
+                ]
+              }}
+              transition={{ duration: 0.8, ease: "easeIn" }}
+            />
+            
+            {/* Scanline effect */}
+            <motion.div
+              className="absolute inset-0"
+              style={{
+                backgroundImage: `repeating-linear-gradient(
+                  0deg,
+                  transparent 0px,
+                  transparent 3px,
+                  rgba(0, 0, 0, 0.1) 3px,
+                  rgba(0, 0, 0, 0.1) 6px
+                )`,
+              }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: [0, 0.2, 0.4, 0.5] }}
+              transition={{ duration: 0.6, ease: "linear" }}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+      
+
 
       <div
         ref={shaderContainerRef}
@@ -129,7 +243,11 @@ export default function HomePage({ language = "en", onStartPlan }: HomePageProps
         <div className="absolute inset-0 bg-black/30" />
       </div>
 
-      <div className={`relative z-10 flex min-h-screen flex-col pt-32 md:pt-36 pb-16 md:pb-24 transition-opacity duration-700 ${isLoaded ? "opacity-100" : "opacity-0"}`}>
+      <div className={`relative z-10 flex min-h-screen flex-col pt-32 md:pt-36 pb-16 md:pb-24 transition-all duration-700 ${isLoaded ? "opacity-100" : "opacity-0"} ${pixelPhase >= 1 ? "pixel-transforming" : ""}`}
+        style={pixelPhase >= 1 ? { 
+          filter: `contrast(${1 + pixelPhase * 0.1}) saturate(${1 + pixelPhase * 0.15})`,
+          transition: "filter 0.5s ease"
+        } : undefined}>
         <section className="flex flex-1 flex-col items-center justify-center gap-8 px-6 py-12 md:px-12 lg:flex-row lg:gap-12 lg:px-16">
           <div className="flex flex-col items-center text-center lg:w-1/2 lg:items-start lg:text-left">
             <motion.div
@@ -138,8 +256,25 @@ export default function HomePage({ language = "en", onStartPlan }: HomePageProps
               transition={{ duration: 0.8, delay: 1.2 }}
               className="mb-6"
             >
-              <p className="font-sans text-5xl font-light tracking-tight text-foreground md:text-6xl lg:text-7xl">{t.welcome}</p>
-              <h1 className="bg-gradient-to-r from-pink-400 via-yellow-400 to-pink-400 bg-clip-text font-baloo text-8xl font-bold leading-none tracking-tight text-transparent md:text-9xl lg:text-[16rem]">
+              <p 
+                className={`font-sans text-5xl font-light tracking-tight md:text-6xl lg:text-7xl transition-all duration-500 ${
+                  pixelPhase >= 1 ? "text-[#8b6914]" : "text-foreground"
+                }`}
+                style={pixelPhase >= 1 ? { textShadow: "3px 3px 0 rgba(0,0,0,0.2)" } : undefined}
+              >
+                {t.welcome}
+              </p>
+              <h1 
+                className={`font-baloo text-8xl font-bold leading-none tracking-tight md:text-9xl lg:text-[16rem] transition-all duration-500 ${
+                  pixelPhase >= 1 
+                    ? "text-[#7ec850]" 
+                    : "bg-gradient-to-r from-pink-400 via-yellow-400 to-pink-400 bg-clip-text text-transparent"
+                }`}
+                style={pixelPhase >= 1 ? { 
+                  textShadow: "6px 6px 0 #5a9a32, 12px 12px 0 rgba(0,0,0,0.2)",
+                  WebkitTextStroke: "3px #5a9a32",
+                } : undefined}
+              >
                 CWrite
               </h1>
             </motion.div>
@@ -166,7 +301,7 @@ export default function HomePage({ language = "en", onStartPlan }: HomePageProps
           </div>
 
           <div className="flex flex-col items-center lg:w-1/2">
-            <div className="mb-16 w-full">
+            <div className={`mb-16 w-full transition-all duration-300 ${pixelPhase >= 1 ? "opacity-0 scale-95" : ""}`}>
               <MagneticCards
                 cards={genreCards}
                 activeCard={activeGenre}
@@ -193,17 +328,56 @@ export default function HomePage({ language = "en", onStartPlan }: HomePageProps
 
             <motion.div
               initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
+              animate={{ 
+                opacity: 1, 
+                y: 0,
+                scale: pixelPhase >= 1 ? [1, 1.05, 1] : 1,
+              }}
               transition={{ duration: 0.8, delay: 2.5 }}
             >
-              <button onClick={() => onStartPlan?.()} className="rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70">
-                <GlassSurface width="auto" height="auto" borderRadius={50} borderWidth={0.08} brightness={55} opacity={0.85} blur={12} displace={0.3}>
-                  <span className="flex items-center gap-3 px-12 py-5 text-xl font-bold whitespace-nowrap text-white md:px-16 md:py-6 md:text-2xl lg:text-3xl">
+              {/* Show pixel button when transitioning, otherwise show glass button */}
+              {pixelPhase >= 1 ? (
+                <motion.button
+                  ref={buttonRef}
+                  disabled
+                  className="focus:outline-none disabled:cursor-not-allowed"
+                  initial={{ scale: 1 }}
+                  animate={{ 
+                    scale: [1, 1.1, 1.05],
+                    boxShadow: [
+                      "4px 4px 0 rgba(0,0,0,0.3)",
+                      "6px 6px 0 rgba(0,0,0,0.4)",
+                      "8px 8px 0 rgba(0,0,0,0.3)",
+                    ]
+                  }}
+                  transition={{ duration: 0.5 }}
+                  style={{
+                    background: "linear-gradient(180deg, #6fcf6f 0%, #4ca84c 100%)",
+                    border: "4px solid #3d8a3d",
+                    boxShadow: "inset -4px -4px 0 rgba(0,0,0,0.25), inset 4px 4px 0 rgba(255,255,255,0.25), 6px 6px 0 rgba(0,0,0,0.3)",
+                    padding: "20px 48px",
+                    imageRendering: "pixelated",
+                  }}
+                >
+                  <span className="flex items-center gap-3 text-xl font-bold whitespace-nowrap text-white md:text-2xl lg:text-3xl" style={{ textShadow: "2px 2px 0 rgba(0,0,0,0.3)" }}>
                     {t.startButton}
                     <span className="text-2xl md:text-3xl lg:text-4xl">&#9992;</span>
                   </span>
-                </GlassSurface>
-              </button>
+                </motion.button>
+              ) : (
+                <button 
+                  ref={buttonRef}
+                  onClick={handleStartJourney} 
+                  disabled={isPixelating}
+                  className="rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70 disabled:cursor-not-allowed">
+                  <GlassSurface width="auto" height="auto" borderRadius={50} borderWidth={0.08} brightness={55} opacity={0.85} blur={12} displace={0.3}>
+                    <span className="flex items-center gap-3 px-12 py-5 text-xl font-bold whitespace-nowrap text-white md:px-16 md:py-6 md:text-2xl lg:text-3xl">
+                      {t.startButton}
+                      <span className="text-2xl md:text-3xl lg:text-4xl">&#9992;</span>
+                    </span>
+                  </GlassSurface>
+                </button>
+              )}
             </motion.div>
           </div>
         </section>

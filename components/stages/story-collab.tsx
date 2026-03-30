@@ -408,9 +408,45 @@ export default function StoryCollab({
 
   return (
     <div
-      className="min-h-screen py-8 px-6 bg-gradient-to-br from-sky-100 via-cyan-50 via-purple-50 to-orange-50 relative"
+      className="min-h-screen py-8 px-6 relative overflow-hidden pixel-theme"
       style={{ paddingTop: "120px", paddingBottom: "120px" }}
     >
+      {/* Pixel art background */}
+      <div className="fixed inset-0 z-0" style={{
+        background: `linear-gradient(180deg, 
+          #b8e4f9 0%, 
+          #87ceeb 25%, 
+          #7ec850 65%, 
+          #5a9a32 100%)`
+      }}>
+        {/* Pixel clouds */}
+        <div className="absolute top-16 left-[10%] w-24 h-12 bg-white opacity-80" style={{
+          clipPath: "polygon(0% 60%, 15% 40%, 30% 50%, 45% 20%, 60% 40%, 75% 30%, 90% 50%, 100% 60%, 100% 100%, 0% 100%)"
+        }} />
+        <div className="absolute top-24 right-[15%] w-32 h-14 bg-white opacity-70" style={{
+          clipPath: "polygon(0% 60%, 15% 40%, 30% 50%, 45% 20%, 60% 40%, 75% 30%, 90% 50%, 100% 60%, 100% 100%, 0% 100%)"
+        }} />
+        <div className="absolute top-32 left-[40%] w-20 h-10 bg-white opacity-75" style={{
+          clipPath: "polygon(0% 60%, 20% 30%, 50% 50%, 80% 25%, 100% 60%, 100% 100%, 0% 100%)"
+        }} />
+        
+        {/* Pixel grass at bottom */}
+        <div className="absolute bottom-0 left-0 right-0 h-32 pointer-events-none">
+          {[...Array(20)].map((_, i) => (
+            <div
+              key={`grass-${i}`}
+              className="absolute bottom-0"
+              style={{
+                left: `${i * 5 + Math.random() * 2}%`,
+                width: "8px",
+                height: `${20 + Math.random() * 16}px`,
+                background: i % 3 === 0 ? "#5a9a32" : "#7ec850",
+              }}
+            />
+          ))}
+        </div>
+      </div>
+
       <div className="max-w-7xl mx-auto relative z-10">
         <StageHeader
           stage={2}
@@ -422,39 +458,43 @@ export default function StoryCollab({
         <div className="grid lg:grid-cols-12 gap-6 mt-8">
           {/* ──── Left: Chat Panel ──── */}
           <div className="lg:col-span-7">
-            <div className="rounded-3xl border-4 border-white/60 bg-white/85 backdrop-blur-sm shadow-2xl overflow-hidden">
+            <div className="pixel-panel overflow-hidden">
               {mode === "ai" ? (
                 /* ──── AI chat mode (all phases: explore → plot → structure → writing) ──── */
                 <>
                   {/* Section progress bar — visible only once structure is chosen */}
                   {storyBlocks.length > 0 && (
-                    <div className="px-5 pt-4 pb-3 border-b border-purple-100 bg-gradient-to-r from-purple-50 to-pink-50">
+                    <div className="px-5 pt-4 pb-3" style={{
+                      borderBottom: "4px solid #8b6914",
+                      background: "linear-gradient(180deg, #e8c547 0%, #c9a82e 100%)"
+                    }}>
                       <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs font-bold text-purple-700">
-                          ✍️ Now writing:{" "}
-                          <span className="text-purple-500">
+                        <span className="text-xs font-bold" style={{ color: "#5a4a2a" }}>
+                          Now writing:{" "}
+                          <span style={{ color: "#3d5a1f" }}>
                             {currentWritingSection < storyBlocks.length
                               ? storyBlocks[currentWritingSection].sectionName
                               : "All done!"}
                           </span>
                         </span>
-                        <span className="text-xs text-slate-400">
+                        <span className="text-xs font-bold" style={{ color: "#6b5210" }}>
                           {Math.min(currentWritingSection + 1, storyBlocks.length)}/{storyBlocks.length}
                         </span>
                       </div>
-                      <div className="flex gap-1.5">
+                      <div className="flex gap-1">
                         {storyBlocks.map((block, idx) => (
                           <div
                             key={block.sectionName}
                             title={block.sectionName}
-                            className={cn(
-                              "flex-1 h-1.5 rounded-full transition-all duration-300",
-                              idx < currentWritingSection
-                                ? "bg-emerald-400"
+                            className="flex-1 h-3 transition-all duration-300"
+                            style={{
+                              background: idx < currentWritingSection
+                                ? "#7ec850"
                                 : idx === currentWritingSection
-                                  ? "bg-purple-500"
-                                  : "bg-slate-200",
-                            )}
+                                  ? "#e8c547"
+                                  : "#d9c9a6",
+                              border: `2px solid ${idx < currentWritingSection ? "#5a9a32" : idx === currentWritingSection ? "#c4a020" : "#8b6914"}`
+                            }}
                           />
                         ))}
                       </div>
@@ -464,18 +504,22 @@ export default function StoryCollab({
                   {/* Chat messages */}
                   <div
                     ref={chatContainerRef}
-                    className="h-[460px] overflow-y-auto p-6 space-y-4 bg-gradient-to-b from-white via-white to-purple-50/60"
+                    className="h-[460px] overflow-y-auto p-6 space-y-4"
+                    style={{ background: "#f5e6c8" }}
                   >
                     {messages.map((msg) => (
                       <div key={msg.id}>
                         <div className={cn("flex", msg.role === "user" ? "justify-end" : "justify-start")}>
                           <div
-                            className={cn(
-                              "max-w-[82%] rounded-2xl px-4 py-3 shadow-sm",
-                              msg.role === "user"
-                                ? "bg-gradient-to-r from-sky-600 to-cyan-600 text-white"
-                                : "bg-gradient-to-r from-purple-100 to-orange-100 text-slate-800 border border-purple-200",
-                            )}
+                            className="max-w-[82%] px-4 py-3"
+                            style={{
+                              background: msg.role === "user" 
+                                ? "linear-gradient(180deg, #7ec850 0%, #5a9a32 100%)" 
+                                : "#fff",
+                              border: msg.role === "user" ? "3px solid #3d8a3d" : "3px solid #8b6914",
+                              boxShadow: "3px 3px 0 rgba(0,0,0,0.2)",
+                              color: msg.role === "user" ? "#fff" : "#5a4a2a"
+                            }}
                           >
                             <p className="whitespace-pre-wrap leading-relaxed text-sm md:text-base">
                               {msg.content}
@@ -489,7 +533,13 @@ export default function StoryCollab({
                                     key={`${msg.id}-${suggestion}`}
                                     type="button"
                                     onClick={() => handleSuggestionClick(suggestion)}
-                                    className="rounded-full border border-purple-300 bg-white/90 px-3 py-1 text-xs font-semibold text-purple-700 transition hover:border-purple-500 hover:bg-white"
+                                    className="px-3 py-1 text-xs font-bold transition hover:scale-105"
+                                    style={{
+                                      background: "linear-gradient(180deg, #7ec850 0%, #5a9a32 100%)",
+                                      border: "2px solid #3d8a3d",
+                                      color: "#fff",
+                                      boxShadow: "2px 2px 0 rgba(0,0,0,0.2)"
+                                    }}
                                   >
                                     {suggestion}
                                   </button>
@@ -503,7 +553,13 @@ export default function StoryCollab({
                                 <button
                                   type="button"
                                   onClick={() => handleAddToStory(msg.storySnippet!)}
-                                  className="flex items-center gap-1.5 rounded-full border border-emerald-300 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-100"
+                                  className="flex items-center gap-1.5 px-3 py-1 text-xs font-bold transition hover:scale-105"
+                                  style={{
+                                    background: "#87ceeb",
+                                    border: "2px solid #5bc0de",
+                                    color: "#2a5a7a",
+                                    boxShadow: "2px 2px 0 rgba(0,0,0,0.2)"
+                                  }}
                                 >
                                   <Plus className="h-3 w-3" />
                                   Add to Story
@@ -521,15 +577,25 @@ export default function StoryCollab({
                                 key={struct.type}
                                 type="button"
                                 onClick={() => handleStructureSelect(struct.type)}
-                                className="rounded-xl border-2 border-purple-200 bg-white p-4 text-left transition hover:border-purple-500 hover:shadow-md"
+                                className="p-4 text-left transition hover:scale-105"
+                                style={{
+                                  background: "#fff",
+                                  border: "3px solid #8b6914",
+                                  boxShadow: "3px 3px 0 rgba(0,0,0,0.2)"
+                                }}
                               >
-                                <h4 className="text-sm font-bold text-purple-800">{struct.name}</h4>
-                                <p className="mt-1 text-xs text-slate-600">{struct.desc}</p>
+                                <h4 className="text-sm font-extrabold" style={{ color: "#5a4a2a" }}>{struct.name}</h4>
+                                <p className="mt-1 text-xs" style={{ color: "#6b5210" }}>{struct.desc}</p>
                                 <div className="mt-2 flex flex-wrap gap-1">
                                   {struct.outline.map((step) => (
                                     <span
                                       key={step}
-                                      className="rounded-full bg-purple-50 px-2 py-0.5 text-[10px] text-purple-600"
+                                      className="px-2 py-0.5 text-[10px] font-bold"
+                                      style={{
+                                        background: "#7ec850",
+                                        color: "#fff",
+                                        border: "2px solid #5a9a32"
+                                      }}
                                     >
                                       {step}
                                     </span>
@@ -545,8 +611,8 @@ export default function StoryCollab({
                     {/* Loading indicator */}
                     {isLoading && (
                       <div className="flex justify-start">
-                        <div className="rounded-2xl border border-purple-200 bg-white px-4 py-3 shadow-sm">
-                          <Loader2 className="h-5 w-5 animate-spin text-purple-600" />
+                        <div className="px-4 py-3" style={{ background: "#fff", border: "3px solid #8b6914" }}>
+                          <Loader2 className="h-5 w-5 animate-spin" style={{ color: "#7ec850" }} />
                         </div>
                       </div>
                     )}
@@ -554,7 +620,7 @@ export default function StoryCollab({
                   </div>
 
                   {/* Chat input */}
-                  <div className="border-t border-purple-100 bg-white p-4 space-y-2">
+                  <div className="p-4 space-y-2" style={{ borderTop: "4px solid #8b6914", background: "#d9c9a6" }}>
                     <div className="flex gap-3">
                       <Input
                         value={chatInput}
@@ -571,13 +637,13 @@ export default function StoryCollab({
                             : "Type your message..."
                         }
                         disabled={isLoading}
-                        className="flex-1 border-purple-200 focus-visible:border-purple-400"
+                        className="flex-1 pixel-input"
                       />
                       <Button
                         type="button"
                         onClick={handleSendChat}
                         disabled={isLoading || !chatInput.trim()}
-                        className="bg-gradient-to-r from-purple-600 to-pink-600 text-white"
+                        className="pixel-btn pixel-btn-green"
                       >
                         <Send className="h-4 w-4" />
                       </Button>
@@ -585,8 +651,7 @@ export default function StoryCollab({
                         type="button"
                         onClick={handleHelpMe}
                         disabled={isLoading}
-                        variant="outline"
-                        className="border-amber-300 text-amber-700 hover:bg-amber-50"
+                        className="pixel-btn pixel-btn-wood"
                         title="Get a creative idea!"
                       >
                         <Lightbulb className="h-4 w-4" />
@@ -599,57 +664,59 @@ export default function StoryCollab({
                         <Button
                           type="button"
                           onClick={() => setCurrentWritingSection((prev) => prev + 1)}
-                          variant="outline"
-                          className="w-full text-xs border-purple-200 text-purple-600 hover:bg-purple-50"
+                          className="w-full text-xs pixel-btn pixel-btn-blue"
                         >
-                          Next Section: {storyBlocks[currentWritingSection + 1].sectionName} →
+                          Next Section: {storyBlocks[currentWritingSection + 1].sectionName}
                         </Button>
                       )}
                   </div>
                 </>
               ) : (
                 /* ──── Manual mode: static guides ──── */
-                <div className="p-6 space-y-6">
-                  <h3 className="text-lg font-bold text-slate-800">Plan Your Story</h3>
+                <div className="p-6 space-y-6" style={{ background: "#f5e6c8" }}>
+                  <h3 className="text-lg font-extrabold" style={{ color: "#5a4a2a", textShadow: "1px 1px 0 rgba(0,0,0,0.2)" }}>Plan Your Story</h3>
 
                   {!manualPlotDone ? (
                     <div className="space-y-4">
-                      <p className="text-sm text-slate-600">
+                      <p className="text-sm font-bold" style={{ color: "#6b5210" }}>
                         Fill in the three elements of your plot:
                       </p>
                       <div className="space-y-3">
                         <div>
-                          <label className="text-sm font-semibold text-slate-700">Setting (where & when)</label>
+                          <label className="text-sm font-extrabold" style={{ color: "#5a4a2a" }}>Setting (where & when)</label>
                           <Input
                             value={plotData.setting}
                             onChange={(e) => setPlotData((prev) => ({ ...prev, setting: e.target.value }))}
                             placeholder="e.g. A magical forest at night"
+                            className="pixel-input"
                           />
                         </div>
                         <div>
-                          <label className="text-sm font-semibold text-slate-700">Conflict (the problem)</label>
+                          <label className="text-sm font-extrabold" style={{ color: "#5a4a2a" }}>Conflict (the problem)</label>
                           <Input
                             value={plotData.conflict}
                             onChange={(e) => setPlotData((prev) => ({ ...prev, conflict: e.target.value }))}
                             placeholder="e.g. A dragon stole the village's water"
+                            className="pixel-input"
                           />
                         </div>
                         <div>
-                          <label className="text-sm font-semibold text-slate-700">Goal (what the hero wants)</label>
+                          <label className="text-sm font-extrabold" style={{ color: "#5a4a2a" }}>Goal (what the hero wants)</label>
                           <Input
                             value={plotData.goal}
                             onChange={(e) => setPlotData((prev) => ({ ...prev, goal: e.target.value }))}
                             placeholder="e.g. Get the water back and befriend the dragon"
+                            className="pixel-input"
                           />
                         </div>
-                        <Button onClick={handleManualPlotConfirm} className="w-full bg-purple-600 text-white">
+                        <Button onClick={handleManualPlotConfirm} className="w-full pixel-btn pixel-btn-green">
                           Confirm Plot
                         </Button>
                       </div>
                     </div>
                   ) : !selectedStructure ? (
                     <div className="space-y-4">
-                      <p className="text-sm text-slate-600">
+                      <p className="text-sm font-bold" style={{ color: "#6b5210" }}>
                         Great plot! Now choose a story structure:
                       </p>
                       <div className="grid gap-3">
@@ -658,15 +725,25 @@ export default function StoryCollab({
                             key={struct.type}
                             type="button"
                             onClick={() => handleStructureSelect(struct.type)}
-                            className="rounded-xl border-2 border-purple-200 bg-white p-4 text-left transition hover:border-purple-500 hover:shadow-md"
+                            className="p-4 text-left transition hover:scale-105"
+                            style={{
+                              background: "#fff",
+                              border: "3px solid #8b6914",
+                              boxShadow: "3px 3px 0 rgba(0,0,0,0.2)"
+                            }}
                           >
-                            <h4 className="text-sm font-bold text-purple-800">{struct.name}</h4>
-                            <p className="mt-1 text-xs text-slate-600">{struct.desc}</p>
+                            <h4 className="text-sm font-extrabold" style={{ color: "#5a4a2a" }}>{struct.name}</h4>
+                            <p className="mt-1 text-xs" style={{ color: "#6b5210" }}>{struct.desc}</p>
                             <div className="mt-2 flex flex-wrap gap-1">
                               {struct.outline.map((step) => (
                                 <span
                                   key={step}
-                                  className="rounded-full bg-purple-50 px-2 py-0.5 text-[10px] text-purple-600"
+                                  className="px-2 py-0.5 text-[10px] font-bold"
+                                  style={{
+                                    background: "#7ec850",
+                                    color: "#fff",
+                                    border: "2px solid #5a9a32"
+                                  }}
                                 >
                                   {step}
                                 </span>
@@ -678,11 +755,11 @@ export default function StoryCollab({
                     </div>
                   ) : (
                     <div className="space-y-3">
-                      <div className="flex items-center gap-2 text-emerald-700">
+                      <div className="flex items-center gap-2" style={{ color: "#3d5a1f" }}>
                         <Check className="h-4 w-4" />
-                        <span className="text-sm font-semibold">Plot & structure ready!</span>
+                        <span className="text-sm font-bold">Plot & structure ready!</span>
                       </div>
-                      <p className="text-sm text-slate-600">
+                      <p className="text-sm font-bold" style={{ color: "#6b5210" }}>
                         Write your story in the editor on the right. Fill in each section and click &ldquo;Finish Story&rdquo; when you&apos;re done.
                       </p>
                     </div>
@@ -694,30 +771,30 @@ export default function StoryCollab({
 
           {/* ──── Right: Story Editor ──── */}
           <div className="lg:col-span-5">
-            <div className="rounded-3xl border-4 border-white/60 bg-white/85 backdrop-blur-sm shadow-2xl overflow-hidden">
-              <div className="p-6 space-y-4">
-                <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                  <Sparkles className="h-5 w-5 text-purple-500" />
+            <div className="pixel-panel overflow-hidden">
+              <div className="p-6 space-y-4" style={{ background: "#f5e6c8" }}>
+                <h3 className="text-lg font-extrabold flex items-center gap-2" style={{ color: "#5a4a2a", textShadow: "1px 1px 0 rgba(0,0,0,0.2)" }}>
+                  <Sparkles className="h-5 w-5" style={{ color: "#7ec850" }} />
                   Story Editor
                 </h3>
 
                 {/* Plot summary */}
                 {(plotData.setting || plotData.conflict || plotData.goal) && (
-                  <div className="rounded-xl border border-purple-200 bg-purple-50/50 p-3 space-y-1">
-                    <h4 className="text-xs font-bold text-purple-700 uppercase tracking-wider">Plot Summary</h4>
+                  <div className="p-3 space-y-1" style={{ background: "#d4e8b4", border: "3px solid #5a9a32" }}>
+                    <h4 className="text-xs font-extrabold uppercase tracking-wider" style={{ color: "#3d5a1f" }}>Plot Summary</h4>
                     {plotData.setting && (
-                      <p className="text-xs text-slate-700">
-                        <span className="font-semibold">Setting:</span> {plotData.setting}
+                      <p className="text-xs" style={{ color: "#5a4a2a" }}>
+                        <span className="font-bold">Setting:</span> {plotData.setting}
                       </p>
                     )}
                     {plotData.conflict && (
-                      <p className="text-xs text-slate-700">
-                        <span className="font-semibold">Problem:</span> {plotData.conflict}
+                      <p className="text-xs" style={{ color: "#5a4a2a" }}>
+                        <span className="font-bold">Problem:</span> {plotData.conflict}
                       </p>
                     )}
                     {plotData.goal && (
-                      <p className="text-xs text-slate-700">
-                        <span className="font-semibold">Goal:</span> {plotData.goal}
+                      <p className="text-xs" style={{ color: "#5a4a2a" }}>
+                        <span className="font-bold">Goal:</span> {plotData.goal}
                       </p>
                     )}
                   </div>
@@ -726,7 +803,11 @@ export default function StoryCollab({
                 {/* Structure badge */}
                 {structureForDisplay && (
                   <div className="flex items-center gap-2">
-                    <span className="rounded-full bg-purple-100 px-3 py-1 text-xs font-semibold text-purple-700">
+                    <span className="px-3 py-1 text-xs font-bold" style={{
+                      background: "#87ceeb",
+                      color: "#2a5a7a",
+                      border: "2px solid #5bc0de"
+                    }}>
                       {structureForDisplay.name}
                     </span>
                   </div>
@@ -741,28 +822,24 @@ export default function StoryCollab({
                       return (
                         <div key={block.sectionName} className="space-y-1">
                           <div className="flex items-center gap-1.5">
-                            <label
-                              className={cn(
-                                "text-xs font-bold uppercase tracking-wider",
-                                isDone ? "text-emerald-600" : isActive ? "text-purple-700" : "text-slate-400",
-                              )}
-                            >
+                            <label className="text-xs font-bold uppercase tracking-wider" style={{
+                              color: isDone ? "#3d5a1f" : isActive ? "#c4a020" : "#8b6914"
+                            }}>
                               {block.sectionName}
                             </label>
-                            {isDone && <Check className="h-3 w-3 text-emerald-500" />}
-                            {isActive && <span className="text-[10px] text-purple-500 font-semibold">← writing now</span>}
+                            {isDone && <Check className="h-3 w-3" style={{ color: "#5a9a32" }} />}
+                            {isActive && <span className="text-[10px] font-bold" style={{ color: "#c4a020" }}>writing now</span>}
                           </div>
                           {mode === "ai" ? (
                             /* Read-only display in AI mode */
                             <div
-                              className={cn(
-                                "min-h-[80px] rounded-lg border p-3 text-sm whitespace-pre-wrap transition-all duration-300",
-                                isActive
-                                  ? "border-purple-300 bg-purple-50/60 ring-2 ring-purple-200"
-                                  : isDone
-                                    ? "border-emerald-200 bg-emerald-50/40 text-slate-700"
-                                    : "border-slate-200 bg-slate-50/60 text-slate-400 italic",
-                              )}
+                              className="min-h-[80px] p-3 text-sm whitespace-pre-wrap transition-all duration-300"
+                              style={{
+                                background: isActive ? "#f5e6c8" : isDone ? "#d4e8b4" : "#e8dcc0",
+                                border: `3px solid ${isActive ? "#c4a020" : isDone ? "#5a9a32" : "#8b6914"}`,
+                                color: isDone ? "#5a4a2a" : "#8b6914",
+                                fontStyle: block.text ? "normal" : "italic"
+                              }}
                             >
                               {block.text || (isActive ? "Your writing will appear here..." : "Not written yet")}
                             </div>
@@ -772,7 +849,7 @@ export default function StoryCollab({
                               value={block.text}
                               onChange={(e) => handleStoryBlockChange(index, e.target.value)}
                               placeholder={`Write the ${block.sectionName.toLowerCase()} of your story...`}
-                              className="min-h-[80px] resize-none border-slate-200 text-sm focus-visible:border-purple-400"
+                              className="min-h-[80px] resize-none pixel-input text-sm"
                             />
                           )}
                         </div>
@@ -780,7 +857,7 @@ export default function StoryCollab({
                     })}
                   </div>
                 ) : (
-                  <div className="flex items-center justify-center h-[200px] text-slate-400 text-sm">
+                  <div className="flex items-center justify-center h-[200px] text-sm font-bold" style={{ color: "#8b6914" }}>
                     {selectedStructure
                       ? "Loading sections..."
                       : "Choose a story structure to start writing!"}
@@ -788,12 +865,12 @@ export default function StoryCollab({
                 )}
 
                 {/* Footer stats + Finish */}
-                <div className="flex items-center justify-between pt-2 border-t border-slate-100">
-                  <div className="text-xs text-slate-500">
-                    Words: <span className="font-semibold text-slate-700">{totalWords}</span>
+                <div className="flex items-center justify-between pt-2" style={{ borderTop: "3px solid #8b6914" }}>
+                  <div className="text-xs font-bold" style={{ color: "#6b5210" }}>
+                    Words: <span style={{ color: "#5a4a2a" }}>{totalWords}</span>
                     {storyBlocks.length > 0 && (
                       <>
-                        {" · "}Sections: <span className="font-semibold text-slate-700">{storyBlocks.filter((b) => b.text.trim()).length}/{storyBlocks.length}</span>
+                        {" | "}Sections: <span style={{ color: "#5a4a2a" }}>{storyBlocks.filter((b) => b.text.trim()).length}/{storyBlocks.length}</span>
                       </>
                     )}
                   </div>
@@ -801,7 +878,7 @@ export default function StoryCollab({
                     type="button"
                     onClick={handleFinishStory}
                     disabled={storyBlocks.length === 0 || totalWords === 0}
-                    className="bg-gradient-to-r from-emerald-600 to-teal-600 text-white"
+                    className="pixel-btn pixel-btn-green"
                   >
                     <Sparkles className="h-4 w-4 mr-1" />
                     Finish Story

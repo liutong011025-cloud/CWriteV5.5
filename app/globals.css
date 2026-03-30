@@ -909,6 +909,38 @@
   right: -14px;
 }
 
+/* Journey ticket card pulse animation */
+@keyframes journey-card-pulse {
+  0%, 100% {
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 10px 25px -3px rgba(168, 85, 247, 0.3), 0 4px 10px -4px rgba(168, 85, 247, 0.2);
+    transform: scale(1.02);
+  }
+}
+
+.animate-journey-card-pulse {
+  animation: journey-card-pulse 2s ease-in-out infinite;
+}
+
+/* Drop zone pulse animation */
+@keyframes drop-zone-pulse {
+  0%, 100% {
+    border-color: rgba(216, 180, 254, 0.6);
+    box-shadow: 0 0 0 0 rgba(168, 85, 247, 0);
+  }
+  50% {
+    border-color: rgba(168, 85, 247, 0.8);
+    box-shadow: 0 0 15px 3px rgba(168, 85, 247, 0.3);
+  }
+}
+
+.animate-drop-zone-pulse {
+  animation: drop-zone-pulse 1.5s ease-in-out infinite;
+}
+
 @keyframes stamp {
   0% {
     transform: scale(0) rotate(-15deg);
@@ -1002,4 +1034,339 @@
 
 .animate-cagent-red-flash {
   animation: cagent-red-flash 2s ease-out forwards;
+}
+
+/* ========== Stardew Valley / Pixel Art Theme ========== */
+
+/* Pixel art color palette */
+:root {
+  --pixel-grass: #7ec850;
+  --pixel-grass-dark: #5a9a32;
+  --pixel-wheat: #e8c547;
+  --pixel-wheat-dark: #c9a82e;
+  --pixel-wood: #8b6914;
+  --pixel-wood-light: #a58b3d;
+  --pixel-wood-dark: #6b5210;
+  --pixel-sky: #87ceeb;
+  --pixel-sky-light: #b8e4f9;
+  --pixel-stone: #9a9a9a;
+  --pixel-stone-dark: #6b6b6b;
+  --pixel-cream: #f5e6c8;
+  --pixel-cream-dark: #d9c9a6;
+  --pixel-brown-panel: #c4a574;
+  --pixel-brown-panel-dark: #9a7b4f;
+  --pixel-red-btn: #c94b4b;
+  --pixel-green-btn: #5cb85c;
+  --pixel-blue-btn: #5bc0de;
+}
+
+/* Pixel border utility - creates stepped pixel edges */
+.pixel-border {
+  border: 4px solid var(--pixel-wood-dark);
+  box-shadow: 
+    inset -4px -4px 0 0 var(--pixel-wood),
+    inset 4px 4px 0 0 var(--pixel-wood-light),
+    4px 4px 0 0 rgba(0,0,0,0.3);
+  image-rendering: pixelated;
+}
+
+.pixel-border-light {
+  border: 3px solid var(--pixel-cream-dark);
+  box-shadow: 
+    inset -3px -3px 0 0 var(--pixel-cream),
+    inset 3px 3px 0 0 #fff,
+    3px 3px 0 0 rgba(0,0,0,0.2);
+}
+
+/* Pixel panel - wooden plank style */
+.pixel-panel {
+  background: linear-gradient(
+    180deg,
+    var(--pixel-brown-panel) 0%,
+    var(--pixel-brown-panel-dark) 100%
+  );
+  border: 4px solid var(--pixel-wood-dark);
+  box-shadow: 
+    inset -4px -4px 0 0 var(--pixel-wood),
+    inset 4px 4px 0 0 var(--pixel-wood-light),
+    6px 6px 0 0 rgba(0,0,0,0.25);
+  position: relative;
+}
+
+.pixel-panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    90deg,
+    transparent 0px,
+    transparent 48px,
+    rgba(0,0,0,0.05) 48px,
+    rgba(0,0,0,0.05) 50px
+  );
+  pointer-events: none;
+}
+
+/* Pixel button styles */
+.pixel-btn {
+  border: 3px solid;
+  box-shadow: 
+    inset -3px -3px 0 0 rgba(0,0,0,0.25),
+    inset 3px 3px 0 0 rgba(255,255,255,0.25),
+    3px 3px 0 0 rgba(0,0,0,0.3);
+  transition: transform 0.1s, box-shadow 0.1s;
+  image-rendering: pixelated;
+}
+
+.pixel-btn:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 
+    inset -3px -3px 0 0 rgba(0,0,0,0.25),
+    inset 3px 3px 0 0 rgba(255,255,255,0.25),
+    4px 4px 0 0 rgba(0,0,0,0.3);
+}
+
+.pixel-btn:active {
+  transform: translate(2px, 2px);
+  box-shadow: 
+    inset 3px 3px 0 0 rgba(0,0,0,0.25),
+    inset -3px -3px 0 0 rgba(255,255,255,0.15),
+    1px 1px 0 0 rgba(0,0,0,0.2);
+}
+
+.pixel-btn-green {
+  background: linear-gradient(180deg, #6fcf6f 0%, #4ca84c 100%);
+  border-color: #3d8a3d;
+  color: #fff;
+  text-shadow: 1px 1px 0 rgba(0,0,0,0.3);
+}
+
+.pixel-btn-red {
+  background: linear-gradient(180deg, #e66767 0%, #c94b4b 100%);
+  border-color: #a33a3a;
+  color: #fff;
+  text-shadow: 1px 1px 0 rgba(0,0,0,0.3);
+}
+
+.pixel-btn-blue {
+  background: linear-gradient(180deg, #6bc9e8 0%, #4aa8c7 100%);
+  border-color: #3a8aa3;
+  color: #fff;
+  text-shadow: 1px 1px 0 rgba(0,0,0,0.3);
+}
+
+.pixel-btn-wood {
+  background: linear-gradient(180deg, var(--pixel-wood-light) 0%, var(--pixel-wood) 100%);
+  border-color: var(--pixel-wood-dark);
+  color: #fff;
+  text-shadow: 1px 1px 0 rgba(0,0,0,0.4);
+}
+
+/* Pixel input field */
+.pixel-input {
+  background: var(--pixel-cream);
+  border: 3px solid var(--pixel-wood);
+  box-shadow: 
+    inset 2px 2px 0 0 rgba(0,0,0,0.1),
+    2px 2px 0 0 rgba(0,0,0,0.15);
+  color: var(--pixel-wood-dark);
+}
+
+.pixel-input:focus {
+  outline: none;
+  border-color: var(--pixel-grass);
+  box-shadow: 
+    inset 2px 2px 0 0 rgba(0,0,0,0.1),
+    0 0 0 2px var(--pixel-grass-dark);
+}
+
+/* Pixel progress bar - crop growth style */
+.pixel-progress {
+  background: var(--pixel-stone);
+  border: 3px solid var(--pixel-stone-dark);
+  box-shadow: inset 2px 2px 0 0 rgba(0,0,0,0.2);
+  height: 16px;
+  position: relative;
+  overflow: hidden;
+}
+
+.pixel-progress-bar {
+  background: linear-gradient(
+    180deg,
+    var(--pixel-grass) 0%,
+    var(--pixel-grass-dark) 50%,
+    var(--pixel-grass) 100%
+  );
+  height: 100%;
+  transition: width 0.3s ease;
+  position: relative;
+}
+
+.pixel-progress-bar::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  right: 2px;
+  height: 4px;
+  background: rgba(255,255,255,0.3);
+}
+
+/* Pixel card style */
+.pixel-card {
+  background: var(--pixel-cream);
+  border: 4px solid var(--pixel-wood);
+  box-shadow: 
+    inset -3px -3px 0 0 var(--pixel-cream-dark),
+    inset 3px 3px 0 0 #fff,
+    4px 4px 0 0 rgba(0,0,0,0.2);
+}
+
+/* Pixel decorative elements */
+.pixel-grass-deco {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  background: var(--pixel-grass);
+  clip-path: polygon(
+    50% 0%, 
+    60% 40%, 
+    100% 40%, 
+    65% 60%, 
+    80% 100%, 
+    50% 75%, 
+    20% 100%, 
+    35% 60%, 
+    0% 40%, 
+    40% 40%
+  );
+}
+
+.pixel-flower-deco {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  background: #ff9999;
+  border-radius: 50%;
+  box-shadow: 
+    6px 0 0 #ff9999,
+    -6px 0 0 #ff9999,
+    0 6px 0 #ff9999,
+    0 -6px 0 #ff9999;
+}
+
+.pixel-flower-deco::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 6px;
+  height: 6px;
+  background: var(--pixel-wheat);
+  border-radius: 50%;
+}
+
+/* Pixel shadow for depth */
+.pixel-shadow {
+  box-shadow: 4px 4px 0 0 rgba(0,0,0,0.25);
+}
+
+.pixel-shadow-lg {
+  box-shadow: 6px 6px 0 0 rgba(0,0,0,0.25);
+}
+
+/* Stardew-style background pattern */
+.pixel-bg-pattern {
+  background-color: var(--pixel-cream);
+  background-image: 
+    linear-gradient(45deg, var(--pixel-cream-dark) 25%, transparent 25%),
+    linear-gradient(-45deg, var(--pixel-cream-dark) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, var(--pixel-cream-dark) 75%),
+    linear-gradient(-45deg, transparent 75%, var(--pixel-cream-dark) 75%);
+  background-size: 16px 16px;
+  background-position: 0 0, 0 8px, 8px -8px, -8px 0px;
+}
+
+/* Pixel theme container */
+.pixel-theme {
+  --background: var(--pixel-cream);
+  --foreground: var(--pixel-wood-dark);
+  background: linear-gradient(
+    180deg,
+    var(--pixel-sky-light) 0%,
+    var(--pixel-sky) 30%,
+    var(--pixel-grass) 70%,
+    var(--pixel-grass-dark) 100%
+  );
+}
+
+/* Pixel text styling */
+.pixel-text {
+  text-shadow: 2px 2px 0 rgba(0,0,0,0.2);
+  letter-spacing: 0.5px;
+}
+
+.pixel-title {
+  text-shadow: 
+    2px 2px 0 var(--pixel-wood-dark),
+    4px 4px 0 rgba(0,0,0,0.15);
+  letter-spacing: 1px;
+}
+
+/* Pixel divider */
+.pixel-divider {
+  height: 4px;
+  background: repeating-linear-gradient(
+    90deg,
+    var(--pixel-wood) 0px,
+    var(--pixel-wood) 8px,
+    var(--pixel-wood-light) 8px,
+    var(--pixel-wood-light) 16px
+  );
+}
+
+/* Pixel chip/tag */
+.pixel-chip {
+  background: var(--pixel-cream);
+  border: 2px solid var(--pixel-wood);
+  padding: 4px 12px;
+  box-shadow: 2px 2px 0 0 rgba(0,0,0,0.15);
+}
+
+/* Pixel selection highlight */
+.pixel-selected {
+  outline: 4px solid var(--pixel-grass);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 6px rgba(126, 200, 80, 0.3);
+}
+
+/* Animated pixel sparkle */
+@keyframes pixel-sparkle {
+  0%, 100% {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.pixel-sparkle {
+  animation: pixel-sparkle 1.5s ease-in-out infinite;
+}
+
+/* Pixel bounce animation */
+@keyframes pixel-bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+.pixel-bounce {
+  animation: pixel-bounce 0.8s ease-in-out infinite;
 }

@@ -139,7 +139,7 @@ function GuidedWriting({ language, storyState, onStoryWrite, onBack, userId, onD
     // Test mode shortcut
     if (userText.trim().toLowerCase() === "test") {
       setSectionDone(prev => ({ ...prev, [currentSection]: true }))
-      setChatMessages(prev => [...prev, { id: userMsgId + 1, role: 'ai', text: 'Test mode: Section marked as complete! ✓' }])
+      setChatMessages(prev => [...prev, { id: userMsgId + 1, role: 'ai', text: 'Test mode: Section marked as complete!' }])
       const nextSection = currentSection + 1
       if (nextSection < sections.length) {
         setTimeout(() => {
@@ -255,7 +255,7 @@ function GuidedWriting({ language, storyState, onStoryWrite, onBack, userId, onD
           setChatMessages(prev => [...prev, {
             id: Date.now(),
             role: 'ai',
-            text: '🎉 Amazing work! You have completed all sections! Click "Finish Story" to continue!'
+            text: 'Amazing work! You have completed all sections! Click "Finish Story" to continue!'
           }])
         }
       }
@@ -298,26 +298,58 @@ function GuidedWriting({ language, storyState, onStoryWrite, onBack, userId, onD
   const allDone = sections.every((_, i) => sectionDone[i])
 
   return (
-    <div
-      className="min-h-screen py-8 px-6 bg-gradient-to-br from-green-100 via-emerald-50 via-blue-50 via-purple-50 to-pink-50 relative overflow-hidden"
-      style={{ paddingTop: '120px', paddingBottom: '120px' }}
-    >
-      {/* Background decorations */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-20 left-10 w-96 h-96 bg-purple-300 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse"></div>
-        <div className="absolute top-40 right-10 w-96 h-96 bg-blue-300 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse" style={{ animationDelay: '2s' }}></div>
-        <div className="absolute -bottom-8 left-1/2 w-96 h-96 bg-pink-300 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse" style={{ animationDelay: '4s' }}></div>
-        <div className="absolute top-1/2 left-1/4 w-64 h-64 bg-cyan-300 rounded-full mix-blend-multiply filter blur-2xl opacity-15 animate-pulse" style={{ animationDelay: '1s' }}></div>
-        <div className="absolute bottom-20 right-1/4 w-64 h-64 bg-emerald-300 rounded-full mix-blend-multiply filter blur-2xl opacity-15 animate-pulse" style={{ animationDelay: '3s' }}></div>
-        <div className="absolute top-32 right-32 text-6xl opacity-10 animate-float" style={{ animationDelay: '0.5s' }}>✍️</div>
-        <div className="absolute top-48 left-48 text-5xl opacity-10 animate-float" style={{ animationDelay: '1.5s' }}>📝</div>
-        <div className="absolute top-64 right-64 text-4xl opacity-10 animate-float" style={{ animationDelay: '0s' }}>📖</div>
-        <div className="absolute bottom-32 left-32 text-4xl opacity-10 animate-float" style={{ animationDelay: '1s' }}>✨</div>
-        <div className="absolute top-96 left-96 text-3xl opacity-10 animate-float" style={{ animationDelay: '2s' }}>🌟</div>
-        <div className="absolute bottom-1/3 right-1/3 text-5xl opacity-10 animate-float" style={{ animationDelay: '0.3s' }}>💫</div>
+    <div className="min-h-screen relative overflow-hidden pixel-theme" style={{ paddingTop: '120px', paddingBottom: '120px' }}>
+      {/* Pixel art background */}
+      <div className="fixed inset-0 z-0" style={{
+        background: `linear-gradient(180deg, 
+          #b8e4f9 0%, 
+          #87ceeb 25%, 
+          #7ec850 65%, 
+          #5a9a32 100%)`
+      }}>
+        {/* Pixel clouds */}
+        <div className="absolute top-16 left-[10%] w-24 h-12 bg-white opacity-80" style={{
+          clipPath: "polygon(0% 60%, 15% 40%, 30% 50%, 45% 20%, 60% 40%, 75% 30%, 90% 50%, 100% 60%, 100% 100%, 0% 100%)"
+        }} />
+        <div className="absolute top-24 right-[15%] w-32 h-14 bg-white opacity-70" style={{
+          clipPath: "polygon(0% 60%, 15% 40%, 30% 50%, 45% 20%, 60% 40%, 75% 30%, 90% 50%, 100% 60%, 100% 100%, 0% 100%)"
+        }} />
+        <div className="absolute top-32 left-[40%] w-20 h-10 bg-white opacity-75" style={{
+          clipPath: "polygon(0% 60%, 20% 30%, 50% 50%, 80% 25%, 100% 60%, 100% 100%, 0% 100%)"
+        }} />
+        
+        {/* Pixel decorative elements */}
+        <div className="absolute bottom-0 left-0 right-0 h-32 pointer-events-none">
+          {[...Array(20)].map((_, i) => (
+            <div
+              key={`grass-${i}`}
+              className="absolute bottom-0"
+              style={{
+                left: `${i * 5 + Math.random() * 2}%`,
+                width: "8px",
+                height: `${20 + Math.random() * 16}px`,
+                background: i % 3 === 0 ? "#5a9a32" : "#7ec850",
+              }}
+            />
+          ))}
+          {[...Array(8)].map((_, i) => (
+            <div
+              key={`flower-${i}`}
+              className="absolute bottom-4"
+              style={{
+                left: `${10 + i * 12}%`,
+              }}
+            >
+              <div className="w-3 h-3 rounded-full" style={{
+                background: ["#ff9999", "#ffcc66", "#ff66b2", "#66ccff"][i % 4],
+                boxShadow: `3px 0 0 ${["#ff9999", "#ffcc66", "#ff66b2", "#66ccff"][i % 4]}, -3px 0 0 ${["#ff9999", "#ffcc66", "#ff66b2", "#66ccff"][i % 4]}, 0 3px 0 ${["#ff9999", "#ffcc66", "#ff66b2", "#66ccff"][i % 4]}, 0 -3px 0 ${["#ff9999", "#ffcc66", "#ff66b2", "#66ccff"][i % 4]}`
+              }} />
+            </div>
+          ))}
+        </div>
       </div>
 
-      <div className="max-w-7xl mx-auto relative z-10">
+      <div className="max-w-7xl mx-auto relative z-10 px-6">
         <StageHeader stage={4} title="Write Your Story" onBack={onBack} />
 
         <div className="grid lg:grid-cols-12 gap-6 mt-8">
@@ -325,11 +357,14 @@ function GuidedWriting({ language, storyState, onStoryWrite, onBack, userId, onD
           {/* LEFT: Chat Panel */}
           <div className="lg:col-span-5">
             <div
-              className="bg-white rounded-3xl border-4 border-blue-300 shadow-2xl flex flex-col"
+              className="pixel-panel flex flex-col"
               style={{ height: '680px' }}
             >
               {/* Chat header */}
-              <div className="flex items-center gap-3 p-4 border-b-2 border-blue-100 bg-gradient-to-r from-blue-50 to-purple-50 rounded-t-3xl shrink-0">
+              <div className="flex items-center gap-3 p-4 shrink-0" style={{
+                borderBottom: "4px solid #8b6914",
+                background: "linear-gradient(180deg, #e8c547 0%, #c9a82e 100%)"
+              }}>
                 <button
                   type="button"
                   onClick={() => setWritingMood(prev => prev === "hang" ? "sit" : "hang")}
@@ -338,39 +373,44 @@ function GuidedWriting({ language, storyState, onStoryWrite, onBack, userId, onD
                   <img src={bearSrc} alt="Cagent Bear" className="h-14 w-14 object-contain drop-shadow-md" />
                 </button>
                 <div>
-                  <h3 className="font-bold text-blue-700 text-lg">Cagent</h3>
-                  <p className="text-xs text-gray-500">
+                  <h3 className="font-bold text-lg pixel-text" style={{ color: "#5a4a2a" }}>Cagent</h3>
+                  <p className="text-xs" style={{ color: "#6b5210" }}>
                     {writingMood === "angry"
-                      ? angryReason === "gibberish" ? "Confused 🤔" : "Not happy 😠"
-                      : writingMood === "like" ? "Impressed 😊"
-                      : writingMood === "hang" ? "Waiting... 😴"
-                      : "Ready to help ✍️"}
+                      ? angryReason === "gibberish" ? "Confused" : "Not happy"
+                      : writingMood === "like" ? "Impressed"
+                      : writingMood === "hang" ? "Waiting..."
+                      : "Ready to help"}
                   </p>
                 </div>
-                <div className="ml-auto text-sm font-semibold text-blue-600 bg-blue-100 px-3 py-1 rounded-full">
+                <div className="ml-auto text-sm font-bold pixel-chip" style={{ color: "#5a4a2a" }}>
                   {sections[currentSection] || `Section ${currentSection + 1}`}
                 </div>
               </div>
 
               {/* Chat messages */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-3">
+              <div className="flex-1 overflow-y-auto p-4 space-y-3" style={{ background: "#f5e6c8" }}>
                 {chatMessages.map(msg => (
                   <div key={msg.id} className={`flex items-end gap-2 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                     {msg.role === 'ai' && (
                       <img src="/Cagentsit.png" alt="" className="h-7 w-7 object-contain shrink-0" />
                     )}
                     <div
-                      className={`max-w-[82%] rounded-2xl px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap ${
+                      className={`max-w-[82%] px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap ${
                         msg.role === 'user'
-                          ? 'bg-blue-600 text-white rounded-br-sm shadow-md'
-                          : 'bg-gray-100 text-gray-800 rounded-bl-sm shadow-sm'
+                          ? 'pixel-btn-green text-white'
+                          : 'pixel-card'
                       }`}
+                      style={{
+                        border: msg.role === 'user' ? '3px solid #3d8a3d' : '3px solid #8b6914',
+                        boxShadow: '3px 3px 0 rgba(0,0,0,0.2)',
+                        color: msg.role === 'user' ? '#fff' : '#5a4a2a'
+                      }}
                     >
                       {msg.isLoading ? (
-                        <span className="flex items-center gap-1 text-gray-500">
-                          <span className="inline-block w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                          <span className="inline-block w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                          <span className="inline-block w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                        <span className="flex items-center gap-1">
+                          <span className="inline-block w-2 h-2 bg-[#8b6914] animate-bounce" style={{ animationDelay: '0ms' }} />
+                          <span className="inline-block w-2 h-2 bg-[#8b6914] animate-bounce" style={{ animationDelay: '150ms' }} />
+                          <span className="inline-block w-2 h-2 bg-[#8b6914] animate-bounce" style={{ animationDelay: '300ms' }} />
                         </span>
                       ) : msg.text}
                     </div>
@@ -380,9 +420,12 @@ function GuidedWriting({ language, storyState, onStoryWrite, onBack, userId, onD
               </div>
 
               {/* Chat input */}
-              <div className="shrink-0 p-4 border-t-2 border-blue-100 bg-gray-50 rounded-b-3xl">
+              <div className="shrink-0 p-4" style={{
+                borderTop: "4px solid #8b6914",
+                background: "#d9c9a6"
+              }}>
                 {writingMood === "angry" && (
-                  <p className="text-xs text-red-600 mb-2 font-medium">
+                  <p className="text-xs mb-2 font-bold" style={{ color: "#c94b4b" }}>
                     {angryReason === "gibberish"
                       ? "Please rewrite with clear, readable sentences."
                       : "Please revise with respectful language."}
@@ -405,25 +448,24 @@ function GuidedWriting({ language, storyState, onStoryWrite, onBack, userId, onD
                     }}
                     placeholder={
                       allDone
-                        ? "All sections complete! Click Finish Story →"
-                        : `Write your ${sections[currentSection] || 'story'} section here…`
+                        ? "All sections complete! Click Finish Story"
+                        : `Write your ${sections[currentSection] || 'story'} section here...`
                     }
-                    className="flex-1 resize-none rounded-2xl border-2 border-blue-200 p-3 text-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100 bg-white font-serif leading-relaxed"
+                    className="flex-1 resize-none p-3 text-sm leading-relaxed pixel-input"
                     rows={3}
                     disabled={isSubmittingChat || allDone}
-                    style={{ fontFamily: 'var(--font-comic-neue)' }}
                   />
                   <Button
                     onClick={handleChatSubmit}
                     disabled={!chatInput.trim() || isSubmittingChat || allDone}
-                    className="bg-blue-600 hover:bg-blue-700 text-white rounded-2xl px-4 py-3 h-auto text-lg font-bold shadow-lg disabled:opacity-40"
+                    className="pixel-btn pixel-btn-green px-4 py-3 h-auto text-lg font-bold disabled:opacity-40"
                   >
                     {isSubmittingChat ? (
-                      <span className="animate-spin">⟳</span>
-                    ) : '→'}
+                      <span className="animate-spin">*</span>
+                    ) : '>'}
                   </Button>
                 </div>
-                <p className="text-xs text-gray-400 mt-1.5">Press Enter to submit • Shift+Enter for new line</p>
+                <p className="text-xs mt-1.5" style={{ color: "#6b5210" }}>Press Enter to submit - Shift+Enter for new line</p>
               </div>
             </div>
           </div>
@@ -431,14 +473,14 @@ function GuidedWriting({ language, storyState, onStoryWrite, onBack, userId, onD
           {/* RIGHT: Story Editor */}
           <div className="lg:col-span-7 flex flex-col gap-4">
             {/* Story sections display */}
-            <div className="bg-gradient-to-br from-white via-blue-50 to-purple-50 rounded-3xl p-6 border-4 border-blue-300 shadow-2xl backdrop-blur-sm flex-1">
+            <div className="pixel-panel p-6 flex-1">
               <div className="flex items-center justify-between mb-5">
-                <h3 className="text-xl font-bold text-blue-700 flex items-center gap-2">
-                  <span className="text-2xl">📚</span>
+                <h3 className="text-xl font-bold flex items-center gap-2 pixel-title" style={{ color: "#8b6914" }}>
+                  <span className="text-2xl">*</span>
                   Your Story
                 </h3>
-                <div className="text-sm font-semibold text-gray-500 bg-white/70 px-3 py-1 rounded-full border border-blue-200">
-                  {sections.filter((_, i) => sectionDone[i]).length}/{sections.length} sections • {wordCount} words
+                <div className="text-sm font-bold pixel-chip" style={{ color: "#5a4a2a" }}>
+                  {sections.filter((_, i) => sectionDone[i]).length}/{sections.length} sections - {wordCount} words
                 </div>
               </div>
 
@@ -453,15 +495,15 @@ function GuidedWriting({ language, storyState, onStoryWrite, onBack, userId, onD
                         setCurrentSection(i)
                       }
                     }}
-                    className={`px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition-all shadow-sm ${
+                    className={`px-4 py-2 text-sm font-bold whitespace-nowrap transition-all pixel-btn ${
                       currentSection === i
-                        ? 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white ring-2 ring-blue-300 scale-105'
+                        ? 'pixel-btn-blue pixel-selected'
                         : sectionDone[i]
-                        ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white hover:scale-105'
-                        : 'bg-white border-2 border-gray-200 text-gray-400 cursor-default'
+                        ? 'pixel-btn-green'
+                        : 'pixel-btn-wood opacity-60 cursor-default'
                     }`}
                   >
-                    {section} {sectionDone[i] && <span className="ml-1">✓</span>}
+                    {section} {sectionDone[i] && <span className="ml-1">+</span>}
                   </button>
                 ))}
               </div>
@@ -471,36 +513,38 @@ function GuidedWriting({ language, storyState, onStoryWrite, onBack, userId, onD
                 {sections.map((section, i) => (
                   <div
                     key={i}
-                    className={`rounded-2xl p-4 border-2 transition-all duration-300 ${
+                    className={`p-4 transition-all duration-300 ${
                       currentSection === i
-                        ? 'border-blue-400 bg-blue-50/80 ring-2 ring-blue-200 shadow-md'
+                        ? 'pixel-selected'
                         : sectionDone[i]
-                        ? 'border-green-300 bg-green-50/60'
-                        : 'border-gray-200 bg-gray-50/60 opacity-50'
+                        ? ''
+                        : 'opacity-50'
                     }`}
+                    style={{
+                      background: currentSection === i ? "#e8f4e8" : sectionDone[i] ? "#e8f4e8" : "#f5e6c8",
+                      border: `3px solid ${currentSection === i ? "#5bc0de" : sectionDone[i] ? "#7ec850" : "#d9c9a6"}`
+                    }}
                   >
                     <div className="flex items-center justify-between mb-2">
-                      <span className="font-bold text-sm flex items-center gap-1.5 text-gray-700">
-                        {currentSection === i && !sectionDone[i] && <span className="text-blue-500 animate-pulse">✍️</span>}
-                        {sectionDone[i] && <span className="text-green-500">✓</span>}
+                      <span className="font-bold text-sm flex items-center gap-1.5" style={{ color: "#5a4a2a" }}>
+                        {currentSection === i && !sectionDone[i] && <span style={{ color: "#5bc0de" }}>*</span>}
+                        {sectionDone[i] && <span style={{ color: "#7ec850" }}>+</span>}
                         {section}
                         {currentSection === i && !sectionDone[i] && (
-                          <span className="text-xs font-normal text-blue-500 ml-1">(writing now)</span>
+                          <span className="text-xs font-normal ml-1" style={{ color: "#5bc0de" }}>(writing now)</span>
                         )}
                       </span>
-                      <span className="text-xs text-gray-400">
+                      <span className="text-xs" style={{ color: "#8b6914" }}>
                         {countWords(sectionTexts[i] || '')} words
                       </span>
                     </div>
                     <p
-                      className={`text-sm font-serif leading-relaxed min-h-[3rem] ${
-                        sectionTexts[i] ? 'text-gray-800' : 'text-gray-400 italic'
-                      }`}
-                      style={{ fontFamily: 'var(--font-comic-neue)' }}
+                      className="text-sm leading-relaxed min-h-[3rem]"
+                      style={{ color: sectionTexts[i] ? "#5a4a2a" : "#9a7b4f", fontStyle: sectionTexts[i] ? "normal" : "italic" }}
                     >
                       {sectionTexts[i] || (
                         currentSection === i
-                          ? 'Your writing will appear here after you submit in the chat…'
+                          ? 'Your writing will appear here after you submit in the chat...'
                           : 'Not started yet'
                       )}
                     </p>
@@ -510,32 +554,34 @@ function GuidedWriting({ language, storyState, onStoryWrite, onBack, userId, onD
             </div>
 
             {/* Progress + Finish button */}
-            <div className="bg-gradient-to-br from-amber-50 via-yellow-50 to-orange-50 rounded-3xl p-5 border-4 border-amber-300 shadow-2xl backdrop-blur-sm">
+            <div className="pixel-panel p-5" style={{ background: "linear-gradient(180deg, #e8c547 0%, #c9a82e 100%)" }}>
               <div className="flex items-center justify-between mb-3">
-                <h4 className="font-bold text-amber-700 flex items-center gap-2">
-                  <span className="text-xl animate-pulse">🎯</span>
+                <h4 className="font-bold flex items-center gap-2 pixel-text" style={{ color: "#5a4a2a" }}>
+                  <span className="text-xl pixel-bounce">*</span>
                   Writing Progress
                 </h4>
-                <span className="text-sm text-gray-600">
+                <span className="text-sm" style={{ color: "#6b5210" }}>
                   {sections.filter((_, i) => sectionDone[i]).length}/{sections.length} sections complete
                 </span>
               </div>
 
-              <div className="relative w-full bg-gray-200 rounded-full h-5 mb-4 overflow-hidden shadow-inner border border-gray-300">
+              {/* Pixel progress bar - crop growth style */}
+              <div className="pixel-progress mb-4">
                 <div
-                  className="h-full bg-gradient-to-r from-amber-400 via-yellow-400 to-orange-400 rounded-full transition-all duration-700 ease-out"
+                  className="pixel-progress-bar"
                   style={{
                     width: `${sections.length ? (sections.filter((_, i) => sectionDone[i]).length / sections.length) * 100 : 0}%`
                   }}
                 />
-                <span className="absolute inset-0 flex items-center justify-center text-xs font-bold text-white drop-shadow">
-                  {sections.length ? Math.round((sections.filter((_, i) => sectionDone[i]).length / sections.length) * 100) : 0}%
-                </span>
               </div>
 
               {allDone && wordCount >= 50 && (
-                <div className="mb-3 p-2 bg-green-100 rounded-xl border-2 border-green-400 text-center text-sm font-bold text-green-700 animate-pulse">
-                  🎊 Ready to Finish! 🎊
+                <div className="mb-3 p-2 text-center text-sm font-bold pixel-bounce" style={{
+                  background: "#7ec850",
+                  border: "3px solid #5a9a32",
+                  color: "#fff"
+                }}>
+                  Ready to Finish!
                 </div>
               )}
 
@@ -543,18 +589,17 @@ function GuidedWriting({ language, storyState, onStoryWrite, onBack, userId, onD
                 onClick={handlePublish}
                 disabled={(!isTestMode && wordCount < 50) || !allDone}
                 size="lg"
-                className="w-full bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 hover:from-green-700 hover:via-emerald-700 hover:to-teal-700 text-white border-0 shadow-2xl py-5 text-lg font-bold disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105 transition-all duration-300 relative overflow-hidden group"
+                className="w-full pixel-btn pixel-btn-green py-5 text-lg font-bold disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <span className="relative z-10 flex items-center justify-center gap-2">
+                <span className="flex items-center justify-center gap-2">
                   {isTestMode ? (
-                    <><span className="text-2xl">🎉</span>Finish Story (Test Mode)</>
+                    <>* Finish Story (Test Mode)</>
                   ) : allDone ? (
-                    <><span className="text-2xl">🎉</span>Finish Story</>
+                    <>* Finish Story</>
                   ) : (
-                    <><span>⏳</span>Complete All Sections ({sections.filter((_, i) => sectionDone[i]).length}/{sections.length} done)</>
+                    <>... Complete All Sections ({sections.filter((_, i) => sectionDone[i]).length}/{sections.length} done)</>
                   )}
                 </span>
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
               </Button>
             </div>
           </div>
