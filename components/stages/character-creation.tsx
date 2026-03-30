@@ -555,8 +555,8 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
               showDetailsPanel
                 ? { transform: `translate(${layoutConfig.sketchX - 12}px, ${layoutConfig.sketchY}px) scale(0.94)` }
                 : {
-                    width: `${layoutConfig.sketchWidth}px`,
-                    maxWidth: "94vw",
+                    width: "2200px",
+                    maxWidth: "98vw",
                     transform: `translate(${layoutConfig.sketchX}px, ${layoutConfig.sketchY}px)`,
                   }
             }
