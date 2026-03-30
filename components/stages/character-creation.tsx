@@ -82,8 +82,8 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
     bubbleScale: 1.20,
     sketchX: 0,
     sketchY: -12,
-    sketchWidth: 2000,
-    sketchHeight: 430,
+    sketchWidth: 2200,
+    sketchHeight: 500,
   })
 
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -401,7 +401,7 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
           if (!open) setTraitDialogTrait(null)
         }}
       >
-        <DialogContent className="pixel-panel border-0 max-w-md fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" style={{ background: "#f5e6c8" }}>
+        <DialogContent className="pixel-panel border-0 max-w-md !top-[50%] !left-[50%] !-translate-x-1/2 !-translate-y-1/2" style={{ background: "#f5e6c8" }}>
           {traitDialogTrait && (
             <>
               <DialogHeader>

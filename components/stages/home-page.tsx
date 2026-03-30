@@ -103,13 +103,13 @@ export default function HomePage({ language = "en", onStartPlan }: HomePageProps
     }
     setIsPixelating(true)
     
-    // Phase 1: Transform elements to pixel style (0-1800ms)
+    // Phase 1: Transform elements to pixel style (0-800ms)
     setPixelPhase(1)
     
     // Navigate directly after pixelation effect completes
     setTimeout(() => {
       onStartPlan?.()
-    }, 2000)
+    }, 900)
   }
 
   return (
@@ -144,7 +144,7 @@ export default function HomePage({ language = "en", onStartPlan }: HomePageProps
                 // @ts-ignore
                 "--wave-radius": ["0px", "3000px"],
               }}
-              transition={{ duration: 1.8, ease: "easeOut" }}
+              transition={{ duration: 0.8, ease: "easeOut" }}
             />
             
             {/* Progressive pixel grid - starts large, gets finer */}
@@ -164,7 +164,7 @@ export default function HomePage({ language = "en", onStartPlan }: HomePageProps
                 backgroundSize: ["64px 64px", "48px 48px", "32px 32px", "16px 16px", "8px 8px"],
               }}
               transition={{ 
-                duration: 1.6, 
+                duration: 0.7, 
                 times: [0, 0.2, 0.4, 0.7, 1],
                 ease: "linear"
               }}
@@ -183,7 +183,7 @@ export default function HomePage({ language = "en", onStartPlan }: HomePageProps
                   "rgba(90,154,50,0.5)",
                 ]
               }}
-              transition={{ duration: 1.8, ease: "easeIn" }}
+              transition={{ duration: 0.8, ease: "easeIn" }}
             />
             
             {/* Scanline effect */}
@@ -200,7 +200,7 @@ export default function HomePage({ language = "en", onStartPlan }: HomePageProps
               }}
               initial={{ opacity: 0 }}
               animate={{ opacity: [0, 0.2, 0.4, 0.5] }}
-              transition={{ duration: 1.2, ease: "linear" }}
+              transition={{ duration: 0.6, ease: "linear" }}
             />
           </motion.div>
         )}
@@ -301,7 +301,7 @@ export default function HomePage({ language = "en", onStartPlan }: HomePageProps
           </div>
 
           <div className="flex flex-col items-center lg:w-1/2">
-            <div className={`mb-16 w-full transition-all duration-500 ${pixelPhase >= 1 ? "opacity-0 scale-95" : ""}`}>
+            <div className={`mb-16 w-full transition-all duration-300 ${pixelPhase >= 1 ? "opacity-0 scale-95" : ""}`}>
               <MagneticCards
                 cards={genreCards}
                 activeCard={activeGenre}
@@ -311,35 +311,6 @@ export default function HomePage({ language = "en", onStartPlan }: HomePageProps
                 delayStart={1}
               />
             </div>
-            
-            {/* Pixel-style cards that appear during transition */}
-            {pixelPhase >= 1 && (
-              <motion.div 
-                className="mb-16 w-full absolute inset-x-0 flex justify-center gap-3 flex-wrap px-4"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4 }}
-              >
-                {genreCards.map((card, i) => (
-                  <motion.div
-                    key={card.id}
-                    initial={{ opacity: 0, scale: 0.8, y: 20 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    transition={{ delay: i * 0.08, duration: 0.3 }}
-                    className="px-4 py-2 font-bold text-sm"
-                    style={{
-                      background: "linear-gradient(180deg, #c4a574 0%, #9a7b4f 100%)",
-                      border: "3px solid #6b5210",
-                      boxShadow: "inset -2px -2px 0 rgba(0,0,0,0.2), inset 2px 2px 0 rgba(255,255,255,0.15), 3px 3px 0 rgba(0,0,0,0.3)",
-                      color: "#fff",
-                      textShadow: "1px 1px 0 #6b5210",
-                    }}
-                  >
-                    {card.title}
-                  </motion.div>
-                ))}
-              </motion.div>
-            )}
 
             <AnimatePresence>
               {activeGenre && (
