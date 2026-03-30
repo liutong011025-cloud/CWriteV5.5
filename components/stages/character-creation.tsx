@@ -401,7 +401,13 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
           if (!open) setTraitDialogTrait(null)
         }}
       >
-        <DialogContent className="pixel-panel border-0 max-w-md !top-[50%] !left-[50%] !-translate-x-1/2 !-translate-y-1/2" style={{ background: "#f5e6c8" }}>
+        <DialogContent 
+          className="border-0 max-w-md z-[200]" 
+          style={{ 
+            background: "#f5e6c8",
+            border: "4px solid #6b5210",
+            boxShadow: "inset -4px -4px 0 0 #8b6914, inset 4px 4px 0 0 #a58b3d, 6px 6px 0 0 rgba(0,0,0,0.25)",
+          }}>
           {traitDialogTrait && (
             <>
               <DialogHeader>
