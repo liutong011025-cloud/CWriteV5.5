@@ -33,16 +33,16 @@ const SPECIES = [
   { name: "Panda", icon: "🐼" },
 ]
 
-const TRAIT_STYLE_CLASSES = [
-  { idle: "bg-rose-100 border-rose-300 text-rose-900 hover:bg-rose-200", selected: "bg-rose-500 border-rose-600 text-white ring-2 ring-rose-300" },
-  { idle: "bg-amber-100 border-amber-300 text-amber-900 hover:bg-amber-200", selected: "bg-amber-500 border-amber-600 text-white ring-2 ring-amber-300" },
-  { idle: "bg-lime-100 border-lime-300 text-lime-900 hover:bg-lime-200", selected: "bg-lime-500 border-lime-600 text-white ring-2 ring-lime-300" },
-  { idle: "bg-emerald-100 border-emerald-300 text-emerald-900 hover:bg-emerald-200", selected: "bg-emerald-500 border-emerald-600 text-white ring-2 ring-emerald-300" },
-  { idle: "bg-cyan-100 border-cyan-300 text-cyan-900 hover:bg-cyan-200", selected: "bg-cyan-500 border-cyan-600 text-white ring-2 ring-cyan-300" },
-  { idle: "bg-sky-100 border-sky-300 text-sky-900 hover:bg-sky-200", selected: "bg-sky-500 border-sky-600 text-white ring-2 ring-sky-300" },
-  { idle: "bg-indigo-100 border-indigo-300 text-indigo-900 hover:bg-indigo-200", selected: "bg-indigo-500 border-indigo-600 text-white ring-2 ring-indigo-300" },
-  { idle: "bg-violet-100 border-violet-300 text-violet-900 hover:bg-violet-200", selected: "bg-violet-500 border-violet-600 text-white ring-2 ring-violet-300" },
-  { idle: "bg-fuchsia-100 border-fuchsia-300 text-fuchsia-900 hover:bg-fuchsia-200", selected: "bg-fuchsia-500 border-fuchsia-600 text-white ring-2 ring-fuchsia-300" },
+const PIXEL_TRAIT_COLORS = [
+  { idle: "bg-[#e8c547] border-[#c9a82e]", selected: "bg-[#c9a82e] border-[#a58b3d] text-white" },
+  { idle: "bg-[#7ec850] border-[#5a9a32]", selected: "bg-[#5a9a32] border-[#3d8a3d] text-white" },
+  { idle: "bg-[#87ceeb] border-[#5bc0de]", selected: "bg-[#5bc0de] border-[#3a8aa3] text-white" },
+  { idle: "bg-[#c4a574] border-[#9a7b4f]", selected: "bg-[#9a7b4f] border-[#8b6914] text-white" },
+  { idle: "bg-[#dda0dd] border-[#ba55d3]", selected: "bg-[#ba55d3] border-[#9932cc] text-white" },
+  { idle: "bg-[#ff9999] border-[#e66767]", selected: "bg-[#e66767] border-[#c94b4b] text-white" },
+  { idle: "bg-[#f5e6c8] border-[#d9c9a6]", selected: "bg-[#d9c9a6] border-[#c4a574] text-[#5a4a2a]" },
+  { idle: "bg-[#6bc9e8] border-[#4aa8c7]", selected: "bg-[#4aa8c7] border-[#3a8aa3] text-white" },
+  { idle: "bg-[#6fcf6f] border-[#4ca84c]", selected: "bg-[#4ca84c] border-[#3d8a3d] text-white" },
 ]
 
 type DrawMode = "pen" | "eraser"
@@ -65,7 +65,7 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
   const [hasSketchStroke, setHasSketchStroke] = useState(false)
   const [drawMode, setDrawMode] = useState<DrawMode>("pen")
   const [brushSize, setBrushSize] = useState(5)
-  const [strokeHex, setStrokeHex] = useState("#1f2937")
+  const [strokeHex, setStrokeHex] = useState("#5a4a2a")
   const colorInputRef = useRef<HTMLInputElement>(null)
 
   const [traitDialogOpen, setTraitDialogOpen] = useState(false)
@@ -161,7 +161,7 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
     if (!canvas) return
     const ctx = canvas.getContext("2d")
     if (!ctx) return
-    ctx.fillStyle = "#ffffff"
+    ctx.fillStyle = "#f5e6c8"
     ctx.fillRect(0, 0, canvas.width, canvas.height)
     ctx.lineCap = "round"
     ctx.lineJoin = "round"
@@ -221,7 +221,7 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
     ctx.lineWidth = brushSize
 
     if (drawMode === "eraser") {
-      ctx.strokeStyle = "#ffffff"
+      ctx.strokeStyle = "#f5e6c8"
     } else {
       ctx.strokeStyle = strokeHex
     }
@@ -323,30 +323,57 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-cyan-50 via-fuchsia-50 to-amber-50 px-6 py-8 relative overflow-hidden" style={{ paddingTop: "120px", paddingBottom: "120px" }}>
-      <div className="pointer-events-none absolute inset-0">
-        <div className="absolute -top-16 -left-16 h-64 w-64 rounded-full bg-fuchsia-200/50 blur-3xl animate-pulse" />
-        <div className="absolute top-1/3 -right-16 h-72 w-72 rounded-full bg-cyan-200/50 blur-3xl animate-pulse" style={{ animationDelay: "300ms" }} />
-        <div className="absolute bottom-0 left-1/3 h-72 w-72 rounded-full bg-amber-200/45 blur-3xl animate-pulse" style={{ animationDelay: "700ms" }} />
+    <div className="min-h-screen relative overflow-hidden pixel-theme" style={{ paddingTop: "120px", paddingBottom: "120px" }}>
+      {/* Pixel art background */}
+      <div className="fixed inset-0 z-0" style={{
+        background: `linear-gradient(180deg, 
+          #b8e4f9 0%, 
+          #87ceeb 25%, 
+          #7ec850 65%, 
+          #5a9a32 100%)`
+      }}>
+        {/* Pixel clouds */}
+        <div className="absolute top-16 left-[10%] w-24 h-12 bg-white opacity-80" style={{
+          clipPath: "polygon(0% 60%, 15% 40%, 30% 50%, 45% 20%, 60% 40%, 75% 30%, 90% 50%, 100% 60%, 100% 100%, 0% 100%)"
+        }} />
+        <div className="absolute top-24 right-[15%] w-32 h-14 bg-white opacity-70" style={{
+          clipPath: "polygon(0% 60%, 15% 40%, 30% 50%, 45% 20%, 60% 40%, 75% 30%, 90% 50%, 100% 60%, 100% 100%, 0% 100%)"
+        }} />
+        <div className="absolute top-32 left-[40%] w-20 h-10 bg-white opacity-75" style={{
+          clipPath: "polygon(0% 60%, 20% 30%, 50% 50%, 80% 25%, 100% 60%, 100% 100%, 0% 100%)"
+        }} />
+        
+        {/* Pixel decorative elements */}
+        <div className="absolute bottom-0 left-0 right-0 h-32 pointer-events-none">
+          {[...Array(20)].map((_, i) => (
+            <div
+              key={`grass-${i}`}
+              className="absolute bottom-0"
+              style={{
+                left: `${i * 5 + Math.random() * 2}%`,
+                width: "8px",
+                height: `${20 + Math.random() * 16}px`,
+                background: i % 3 === 0 ? "#5a9a32" : "#7ec850",
+              }}
+            />
+          ))}
+          {[...Array(8)].map((_, i) => (
+            <div
+              key={`flower-${i}`}
+              className="absolute bottom-4"
+              style={{
+                left: `${10 + i * 12}%`,
+              }}
+            >
+              <div className="w-3 h-3 rounded-full" style={{
+                background: ["#ff9999", "#ffcc66", "#ff66b2", "#66ccff"][i % 4],
+                boxShadow: `3px 0 0 ${["#ff9999", "#ffcc66", "#ff66b2", "#66ccff"][i % 4]}, -3px 0 0 ${["#ff9999", "#ffcc66", "#ff66b2", "#66ccff"][i % 4]}, 0 3px 0 ${["#ff9999", "#ffcc66", "#ff66b2", "#66ccff"][i % 4]}, 0 -3px 0 ${["#ff9999", "#ffcc66", "#ff66b2", "#66ccff"][i % 4]}`
+              }} />
+            </div>
+          ))}
+        </div>
       </div>
-      <div className="pointer-events-none absolute top-[140px] left-10 text-5xl animate-bounce" style={{ animationDuration: "2.6s" }}>🎨</div>
-      <div className="pointer-events-none absolute top-[210px] right-14 text-4xl animate-bounce" style={{ animationDelay: "0.7s", animationDuration: "2.9s" }}>🖍️</div>
-      <div className="pointer-events-none absolute top-[110px] left-1/3 text-4xl animate-bounce" style={{ animationDelay: "0.2s", animationDuration: "3.1s" }}>🧁</div>
-      <div className="pointer-events-none absolute top-[180px] right-1/3 text-4xl animate-bounce" style={{ animationDelay: "1.2s", animationDuration: "2.7s" }}>🪄</div>
-      <div className="pointer-events-none absolute bottom-[120px] left-16 text-4xl animate-bounce" style={{ animationDelay: "1.1s", animationDuration: "3.2s" }}>✨</div>
-      <div className="pointer-events-none absolute bottom-[170px] right-10 text-5xl animate-bounce" style={{ animationDelay: "1.5s", animationDuration: "2.8s" }}>🌈</div>
-      <div className="pointer-events-none absolute bottom-[100px] left-1/3 text-4xl animate-bounce" style={{ animationDelay: "0.9s", animationDuration: "3.4s" }}>🎀</div>
-      <div className="pointer-events-none absolute bottom-[220px] right-1/4 text-4xl animate-bounce" style={{ animationDelay: "0.4s", animationDuration: "2.5s" }}>🧸</div>
-      <div className="pointer-events-none absolute top-[300px] left-[8%] text-3xl animate-bounce" style={{ animationDelay: "1.8s", animationDuration: "3.2s" }}>⭐</div>
-      <div className="pointer-events-none absolute top-[330px] right-[10%] text-3xl animate-bounce" style={{ animationDelay: "1.4s", animationDuration: "3s" }}>💫</div>
-      <div className="pointer-events-none absolute top-[240px] left-[20%] text-4xl animate-bounce" style={{ animationDelay: "0.5s", animationDuration: "3.1s" }}>🦄</div>
-      <div className="pointer-events-none absolute top-[260px] right-[22%] text-4xl animate-bounce" style={{ animationDelay: "1s", animationDuration: "2.6s" }}>🌟</div>
-      <div className="pointer-events-none absolute bottom-[240px] left-[24%] text-4xl animate-bounce" style={{ animationDelay: "1.6s", animationDuration: "3.3s" }}>🍭</div>
-      <div className="pointer-events-none absolute bottom-[260px] right-[18%] text-4xl animate-bounce" style={{ animationDelay: "0.8s", animationDuration: "2.9s" }}>🫧</div>
-      <div className="pointer-events-none absolute top-[380px] left-[6%] text-3xl animate-bounce" style={{ animationDelay: "1.3s", animationDuration: "3.5s" }}>🎈</div>
-      <div className="pointer-events-none absolute top-[410px] right-[6%] text-3xl animate-bounce" style={{ animationDelay: "0.6s", animationDuration: "2.7s" }}>🧠</div>
-      <div className="pointer-events-none absolute bottom-[70px] left-[40%] text-4xl animate-bounce" style={{ animationDelay: "1.9s", animationDuration: "3.2s" }}>🎉</div>
-      <div className="pointer-events-none absolute bottom-[80px] right-[38%] text-4xl animate-bounce" style={{ animationDelay: "1.1s", animationDuration: "2.8s" }}>🎊</div>
+
       <Dialog
         open={traitDialogOpen}
         onOpenChange={(open) => {
@@ -354,27 +381,27 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
           if (!open) setTraitDialogTrait(null)
         }}
       >
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="pixel-panel border-0" style={{ background: "#f5e6c8" }}>
           {traitDialogTrait && (
             <>
               <DialogHeader>
-                <DialogTitle>{traitDialogTrait.name}</DialogTitle>
+                <DialogTitle className="pixel-title" style={{ color: "#8b6914" }}>{traitDialogTrait.name}</DialogTitle>
               </DialogHeader>
-              <p className="text-sm text-foreground">
+              <p className="text-sm" style={{ color: "#5a4a2a" }}>
                 {traitDialogTrait.explanationTemplate.replace(/\{\{name\}\}/g, name.trim() || "your character")}
               </p>
               <div className="space-y-2">
-                <p className="text-sm font-semibold text-foreground">When writing, you can use:</p>
-                <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
+                <p className="text-sm font-bold" style={{ color: "#8b6914" }}>When writing, you can use:</p>
+                <ul className="list-disc list-inside space-y-1 text-sm" style={{ color: "#6b5210" }}>
                   {traitDialogTrait.writingTips.map((tip, i) => (
-                    <li key={i}>"{tip}"</li>
+                    <li key={i}>&quot;{tip}&quot;</li>
                   ))}
                 </ul>
               </div>
               <DialogFooter className="gap-2 sm:gap-0">
                 {selectedTraits.includes(traitDialogTrait.name) ? (
                   <Button
-                    variant="outline"
+                    className="pixel-btn pixel-btn-red"
                     onClick={() => {
                       toggleTrait(traitDialogTrait.name)
                       setTraitDialogOpen(false)
@@ -385,6 +412,7 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
                   </Button>
                 ) : (
                   <Button
+                    className="pixel-btn pixel-btn-green"
                     onClick={() => {
                       toggleTrait(traitDialogTrait.name)
                       setTraitDialogOpen(false)
@@ -395,7 +423,7 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
                   </Button>
                 )}
                 <Button
-                  variant="outline"
+                  className="pixel-btn pixel-btn-wood"
                   onClick={() => {
                     setTraitDialogOpen(false)
                     setTraitDialogTrait(null)
@@ -409,18 +437,20 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
         </DialogContent>
       </Dialog>
 
-      <div className="max-w-7xl mx-auto relative z-10">
+      <div className="max-w-7xl mx-auto relative z-10 px-6 py-8">
         <StageHeader stage={1} title="Create Your Character" onBack={onBack} />
 
         {showGenerationHint && (
-          <div className="mt-6 mx-auto max-w-4xl rounded-2xl border-2 border-fuchsia-300 bg-white/95 px-7 py-4 text-lg font-bold text-fuchsia-700 shadow-xl">
-            This may take some time. You can continue filling in your character details while the image is generating.
+          <div className="mt-6 mx-auto max-w-4xl pixel-panel px-7 py-4">
+            <p className="text-lg font-bold pixel-text" style={{ color: "#8b6914" }}>
+              This may take some time. You can continue filling in your character details while the image is generating.
+            </p>
           </div>
         )}
 
         <div className={`mt-8 ${showDetailsPanel ? "grid grid-cols-1 xl:grid-cols-12 gap-6" : "flex justify-center items-center min-h-[72vh] w-full gap-8"}`}>
           <section
-            className={`self-start rounded-3xl border-2 border-violet-200 bg-white/80 backdrop-blur-sm shadow-xl p-6 transition-all duration-700 ${
+            className={`self-start pixel-panel p-6 transition-all duration-700 ${
               showDetailsPanel
                 ? "xl:col-span-7"
                 : "scale-100"
@@ -436,12 +466,12 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
             }
           >
             <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
-              <h2 className="text-2xl font-bold text-violet-700">Sketch Board</h2>
-              <p className="text-sm text-violet-600">1) Choose species, 2) Draw, 3) Generate</p>
+              <h2 className="text-2xl font-bold pixel-title" style={{ color: "#8b6914" }}>Sketch Board</h2>
+              <p className="text-sm pixel-text" style={{ color: "#6b5210" }}>1) Choose species, 2) Draw, 3) Generate</p>
             </div>
 
             <div className="mb-4">
-              <label className="block text-sm font-semibold text-violet-700 mb-2">Species (Required first)</label>
+              <label className="block text-sm font-bold mb-2 pixel-text" style={{ color: "#8b6914" }}>Species (Required first)</label>
               <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-2">
                 {SPECIES.map((spec) => {
                   const selected = species === spec.name
@@ -450,8 +480,8 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
                       key={spec.name}
                       type="button"
                       onClick={() => setSpecies(spec.name)}
-                      className={`rounded-xl border-2 px-3 py-2 text-sm font-semibold transition ${
-                        selected ? "border-violet-500 bg-violet-100 text-violet-800" : "border-violet-100 bg-white text-slate-700 hover:border-violet-300"
+                      className={`px-3 py-2 text-sm font-bold transition pixel-btn ${
+                        selected ? "pixel-btn-green pixel-selected" : "pixel-btn-wood"
                       }`}
                     >
                       <span className="mr-1">{spec.icon}</span>
@@ -462,10 +492,10 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
                 <button
                   type="button"
                   onClick={() => setSpecies("Custom")}
-                  className={`rounded-xl border-2 px-3 py-2 text-sm font-semibold transition ${
+                  className={`px-3 py-2 text-sm font-bold transition pixel-btn ${
                     species === "Custom"
-                      ? "border-violet-500 bg-violet-100 text-violet-800"
-                      : "border-violet-100 bg-white text-slate-700 hover:border-violet-300"
+                      ? "pixel-btn-green pixel-selected"
+                      : "pixel-btn-wood"
                   }`}
                 >
                   ✏️ Custom
@@ -476,48 +506,50 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
                   value={customSpecies}
                   onChange={(e) => setCustomSpecies(e.target.value)}
                   placeholder="Enter custom species..."
-                  className="mt-3 border-violet-200 focus-visible:ring-violet-400"
+                  className="mt-3 pixel-input"
                 />
               )}
             </div>
 
-            <div className="rounded-2xl border border-[#d2b48c] bg-[#f3e7cf] p-4 shadow-inner">
+            <div className="pixel-card p-4">
               <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
                 <div className="flex items-center gap-2">
                   <Button
                     type="button"
-                    variant={drawMode === "pen" ? "default" : "outline"}
                     onClick={() => setDrawMode("pen")}
-                    className={drawMode === "pen" ? "bg-violet-600 hover:bg-violet-700" : "border-violet-300 text-violet-700"}
+                    className={`pixel-btn ${drawMode === "pen" ? "pixel-btn-green" : "pixel-btn-wood"}`}
                   >
                     <PencilLine className="h-4 w-4 mr-1" />
                     Pen
                   </Button>
                   <Button
                     type="button"
-                    variant={drawMode === "eraser" ? "default" : "outline"}
                     onClick={() => setDrawMode("eraser")}
-                    className={drawMode === "eraser" ? "bg-violet-600 hover:bg-violet-700" : "border-violet-300 text-violet-700"}
+                    className={`pixel-btn ${drawMode === "eraser" ? "pixel-btn-green" : "pixel-btn-wood"}`}
                   >
                     <Eraser className="h-4 w-4 mr-1" />
                     Eraser
                   </Button>
                 </div>
                 <div className="flex items-center gap-3">
-                  <label className="text-xs text-violet-700 font-semibold">Size</label>
+                  <label className="text-xs font-bold pixel-text" style={{ color: "#8b6914" }}>Size</label>
                   <input
                     type="range"
                     min={2}
                     max={20}
                     value={brushSize}
                     onChange={(e) => setBrushSize(Number(e.target.value))}
-                    className="w-28 accent-violet-600"
+                    className="w-28"
+                    style={{ accentColor: "#7ec850" }}
                   />
                   <button
                     type="button"
                     onClick={() => colorInputRef.current?.click()}
-                    className="relative h-10 w-10 rounded-full border-2 border-violet-200 shadow-sm disabled:opacity-50"
-                    style={{ backgroundColor: strokeHex }}
+                    className="relative h-10 w-10 pixel-shadow disabled:opacity-50"
+                    style={{ 
+                      backgroundColor: strokeHex,
+                      border: "3px solid #8b6914"
+                    }}
                     disabled={drawMode === "eraser"}
                     aria-label="Choose stroke color"
                   />
@@ -535,8 +567,12 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
 
               <div
                 ref={containerRef}
-                className="relative rounded-2xl overflow-hidden border-2 border-violet-200 bg-white transition-all duration-500"
-                style={{ height: `${showDetailsPanel ? Math.max(300, layoutConfig.sketchHeight - 100) : layoutConfig.sketchHeight}px` }}
+                className="relative overflow-hidden transition-all duration-500"
+                style={{ 
+                  height: `${showDetailsPanel ? Math.max(300, layoutConfig.sketchHeight - 100) : layoutConfig.sketchHeight}px`,
+                  border: "4px solid #8b6914",
+                  boxShadow: "inset 3px 3px 0 rgba(0,0,0,0.1), 4px 4px 0 rgba(0,0,0,0.2)"
+                }}
               >
                 <canvas
                   ref={canvasRef}
@@ -550,7 +586,7 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
               </div>
 
               <div className="mt-3 flex items-center justify-between gap-2 flex-wrap">
-                <Button type="button" variant="outline" onClick={clearSketch} className="border-violet-300 text-violet-700">
+                <Button type="button" onClick={clearSketch} className="pixel-btn pixel-btn-red">
                   <Trash2 className="h-4 w-4 mr-1" />
                   Clear Board
                 </Button>
@@ -558,7 +594,7 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
                   type="button"
                   onClick={handleGenerateImage}
                   disabled={!canGenerate}
-                  className="bg-gradient-to-r from-violet-600 via-fuchsia-600 to-pink-600 hover:from-violet-700 hover:via-fuchsia-700 hover:to-pink-700 text-white"
+                  className="pixel-btn pixel-btn-green disabled:opacity-50"
                 >
                   {isGenerating ? (
                     <>
@@ -588,12 +624,15 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
               }}
             >
               <div
-                className="absolute top-10 left-1/2 -translate-x-1/2 w-[380px] rounded-2xl border-2 border-amber-200 bg-white/95 px-4 py-3 text-center text-[15px] font-bold text-amber-700 shadow-xl leading-snug"
-                style={{ transform: `translate(calc(-50% + ${layoutConfig.bubbleX}px), ${layoutConfig.bubbleY}px) scale(${layoutConfig.bubbleScale})` }}
+                className="absolute top-10 left-1/2 -translate-x-1/2 w-[380px] pixel-panel px-4 py-3 text-center text-[15px] font-bold leading-snug"
+                style={{ 
+                  transform: `translate(calc(-50% + ${layoutConfig.bubbleX}px), ${layoutConfig.bubbleY}px) scale(${layoutConfig.bubbleScale})`,
+                  color: "#5a4a2a"
+                }}
               >
                 After determining the species of your story characters, you can draw them on the drawing board.
                 <br />
-                Let's see who can draw it more Realistic !
+                Let&apos;s see who can draw it more Realistic !
               </div>
               <img
                 src="/Cagentdraw.png"
@@ -604,39 +643,39 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
           )}
 
           <section
-            className={`xl:col-span-5 rounded-3xl border-2 border-cyan-200 bg-white/85 backdrop-blur-sm shadow-xl p-6 transition-all duration-500 ${
+            className={`xl:col-span-5 pixel-panel p-6 transition-all duration-500 ${
               showDetailsPanel ? "opacity-100 translate-x-0" : "opacity-0 translate-x-8 pointer-events-none hidden xl:block"
             }`}
           >
-            <h2 className="text-2xl font-bold text-cyan-700 mb-4">Character Details</h2>
+            <h2 className="text-2xl font-bold mb-4 pixel-title" style={{ color: "#8b6914" }}>Character Details</h2>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-semibold text-cyan-700 mb-1">Name *</label>
+                <label className="block text-sm font-bold mb-1 pixel-text" style={{ color: "#8b6914" }}>Name *</label>
                 <Input
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="e.g., Lumi"
-                  className="border-cyan-200 focus-visible:ring-cyan-400"
+                  className="pixel-input"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-cyan-700 mb-1">Age *</label>
+                <label className="block text-sm font-bold mb-1 pixel-text" style={{ color: "#8b6914" }}>Age *</label>
                 <Input
                   type="number"
                   value={age}
                   onChange={(e) => setAge(e.target.value)}
                   placeholder="e.g., 8"
-                  className="border-cyan-200 focus-visible:ring-cyan-400"
+                  className="pixel-input"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-cyan-700 mb-1">Traits * (choose up to 3)</label>
+                <label className="block text-sm font-bold mb-1 pixel-text" style={{ color: "#8b6914" }}>Traits * (choose up to 3)</label>
                 <div className="flex flex-wrap gap-2">
                   {EOB_TRAITS.map((trait, traitIndex) => {
                     const selected = selectedTraits.includes(trait.name)
-                    const styleSet = TRAIT_STYLE_CLASSES[traitIndex % TRAIT_STYLE_CLASSES.length]
+                    const styleSet = PIXEL_TRAIT_COLORS[traitIndex % PIXEL_TRAIT_COLORS.length]
                     return (
                       <button
                         key={trait.name}
@@ -645,9 +684,10 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
                           setTraitDialogTrait(trait)
                           setTraitDialogOpen(true)
                         }}
-                        className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition ${
+                        className={`px-3 py-1.5 text-xs font-bold border-2 transition pixel-shadow ${
                           selected ? styleSet.selected : styleSet.idle
                         }`}
+                        style={{ color: selected ? undefined : "#5a4a2a" }}
                       >
                         {trait.name}
                       </button>
@@ -659,33 +699,36 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
               {isHighLevel && (
                 <>
                   <div>
-                    <label className="block text-sm font-semibold text-cyan-700 mb-1">Background *</label>
+                    <label className="block text-sm font-bold mb-1 pixel-text" style={{ color: "#8b6914" }}>Background *</label>
                     <textarea
                       value={background}
                       onChange={(e) => setBackground(e.target.value)}
                       rows={3}
                       placeholder="Where does this character come from?"
-                      className="w-full rounded-xl border border-cyan-200 bg-white px-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-cyan-400"
+                      className="w-full px-3 py-2 text-sm pixel-input"
+                      style={{ color: "#5a4a2a" }}
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-cyan-700 mb-1">Emotional Experience *</label>
+                    <label className="block text-sm font-bold mb-1 pixel-text" style={{ color: "#8b6914" }}>Emotional Experience *</label>
                     <textarea
                       value={emotional}
                       onChange={(e) => setEmotional(e.target.value)}
                       rows={3}
                       placeholder="What feelings does this character often face?"
-                      className="w-full rounded-xl border border-cyan-200 bg-white px-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-cyan-400"
+                      className="w-full px-3 py-2 text-sm pixel-input"
+                      style={{ color: "#5a4a2a" }}
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-cyan-700 mb-1">Symbolic Objects *</label>
+                    <label className="block text-sm font-bold mb-1 pixel-text" style={{ color: "#8b6914" }}>Symbolic Objects *</label>
                     <textarea
                       value={symbolic}
                       onChange={(e) => setSymbolic(e.target.value)}
                       rows={3}
                       placeholder="Any object that represents your character?"
-                      className="w-full rounded-xl border border-cyan-200 bg-white px-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-cyan-400"
+                      className="w-full px-3 py-2 text-sm pixel-input"
+                      style={{ color: "#5a4a2a" }}
                     />
                   </div>
                 </>
@@ -693,63 +736,69 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
 
               {!isHighLevel && (
                 <div>
-                  <label className="block text-sm font-semibold text-cyan-700 mb-1">Background (optional)</label>
+                  <label className="block text-sm font-bold mb-1 pixel-text" style={{ color: "#8b6914" }}>Background (optional)</label>
                   <textarea
                     value={background}
                     onChange={(e) => setBackground(e.target.value)}
                     rows={3}
                     placeholder="Optional story details about your character..."
-                    className="w-full rounded-xl border border-cyan-200 bg-white px-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-cyan-400"
+                    className="w-full px-3 py-2 text-sm pixel-input"
+                    style={{ color: "#5a4a2a" }}
                   />
                 </div>
               )}
             </div>
 
-            <div className="mt-5 rounded-2xl border border-cyan-200 bg-cyan-50 p-4">
-              <h3 className="text-sm font-bold text-cyan-800 mb-2">Generation Preview</h3>
+            <div className="mt-5 pixel-card p-4">
+              <h3 className="text-sm font-bold mb-2 pixel-text" style={{ color: "#8b6914" }}>Generation Preview</h3>
               {isGenerating && (
-                <div className="mb-3 rounded-xl border border-cyan-300 bg-white px-3 py-2">
-                  <div className="flex items-center gap-2 text-cyan-700 text-sm font-semibold mb-2">
+                <div className="mb-3 pixel-card px-3 py-2">
+                  <div className="flex items-center gap-2 text-sm font-bold" style={{ color: "#7ec850" }}>
                     Generating image...
                   </div>
                 </div>
               )}
               {imageUrl ? (
                 <div className="space-y-3">
-                  <div className={`h-[360px] w-full rounded-xl border bg-white p-1 ${isGenerating ? "preview-loading-glow border-fuchsia-300" : "border-cyan-200"}`}>
-                    <img src={imageUrl} alt="Generated character" className="h-full w-full rounded-lg object-contain" />
+                  <div className={`h-[360px] w-full p-1 ${isGenerating ? "pixel-selected" : ""}`} style={{
+                    border: "4px solid #8b6914",
+                    background: "#f5e6c8"
+                  }}>
+                    <img src={imageUrl} alt="Generated character" className="h-full w-full object-contain" />
                   </div>
                   <Button
                     type="button"
-                    variant="outline"
                     onClick={handleGenerateImage}
                     disabled={!finalSpecies.trim() || !hasSketchStroke || isGenerating}
-                    className="w-full border-cyan-300 text-cyan-700"
+                    className="w-full pixel-btn pixel-btn-blue"
                   >
                     {!isGenerating && <RefreshCw className="h-4 w-4 mr-2" />}
                     Regenerate Image
                   </Button>
                 </div>
               ) : (
-                <div className={`rounded-xl border bg-white p-4 ${isGenerating ? "preview-loading-glow border-fuchsia-300" : "border-cyan-200"}`}>
+                <div className={`p-4 ${isGenerating ? "pixel-selected" : ""}`} style={{
+                  border: "4px solid #8b6914",
+                  background: "#f5e6c8"
+                }}>
                   <div className="flex items-center justify-center gap-2 py-2">
-                    <span className="h-2.5 w-2.5 rounded-full bg-cyan-500 animate-bounce" />
-                    <span className="h-2.5 w-2.5 rounded-full bg-fuchsia-500 animate-bounce" style={{ animationDelay: "120ms" }} />
-                    <span className="h-2.5 w-2.5 rounded-full bg-amber-500 animate-bounce" style={{ animationDelay: "240ms" }} />
+                    <span className="h-2.5 w-2.5 bg-[#7ec850] animate-bounce" />
+                    <span className="h-2.5 w-2.5 bg-[#e8c547] animate-bounce" style={{ animationDelay: "120ms" }} />
+                    <span className="h-2.5 w-2.5 bg-[#87ceeb] animate-bounce" style={{ animationDelay: "240ms" }} />
                   </div>
                 </div>
               )}
             </div>
 
             <div className="mt-6 space-y-2">
-              <p className="text-xs text-slate-600">
+              <p className="text-xs pixel-text" style={{ color: "#6b5210" }}>
                 Continue is unlocked only when all required details are complete.
               </p>
               <Button
                 type="button"
                 onClick={handleCreate}
                 disabled={!canContinue}
-                className="w-full bg-gradient-to-r from-cyan-600 via-blue-600 to-violet-600 hover:from-cyan-700 hover:via-blue-700 hover:to-violet-700 text-white text-base font-bold py-5"
+                className="w-full text-base font-bold py-5 pixel-btn pixel-btn-green disabled:opacity-50"
               >
                 Continue →
               </Button>
@@ -757,26 +806,6 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
           </section>
         </div>
       </div>
-      <style jsx global>{`
-        @keyframes previewBorderGlow {
-          0% {
-            box-shadow: 0 0 0 0 rgba(236, 72, 153, 0.15), 0 0 0 0 rgba(6, 182, 212, 0.1);
-            border-color: rgba(236, 72, 153, 0.45);
-          }
-          50% {
-            box-shadow: 0 0 0 2px rgba(236, 72, 153, 0.2), 0 0 24px 3px rgba(6, 182, 212, 0.2);
-            border-color: rgba(14, 165, 233, 0.7);
-          }
-          100% {
-            box-shadow: 0 0 0 0 rgba(236, 72, 153, 0.15), 0 0 0 0 rgba(6, 182, 212, 0.1);
-            border-color: rgba(236, 72, 153, 0.45);
-          }
-        }
-        .preview-loading-glow {
-          animation: previewBorderGlow 1.2s ease-in-out infinite;
-        }
-      `}</style>
     </div>
   )
 }
-
