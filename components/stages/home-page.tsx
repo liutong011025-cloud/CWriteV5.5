@@ -10,6 +10,36 @@ import { MagneticCards } from "@/components/magnetic-card"
 import { GenreDetails } from "@/components/genre-details"
 import GlassSurface from "@/components/glass-surface"
 
+function PixelRevealText({
+  text,
+  baseClassName,
+  pixelClassName,
+  pixelStyle,
+}: {
+  text: string
+  baseClassName: string
+  pixelClassName?: string
+  pixelStyle?: React.CSSProperties
+}) {
+  // Use letter stepping via steps(N,end) where N is the string length.
+  const steps = Math.max(4, text.length)
+  return (
+    <span className="pixel-reveal">
+      <span className={`pixel-reveal__base ${baseClassName}`}>{text}</span>
+      <span
+        className={`pixel-reveal__pixel ${baseClassName} ${pixelClassName || ""}`.trim()}
+        style={{
+          ...pixelStyle,
+          animationTimingFunction: `steps(${steps}, end)`,
+        }}
+        aria-hidden="true"
+      >
+        {text}
+      </span>
+    </span>
+  )
+}
+
 interface HomePageProps {
   language?: Language
   user?: { username: string; role: "teacher" | "student"; noAi?: boolean }
@@ -371,7 +401,11 @@ export default function HomePage({ language = "en", onStartPlan }: HomePageProps
                 }`}
                 style={pixelPhase >= 1 ? { textShadow: "3px 3px 0 rgba(0,0,0,0.2)" } : undefined}
               >
-                {t.welcome}
+                <PixelRevealText
+                  text={t.welcome}
+                  baseClassName="font-sans"
+                  pixelStyle={pixelPhase >= 1 ? { color: "#8b6914" } : undefined}
+                />
               </p>
               <h1 
                 data-pixel-item
@@ -386,7 +420,11 @@ export default function HomePage({ language = "en", onStartPlan }: HomePageProps
                   WebkitTextStroke: "3px #5a9a32",
                 } : undefined}
               >
-                CWrite
+                <PixelRevealText
+                  text="CWrite"
+                  baseClassName="font-baloo"
+                  pixelStyle={pixelPhase >= 1 ? { color: "#7ec850", WebkitTextStroke: "0px transparent" } : { color: "#ffffff" }}
+                />
               </h1>
             </motion.div>
 
@@ -396,8 +434,20 @@ export default function HomePage({ language = "en", onStartPlan }: HomePageProps
               transition={{ duration: 0.8, delay: 1.4 }}
               className="mb-8"
             >
-              <p data-pixel-item data-pixel-kind="text" className="font-sans text-3xl font-medium text-foreground/90 md:text-4xl lg:text-5xl">{t.subtitleTop}</p>
-              <p data-pixel-item data-pixel-kind="text" className="mt-2 font-sans text-xl text-foreground/70 md:text-2xl lg:text-3xl">{t.subtitleBottom}</p>
+              <p data-pixel-item data-pixel-kind="text" className="font-sans text-3xl font-medium text-foreground/90 md:text-4xl lg:text-5xl">
+                <PixelRevealText
+                  text={t.subtitleTop}
+                  baseClassName="font-sans"
+                  pixelStyle={pixelPhase >= 1 ? { color: "rgba(17,24,39,0.9)" } : { color: "rgba(17,24,39,0.9)" }}
+                />
+              </p>
+              <p data-pixel-item data-pixel-kind="text" className="mt-2 font-sans text-xl text-foreground/70 md:text-2xl lg:text-3xl">
+                <PixelRevealText
+                  text={t.subtitleBottom}
+                  baseClassName="font-sans"
+                  pixelStyle={pixelPhase >= 1 ? { color: "rgba(17,24,39,0.7)" } : { color: "rgba(17,24,39,0.7)" }}
+                />
+              </p>
             </motion.div>
 
             <motion.p
@@ -409,7 +459,13 @@ export default function HomePage({ language = "en", onStartPlan }: HomePageProps
               className="font-caveat text-4xl font-bold md:text-5xl lg:text-6xl"
               style={{ textShadow: "0 2px 20px rgba(0,0,0,0.5), 0 0 40px rgba(255,255,255,0.3)" }}
             >
-              <span className="text-white">{t.tagline}</span>
+              <span className="text-white">
+                <PixelRevealText
+                  text={t.tagline}
+                  baseClassName="font-caveat"
+                  pixelStyle={{ color: "#ffffff" }}
+                />
+              </span>
             </motion.p>
           </div>
 
