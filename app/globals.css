@@ -1006,47 +1006,25 @@
   }
 }
 
-.pixel-letter-stack {
-  display: inline-grid;
-  white-space: pre;
-  vertical-align: baseline;
-}
-
-.pixel-letter-layer {
-  grid-area: 1 / 1;
+.pixel-letter {
   display: inline-block;
+  white-space: pre;
 }
 
-.pixel-letter-layer-base {
-  opacity: 1;
-}
-
-.pixel-letter-layer-pixel {
-  opacity: 0;
+.pixel-letter.pixel-letter-active {
   font-family: var(--font-press-start-2p), ui-monospace, monospace;
-  /* Keep size unchanged; pixel font can feel larger visually, so slightly scale down. */
-  font-size: 1em;
-  transform: scale(0.98);
-  transform-origin: left bottom;
   text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.25);
-}
-
-.pixel-letter-stack.pixel-letter-active .pixel-letter-layer-base {
   animation: pixelizeLetter 520ms steps(8, end) both;
   animation-delay: var(--pixel-letter-delay, 0ms);
-  /* fade the base out */
-  opacity: 0;
-}
-
-.pixel-letter-stack.pixel-letter-active .pixel-letter-layer-pixel {
-  animation: pixelizeLetter 520ms steps(8, end) both;
-  animation-delay: var(--pixel-letter-delay, 0ms);
-  /* fade the pixel in */
-  opacity: 1;
 }
 
 .pixel-farm-transition.pixel-farm-transition-active [data-pixel-item][data-pixel-kind="text"] {
   font-family: var(--font-press-start-2p), ui-monospace, monospace;
+  /* Keep typography size identical to pre-transition */
+  font-size: inherit;
+  line-height: inherit;
+  /* Compensate different x-height/metrics of pixel font so it doesn't look bigger */
+  font-size-adjust: 0.52;
   text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.25);
   letter-spacing: 0.02em;
 }
