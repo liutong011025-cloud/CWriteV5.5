@@ -86,6 +86,7 @@ export default function HomePage({ language = "en", onStartPlan }: HomePageProps
   const shaderContainerRef = useRef<HTMLDivElement>(null)
   const pixelRootRef = useRef<HTMLDivElement>(null)
   const buttonRef = useRef<HTMLButtonElement>(null)
+  const startJourneyAudioRef = useRef<HTMLAudioElement | null>(null)
   const t = translations[language] || translations.en
 
   useEffect(() => {
@@ -176,6 +177,21 @@ export default function HomePage({ language = "en", onStartPlan }: HomePageProps
     setTimeout(() => {
       onStartPlan?.()
     }, 900)
+  }
+
+  const handleStartJourneyClick = () => {
+    try {
+      if (!startJourneyAudioRef.current) {
+        startJourneyAudioRef.current = new Audio("/click.mp3")
+        startJourneyAudioRef.current.preload = "auto"
+        startJourneyAudioRef.current.volume = 0.28
+      }
+      startJourneyAudioRef.current.currentTime = 0
+      void startJourneyAudioRef.current.play()
+    } catch {
+      // ignore
+    }
+    handleStartJourney()
   }
 
   return (
@@ -541,10 +557,11 @@ export default function HomePage({ language = "en", onStartPlan }: HomePageProps
               ) : (
                 <button 
                   ref={buttonRef}
-                  onClick={handleStartJourney} 
+                  onClick={handleStartJourneyClick}
                   disabled={isPixelating}
                   data-pixel-item
                   data-pixel-kind="button"
+                  data-click-sound="start-journey"
                   className="rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70 disabled:cursor-not-allowed">
                   <GlassSurface width="auto" height="auto" borderRadius={50} borderWidth={0.08} brightness={55} opacity={0.85} blur={12} displace={0.3}>
                     <span className="flex items-center gap-3 px-12 py-5 text-xl font-bold whitespace-nowrap text-white md:px-16 md:py-6 md:text-2xl lg:text-3xl">
