@@ -597,7 +597,7 @@ Continue guiding step by step. Each response should:
       body: JSON.stringify({
         prompt,
         stage: "plot",
-        userId: userId || "default-user",
+        user_id: userId || "default-user",
         aspect_ratio: "16:9",
       }),
     }).catch(() => {})
