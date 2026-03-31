@@ -999,6 +999,9 @@ export default function Home() {
             setStage("writeTypeSelection")
           }}
           onViewAbout={() => setStage("about")}
+          onVisitFarm={() => {
+            if (user) setStage("userProfile")
+          }}
         />
       )}
       {stage === "journeyTicket" && user && writingAssessment && (
