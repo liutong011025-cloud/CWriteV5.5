@@ -157,24 +157,48 @@ export default function ContinueWorksDialog({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="w-full max-w-[calc(100vw-2rem)] sm:max-w-4xl max-h-[90vh] overflow-y-auto overflow-x-hidden bg-gradient-to-br from-white via-purple-50 to-pink-50 border-4 border-purple-300 shadow-2xl mx-4 sm:mx-0">
+      <DialogContent className="w-full max-w-[calc(100vw-2rem)] sm:max-w-4xl max-h-[90vh] overflow-y-auto overflow-x-hidden pixel-theme border-0 shadow-none mx-4 sm:mx-0 p-0">
+        <div
+          className="relative overflow-hidden"
+          style={{
+            background: `linear-gradient(180deg, #b8e4f9 0%, #87ceeb 28%, #7ec850 68%, #5a9a32 100%)`,
+          }}
+        >
+          {/* Pixel grass */}
+          <div className="absolute bottom-0 left-0 right-0 h-24 pointer-events-none opacity-80">
+            {[...Array(22)].map((_, i) => (
+              <div
+                key={`dlg-grass-${i}`}
+                className="absolute bottom-0"
+                style={{
+                  left: `${i * 5 + Math.random() * 2}%`,
+                  width: "8px",
+                  height: `${18 + Math.random() * 14}px`,
+                  background: i % 3 === 0 ? "#5a9a32" : "#7ec850",
+                  imageRendering: "pixelated",
+                }}
+              />
+            ))}
+          </div>
+
+          <div className="p-6 md:p-8">
         <DialogHeader className="pb-2">
           <div className="flex items-center gap-4">
             {/* 左側用戶頭像，大小約等於標題行高 */}
-            <Avatar className="h-16 w-16 rounded-full border-2 border-purple-300 shadow-md bg-white">
+            <Avatar className="h-16 w-16 border-4 shadow-md bg-white" style={{ borderColor: "#8b6914", borderRadius: 0 }}>
               {avatarUrl && (
                 <AvatarImage src={avatarUrl} alt={userId} />
               )}
-              <AvatarFallback className="rounded-full bg-gradient-to-br from-purple-500 to-pink-500 text-white text-xl font-bold">
+              <AvatarFallback className="bg-gradient-to-br text-white text-xl font-bold" style={{ borderRadius: 0, background: "linear-gradient(180deg, #e8c547 0%, #c9a82e 100%)" }}>
                 {avatarEmoji || userId.slice(0, 2).toUpperCase()}
               </AvatarFallback>
             </Avatar>
             <div className="flex flex-col items-start">
-              <DialogTitle className="text-3xl md:text-4xl font-black bg-gradient-to-r from-purple-600 via-pink-600 to-orange-600 bg-clip-text text-transparent flex items-center gap-2">
-                <Sparkles className="w-7 h-7 text-purple-600" />
+              <DialogTitle className="text-3xl md:text-4xl font-black flex items-center gap-2 pixel-text" style={{ color: "#5a4a2a", textShadow: "2px 2px 0 rgba(0,0,0,0.2)" }}>
+                <Sparkles className="w-7 h-7" style={{ color: "#e8c547" }} />
                 Welcome Back!
               </DialogTitle>
-              <DialogDescription className="text-left text-base md:text-lg text-gray-700 mt-1">
+              <DialogDescription className="text-left text-base md:text-lg mt-1 pixel-text" style={{ color: "#6b5210" }}>
                 Would you like to start a new writing project or continue with your previous work?
               </DialogDescription>
             </div>
@@ -185,7 +209,7 @@ export default function ContinueWorksDialog({
           {/* 开始新的按钮 */}
           <Button
             onClick={onStartNew}
-            className="w-full bg-gradient-to-r from-purple-600 via-pink-600 to-orange-600 hover:from-purple-700 hover:via-pink-700 hover:to-orange-700 text-white border-0 shadow-xl py-8 text-2xl font-bold rounded-2xl hover:scale-105 transition-all duration-300"
+            className="w-full py-7 text-xl font-extrabold pixel-btn pixel-btn-green"
           >
             <Sparkles className="w-6 h-6 mr-3" />
             Start New Writing Project
@@ -200,7 +224,7 @@ export default function ContinueWorksDialog({
             </div>
           ) : works.length > 0 ? (
             <div className="space-y-4">
-              <h3 className="text-2xl font-bold text-gray-700 text-center mb-4">
+              <h3 className="text-2xl font-extrabold text-center mb-4 pixel-text" style={{ color: "#5a4a2a", textShadow: "1px 1px 0 rgba(0,0,0,0.15)" }}>
                 Continue Your Previous Work
               </h3>
               <div className="grid gap-4 max-h-[400px] overflow-y-auto pr-2">
@@ -208,23 +232,24 @@ export default function ContinueWorksDialog({
                   <button
                     key={work.id}
                     onClick={() => onContinue(work)}
-                    className={`bg-gradient-to-r ${getTypeColor(work.type)} hover:opacity-90 text-white rounded-xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02] text-left`}
+                    className="pixel-card p-5 text-left transition hover:-translate-y-0.5"
+                    style={{ border: "4px solid #8b6914" }}
                   >
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex items-start gap-4 flex-1">
-                        <div className="bg-white/20 rounded-lg p-3">
+                        <div className="p-3" style={{ background: "#87ceeb", border: "3px solid #5bc0de" }}>
                           {getTypeIcon(work.type)}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <h4 className="text-xl font-bold mb-2 truncate">{work.title}</h4>
-                          <p className="text-white/90 text-sm mb-3 line-clamp-2">{work.preview}...</p>
-                          <div className="flex items-center gap-2 text-white/80 text-xs">
+                          <h4 className="text-lg font-extrabold mb-2 truncate pixel-text" style={{ color: "#5a4a2a" }}>{work.title}</h4>
+                          <p className="text-sm mb-3 line-clamp-2 pixel-text" style={{ color: "#6b5210" }}>{work.preview}...</p>
+                          <div className="flex items-center gap-2 text-xs pixel-text" style={{ color: "#8b6914" }}>
                             <Clock className="w-4 h-4" />
                             <span>{formatDate(work.updatedAt)}</span>
                           </div>
                         </div>
                       </div>
-                      <ArrowRight className="w-6 h-6 flex-shrink-0" />
+                      <ArrowRight className="w-6 h-6 flex-shrink-0" style={{ color: "#8b6914" }} />
                     </div>
                   </button>
                 ))}
@@ -232,9 +257,11 @@ export default function ContinueWorksDialog({
             </div>
           ) : (
             <div className="text-center py-8 text-gray-500">
-              <p className="text-lg">No previous works found. Start a new project!</p>
+              <p className="text-lg pixel-text" style={{ color: "#6b5210" }}>No previous works found. Start a new project!</p>
             </div>
           )}
+        </div>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
