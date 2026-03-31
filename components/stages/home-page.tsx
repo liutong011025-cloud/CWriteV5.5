@@ -87,7 +87,37 @@ export default function HomePage({ language = "en", onStartPlan }: HomePageProps
   const pixelRootRef = useRef<HTMLDivElement>(null)
   const buttonRef = useRef<HTMLButtonElement>(null)
   const startJourneyAudioRef = useRef<HTMLAudioElement | null>(null)
+  const lastStartSoundAtRef = useRef(0)
   const t = translations[language] || translations.en
+
+  // Preload the dedicated Start Journey SFX so it plays immediately on press.
+  useEffect(() => {
+    try {
+      if (!startJourneyAudioRef.current) {
+        startJourneyAudioRef.current = new Audio("/bit.mp3")
+        startJourneyAudioRef.current.preload = "auto"
+        // 10% quieter than 0.28
+        startJourneyAudioRef.current.volume = 0.252
+        startJourneyAudioRef.current.load?.()
+      }
+    } catch {
+      // ignore
+    }
+  }, [])
+
+  const playStartJourneySound = () => {
+    const now = Date.now()
+    // Avoid double-trigger if pointerdown + click both fire.
+    if (now - lastStartSoundAtRef.current < 250) return
+    lastStartSoundAtRef.current = now
+    try {
+      if (!startJourneyAudioRef.current) return
+      startJourneyAudioRef.current.currentTime = 0
+      void startJourneyAudioRef.current.play()
+    } catch {
+      // ignore
+    }
+  }
 
   useEffect(() => {
     const checkShaderReady = () => {
@@ -180,19 +210,7 @@ export default function HomePage({ language = "en", onStartPlan }: HomePageProps
   }
 
   const handleStartJourneyClick = () => {
-    try {
-      if (!startJourneyAudioRef.current) {
-        // NOTE: Vercel/Linux is case-sensitive.
-        // Home page Start Journey uses a dedicated SFX.
-        startJourneyAudioRef.current = new Audio("/bit.mp3")
-        startJourneyAudioRef.current.preload = "auto"
-        startJourneyAudioRef.current.volume = 0.28
-      }
-      startJourneyAudioRef.current.currentTime = 0
-      void startJourneyAudioRef.current.play()
-    } catch {
-      // ignore
-    }
+    playStartJourneySound()
     handleStartJourney()
   }
 
@@ -559,6 +577,7 @@ export default function HomePage({ language = "en", onStartPlan }: HomePageProps
               ) : (
                 <button 
                   ref={buttonRef}
+                  onPointerDown={playStartJourneySound}
                   onClick={handleStartJourneyClick}
                   disabled={isPixelating}
                   data-pixel-item
