@@ -16,7 +16,10 @@ export default function ClickSoundProvider() {
     audio.preload = "auto"
     audio.volume = 0.25
 
-    const handleClick = () => {
+    const handleClick = (event: MouseEvent) => {
+      // Allow specific buttons to override global click sound.
+      const target = event.target as HTMLElement | null
+      if (target?.closest?.('[data-click-sound="start-journey"]')) return
       try {
         audio.currentTime = 0
         void audio.play()
