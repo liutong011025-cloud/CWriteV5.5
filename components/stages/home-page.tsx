@@ -396,12 +396,8 @@ export default function HomePage({ language = "en", onStartPlan }: HomePageProps
               transition={{ duration: 0.8, delay: 1.4 }}
               className="mb-8"
             >
-              <p data-pixel-item data-pixel-kind="text" className="font-sans text-3xl font-medium text-foreground/90 md:text-4xl lg:text-5xl">
-                {t.subtitleTop}
-              </p>
-              <p data-pixel-item data-pixel-kind="text" className="mt-2 font-sans text-xl text-foreground/70 md:text-2xl lg:text-3xl">
-                {t.subtitleBottom}
-              </p>
+              <p data-pixel-item data-pixel-kind="text" className="font-sans text-3xl font-medium text-foreground/90 md:text-4xl lg:text-5xl">{t.subtitleTop}</p>
+              <p data-pixel-item data-pixel-kind="text" className="mt-2 font-sans text-xl text-foreground/70 md:text-2xl lg:text-3xl">{t.subtitleBottom}</p>
             </motion.div>
 
             <motion.p
@@ -413,9 +409,7 @@ export default function HomePage({ language = "en", onStartPlan }: HomePageProps
               className="font-caveat text-4xl font-bold md:text-5xl lg:text-6xl"
               style={{ textShadow: "0 2px 20px rgba(0,0,0,0.5), 0 0 40px rgba(255,255,255,0.3)" }}
             >
-              <span className="text-white">
-                {t.tagline}
-              </span>
+              <span className="text-white">{t.tagline}</span>
             </motion.p>
           </div>
 
