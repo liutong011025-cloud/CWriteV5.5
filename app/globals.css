@@ -941,6 +941,52 @@
   animation: drop-zone-pulse 1.5s ease-in-out infinite;
 }
 
+/* ─────────────────────────────────────────────────────────────
+   Home page pixel-farm transition (distance-based sequencing)
+   ───────────────────────────────────────────────────────────── */
+
+.pixel-farm-transition {
+  --pixel-wood: #6b5210;
+  --pixel-wheat: #e8c547;
+  --pixel-grass: #7ec850;
+  --pixel-sky: #87ceeb;
+}
+
+.pixel-farm-transition [data-pixel-item] {
+  transition-property: filter, transform, opacity, color, background-color, box-shadow, border-color;
+  transition-duration: 520ms;
+  transition-timing-function: steps(6, end);
+  transition-delay: var(--pixel-delay, 0ms);
+  will-change: filter, transform, opacity;
+}
+
+.pixel-farm-transition.pixel-farm-transition-active {
+  image-rendering: pixelated;
+}
+
+.pixel-farm-transition.pixel-farm-transition-active [data-pixel-item] {
+  filter: contrast(1.12) saturate(1.15);
+}
+
+.pixel-farm-transition.pixel-farm-transition-active [data-pixel-item][data-pixel-kind="text"] {
+  font-family: var(--font-press-start-2p), ui-monospace, monospace;
+  text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.25);
+  letter-spacing: 0.02em;
+}
+
+.pixel-farm-transition.pixel-farm-transition-active [data-pixel-item][data-pixel-kind="panel"] {
+  background: linear-gradient(180deg, rgba(245, 230, 200, 0.92) 0%, rgba(232, 197, 71, 0.22) 100%);
+  border: 4px solid var(--pixel-wood);
+  box-shadow: inset -4px -4px 0 rgba(0,0,0,0.12), inset 4px 4px 0 rgba(255,255,255,0.25), 6px 6px 0 rgba(0,0,0,0.25);
+}
+
+.pixel-farm-transition.pixel-farm-transition-active [data-pixel-item][data-pixel-kind="button"] {
+  border-radius: 0 !important;
+  background: linear-gradient(180deg, #d9c9a6 0%, #c4a574 100%);
+  border: 4px solid var(--pixel-wood);
+  box-shadow: inset -4px -4px 0 rgba(0,0,0,0.18), inset 4px 4px 0 rgba(255,255,255,0.28), 6px 6px 0 rgba(0,0,0,0.28);
+}
+
 @keyframes stamp {
   0% {
     transform: scale(0) rotate(-15deg);
