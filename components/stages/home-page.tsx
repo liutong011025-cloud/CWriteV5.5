@@ -58,6 +58,40 @@ export default function HomePage({ language = "en", onStartPlan }: HomePageProps
   const buttonRef = useRef<HTMLButtonElement>(null)
   const t = translations[language] || translations.en
 
+  const BG_REVEAL_MS = 850
+
+  const PixelText = ({
+    text,
+    active,
+    className,
+  }: {
+    text: string
+    active: boolean
+    className?: string
+  }) => {
+    // Right-to-left per-character delay, synced to the bg reveal duration.
+    const chars = Array.from(text ?? "")
+    const count = Math.max(1, chars.length)
+    const step = Math.max(8, Math.floor(BG_REVEAL_MS / count))
+    return (
+      <span className={className}>
+        {chars.map((ch, idx) => {
+          const rtlIndex = count - 1 - idx
+          const delay = rtlIndex * step
+          return (
+            <span
+              key={`${idx}-${ch}`}
+              className={`pixel-letter ${active ? "pixel-letter-active" : ""}`}
+              style={active ? ({ ["--pixel-letter-delay" as any]: `${delay}ms` } as React.CSSProperties) : undefined}
+            >
+              {ch === " " ? "\u00A0" : ch}
+            </span>
+          )
+        })}
+      </span>
+    )
+  }
+
   useEffect(() => {
     const checkShaderReady = () => {
       if (!shaderContainerRef.current) return false
@@ -371,7 +405,7 @@ export default function HomePage({ language = "en", onStartPlan }: HomePageProps
                 }`}
                 style={pixelPhase >= 1 ? { textShadow: "3px 3px 0 rgba(0,0,0,0.2)" } : undefined}
               >
-                {t.welcome}
+                <PixelText text={t.welcome} active={pixelPhase >= 1} />
               </p>
               <h1 
                 data-pixel-item
@@ -386,7 +420,7 @@ export default function HomePage({ language = "en", onStartPlan }: HomePageProps
                   WebkitTextStroke: "3px #5a9a32",
                 } : undefined}
               >
-                CWrite
+                <PixelText text={"CWrite"} active={pixelPhase >= 1} />
               </h1>
             </motion.div>
 
@@ -396,8 +430,12 @@ export default function HomePage({ language = "en", onStartPlan }: HomePageProps
               transition={{ duration: 0.8, delay: 1.4 }}
               className="mb-8"
             >
-              <p data-pixel-item data-pixel-kind="text" className="font-sans text-3xl font-medium text-foreground/90 md:text-4xl lg:text-5xl">{t.subtitleTop}</p>
-              <p data-pixel-item data-pixel-kind="text" className="mt-2 font-sans text-xl text-foreground/70 md:text-2xl lg:text-3xl">{t.subtitleBottom}</p>
+              <p data-pixel-item data-pixel-kind="text" className="font-sans text-3xl font-medium text-foreground/90 md:text-4xl lg:text-5xl">
+                <PixelText text={t.subtitleTop} active={pixelPhase >= 1} />
+              </p>
+              <p data-pixel-item data-pixel-kind="text" className="mt-2 font-sans text-xl text-foreground/70 md:text-2xl lg:text-3xl">
+                <PixelText text={t.subtitleBottom} active={pixelPhase >= 1} />
+              </p>
             </motion.div>
 
             <motion.p
@@ -409,7 +447,9 @@ export default function HomePage({ language = "en", onStartPlan }: HomePageProps
               className="font-caveat text-4xl font-bold md:text-5xl lg:text-6xl"
               style={{ textShadow: "0 2px 20px rgba(0,0,0,0.5), 0 0 40px rgba(255,255,255,0.3)" }}
             >
-              <span className="text-white">{t.tagline}</span>
+              <span className="text-white">
+                <PixelText text={t.tagline} active={pixelPhase >= 1} />
+              </span>
             </motion.p>
           </div>
 
