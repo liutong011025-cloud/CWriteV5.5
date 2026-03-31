@@ -984,7 +984,7 @@
 
 .pixel-farm-transition.pixel-farm-transition-active [data-pixel-item] {
   /* Use keyframes (not transitions) so the delay feels like a real sequence. */
-  animation: pixelizeItem 720ms steps(8, end) both;
+  animation: pixelizeItem 1400ms steps(10, end) both;
   animation-delay: var(--pixel-delay, 0ms);
 }
 
