@@ -991,7 +991,8 @@ export default function Home() {
             if (!writingAssessment) {
               setWritingAssessment({ score: 0, level: 1, mapImageStatus: "idle" })
             }
-            setStage("journeyTicket")
+            // Start your journey -> go to Writing Map (Farm) first
+            setStage("userProfile")
           }}
           onStartWrite={() => {
             setJourneySelection(null)
