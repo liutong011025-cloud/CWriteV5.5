@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server"
 import { fal } from "@fal-ai/client"
 
 const FAL_NANO_BANANA_EDIT_MODEL = "fal-ai/nano-banana-2/edit"
+// Fallback key to match the rest of the app's Fal usage (generate-image uses hardcoded keys).
+const FAL_KEY_FALLBACK = "fe7aa0cd-770b-4637-ab05-523a332169b4:dca9c9ff8f073a4c33704236d8942faa"
 
 type CharacterImageEditRequestBody = {
   drawingDataUrl: string
@@ -44,13 +46,17 @@ const extractFalErrorDetail = (error: any) => {
 
 export async function POST(request: NextRequest) {
   try {
-    if (!process.env.FAL_KEY) {
-      console.error("[character-image-edit] FAL_KEY not configured")
+    const falKey = process.env.FAL_KEY || FAL_KEY_FALLBACK
+    if (!falKey) {
+      console.error("[character-image-edit] FAL key not configured")
       return NextResponse.json(
         { error: "character_unavailable", message: "Character painter is resting. Try again later." },
         { status: 200 }
       )
     }
+
+    // Ensure Fal client has credentials even when env var is missing.
+    fal.config({ credentials: falKey })
 
     const body = (await request.json()) as CharacterImageEditRequestBody
     const {
