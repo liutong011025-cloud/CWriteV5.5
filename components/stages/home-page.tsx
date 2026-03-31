@@ -132,9 +132,9 @@ export default function HomePage({ language = "en", onStartPlan }: HomePageProps
         .sort((a, b) => a.dist - b.dist)
 
       const maxDist = Math.max(1, ...withDist.map((x) => x.dist))
-      // Make the sequence feel obviously "near -> far" instead of instant.
-      const baseDelayMs = 120
-      const maxDelayMs = 2200
+      // Keep a near->far sequence, but don't delay navigation too long.
+      const baseDelayMs = 60
+      const maxDelayMs = 900
       for (const { el, dist } of withDist) {
         const delay = baseDelayMs + Math.round((dist / maxDist) * maxDelayMs)
         el.style.setProperty("--pixel-delay", `${delay}ms`)
@@ -145,7 +145,7 @@ export default function HomePage({ language = "en", onStartPlan }: HomePageProps
     // Navigate directly after pixelation effect completes
     setTimeout(() => {
       onStartPlan?.()
-    }, 3000)
+    }, 900)
   }
 
   return (
@@ -248,9 +248,9 @@ export default function HomePage({ language = "en", onStartPlan }: HomePageProps
           <motion.div
             className="fixed inset-0 z-[60] pointer-events-none"
             initial={{ opacity: 0 }}
-            animate={{ opacity: 0.55 }}
+            animate={{ opacity: 0.35 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.25 }}
+            transition={{ duration: 0.18 }}
           >
             <motion.div
               className="absolute inset-0"
@@ -271,7 +271,7 @@ export default function HomePage({ language = "en", onStartPlan }: HomePageProps
                 // @ts-ignore
                 "--reveal": ["0px", "2600px"],
               }}
-              transition={{ duration: 1.35, ease: "linear" }}
+              transition={{ duration: 0.85, ease: "linear" }}
             >
               {/* pixel clouds */}
               <div className="absolute top-20 left-[10%] w-24 h-12 bg-white/80" style={{
