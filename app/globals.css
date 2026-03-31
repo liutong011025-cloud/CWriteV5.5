@@ -964,8 +964,28 @@
   image-rendering: pixelated;
 }
 
+@keyframes pixelizeItem {
+  0% {
+    filter: none;
+    transform: translateZ(0) scale(1);
+    opacity: 1;
+  }
+  35% {
+    filter: blur(1.4px) contrast(1.05) saturate(1.05);
+    transform: translateZ(0) scale(0.995);
+    opacity: 0.92;
+  }
+  100% {
+    filter: contrast(1.18) saturate(1.18);
+    transform: translateZ(0) scale(1);
+    opacity: 1;
+  }
+}
+
 .pixel-farm-transition.pixel-farm-transition-active [data-pixel-item] {
-  filter: contrast(1.12) saturate(1.15);
+  /* Use keyframes (not transitions) so the delay feels like a real sequence. */
+  animation: pixelizeItem 720ms steps(8, end) both;
+  animation-delay: var(--pixel-delay, 0ms);
 }
 
 .pixel-farm-transition.pixel-farm-transition-active [data-pixel-item][data-pixel-kind="text"] {
