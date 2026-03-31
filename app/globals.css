@@ -988,41 +988,8 @@
   animation-delay: var(--pixel-delay, 0ms);
 }
 
-/* Letter-by-letter pixelize (for home hero texts) */
-@keyframes pixelizeLetter {
-  0% {
-    filter: none;
-    opacity: 1;
-    transform: translateZ(0);
-  }
-  35% {
-    filter: blur(1.2px) contrast(1.04) saturate(1.04);
-    opacity: 0.9;
-  }
-  100% {
-    filter: contrast(1.18) saturate(1.18);
-    opacity: 1;
-    transform: translateZ(0);
-  }
-}
-
-.pixel-letter {
-  display: inline-block;
-  white-space: pre;
-}
-
-.pixel-letter.pixel-letter-active {
-  font-family: var(--font-press-start-2p), ui-monospace, monospace;
-  text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.25);
-  animation: pixelizeLetter 520ms steps(8, end) both;
-  animation-delay: var(--pixel-letter-delay, 0ms);
-}
-
 .pixel-farm-transition.pixel-farm-transition-active [data-pixel-item][data-pixel-kind="text"] {
   font-family: var(--font-press-start-2p), ui-monospace, monospace;
-  /* Keep typography size identical to pre-transition */
-  font-size: inherit;
-  line-height: inherit;
   text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.25);
   letter-spacing: 0.02em;
 }
