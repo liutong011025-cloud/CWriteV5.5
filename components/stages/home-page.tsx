@@ -182,7 +182,9 @@ export default function HomePage({ language = "en", onStartPlan }: HomePageProps
   const handleStartJourneyClick = () => {
     try {
       if (!startJourneyAudioRef.current) {
-        startJourneyAudioRef.current = new Audio("/click.mp3")
+        // NOTE: Vercel/Linux is case-sensitive.
+        // Home page Start Journey uses a dedicated SFX.
+        startJourneyAudioRef.current = new Audio("/bit.mp3")
         startJourneyAudioRef.current.preload = "auto"
         startJourneyAudioRef.current.volume = 0.28
       }
