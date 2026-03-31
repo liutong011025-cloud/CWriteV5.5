@@ -249,13 +249,13 @@ export default function WriteTypeSelection({
       </div>
 
       {/* Main content */}
-      <div className="relative z-10 min-h-screen px-6 lg:px-12 py-12 lg:py-20 pl-16 lg:pl-20" style={{ paddingTop: '128px', paddingBottom: '120px' }}>
+      <div className="relative z-10 min-h-screen px-8 lg:px-14 py-10 lg:py-14 pl-16 lg:pl-20" style={{ paddingTop: '128px', paddingBottom: '120px' }}>
         {onBack && <BackButton onClick={onBack} variant="purple" />}
 
         {/* Title */}
-        <div className="text-center mb-12">
+        <div className="text-center mb-10">
           <h1 
-            className="text-4xl md:text-5xl lg:text-6xl font-extrabold mb-4"
+            className="text-5xl md:text-6xl lg:text-7xl font-extrabold mb-4"
             style={{ 
               color: "#5a4a2a", 
               textShadow: "3px 3px 0 rgba(0,0,0,0.2), -1px -1px 0 rgba(255,255,255,0.3)",
@@ -264,13 +264,13 @@ export default function WriteTypeSelection({
           >
             {t.title}
           </h1>
-          <p className="text-lg md:text-xl font-bold" style={{ color: "#3d5a1f", textShadow: "1px 1px 0 rgba(255,255,255,0.5)" }}>
+          <p className="text-2xl md:text-3xl font-extrabold" style={{ color: "#3d5a1f", textShadow: "1px 1px 0 rgba(255,255,255,0.5)" }}>
             {t.subtitle}
           </p>
         </div>
 
         {/* Five writing type cards in pixel style */}
-        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-5 mb-12">
+        <div className="max-w-[92rem] mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-7 mb-10">
           {writingTypes.map((type, index) => {
             const isHovered = hoveredCard === type.id
             return (
@@ -279,16 +279,16 @@ export default function WriteTypeSelection({
                 onMouseEnter={() => setHoveredCard(type.id)}
                 onMouseLeave={() => setHoveredCard(null)}
                 onClick={() => handleSelect(type.id)}
-                className="pixel-panel p-6 cursor-pointer transition-all duration-300"
+                className="pixel-panel p-8 cursor-pointer transition-all duration-300 min-h-[520px] flex"
                 style={{ 
                   transform: isHovered ? 'scale(1.03) translateY(-4px)' : 'scale(1)',
                   boxShadow: isHovered ? '6px 6px 0 rgba(0,0,0,0.3)' : '4px 4px 0 rgba(0,0,0,0.2)',
                 }}
               >
-                <div className="text-center">
+                <div className="text-center w-full flex flex-col justify-between">
                   {/* Icon */}
                   <div 
-                    className="text-6xl mb-4 transition-all duration-300"
+                    className="text-8xl mb-5 transition-all duration-300"
                     style={{
                       transform: isHovered ? "scale(1.15) rotate(5deg)" : "scale(1)",
                     }}
@@ -298,7 +298,7 @@ export default function WriteTypeSelection({
                   
                   {/* Title */}
                   <h2 
-                    className="text-xl font-extrabold mb-3 transition-all duration-300"
+                    className="text-3xl font-extrabold mb-4 transition-all duration-300"
                     style={{ 
                       color: type.colors.bg,
                       textShadow: "1px 1px 0 rgba(0,0,0,0.2)"
@@ -308,16 +308,16 @@ export default function WriteTypeSelection({
                   </h2>
                   
                   {/* Description */}
-                  <p className="text-sm font-bold leading-relaxed mb-4" style={{ color: "#5a4a2a" }}>
+                  <p className="text-lg font-bold leading-relaxed mb-5" style={{ color: "#5a4a2a" }}>
                     {type.description}
                   </p>
                   
                   {/* Features list */}
-                  <div className="space-y-1.5 mb-4">
+                  <div className="space-y-2.5 mb-5">
                     {type.features.map((feature, i) => (
                       <div 
                         key={i}
-                        className="flex items-center justify-center gap-1.5 text-xs font-bold"
+                        className="flex items-center justify-center gap-2 text-base font-bold"
                         style={{ color: "#6b5210" }}
                       >
                         <span style={{ color: "#e8c547" }}>*</span>
@@ -328,13 +328,13 @@ export default function WriteTypeSelection({
                   
                   {/* Prompt quote */}
                   <div 
-                    className="p-3"
+                    className="p-4 mt-auto"
                     style={{ 
                       background: "#d4e8b4", 
                       border: "3px solid #5a9a32",
                     }}
                   >
-                    <p className="text-xs font-bold italic" style={{ color: "#3d5a1f" }}>
+                    <p className="text-base font-bold italic" style={{ color: "#3d5a1f" }}>
                       "{type.prompt}"
                     </p>
                   </div>
@@ -346,8 +346,8 @@ export default function WriteTypeSelection({
 
         {/* Bottom tip */}
         <div className="text-center max-w-3xl mx-auto">
-          <div className="pixel-panel p-4 inline-block">
-            <p className="text-base font-bold" style={{ color: "#5a4a2a" }}>
+          <div className="pixel-panel p-5 inline-block">
+            <p className="text-lg font-bold" style={{ color: "#5a4a2a" }}>
               {t.bottomTip}
             </p>
           </div>
