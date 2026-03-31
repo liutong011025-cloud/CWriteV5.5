@@ -47,6 +47,7 @@ interface HomePageProps {
   onStartBookReview?: () => void
   onStartLetter?: () => void
   onStartPlan?: () => void
+  onVisitFarm?: () => void
   onStartWrite?: () => void
   onViewAbout?: () => void
 }
@@ -76,7 +77,7 @@ const translations = {
   },
 }
 
-export default function HomePage({ language = "en", onStartPlan }: HomePageProps) {
+export default function HomePage({ language = "en", onStartPlan, onVisitFarm }: HomePageProps) {
   const [isLoaded, setIsLoaded] = useState(false)
   const [activeGenre, setActiveGenre] = useState<string | null>(null)
   const [isPixelating, setIsPixelating] = useState(false)
@@ -85,7 +86,8 @@ export default function HomePage({ language = "en", onStartPlan }: HomePageProps
   const [showPixelSky, setShowPixelSky] = useState(false)
   const shaderContainerRef = useRef<HTMLDivElement>(null)
   const pixelRootRef = useRef<HTMLDivElement>(null)
-  const buttonRef = useRef<HTMLButtonElement>(null)
+  const startButtonRef = useRef<HTMLButtonElement>(null)
+  const farmButtonRef = useRef<HTMLButtonElement>(null)
   const startJourneyAudioRef = useRef<HTMLAudioElement | null>(null)
   const lastStartSoundAtRef = useRef(0)
   const t = translations[language] || translations.en
@@ -97,7 +99,7 @@ export default function HomePage({ language = "en", onStartPlan }: HomePageProps
         startJourneyAudioRef.current = new Audio("/bit.mp3")
         startJourneyAudioRef.current.preload = "auto"
         // 10% quieter than 0.28
-        startJourneyAudioRef.current.volume = 0.2
+        startJourneyAudioRef.current.volume = 0.252
         startJourneyAudioRef.current.load?.()
       }
     } catch {
@@ -156,12 +158,12 @@ export default function HomePage({ language = "en", onStartPlan }: HomePageProps
     setActiveGenre(null)
   }
 
-  const handleStartJourney = () => {
-    if (buttonRef.current) {
-      const rect = buttonRef.current.getBoundingClientRect()
+  const handlePixelJourney = (originEl: HTMLElement | null, navigate?: () => void) => {
+    if (originEl) {
+      const rect = originEl.getBoundingClientRect()
       setPixelOrigin({
         x: rect.left + rect.width / 2,
-        y: rect.top + rect.height / 2
+        y: rect.top + rect.height / 2,
       })
     }
     setIsPixelating(true)
@@ -173,7 +175,7 @@ export default function HomePage({ language = "en", onStartPlan }: HomePageProps
     // Distance-based sequencing: nearest items pixelize first
     window.setTimeout(() => {
       const root = pixelRootRef.current
-      const btn = buttonRef.current
+      const btn = originEl
       if (!root || !btn) return
 
       const btnRect = btn.getBoundingClientRect()
@@ -205,13 +207,18 @@ export default function HomePage({ language = "en", onStartPlan }: HomePageProps
     
     // Navigate directly after pixelation effect completes
     setTimeout(() => {
-      onStartPlan?.()
+      navigate?.()
     }, 900)
   }
 
   const handleStartJourneyClick = () => {
     playStartJourneySound()
-    handleStartJourney()
+    handlePixelJourney(startButtonRef.current, onStartPlan)
+  }
+
+  const handleVisitFarmClick = () => {
+    playStartJourneySound()
+    handlePixelJourney(farmButtonRef.current, onVisitFarm)
   }
 
   return (
@@ -545,53 +552,98 @@ export default function HomePage({ language = "en", onStartPlan }: HomePageProps
               }}
               transition={{ duration: 0.8, delay: 2.5 }}
             >
-              {/* Show pixel button when transitioning, otherwise show glass button */}
-              {pixelPhase >= 1 ? (
-                <motion.button
-                  ref={buttonRef}
-                  disabled
-                  className="focus:outline-none disabled:cursor-not-allowed"
-                  initial={{ scale: 1 }}
-                  animate={{ 
-                    scale: [1, 1.1, 1.05],
-                    boxShadow: [
-                      "4px 4px 0 rgba(0,0,0,0.3)",
-                      "6px 6px 0 rgba(0,0,0,0.4)",
-                      "8px 8px 0 rgba(0,0,0,0.3)",
-                    ]
-                  }}
-                  transition={{ duration: 0.5 }}
-                  style={{
-                    background: "linear-gradient(180deg, #6fcf6f 0%, #4ca84c 100%)",
-                    border: "4px solid #3d8a3d",
-                    boxShadow: "inset -4px -4px 0 rgba(0,0,0,0.25), inset 4px 4px 0 rgba(255,255,255,0.25), 6px 6px 0 rgba(0,0,0,0.3)",
-                    padding: "20px 48px",
-                    imageRendering: "pixelated",
-                  }}
-                >
-                  <span className="flex items-center gap-3 text-xl font-bold whitespace-nowrap text-white md:text-2xl lg:text-3xl" style={{ textShadow: "2px 2px 0 rgba(0,0,0,0.3)" }}>
-                    {t.startButton}
-                    <span className="text-2xl md:text-3xl lg:text-4xl">&#9992;</span>
-                  </span>
-                </motion.button>
-              ) : (
-                <button 
-                  ref={buttonRef}
-                  onPointerDown={playStartJourneySound}
-                  onClick={handleStartJourneyClick}
-                  disabled={isPixelating}
-                  data-pixel-item
-                  data-pixel-kind="button"
-                  data-click-sound="start-journey"
-                  className="rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70 disabled:cursor-not-allowed">
-                  <GlassSurface width="auto" height="auto" borderRadius={50} borderWidth={0.08} brightness={55} opacity={0.85} blur={12} displace={0.3}>
-                    <span className="flex items-center gap-3 px-12 py-5 text-xl font-bold whitespace-nowrap text-white md:px-16 md:py-6 md:text-2xl lg:text-3xl">
+              <div className="flex flex-col items-center justify-center gap-4 sm:flex-row sm:gap-6">
+                {/* Visit my farm */}
+                {pixelPhase >= 1 ? (
+                  <motion.button
+                    ref={farmButtonRef}
+                    disabled
+                    className="focus:outline-none disabled:cursor-not-allowed"
+                    initial={{ scale: 1 }}
+                    animate={{ scale: [1, 1.06, 1.03] }}
+                    transition={{ duration: 0.5 }}
+                    style={{
+                      background: "linear-gradient(180deg, #d9c9a6 0%, #c4a574 100%)",
+                      border: "4px solid #8b6914",
+                      boxShadow: "inset -4px -4px 0 rgba(0,0,0,0.25), inset 4px 4px 0 rgba(255,255,255,0.25), 6px 6px 0 rgba(0,0,0,0.3)",
+                      padding: "20px 40px",
+                      imageRendering: "pixelated",
+                    }}
+                  >
+                    <span className="flex items-center gap-3 text-xl font-bold whitespace-nowrap text-white md:text-2xl lg:text-3xl" style={{ textShadow: "2px 2px 0 rgba(0,0,0,0.3)" }}>
+                      Visit my farm
+                      <span className="text-2xl md:text-3xl lg:text-4xl">🏠</span>
+                    </span>
+                  </motion.button>
+                ) : (
+                  <button
+                    ref={farmButtonRef}
+                    onPointerDown={playStartJourneySound}
+                    onClick={handleVisitFarmClick}
+                    disabled={isPixelating}
+                    data-pixel-item
+                    data-pixel-kind="button"
+                    data-click-sound="visit-farm"
+                    className="rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70 disabled:cursor-not-allowed"
+                  >
+                    <GlassSurface width="auto" height="auto" borderRadius={50} borderWidth={0.08} brightness={55} opacity={0.85} blur={12} displace={0.3}>
+                      <span className="flex items-center gap-3 px-10 py-5 text-xl font-bold whitespace-nowrap text-white md:px-14 md:py-6 md:text-2xl lg:text-3xl">
+                        Visit my farm
+                        <span className="text-2xl md:text-3xl lg:text-4xl">🏠</span>
+                      </span>
+                    </GlassSurface>
+                  </button>
+                )}
+
+                {/* Start journey */}
+                {pixelPhase >= 1 ? (
+                  <motion.button
+                    ref={startButtonRef}
+                    disabled
+                    className="focus:outline-none disabled:cursor-not-allowed"
+                    initial={{ scale: 1 }}
+                    animate={{
+                      scale: [1, 1.1, 1.05],
+                      boxShadow: [
+                        "4px 4px 0 rgba(0,0,0,0.3)",
+                        "6px 6px 0 rgba(0,0,0,0.4)",
+                        "8px 8px 0 rgba(0,0,0,0.3)",
+                      ],
+                    }}
+                    transition={{ duration: 0.5 }}
+                    style={{
+                      background: "linear-gradient(180deg, #6fcf6f 0%, #4ca84c 100%)",
+                      border: "4px solid #3d8a3d",
+                      boxShadow: "inset -4px -4px 0 rgba(0,0,0,0.25), inset 4px 4px 0 rgba(255,255,255,0.25), 6px 6px 0 rgba(0,0,0,0.3)",
+                      padding: "20px 48px",
+                      imageRendering: "pixelated",
+                    }}
+                  >
+                    <span className="flex items-center gap-3 text-xl font-bold whitespace-nowrap text-white md:text-2xl lg:text-3xl" style={{ textShadow: "2px 2px 0 rgba(0,0,0,0.3)" }}>
                       {t.startButton}
                       <span className="text-2xl md:text-3xl lg:text-4xl">&#9992;</span>
                     </span>
-                  </GlassSurface>
-                </button>
-              )}
+                  </motion.button>
+                ) : (
+                  <button
+                    ref={startButtonRef}
+                    onPointerDown={playStartJourneySound}
+                    onClick={handleStartJourneyClick}
+                    disabled={isPixelating}
+                    data-pixel-item
+                    data-pixel-kind="button"
+                    data-click-sound="start-journey"
+                    className="rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70 disabled:cursor-not-allowed"
+                  >
+                    <GlassSurface width="auto" height="auto" borderRadius={50} borderWidth={0.08} brightness={55} opacity={0.85} blur={12} displace={0.3}>
+                      <span className="flex items-center gap-3 px-12 py-5 text-xl font-bold whitespace-nowrap text-white md:px-16 md:py-6 md:text-2xl lg:text-3xl">
+                        {t.startButton}
+                        <span className="text-2xl md:text-3xl lg:text-4xl">&#9992;</span>
+                      </span>
+                    </GlassSurface>
+                  </button>
+                )}
+              </div>
             </motion.div>
           </div>
         </section>
