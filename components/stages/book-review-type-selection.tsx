@@ -214,22 +214,31 @@ export default function BookReviewTypeSelection({ language = "en", bookTitle, on
   // 如果沒有 bookTitle，保留原來的「三扇門」選類型 UI（主要給 noAi 舊流程）
   if (!bookTitle) {
     return (
-      <div className="min-h-screen relative overflow-hidden bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
-        {/* 裝飾背景 */}
-        <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
-          <div className="absolute top-10 right-20 w-96 h-96 bg-blue-200 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse"></div>
-          <div className="absolute top-40 left-20 w-80 h-80 bg-indigo-200 rounded-full mix-blend-multiply filter blur-3xl opacity-15 animate-pulse" style={{ animationDelay: "2s" }}></div>
-          <div className="absolute bottom-20 right-1/3 w-72 h-72 bg-purple-200 rounded-full mix-blend-multiply filter blur-3xl opacity-15 animate-pulse" style={{ animationDelay: "4s" }}></div>
+      <div className="min-h-screen relative overflow-hidden pixel-theme">
+        {/* Pixel art background */}
+        <div className="fixed inset-0 z-0" style={{
+          background: `linear-gradient(180deg, 
+            #b8e4f9 0%, 
+            #87ceeb 25%, 
+            #7ec850 65%, 
+            #5a9a32 100%)`
+        }}>
+          <div className="absolute top-16 left-[10%] w-24 h-12 bg-white opacity-80" style={{
+            clipPath: "polygon(0% 60%, 15% 40%, 30% 50%, 45% 20%, 60% 40%, 75% 30%, 90% 50%, 100% 60%, 100% 100%, 0% 100%)"
+          }} />
+          <div className="absolute top-24 right-[15%] w-32 h-14 bg-white opacity-70" style={{
+            clipPath: "polygon(0% 60%, 15% 40%, 30% 50%, 45% 20%, 60% 40%, 75% 30%, 90% 50%, 100% 60%, 100% 100%, 0% 100%)"
+          }} />
         </div>
 
         <div className="relative z-10 min-h-screen px-6 lg:px-12 py-12 lg:py-20 pl-16 lg:pl-20" style={{ paddingTop: "128px", paddingBottom: "120px" }}>
           {onBack && <BackButton onClick={onBack} variant="blue" />}
 
           <div className="text-center mb-12">
-            <h1 className="text-5xl md:text-6xl lg:text-7xl font-black mb-4 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent">
+            <h1 className="text-5xl md:text-6xl lg:text-7xl font-black mb-4 pixel-title" style={{ color: "#6b5210", textShadow: "3px 3px 0 rgba(0,0,0,0.2)" }}>
               {t.title}
             </h1>
-            <p className="text-lg md:text-xl text-gray-600">{t.subtitle}</p>
+            <p className="text-lg md:text-xl pixel-text" style={{ color: "#5a4a2a" }}>{t.subtitle}</p>
           </div>
 
           <div className="max-w-7xl mx-auto mb-12 relative overflow-x-auto" style={{ minHeight: "600px" }}>
@@ -259,8 +268,8 @@ export default function BookReviewTypeSelection({ language = "en", bookTitle, on
                     onMouseLeave={() => setHoveredDoor(null)}
                   >
                     <div className="mb-4 text-center w-full">
-                      <div className="inline-block bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 rounded-2xl px-6 py-3 shadow-lg w-full min-h-[80px] flex items-center justify-center">
-                        <h2 className="text-2xl md:text-3xl font-bold text-white whitespace-normal break-words text-center">
+                        <div className="inline-block pixel-card px-6 py-3 shadow-lg w-full min-h-[80px] flex items-center justify-center" style={{ background: "#e8c547" }}>
+                          <h2 className="text-2xl md:text-3xl font-bold whitespace-normal break-words text-center pixel-text" style={{ color: "#5a4a2a" }}>
                           {type.name.split(" ").map((word, i) => (
                             <span key={i}>
                               {word}
@@ -293,12 +302,21 @@ export default function BookReviewTypeSelection({ language = "en", bookTitle, on
 
   // 有 bookTitle：新 UI——三個框 + AI 問題 + 高亮推薦類型 + 展開詳情
   return (
-    <div className="min-h-screen relative overflow-hidden bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
-      {/* 装饰性背景元素 */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
-        <div className="absolute top-10 right-20 w-96 h-96 bg-blue-200 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse"></div>
-        <div className="absolute top-40 left-20 w-80 h-80 bg-indigo-200 rounded-full mix-blend-multiply filter blur-3xl opacity-15 animate-pulse" style={{ animationDelay: '2s' }}></div>
-        <div className="absolute bottom-20 right-1/3 w-72 h-72 bg-purple-200 rounded-full mix-blend-multiply filter blur-3xl opacity-15 animate-pulse" style={{ animationDelay: '4s' }}></div>
+    <div className="min-h-screen relative overflow-hidden pixel-theme">
+      {/* Pixel art background */}
+      <div className="fixed inset-0 z-0" style={{
+        background: `linear-gradient(180deg, 
+          #b8e4f9 0%, 
+          #87ceeb 25%, 
+          #7ec850 65%, 
+          #5a9a32 100%)`
+      }}>
+        <div className="absolute top-16 left-[10%] w-24 h-12 bg-white opacity-80" style={{
+          clipPath: "polygon(0% 60%, 15% 40%, 30% 50%, 45% 20%, 60% 40%, 75% 30%, 90% 50%, 100% 60%, 100% 100%, 0% 100%)"
+        }} />
+        <div className="absolute top-24 right-[15%] w-32 h-14 bg-white opacity-70" style={{
+          clipPath: "polygon(0% 60%, 15% 40%, 30% 50%, 45% 20%, 60% 40%, 75% 30%, 90% 50%, 100% 60%, 100% 100%, 0% 100%)"
+        }} />
       </div>
 
       {/* 主要内容 */}
@@ -307,16 +325,16 @@ export default function BookReviewTypeSelection({ language = "en", bookTitle, on
 
         {/* 标题 */}
         <div className="text-center mb-12">
-          <h1 className="text-5xl md:text-6xl lg:text-7xl font-black mb-4 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent">
+          <h1 className="text-5xl md:text-6xl lg:text-7xl font-black mb-4 pixel-title" style={{ color: "#6b5210", textShadow: "3px 3px 0 rgba(0,0,0,0.2)" }}>
             {t.title}
           </h1>
-          <p className="text-lg md:text-xl text-gray-600">
+          <p className="text-lg md:text-xl pixel-text" style={{ color: "#5a4a2a" }}>
             {language === "zh"
               ? `你剛剛選擇的書：${bookTitle}。讓 AI 幫你看看哪一種英文書評最適合這本書吧！`
               : `You chose: "${bookTitle}". Let AI help you find the best review style for this book!`}
           </p>
           {isLoadingAi && (
-            <p className="mt-3 text-sm text-indigo-600">
+            <p className="mt-3 text-sm pixel-text" style={{ color: "#3a8aa3" }}>
               {language === "zh" ? "Cagent 正在為你思考最適合的書評類型..." : "Cagent is thinking about the best review style for this book..."}
             </p>
           )}
