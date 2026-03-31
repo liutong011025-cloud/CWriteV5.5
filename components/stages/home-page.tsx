@@ -97,7 +97,7 @@ export default function HomePage({ language = "en", onStartPlan }: HomePageProps
         startJourneyAudioRef.current = new Audio("/bit.mp3")
         startJourneyAudioRef.current.preload = "auto"
         // 10% quieter than 0.28
-        startJourneyAudioRef.current.volume = 0.22
+        startJourneyAudioRef.current.volume = 0.2
         startJourneyAudioRef.current.load?.()
       }
     } catch {
