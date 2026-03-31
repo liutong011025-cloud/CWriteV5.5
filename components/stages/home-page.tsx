@@ -78,13 +78,15 @@ export default function HomePage({ language = "en", onStartPlan }: HomePageProps
         {chars.map((ch, idx) => {
           const rtlIndex = count - 1 - idx
           const delay = rtlIndex * step
+          const displayChar = ch === " " ? "\u00A0" : ch
           return (
             <span
               key={`${idx}-${ch}`}
-              className={`pixel-letter ${active ? "pixel-letter-active" : ""}`}
+              className={`pixel-letter-stack ${active ? "pixel-letter-active" : ""}`}
               style={active ? ({ ["--pixel-letter-delay" as any]: `${delay}ms` } as React.CSSProperties) : undefined}
             >
-              {ch === " " ? "\u00A0" : ch}
+              <span className="pixel-letter-layer pixel-letter-layer-base">{displayChar}</span>
+              <span className="pixel-letter-layer pixel-letter-layer-pixel">{displayChar}</span>
             </span>
           )
         })}
