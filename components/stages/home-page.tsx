@@ -518,7 +518,7 @@ export default function HomePage({ language = "en", onStartPlan, onVisitFarm }: 
           </div>
 
           <div className="flex flex-col items-center lg:w-1/2">
-            <div data-pixel-item data-pixel-kind="panel" className={`mb-16 w-full transition-all duration-300 ${pixelPhase >= 1 ? "opacity-0 scale-95" : ""}`}>
+            <div data-pixel-item data-pixel-kind="panel" className="mb-16 w-full transition-all duration-300">
               <MagneticCards
                 cards={genreCards}
                 activeCard={activeGenre}
