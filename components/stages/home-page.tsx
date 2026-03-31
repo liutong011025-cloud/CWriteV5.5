@@ -420,11 +420,16 @@ export default function HomePage({ language = "en", onStartPlan }: HomePageProps
                   WebkitTextStroke: "3px #5a9a32",
                 } : undefined}
               >
-                <PixelRevealText
-                  text="CWrite"
-                  baseClassName="font-baloo"
-                  pixelStyle={pixelPhase >= 1 ? { color: "#7ec850", WebkitTextStroke: "0px transparent" } : { color: "#ffffff" }}
-                />
+                {pixelPhase >= 1 ? (
+                  <PixelRevealText
+                    text="CWrite"
+                    // Keep size from the h1; only pixel overlay should apply font.
+                    baseClassName=""
+                    pixelStyle={{ color: "#7ec850", WebkitTextStroke: "0px transparent" }}
+                  />
+                ) : (
+                  "CWrite"
+                )}
               </h1>
             </motion.div>
 
