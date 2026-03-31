@@ -51,12 +51,35 @@ export default function BookReviewWelcome({
   const t = translations[language] || translations.en
 
   return (
-    <div className="min-h-screen relative overflow-hidden bg-gradient-to-br from-blue-50 via-cyan-50 to-teal-50" style={{ paddingTop: '120px', paddingBottom: '120px' }}>
-      {/* 背景装饰元素 */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-20 left-10 w-96 h-96 bg-blue-300 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse"></div>
-        <div className="absolute top-40 right-20 w-96 h-96 bg-cyan-300 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse" style={{ animationDelay: '2s' }}></div>
-        <div className="absolute bottom-20 left-1/4 w-96 h-96 bg-teal-300 rounded-full mix-blend-multiply filter blur-3xl opacity-15 animate-pulse" style={{ animationDelay: '4s' }}></div>
+    <div className="min-h-screen relative overflow-hidden pixel-theme" style={{ paddingTop: '120px', paddingBottom: '120px' }}>
+      {/* Pixel art background */}
+      <div className="fixed inset-0 z-0" style={{
+        background: `linear-gradient(180deg, 
+          #b8e4f9 0%, 
+          #87ceeb 25%, 
+          #7ec850 65%, 
+          #5a9a32 100%)`
+      }}>
+        <div className="absolute top-16 left-[10%] w-24 h-12 bg-white opacity-80" style={{
+          clipPath: "polygon(0% 60%, 15% 40%, 30% 50%, 45% 20%, 60% 40%, 75% 30%, 90% 50%, 100% 60%, 100% 100%, 0% 100%)"
+        }} />
+        <div className="absolute top-24 right-[15%] w-32 h-14 bg-white opacity-70" style={{
+          clipPath: "polygon(0% 60%, 15% 40%, 30% 50%, 45% 20%, 60% 40%, 75% 30%, 90% 50%, 100% 60%, 100% 100%, 0% 100%)"
+        }} />
+        <div className="absolute bottom-0 left-0 right-0 h-32 pointer-events-none">
+          {[...Array(22)].map((_, i) => (
+            <div
+              key={`grass-${i}`}
+              className="absolute bottom-0"
+              style={{
+                left: `${i * 4 + Math.random() * 2}%`,
+                width: "8px",
+                height: `${18 + Math.random() * 18}px`,
+                background: i % 3 === 0 ? "#5a9a32" : "#7ec850",
+              }}
+            />
+          ))}
+        </div>
       </div>
 
       {/* 主要内容容器 */}
@@ -68,24 +91,26 @@ export default function BookReviewWelcome({
           <div className="max-w-7xl mx-auto text-center">
             <div className="text-7xl mb-6 animate-bounce-in" style={{ animationDelay: '0.1s' }}>📚</div>
             <h1 
-              className="text-6xl md:text-7xl lg:text-8xl font-black mb-6 bg-gradient-to-r from-blue-600 via-cyan-600 to-teal-600 bg-clip-text text-transparent drop-shadow-lg animate-fade-in-up"
+              className="text-6xl md:text-7xl lg:text-8xl font-black mb-6 pixel-title animate-fade-in-up"
               style={{
-                letterSpacing: '-0.02em',
-                lineHeight: '1.1',
+                color: "#6b5210",
+                textShadow: "3px 3px 0 #5a9a32, 6px 6px 0 rgba(0,0,0,0.2)",
+                letterSpacing: "-0.02em",
+                lineHeight: "1.1",
                 animationDelay: '0s',
               }}
             >
               {t.title}
             </h1>
             <p 
-              className="text-2xl md:text-3xl font-bold text-gray-800 mb-4 animate-fade-in-up" 
-              style={{ animationDelay: '0.2s' }}
+              className="text-2xl md:text-3xl font-bold mb-4 animate-fade-in-up pixel-text" 
+              style={{ color: "#5a4a2a", textShadow: "1px 1px 0 rgba(255,255,255,0.5)", animationDelay: '0.2s' }}
             >
               {t.subtitle}
             </p>
             <div 
-              className="w-32 h-1 bg-gradient-to-r from-blue-400 via-cyan-400 to-teal-400 mx-auto mt-8 rounded-full animate-scale-in" 
-              style={{ animationDelay: '0.4s' }}
+              className="w-32 h-1 mx-auto mt-8 animate-scale-in" 
+              style={{ background: "#e8c547", border: "3px solid #8b6914", animationDelay: '0.4s' }}
             ></div>
           </div>
         </div>
@@ -94,53 +119,53 @@ export default function BookReviewWelcome({
         <div className="flex-1 px-6 py-12 max-w-7xl mx-auto w-full">
           {/* 介绍段落 */}
           <div className="prose prose-lg max-w-none mb-16 space-y-6 animate-fade-in" style={{ animationDelay: '0.6s' }}>
-            <p className="text-lg md:text-xl text-gray-700 leading-relaxed text-center">
+            <p className="text-lg md:text-xl leading-relaxed text-center pixel-text" style={{ color: "#5a4a2a" }}>
               {t.intro}
             </p>
           </div>
 
           {/* 功能特点 */}
           <div className="mb-16 animate-fade-in" style={{ animationDelay: '0.8s' }}>
-            <h2 className="text-4xl md:text-5xl font-bold text-center mb-12 bg-gradient-to-r from-blue-600 via-cyan-600 to-teal-600 bg-clip-text text-transparent">
+            <h2 className="text-4xl md:text-5xl font-bold text-center mb-12 pixel-title" style={{ color: "#6b5210", textShadow: "2px 2px 0 rgba(0,0,0,0.15)" }}>
               {t.learnTitle}
             </h2>
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               {/* Analyze Books */}
               <div 
-                className="bg-white/80 backdrop-blur-lg rounded-3xl p-8 border-2 border-blue-200 shadow-xl hover:shadow-2xl transition-all duration-500 hover:scale-105"
+                className="pixel-card p-8 shadow-xl hover:shadow-2xl transition-all duration-500 hover:scale-105"
                 onMouseEnter={() => setHoveredCard(1)}
                 onMouseLeave={() => setHoveredCard(null)}
               >
                 <div className="text-5xl mb-4 text-center animate-bounce-in" style={{ animationDelay: '0.1s' }}>🔍</div>
-                <h3 className="text-2xl font-bold mb-4 text-blue-700 text-center">{t.analyzeTitle}</h3>
-                <p className="text-gray-700 leading-relaxed">
+                <h3 className="text-2xl font-bold mb-4 text-center pixel-text" style={{ color: "#2a5a7a" }}>{t.analyzeTitle}</h3>
+                <p className="leading-relaxed pixel-text" style={{ color: "#5a4a2a" }}>
                   {t.analyzeDesc}
                 </p>
               </div>
 
               {/* Express Opinions */}
               <div 
-                className="bg-white/80 backdrop-blur-lg rounded-3xl p-8 border-2 border-cyan-200 shadow-xl hover:shadow-2xl transition-all duration-500 hover:scale-105"
+                className="pixel-card p-8 shadow-xl hover:shadow-2xl transition-all duration-500 hover:scale-105"
                 onMouseEnter={() => setHoveredCard(2)}
                 onMouseLeave={() => setHoveredCard(null)}
               >
                 <div className="text-5xl mb-4 text-center animate-bounce-in" style={{ animationDelay: '0.2s' }}>💭</div>
-                <h3 className="text-2xl font-bold mb-4 text-cyan-700 text-center">{t.expressTitle}</h3>
-                <p className="text-gray-700 leading-relaxed">
+                <h3 className="text-2xl font-bold mb-4 text-center pixel-text" style={{ color: "#3a8aa3" }}>{t.expressTitle}</h3>
+                <p className="leading-relaxed pixel-text" style={{ color: "#5a4a2a" }}>
                   {t.expressDesc}
                 </p>
               </div>
 
               {/* Critical Thinking */}
               <div 
-                className="bg-white/80 backdrop-blur-lg rounded-3xl p-8 border-2 border-teal-200 shadow-xl hover:shadow-2xl transition-all duration-500 hover:scale-105"
+                className="pixel-card p-8 shadow-xl hover:shadow-2xl transition-all duration-500 hover:scale-105"
                 onMouseEnter={() => setHoveredCard(3)}
                 onMouseLeave={() => setHoveredCard(null)}
               >
                 <div className="text-5xl mb-4 text-center animate-bounce-in" style={{ animationDelay: '0.3s' }}>🧠</div>
-                <h3 className="text-2xl font-bold mb-4 text-teal-700 text-center">{t.criticalTitle}</h3>
-                <p className="text-gray-700 leading-relaxed">
+                <h3 className="text-2xl font-bold mb-4 text-center pixel-text" style={{ color: "#3d5a1f" }}>{t.criticalTitle}</h3>
+                <p className="leading-relaxed pixel-text" style={{ color: "#5a4a2a" }}>
                   {t.criticalDesc}
                 </p>
               </div>
@@ -154,7 +179,7 @@ export default function BookReviewWelcome({
                 <Button
                   onClick={onStartBookReview}
                   size="lg"
-                  className="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white border-0 shadow-2xl py-6 px-12 text-xl font-bold hover:scale-105 transition-transform duration-300 animate-bounce-in"
+                  className="pixel-btn pixel-btn-green shadow-2xl py-6 px-12 text-xl font-bold hover:scale-105 transition-transform duration-300 animate-bounce-in"
                   style={{ animationDelay: '1.1s' }}
                 >
                   {t.startButton}
