@@ -52,6 +52,7 @@ export default function HomePage({ language = "en", onStartPlan }: HomePageProps
   const [isPixelating, setIsPixelating] = useState(false)
   const [pixelPhase, setPixelPhase] = useState(0) // 0=none, 1=transform elements then navigate
   const [pixelOrigin, setPixelOrigin] = useState({ x: 0, y: 0 })
+  const [showPixelSky, setShowPixelSky] = useState(false)
   const shaderContainerRef = useRef<HTMLDivElement>(null)
   const pixelRootRef = useRef<HTMLDivElement>(null)
   const buttonRef = useRef<HTMLButtonElement>(null)
@@ -106,6 +107,7 @@ export default function HomePage({ language = "en", onStartPlan }: HomePageProps
     
     // Phase 1: Transform elements to pixel style, sequenced by distance to Start button
     setPixelPhase(1)
+    setShowPixelSky(true)
 
     // Distance-based sequencing: nearest items pixelize first
     window.setTimeout(() => {
@@ -130,7 +132,7 @@ export default function HomePage({ language = "en", onStartPlan }: HomePageProps
         .sort((a, b) => a.dist - b.dist)
 
       const maxDist = Math.max(1, ...withDist.map((x) => x.dist))
-      const maxDelayMs = 700
+      const maxDelayMs = 1100
       for (const { el, dist } of withDist) {
         const delay = Math.round((dist / maxDist) * maxDelayMs)
         el.style.setProperty("--pixel-delay", `${delay}ms`)
@@ -141,7 +143,7 @@ export default function HomePage({ language = "en", onStartPlan }: HomePageProps
     // Navigate directly after pixelation effect completes
     setTimeout(() => {
       onStartPlan?.()
-    }, 900)
+    }, 1400)
   }
 
   return (
@@ -237,6 +239,81 @@ export default function HomePage({ language = "en", onStartPlan }: HomePageProps
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Pixel sky/grass overlay (dramatic background switch from button outward) */}
+      <AnimatePresence>
+        {showPixelSky && (
+          <motion.div
+            className="fixed inset-0 z-[60] pointer-events-none"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.25 }}
+          >
+            <motion.div
+              className="absolute inset-0"
+              style={{
+                background: `linear-gradient(180deg, 
+                  #b8e4f9 0%, 
+                  #87ceeb 28%, 
+                  #7ec850 68%, 
+                  #5a9a32 100%)`,
+                imageRendering: "pixelated",
+                // radial reveal from the Start button
+                WebkitMaskImage: `radial-gradient(circle at ${pixelOrigin.x}px ${pixelOrigin.y}px, #000 0%, #000 var(--reveal), transparent calc(var(--reveal) + 140px))`,
+                maskImage: `radial-gradient(circle at ${pixelOrigin.x}px ${pixelOrigin.y}px, #000 0%, #000 var(--reveal), transparent calc(var(--reveal) + 140px))`,
+                // @ts-ignore
+                "--reveal": "0px",
+              }}
+              animate={{
+                // @ts-ignore
+                "--reveal": ["0px", "2600px"],
+              }}
+              transition={{ duration: 1.35, ease: "linear" }}
+            >
+              {/* pixel clouds */}
+              <div className="absolute top-20 left-[10%] w-24 h-12 bg-white/80" style={{
+                clipPath: "polygon(0% 60%, 15% 40%, 30% 50%, 45% 20%, 60% 40%, 75% 30%, 90% 50%, 100% 60%, 100% 100%, 0% 100%)",
+                imageRendering: "pixelated",
+              }} />
+              <div className="absolute top-28 right-[15%] w-32 h-14 bg-white/70" style={{
+                clipPath: "polygon(0% 60%, 15% 40%, 30% 50%, 45% 20%, 60% 40%, 75% 30%, 90% 50%, 100% 60%, 100% 100%, 0% 100%)",
+                imageRendering: "pixelated",
+              }} />
+
+              {/* pixel grass blades */}
+              <div className="absolute bottom-0 left-0 right-0 h-32 pointer-events-none">
+                {[...Array(26)].map((_, i) => (
+                  <div
+                    key={`pixel-grass-${i}`}
+                    className="absolute bottom-0"
+                    style={{
+                      left: `${i * 4 + Math.random() * 2}%`,
+                      width: "8px",
+                      height: `${18 + Math.random() * 18}px`,
+                      background: i % 3 === 0 ? "#5a9a32" : "#7ec850",
+                      imageRendering: "pixelated",
+                    }}
+                  />
+                ))}
+                {[...Array(10)].map((_, i) => (
+                  <div
+                    key={`pixel-flower-${i}`}
+                    className="absolute bottom-5"
+                    style={{ left: `${8 + i * 9}%` }}
+                  >
+                    <div className="w-3 h-3 rounded-full" style={{
+                      background: ["#ff9999", "#ffcc66", "#ff66b2", "#66ccff"][i % 4],
+                      boxShadow: `3px 0 0 ${["#ff9999", "#ffcc66", "#ff66b2", "#66ccff"][i % 4]}, -3px 0 0 ${["#ff9999", "#ffcc66", "#ff66b2", "#66ccff"][i % 4]}, 0 3px 0 ${["#ff9999", "#ffcc66", "#ff66b2", "#66ccff"][i % 4]}, 0 -3px 0 ${["#ff9999", "#ffcc66", "#ff66b2", "#66ccff"][i % 4]}`,
+                      imageRendering: "pixelated",
+                    }} />
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
       
 
 
@@ -252,12 +329,6 @@ export default function HomePage({ language = "en", onStartPlan }: HomePageProps
             speed={0.9}
             detail={0.7}
             blend={60}
-            coarseX={35}
-            coarseY={35}
-            mediumX={45}
-            mediumY={45}
-            fineX={35}
-            fineY={35}
           />
           <ChromaFlow
             baseColor="#F8BBD9"
