@@ -53,6 +53,7 @@ export default function HomePage({ language = "en", onStartPlan }: HomePageProps
   const [pixelPhase, setPixelPhase] = useState(0) // 0=none, 1=transform elements then navigate
   const [pixelOrigin, setPixelOrigin] = useState({ x: 0, y: 0 })
   const shaderContainerRef = useRef<HTMLDivElement>(null)
+  const pixelRootRef = useRef<HTMLDivElement>(null)
   const buttonRef = useRef<HTMLButtonElement>(null)
   const t = translations[language] || translations.en
 
@@ -103,8 +104,39 @@ export default function HomePage({ language = "en", onStartPlan }: HomePageProps
     }
     setIsPixelating(true)
     
-    // Phase 1: Transform elements to pixel style (0-800ms)
+    // Phase 1: Transform elements to pixel style, sequenced by distance to Start button
     setPixelPhase(1)
+
+    // Distance-based sequencing: nearest items pixelize first
+    window.setTimeout(() => {
+      const root = pixelRootRef.current
+      const btn = buttonRef.current
+      if (!root || !btn) return
+
+      const btnRect = btn.getBoundingClientRect()
+      const origin = { x: btnRect.left + btnRect.width / 2, y: btnRect.top + btnRect.height / 2 }
+
+      const items = Array.from(root.querySelectorAll<HTMLElement>("[data-pixel-item]"))
+      const withDist = items
+        .map((el) => {
+          const r = el.getBoundingClientRect()
+          const cx = r.left + r.width / 2
+          const cy = r.top + r.height / 2
+          const dx = cx - origin.x
+          const dy = cy - origin.y
+          const dist = Math.sqrt(dx * dx + dy * dy)
+          return { el, dist }
+        })
+        .sort((a, b) => a.dist - b.dist)
+
+      const maxDist = Math.max(1, ...withDist.map((x) => x.dist))
+      const maxDelayMs = 700
+      for (const { el, dist } of withDist) {
+        const delay = Math.round((dist / maxDist) * maxDelayMs)
+        el.style.setProperty("--pixel-delay", `${delay}ms`)
+      }
+      root.classList.add("pixel-farm-transition-active")
+    }, 0)
     
     // Navigate directly after pixelation effect completes
     setTimeout(() => {
@@ -243,7 +275,9 @@ export default function HomePage({ language = "en", onStartPlan }: HomePageProps
         <div className="absolute inset-0 bg-black/30" />
       </div>
 
-      <div className={`relative z-10 flex min-h-screen flex-col pt-32 md:pt-36 pb-16 md:pb-24 transition-all duration-700 ${isLoaded ? "opacity-100" : "opacity-0"} ${pixelPhase >= 1 ? "pixel-transforming" : ""}`}
+      <div
+        ref={pixelRootRef}
+        className={`pixel-farm-transition relative z-10 flex min-h-screen flex-col pt-32 md:pt-36 pb-16 md:pb-24 transition-all duration-700 ${isLoaded ? "opacity-100" : "opacity-0"} ${pixelPhase >= 1 ? "pixel-transforming" : ""}`}
         style={pixelPhase >= 1 ? { 
           filter: `contrast(${1 + pixelPhase * 0.1}) saturate(${1 + pixelPhase * 0.15})`,
           transition: "filter 0.5s ease"
@@ -257,6 +291,8 @@ export default function HomePage({ language = "en", onStartPlan }: HomePageProps
               className="mb-6"
             >
               <p 
+                data-pixel-item
+                data-pixel-kind="text"
                 className={`font-sans text-5xl font-light tracking-tight md:text-6xl lg:text-7xl transition-all duration-500 ${
                   pixelPhase >= 1 ? "text-[#8b6914]" : "text-foreground"
                 }`}
@@ -265,6 +301,8 @@ export default function HomePage({ language = "en", onStartPlan }: HomePageProps
                 {t.welcome}
               </p>
               <h1 
+                data-pixel-item
+                data-pixel-kind="text"
                 className={`font-baloo text-8xl font-bold leading-none tracking-tight md:text-9xl lg:text-[16rem] transition-all duration-500 ${
                   pixelPhase >= 1 
                     ? "text-[#7ec850]" 
@@ -285,14 +323,16 @@ export default function HomePage({ language = "en", onStartPlan }: HomePageProps
               transition={{ duration: 0.8, delay: 1.4 }}
               className="mb-8"
             >
-              <p className="font-sans text-3xl font-medium text-foreground/90 md:text-4xl lg:text-5xl">{t.subtitleTop}</p>
-              <p className="mt-2 font-sans text-xl text-foreground/70 md:text-2xl lg:text-3xl">{t.subtitleBottom}</p>
+              <p data-pixel-item data-pixel-kind="text" className="font-sans text-3xl font-medium text-foreground/90 md:text-4xl lg:text-5xl">{t.subtitleTop}</p>
+              <p data-pixel-item data-pixel-kind="text" className="mt-2 font-sans text-xl text-foreground/70 md:text-2xl lg:text-3xl">{t.subtitleBottom}</p>
             </motion.div>
 
             <motion.p
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 1, delay: 2.1 }}
+              data-pixel-item
+              data-pixel-kind="text"
               className="font-caveat text-4xl font-bold md:text-5xl lg:text-6xl"
               style={{ textShadow: "0 2px 20px rgba(0,0,0,0.5), 0 0 40px rgba(255,255,255,0.3)" }}
             >
@@ -301,7 +341,7 @@ export default function HomePage({ language = "en", onStartPlan }: HomePageProps
           </div>
 
           <div className="flex flex-col items-center lg:w-1/2">
-            <div className={`mb-16 w-full transition-all duration-300 ${pixelPhase >= 1 ? "opacity-0 scale-95" : ""}`}>
+            <div data-pixel-item data-pixel-kind="panel" className={`mb-16 w-full transition-all duration-300 ${pixelPhase >= 1 ? "opacity-0 scale-95" : ""}`}>
               <MagneticCards
                 cards={genreCards}
                 activeCard={activeGenre}
@@ -369,6 +409,8 @@ export default function HomePage({ language = "en", onStartPlan }: HomePageProps
                   ref={buttonRef}
                   onClick={handleStartJourney} 
                   disabled={isPixelating}
+                  data-pixel-item
+                  data-pixel-kind="button"
                   className="rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70 disabled:cursor-not-allowed">
                   <GlassSurface width="auto" height="auto" borderRadius={50} borderWidth={0.08} brightness={55} opacity={0.85} blur={12} displace={0.3}>
                     <span className="flex items-center gap-3 px-12 py-5 text-xl font-bold whitespace-nowrap text-white md:px-16 md:py-6 md:text-2xl lg:text-3xl">
