@@ -115,6 +115,8 @@ export function MagneticCards({
             onClick={() => onCardClick?.(card.id)}
             onMouseMove={(e) => handleMouseMove(e, index)}
             onMouseLeave={() => handleMouseLeave(index)}
+            data-pixel-item
+            data-pixel-kind="button"
             className="group relative rounded-full px-8 py-5 md:px-12 md:py-7 lg:px-14 lg:py-8 transition-all duration-300 ease-out active:scale-95 will-change-transform"
             style={
               {
