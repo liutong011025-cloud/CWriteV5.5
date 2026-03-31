@@ -1023,8 +1023,6 @@
   /* Keep typography size identical to pre-transition */
   font-size: inherit;
   line-height: inherit;
-  /* Compensate different x-height/metrics of pixel font so it doesn't look bigger */
-  font-size-adjust: 0.52;
   text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.25);
   letter-spacing: 0.02em;
 }
