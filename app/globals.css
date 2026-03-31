@@ -988,10 +988,42 @@
   animation-delay: var(--pixel-delay, 0ms);
 }
 
-.pixel-farm-transition.pixel-farm-transition-active [data-pixel-item][data-pixel-kind="text"] {
+/* Text reveal: keep original modern typography size/layout,
+   and overlay a pixel-font layer that reveals right-to-left in steps. */
+.pixel-reveal {
+  position: relative;
+  display: inline-block;
+}
+
+.pixel-reveal__base {
+  position: relative;
+  z-index: 1;
+}
+
+.pixel-reveal__pixel {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
   font-family: var(--font-press-start-2p), ui-monospace, monospace;
-  text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.25);
   letter-spacing: 0.02em;
+  text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.25);
+  /* Start hidden: reveal from right -> left */
+  clip-path: inset(0 0 0 100%);
+  opacity: 0.98;
+}
+
+@keyframes pixelTextRevealRtl {
+  0%   { clip-path: inset(0 0 0 100%); }
+  100% { clip-path: inset(0 0 0 0%); }
+}
+
+.pixel-farm-transition.pixel-farm-transition-active .pixel-reveal__pixel {
+  animation-name: pixelTextRevealRtl;
+  animation-duration: var(--pixel-text-duration, 900ms);
+  animation-delay: var(--pixel-delay, 0ms);
+  animation-fill-mode: both;
+  /* timing-function is set inline (steps(N,end)) for per-string letter stepping */
 }
 
 .pixel-farm-transition.pixel-farm-transition-active [data-pixel-item][data-pixel-kind="panel"] {
