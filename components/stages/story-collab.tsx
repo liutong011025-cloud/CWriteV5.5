@@ -115,6 +115,7 @@ export default function StoryCollab({
   const [chatInput, setChatInput] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [conversationHistory, setConversationHistory] = useState<Array<{ role: string; content: string }>>([])
+  const [testMode, setTestMode] = useState(false)
 
   // Plot data
   const [plotData, setPlotData] = useState<{ setting: string; conflict: string; goal: string }>({
@@ -313,12 +314,66 @@ export default function StoryCollab({
 
   /* ── Handlers ── */
 
+  const activateTestModeAndFinish = useCallback(() => {
+    setTestMode(true)
+
+    const testPlot = {
+      setting: "in a sunny pixel farm",
+      conflict: "the hero loses a magic seed",
+      goal: "wants to find the seed before sunset",
+    }
+    setPlotData(testPlot)
+    setManualPlotDone(true)
+    onPlotCreate(testPlot)
+
+    const struct = STRUCTURES[0]
+    setSelectedStructure(struct.type)
+    setStoryBlocks(
+      struct.outline.map((sectionName, idx) => ({
+        sectionName,
+        text:
+          idx === 0
+            ? "Test mode story. This is a short sample adventure on the farm."
+            : "The story continues with clear actions and a happy ending.",
+      })),
+    )
+    onStructureSelect({ type: struct.type, outline: struct.outline })
+
+    setPhase("writing")
+    setCurrentWritingSection(struct.outline.length)
+
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: `test-${Date.now()}`,
+        role: "assistant",
+        content: "TEST MODE enabled: skipping plot, structure, and writing. Finishing now.",
+        suggestions: [],
+      },
+    ])
+
+    // Finish after state updates are queued
+    window.setTimeout(() => {
+      const composed = struct.outline
+        .map((sectionName, idx) => {
+          const text =
+            idx === 0
+              ? "Test mode story. This is a short sample adventure on the farm."
+              : "The story continues with clear actions and a happy ending."
+          return `${sectionName}:\n${text}`.trimEnd()
+        })
+        .join("\n\n")
+        .trim()
+      onStoryWrite(composed)
+    }, 0)
+  }, [onPlotCreate, onStructureSelect, onStoryWrite])
+
   const handleSendChat = useCallback(() => {
     const text = chatInput.trim()
     if (!text || isLoading) return
     if (text.toLowerCase() === "test") {
       setChatInput("")
-      handleFinishStory()
+      activateTestModeAndFinish()
       return
     }
     // In writing phase, auto-save the user's text to the current section
@@ -479,6 +534,13 @@ export default function StoryCollab({
           onBack={onBack}
           character={storyState.character?.name || undefined}
         />
+        {testMode && (
+          <div className="mt-4 pixel-panel p-3" style={{ background: "#e8c547", border: "4px solid #c4a020" }}>
+            <p className="text-sm font-extrabold" style={{ color: "#5a4a2a" }}>
+              TEST MODE: 已跳过 plot / structure / writing
+            </p>
+          </div>
+        )}
 
         <div className="grid lg:grid-cols-12 gap-6 mt-8">
           {/* ──── Left: Chat Panel ──── */}
