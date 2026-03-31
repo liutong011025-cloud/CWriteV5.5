@@ -551,6 +551,7 @@ export default function HomePage({ language = "en", onStartPlan, onVisitFarm }: 
                 scale: pixelPhase >= 1 ? [1, 1.05, 1] : 1,
               }}
               transition={{ duration: 0.8, delay: 2.5 }}
+              className="mt-10"
             >
               <div className="flex flex-col items-center justify-center gap-4 sm:flex-row sm:gap-6">
                 {/* Visit my farm */}
@@ -584,10 +585,10 @@ export default function HomePage({ language = "en", onStartPlan, onVisitFarm }: 
                     data-pixel-item
                     data-pixel-kind="button"
                     data-click-sound="visit-farm"
-                    className="rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70 disabled:cursor-not-allowed"
+                    className="group rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70 disabled:cursor-not-allowed transition-transform duration-200 hover:scale-[1.04] active:scale-[1.0]"
                   >
                     <GlassSurface width="auto" height="auto" borderRadius={50} borderWidth={0.08} brightness={55} opacity={0.85} blur={12} displace={0.3}>
-                      <span className="flex items-center gap-3 px-10 py-5 text-xl font-bold whitespace-nowrap text-white md:px-14 md:py-6 md:text-2xl lg:text-3xl">
+                      <span className="flex items-center gap-3 px-10 py-5 text-xl font-bold whitespace-nowrap text-white md:px-14 md:py-6 md:text-2xl lg:text-3xl transition-all duration-200 group-hover:brightness-110">
                         Visit my farm
                         <span className="text-2xl md:text-3xl lg:text-4xl">🏠</span>
                       </span>
@@ -633,10 +634,10 @@ export default function HomePage({ language = "en", onStartPlan, onVisitFarm }: 
                     data-pixel-item
                     data-pixel-kind="button"
                     data-click-sound="start-journey"
-                    className="rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70 disabled:cursor-not-allowed"
+                    className="group rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70 disabled:cursor-not-allowed transition-transform duration-200 hover:scale-[1.04] active:scale-[1.0]"
                   >
                     <GlassSurface width="auto" height="auto" borderRadius={50} borderWidth={0.08} brightness={55} opacity={0.85} blur={12} displace={0.3}>
-                      <span className="flex items-center gap-3 px-12 py-5 text-xl font-bold whitespace-nowrap text-white md:px-16 md:py-6 md:text-2xl lg:text-3xl">
+                      <span className="flex items-center gap-3 px-12 py-5 text-xl font-bold whitespace-nowrap text-white md:px-16 md:py-6 md:text-2xl lg:text-3xl transition-all duration-200 group-hover:brightness-110">
                         {t.startButton}
                         <span className="text-2xl md:text-3xl lg:text-4xl">&#9992;</span>
                       </span>
