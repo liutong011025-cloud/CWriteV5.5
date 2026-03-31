@@ -132,9 +132,11 @@ export default function HomePage({ language = "en", onStartPlan }: HomePageProps
         .sort((a, b) => a.dist - b.dist)
 
       const maxDist = Math.max(1, ...withDist.map((x) => x.dist))
-      const maxDelayMs = 1100
+      // Make the sequence feel obviously "near -> far" instead of instant.
+      const baseDelayMs = 120
+      const maxDelayMs = 2200
       for (const { el, dist } of withDist) {
-        const delay = Math.round((dist / maxDist) * maxDelayMs)
+        const delay = baseDelayMs + Math.round((dist / maxDist) * maxDelayMs)
         el.style.setProperty("--pixel-delay", `${delay}ms`)
       }
       root.classList.add("pixel-farm-transition-active")
@@ -143,7 +145,7 @@ export default function HomePage({ language = "en", onStartPlan }: HomePageProps
     // Navigate directly after pixelation effect completes
     setTimeout(() => {
       onStartPlan?.()
-    }, 1400)
+    }, 3000)
   }
 
   return (
@@ -246,7 +248,7 @@ export default function HomePage({ language = "en", onStartPlan }: HomePageProps
           <motion.div
             className="fixed inset-0 z-[60] pointer-events-none"
             initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
+            animate={{ opacity: 0.55 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.25 }}
           >
