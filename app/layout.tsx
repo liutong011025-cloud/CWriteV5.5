@@ -1,6 +1,6 @@
 import type React from 'react'
 import type { Metadata } from 'next'
-import { Geist, Geist_Mono, Comic_Neue, Patrick_Hand, Caveat, Baloo_2 } from 'next/font/google'
+import { Geist, Geist_Mono, Comic_Neue, Patrick_Hand, Caveat, Baloo_2, Press_Start_2P } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import { Toaster } from '@/components/ui/sonner'
 import HeaderWrapper from '@/components/header-wrapper'
@@ -28,6 +28,11 @@ const baloo2 = Baloo_2({
   subsets: ["latin"],
   variable: "--font-baloo",
 });
+const pressStart2p = Press_Start_2P({
+  weight: ["400"],
+  subsets: ["latin"],
+  variable: "--font-press-start-2p",
+})
 
 export const metadata: Metadata = {
   title: 'CWrite',
@@ -47,7 +52,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${comicNeue.variable} ${patrickHand.variable} ${geist.variable} ${geistMono.variable} ${caveat.variable} ${baloo2.variable} font-sans antialiased flex flex-col min-h-screen bg-cover bg-center bg-no-repeat`}
+        className={`${comicNeue.variable} ${patrickHand.variable} ${geist.variable} ${geistMono.variable} ${caveat.variable} ${baloo2.variable} ${pressStart2p.variable} font-sans antialiased flex flex-col min-h-screen bg-cover bg-center bg-no-repeat`}
         style={{
           backgroundImage: "url('/firstmap.png')",
           backgroundSize: "cover",
