@@ -20,6 +20,7 @@ export default function ClickSoundProvider() {
       // Allow specific buttons to override global click sound.
       const target = event.target as HTMLElement | null
       if (target?.closest?.('[data-click-sound="start-journey"]')) return
+      if (target?.closest?.('[data-click-sound="visit-farm"]')) return
       try {
         audio.currentTime = 0
         void audio.play()
