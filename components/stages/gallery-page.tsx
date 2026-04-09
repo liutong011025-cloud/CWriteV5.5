@@ -1,9 +1,9 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import Image from "next/image"
-import { BookOpen, Book, Mail, FileText, ChevronDown, ChevronRight, Sparkles, ArrowLeft, MessageSquare, Clapperboard, Feather } from "lucide-react"
+import { BookOpen, Book, Mail, FileText, ChevronDown, ChevronRight, ArrowLeft, MessageSquare, Clapperboard, Feather, X } from "lucide-react"
 import { toast } from "sonner"
 
 type ArticleType = "story" | "bookReview" | "letter" | "drama" | "poetry"
@@ -41,22 +41,61 @@ function workTypeFromArticleType(t: ArticleType): "story" | "bookReview" | "lett
   return "story"
 }
 
+// Pixel book shelf icons for each type
+const TYPE_CONFIGS = {
+  story: {
+    label: "Stories",
+    color: "#e8c547",
+    borderColor: "#c4a020",
+    icon: Book,
+    shelfColor: "#8B4513",
+    bookColors: ["#e74c3c", "#3498db", "#2ecc71", "#9b59b6", "#f39c12"],
+  },
+  bookReview: {
+    label: "Book Reviews",
+    color: "#87ceeb",
+    borderColor: "#5bc0de",
+    icon: FileText,
+    shelfColor: "#654321",
+    bookColors: ["#1abc9c", "#e67e22", "#34495e", "#16a085", "#d35400"],
+  },
+  letter: {
+    label: "Letters",
+    color: "#f5a9b8",
+    borderColor: "#e91e63",
+    icon: Mail,
+    shelfColor: "#5D4037",
+    bookColors: ["#ff6b6b", "#feca57", "#ff9ff3", "#54a0ff", "#5f27cd"],
+  },
+  drama: {
+    label: "Drama",
+    color: "#ffd700",
+    borderColor: "#daa520",
+    icon: Clapperboard,
+    shelfColor: "#795548",
+    bookColors: ["#ee5a24", "#0652DD", "#6ab04c", "#be2edd", "#22a6b3"],
+  },
+  poetry: {
+    label: "Poetry",
+    color: "#7ec850",
+    borderColor: "#5a9a32",
+    icon: Feather,
+    shelfColor: "#6D4C41",
+    bookColors: ["#6c5ce7", "#00b894", "#fdcb6e", "#e17055", "#74b9ff"],
+  },
+}
+
 export default function GalleryPage({ currentUser = null, currentUserRole = null, fromEdit = false, editType, onBackToEdit }: GalleryPageProps) {
   const [selectedType, setSelectedType] = useState<ArticleType | null>(null)
-  const [expandedArticles, setExpandedArticles] = useState<Set<string>>(new Set())
+  const [expandedArticle, setExpandedArticle] = useState<Article | null>(null)
   const [interactions, setInteractions] = useState<any[]>([])
   const [mounted, setMounted] = useState(false)
   const [reviewContent, setReviewContent] = useState<Record<string, string>>({})
   const [reviewSubmitting, setReviewSubmitting] = useState<string | null>(null)
+  const [hoveredShelf, setHoveredShelf] = useState<ArticleType | null>(null)
 
-  useEffect(() => {
-    setMounted(true)
-    fetchInteractions()
-    const interval = setInterval(fetchInteractions, 5000)
-    return () => clearInterval(interval)
-  }, [])
-
-  const fetchInteractions = async () => {
+  // Pre-fetch interactions on mount for faster loading
+  const fetchInteractions = useCallback(async () => {
     try {
       const response = await fetch('/api/interactions')
       const data = await response.json()
@@ -64,16 +103,23 @@ export default function GalleryPage({ currentUser = null, currentUserRole = null
     } catch (error) {
       console.error("Error fetching interactions:", error)
     }
-  }
+  }, [])
 
-  // 从 interactions 提取文章
-  const extractArticles = (): Article[] => {
+  useEffect(() => {
+    setMounted(true)
+    fetchInteractions()
+    const interval = setInterval(fetchInteractions, 10000) // Reduced frequency
+    return () => clearInterval(interval)
+  }, [fetchInteractions])
+
+  // Extract articles from interactions
+  const extractArticles = useCallback((): Article[] => {
     const articles: Article[] = []
 
-    // 从 interactions 中提取 Story 文章
+    // Stories
     interactions
       .filter(i => i.story && (i.stage === 'review' || i.story.trim().length > 0))
-      .forEach((i, idx) => {
+      .forEach((i) => {
         const story = typeof i.story === 'string' ? i.story : (i.output?.story || '')
         if (story.trim()) {
           articles.push({
@@ -87,19 +133,16 @@ export default function GalleryPage({ currentUser = null, currentUserRole = null
         }
       })
 
-    // 从 interactions 中提取 Book Review 文章
-    // 检查 stage 为 bookReviewComplete 或者有 review 内容
-    // 过滤掉内容太少的review（少于50个字符）
+    // Book Reviews
     interactions
       .filter(i => {
         const hasReview = i.review && (typeof i.review === 'string' ? i.review.trim().length > 0 : false)
         const isCompleteStage = i.stage === 'bookReviewComplete' || i.stage === 'bookReviewCompleteNoAi'
         return hasReview || isCompleteStage
       })
-      .forEach((i, idx) => {
+      .forEach((i) => {
         const review = typeof i.review === 'string' ? i.review : (i.output?.review || i.data?.review || '')
         const reviewText = review.trim()
-        // 只添加内容长度大于50个字符的review（过滤掉测试内容或空内容）
         if (reviewText && reviewText.length > 50) {
           articles.push({
             id: `review-${i.user_id}-${i.timestamp || Date.now()}`,
@@ -114,10 +157,10 @@ export default function GalleryPage({ currentUser = null, currentUserRole = null
         }
       })
 
-    // 从 interactions 中提取 Letter 文章
+    // Letters
     interactions
       .filter(i => i.letter && (i.stage === 'letterComplete' || i.letter.trim().length > 0))
-      .forEach((i, idx) => {
+      .forEach((i) => {
         const letter = typeof i.letter === 'string' ? i.letter : (i.output?.letter || '')
         if (letter.trim()) {
           articles.push({
@@ -133,7 +176,7 @@ export default function GalleryPage({ currentUser = null, currentUserRole = null
         }
       })
 
-    // 从 interactions 中提取 Drama 文章
+    // Drama
     interactions
       .filter(i => i.drama && (i.stage === 'dramaBook' || (typeof i.drama === 'string' && i.drama.trim().length > 0)))
       .forEach((i) => {
@@ -151,7 +194,7 @@ export default function GalleryPage({ currentUser = null, currentUserRole = null
         }
       })
 
-    // 从 interactions 中提取 Poetry 文章
+    // Poetry
     interactions
       .filter(i => i.poetry && (typeof i.poetry === 'string' && i.poetry.trim().length > 0))
       .forEach((i) => {
@@ -170,9 +213,8 @@ export default function GalleryPage({ currentUser = null, currentUserRole = null
         }
       })
 
-    // 添加示例文章 - 使用固定时间戳避免 SSR/CSR 不一致
-    // 只在客户端添加示例文章
-    const now = mounted ? Date.now() : 1704067200000 // 固定时间戳作为 SSR 时的默认值
+    // Example articles
+    const now = mounted ? Date.now() : 1704067200000
     const examples: Article[] = [
       {
         id: 'example-story-1',
@@ -184,7 +226,7 @@ export default function GalleryPage({ currentUser = null, currentUserRole = null
 One day, Sparkle found a lost kitten in the forest. The kitten was cold and scared. Sparkle wanted to help, but he didn't know how. Suddenly, he felt a warm feeling in his belly. It was his first fire! He breathed a gentle flame to keep the kitten warm.
 
 The other dragons saw how brave Sparkle was and stopped laughing. Sparkle learned that being different is okay, and helping others is what truly makes you brave.`,
-        timestamp: now - 86400000, // 1 day ago
+        timestamp: now - 86400000,
       },
       {
         id: 'example-review-1',
@@ -194,7 +236,7 @@ The other dragons saw how brave Sparkle was and stopped laughing. Sparkle learne
         content: `The Magic Treehouse is an amazing adventure book! Jack and Annie discover a magical treehouse filled with books. When they point to a picture in a book, the treehouse spins and takes them to that place!
 
 I loved reading about their adventures in ancient Egypt and meeting mummies. The book is exciting and teaches you about history too. I recommend this book to kids who love adventure and magic!`,
-        timestamp: now - 172800000, // 2 days ago
+        timestamp: now - 172800000,
         bookTitle: "The Magic Treehouse",
       },
       {
@@ -212,14 +254,14 @@ I hope to see you soon! Thank you for the birthday present you sent me. I love i
 
 Love,
 Emma`,
-        timestamp: now - 259200000, // 3 days ago
+        timestamp: now - 259200000,
         recipient: "Grandma",
         occasion: "Sharing summer news",
       },
     ]
 
     return [...articles, ...examples].sort((a, b) => b.timestamp - a.timestamp)
-  }
+  }, [interactions, mounted])
 
   const articles = extractArticles()
 
@@ -231,23 +273,11 @@ Emma`,
     return acc
   }, {} as Record<ArticleType, Article[]>)
 
-  const toggleArticle = (id: string) => {
-    setExpandedArticles(prev => {
-      const newSet = new Set(prev)
-      if (newSet.has(id)) {
-        newSet.delete(id)
-      } else {
-        newSet.add(id)
-      }
-      return newSet
-    })
-  }
-
   const formatDate = (timestamp: number) => {
-    if (!mounted) return '' // 避免 SSR/CSR 不一致
+    if (!mounted) return ''
     return new Date(timestamp).toLocaleDateString('en-US', {
       year: 'numeric',
-      month: 'long',
+      month: 'short',
       day: 'numeric',
     })
   }
@@ -273,7 +303,7 @@ Emma`,
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || "Failed to submit")
       setReviewContent((prev) => ({ ...prev, [article.id]: "" }))
-      toast.success("Review submitted! The author will see it in their profile.")
+      toast.success("Review submitted!")
     } catch (e: any) {
       toast.error(e.message || "Failed to submit review")
     } finally {
@@ -281,54 +311,368 @@ Emma`,
     }
   }
 
-  const renderLeaveReview = (article: Article, theme: "purple" | "indigo" | "pink") => {
-    if (!currentUser) return null
-    const role = currentUserRole || "student"
-    const border = theme === "purple" ? "border-purple-700/50" : theme === "indigo" ? "border-indigo-700/50" : "border-pink-700/50"
-    const bg = theme === "purple" ? "bg-slate-900/80" : theme === "indigo" ? "bg-slate-900/80" : "bg-slate-900/80"
+  // Render pixel bookshelf for a type
+  const renderBookShelf = (type: ArticleType) => {
+    const config = TYPE_CONFIGS[type]
+    const typeArticles = groupedArticles[type] || []
+    const Icon = config.icon
+    const isHovered = hoveredShelf === type
+    const isSelected = selectedType === type
+
     return (
-      <div className={`mt-4 rounded-lg border ${border} ${bg} p-4`}>
-        <p className="mb-2 flex items-center gap-2 text-sm font-semibold text-yellow-300">
-          <MessageSquare className="h-4 w-4" />
-          Leave a review (Peer review)
-        </p>
-        <textarea
-          placeholder="Write your feedback for the author..."
-          value={reviewContent[article.id] ?? ""}
-          onChange={(e) => setReviewContent((prev) => ({ ...prev, [article.id]: e.target.value }))}
-          className="mb-2 w-full rounded-lg border border-slate-600 bg-slate-800/80 px-3 py-2 text-sm text-white placeholder:text-slate-400"
-          rows={3}
-        />
-        <div className="flex flex-wrap items-center gap-2">
-          <Button
-            size="sm"
-            onClick={() => submitReview(article, "student")}
-            disabled={!reviewContent[article.id]?.trim() || reviewSubmitting === article.id}
-            className="rounded-lg bg-amber-600 hover:bg-amber-700"
+      <div
+        key={type}
+        className="relative cursor-pointer transition-all duration-300"
+        style={{
+          transform: isHovered ? "scale(1.02) translateY(-4px)" : "scale(1)",
+        }}
+        onMouseEnter={() => setHoveredShelf(type)}
+        onMouseLeave={() => setHoveredShelf(null)}
+        onClick={() => setSelectedType(isSelected ? null : type)}
+      >
+        {/* Bookshelf frame */}
+        <div
+          className="relative p-4"
+          style={{
+            background: `linear-gradient(180deg, ${config.shelfColor} 0%, #3d2817 100%)`,
+            border: `4px solid ${isSelected ? config.color : "#5a3d1a"}`,
+            boxShadow: isSelected 
+              ? `0 0 20px ${config.color}60, inset 0 2px 0 rgba(255,255,255,0.1)` 
+              : "inset 0 2px 0 rgba(255,255,255,0.1), 4px 4px 0 rgba(0,0,0,0.3)",
+          }}
+        >
+          {/* Shelf label */}
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <Icon className="w-6 h-6" style={{ color: config.color }} />
+              <span className="font-bold text-lg" style={{ color: config.color, textShadow: "2px 2px 0 rgba(0,0,0,0.5)" }}>
+                {config.label}
+              </span>
+            </div>
+            <div
+              className="px-2 py-1 text-xs font-bold"
+              style={{
+                background: config.color,
+                color: "#3d2817",
+                border: `2px solid ${config.borderColor}`,
+              }}
+            >
+              {typeArticles.length}
+            </div>
+          </div>
+
+          {/* Books on shelf */}
+          <div className="flex items-end gap-1 h-24 overflow-hidden">
+            {typeArticles.slice(0, 8).map((article, idx) => {
+              const bookColor = config.bookColors[idx % config.bookColors.length]
+              const height = 60 + Math.random() * 30
+              return (
+                <div
+                  key={article.id}
+                  className="relative transition-all duration-200 hover:translate-y-[-4px]"
+                  style={{
+                    width: "20px",
+                    height: `${height}px`,
+                    background: `linear-gradient(90deg, ${bookColor} 0%, ${bookColor}dd 50%, ${bookColor}99 100%)`,
+                    border: "2px solid rgba(0,0,0,0.3)",
+                    borderBottom: "none",
+                    boxShadow: "inset -2px 0 0 rgba(0,0,0,0.2)",
+                  }}
+                  title={article.title}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setExpandedArticle(article)
+                  }}
+                >
+                  {/* Book spine detail */}
+                  <div
+                    className="absolute top-2 left-1 right-1 h-1"
+                    style={{ background: "rgba(255,255,255,0.3)" }}
+                  />
+                  <div
+                    className="absolute bottom-2 left-1 right-1 h-1"
+                    style={{ background: "rgba(255,255,255,0.2)" }}
+                  />
+                </div>
+              )
+            })}
+            {typeArticles.length === 0 && (
+              <div className="text-sm italic px-2" style={{ color: "#a08060" }}>
+                Empty shelf...
+              </div>
+            )}
+            {typeArticles.length > 8 && (
+              <div
+                className="px-2 py-1 text-xs font-bold self-center"
+                style={{ color: config.color }}
+              >
+                +{typeArticles.length - 8}
+              </div>
+            )}
+          </div>
+
+          {/* Shelf wood bottom */}
+          <div
+            className="absolute bottom-0 left-0 right-0 h-3"
+            style={{
+              background: `linear-gradient(180deg, #5a3d1a 0%, #3d2817 100%)`,
+              borderTop: "2px solid #7a5d3a",
+            }}
+          />
+        </div>
+
+        {/* Hover tooltip */}
+        {isHovered && (
+          <div
+            className="absolute -top-12 left-1/2 transform -translate-x-1/2 px-3 py-1 text-xs font-bold whitespace-nowrap z-20"
+            style={{
+              background: "#f5e6c8",
+              border: "3px solid #8b6914",
+              color: "#5a4a2a",
+              boxShadow: "3px 3px 0 rgba(0,0,0,0.3)",
+            }}
           >
-            {reviewSubmitting === article.id ? "Submitting..." : "Submit review"}
+            Click to browse {config.label.toLowerCase()}!
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  // Article list panel
+  const renderArticleList = () => {
+    if (!selectedType) return null
+    const config = TYPE_CONFIGS[selectedType]
+    const typeArticles = groupedArticles[selectedType] || []
+
+    return (
+      <div
+        className="pixel-panel p-6 mt-6"
+        style={{ background: "#f5e6c8" }}
+      >
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-2xl font-extrabold flex items-center gap-3" style={{ color: "#5a4a2a", textShadow: "2px 2px 0 rgba(0,0,0,0.2)" }}>
+            <config.icon className="w-7 h-7" style={{ color: config.borderColor }} />
+            {config.label}
+          </h3>
+          <Button
+            onClick={() => setSelectedType(null)}
+            className="pixel-btn pixel-btn-wood"
+          >
+            <X className="w-4 h-4 mr-1" />
+            Close
           </Button>
+        </div>
+
+        <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2">
+          {typeArticles.length > 0 ? (
+            typeArticles.map((article) => (
+              <div
+                key={article.id}
+                className="p-4 cursor-pointer transition-all hover:scale-[1.01]"
+                style={{
+                  background: "#fff",
+                  border: `3px solid ${config.borderColor}`,
+                  boxShadow: "3px 3px 0 rgba(0,0,0,0.2)",
+                }}
+                onClick={() => setExpandedArticle(article)}
+              >
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h4 className="font-bold text-lg" style={{ color: "#5a4a2a" }}>
+                      {article.title}
+                    </h4>
+                    <p className="text-sm" style={{ color: "#8b6914" }}>
+                      by {article.author} | {formatDate(article.timestamp)}
+                    </p>
+                  </div>
+                  <ChevronRight className="w-5 h-5" style={{ color: config.borderColor }} />
+                </div>
+                <p className="mt-2 text-sm line-clamp-2" style={{ color: "#6b5210" }}>
+                  {article.content.slice(0, 150)}...
+                </p>
+              </div>
+            ))
+          ) : (
+            <div className="text-center py-8" style={{ color: "#8b6914" }}>
+              No {config.label.toLowerCase()} yet. Be the first to write one!
+            </div>
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  // Article detail modal
+  const renderArticleModal = () => {
+    if (!expandedArticle) return null
+    const config = TYPE_CONFIGS[expandedArticle.type]
+
+    return (
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center p-4"
+        style={{ background: "rgba(0,0,0,0.7)" }}
+        onClick={() => setExpandedArticle(null)}
+      >
+        <div
+          className="pixel-panel max-w-3xl w-full max-h-[80vh] overflow-y-auto"
+          style={{ background: "#f5e6c8" }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Header */}
+          <div
+            className="p-4 flex items-center justify-between"
+            style={{
+              background: `linear-gradient(180deg, ${config.color} 0%, ${config.borderColor} 100%)`,
+              borderBottom: "4px solid #8b6914",
+            }}
+          >
+            <div className="flex items-center gap-3">
+              <config.icon className="w-6 h-6" style={{ color: "#5a4a2a" }} />
+              <span className="font-bold text-sm px-2 py-1" style={{
+                background: "#f5e6c8",
+                border: "2px solid #8b6914",
+                color: "#5a4a2a",
+              }}>
+                {config.label}
+              </span>
+            </div>
+            <Button
+              onClick={() => setExpandedArticle(null)}
+              className="pixel-btn pixel-btn-wood"
+              size="sm"
+            >
+              <X className="w-4 h-4" />
+            </Button>
+          </div>
+
+          {/* Content */}
+          <div className="p-6">
+            <h2 className="text-2xl font-extrabold mb-2" style={{ color: "#5a4a2a", textShadow: "2px 2px 0 rgba(0,0,0,0.15)" }}>
+              {expandedArticle.title}
+            </h2>
+            <p className="text-sm mb-4" style={{ color: "#8b6914" }}>
+              by {expandedArticle.author} | {formatDate(expandedArticle.timestamp)}
+            </p>
+
+            {expandedArticle.coverUrl && (
+              <div className="relative w-32 h-48 mx-auto mb-4" style={{ border: "4px solid #8b6914" }}>
+                <Image
+                  src={expandedArticle.coverUrl}
+                  alt={expandedArticle.bookTitle || "Book cover"}
+                  fill
+                  className="object-cover"
+                  unoptimized
+                />
+              </div>
+            )}
+
+            <div
+              className="p-4 mb-4"
+              style={{
+                background: "#fff",
+                border: "3px solid #8b6914",
+                boxShadow: "inset 2px 2px 0 rgba(0,0,0,0.1)",
+              }}
+            >
+              <pre className="whitespace-pre-wrap text-sm leading-relaxed" style={{ color: "#5a4a2a", fontFamily: "inherit" }}>
+                {expandedArticle.content}
+              </pre>
+            </div>
+
+            {/* Review section */}
+            {currentUser && (
+              <div
+                className="p-4"
+                style={{
+                  background: "#d4e8b4",
+                  border: "3px solid #5a9a32",
+                }}
+              >
+                <p className="flex items-center gap-2 text-sm font-bold mb-2" style={{ color: "#3d5a1f" }}>
+                  <MessageSquare className="w-4 h-4" />
+                  Leave a review
+                </p>
+                <textarea
+                  placeholder="Write your feedback..."
+                  value={reviewContent[expandedArticle.id] ?? ""}
+                  onChange={(e) => setReviewContent((prev) => ({ ...prev, [expandedArticle.id]: e.target.value }))}
+                  className="w-full p-3 text-sm pixel-input mb-2"
+                  rows={3}
+                />
+                <Button
+                  onClick={() => submitReview(expandedArticle, currentUserRole || "student")}
+                  disabled={!reviewContent[expandedArticle.id]?.trim() || reviewSubmitting === expandedArticle.id}
+                  className="pixel-btn pixel-btn-green"
+                >
+                  {reviewSubmitting === expandedArticle.id ? "Submitting..." : "Submit Review"}
+                </Button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-900 via-purple-900 to-indigo-900 relative overflow-hidden" data-stage="gallery">
-      {/* 深色神秘背景 */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 left-0 w-full h-full bg-[url('/library.png')] opacity-20 bg-cover bg-center"></div>
-        <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-purple-900/40 to-indigo-900/60"></div>
-        <div className="absolute top-20 right-10 w-96 h-96 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl opacity-10 animate-pulse"></div>
-        <div className="absolute bottom-20 left-10 w-96 h-96 bg-indigo-500 rounded-full mix-blend-multiply filter blur-3xl opacity-10 animate-pulse" style={{ animationDelay: '2s' }}></div>
+    <div className="min-h-screen relative overflow-hidden pixel-theme" data-stage="gallery">
+      {/* Pixel art background - cozy library */}
+      <div className="fixed inset-0 z-0" style={{
+        background: `linear-gradient(180deg, 
+          #2d1b0e 0%, 
+          #3d2817 20%,
+          #4a3423 50%,
+          #5a4030 80%,
+          #6a503d 100%)`
+      }}>
+        {/* Wooden floor pattern */}
+        <div className="absolute bottom-0 left-0 right-0 h-48" style={{
+          background: "repeating-linear-gradient(90deg, #5a3d1a 0px, #5a3d1a 80px, #4a2d10 80px, #4a2d10 160px)",
+          borderTop: "4px solid #3d2010",
+        }} />
+        
+        {/* Floating candles/lights */}
+        {[...Array(6)].map((_, i) => (
+          <div
+            key={`candle-${i}`}
+            className="absolute animate-pulse"
+            style={{
+              left: `${15 + i * 15}%`,
+              top: `${10 + (i % 2) * 8}%`,
+              width: "12px",
+              height: "20px",
+              background: "#ffd700",
+              boxShadow: "0 0 20px #ffd700, 0 0 40px #ff8c00",
+              animationDelay: `${i * 0.5}s`,
+            }}
+          />
+        ))}
+
+        {/* Decorative pixel stars */}
+        {[...Array(8)].map((_, i) => (
+          <div
+            key={`star-${i}`}
+            className="absolute animate-twinkle"
+            style={{
+              left: `${10 + i * 12}%`,
+              top: `${5 + (i % 3) * 5}%`,
+              width: "8px",
+              height: "8px",
+              background: "#ffd700",
+              clipPath: "polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%)",
+              animationDelay: `${i * 0.3}s`,
+            }}
+          />
+        ))}
       </div>
 
-      {/* 返回编辑按钮 - 只在从编辑页面进入时显示 */}
+      {/* Back to Edit button */}
       {fromEdit && onBackToEdit && (
         <div className="absolute top-4 right-4 z-50">
           <Button
             onClick={onBackToEdit}
-            className="bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 text-white border-0 shadow-xl py-3 px-6 text-lg font-bold rounded-xl"
+            className="pixel-btn pixel-btn-orange"
           >
             <ArrowLeft className="w-5 h-5 mr-2" />
             Back to Editing
@@ -336,380 +680,110 @@ Emma`,
         </div>
       )}
 
-      <div className="relative z-10 max-w-7xl mx-auto px-6 py-12" style={{ paddingTop: '120px', paddingBottom: '120px' }}>
-        {/* 介绍区域 - 包含 Luminai 图片 */}
-        <div className="mb-12 bg-gradient-to-br from-slate-800/90 via-purple-900/80 to-indigo-900/90 rounded-3xl p-8 border-2 border-purple-700/50 shadow-2xl backdrop-blur-lg">
-          <div className="grid md:grid-cols-2 gap-8 items-center">
-            {/* 左侧：介绍文字 */}
-            <div>
-              <h1 className="text-5xl md:text-6xl font-black mb-4 bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500 bg-clip-text text-transparent">
-                Luminai Library
-              </h1>
-              <p className="text-purple-200 text-lg mb-4 leading-relaxed">
-                Welcome to the sacred library of memory, where every story, review, letter, drama, and poem written by our young authors is carefully preserved.
-              </p>
-              <div className="space-y-3 text-purple-300">
-                <div className="flex items-start gap-3">
-                  <Sparkles className="w-5 h-5 text-yellow-400 mt-1 flex-shrink-0" />
-                  <p className="text-sm"><strong className="text-yellow-400">Luminai Library</strong> is a place of inspiration and creativity. Here, wisdom guides us to remember and cherish every creative work.</p>
-                </div>
-                <div className="flex items-start gap-3">
-                  <BookOpen className="w-5 h-5 text-yellow-400 mt-1 flex-shrink-0" />
-                  <p className="text-sm">Browse through <strong className="text-yellow-400">Stories</strong>, <strong className="text-yellow-400">Book Reviews</strong>, <strong className="text-yellow-400">Letters</strong>, <strong className="text-yellow-400">Drama</strong>, and <strong className="text-yellow-400">Poetry</strong> created by students, each one a treasure of imagination.</p>
-                </div>
-                <div className="flex items-start gap-3">
-                  <FileText className="w-5 h-5 text-yellow-400 mt-1 flex-shrink-0" />
-                  <p className="text-sm">Click on any category below to explore the writings. Each piece tells a unique story from a young author's heart.</p>
-                </div>
-              </div>
-            </div>
-
-            {/* 右侧：Luminai 图片 */}
-            <div className="relative h-96 rounded-2xl overflow-hidden border-2 border-amber-500/30 shadow-2xl">
+      <div className="relative z-10 max-w-6xl mx-auto px-6 py-12" style={{ paddingTop: '120px', paddingBottom: '120px' }}>
+        {/* Header */}
+        <div className="pixel-panel p-6 mb-8" style={{ background: "#f5e6c8" }}>
+          <div className="flex flex-col md:flex-row items-center gap-6">
+            {/* Librarian image */}
+            <div
+              className="relative w-32 h-32 flex-shrink-0"
+              style={{ border: "4px solid #8b6914" }}
+            >
               <Image
                 src="/libraryMan.png"
-                alt="Luminai Library"
+                alt="Luminai Librarian"
                 fill
-                className="object-contain opacity-90"
-                style={{
-                  filter: 'drop-shadow(0 0 20px rgba(251, 191, 36, 0.3))',
-                }}
+                className="object-contain"
+                style={{ background: "#d9c9a6" }}
                 unoptimized
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-slate-900/50 via-transparent to-transparent"></div>
-              <div className="absolute bottom-4 left-4 right-4 text-center">
-                <p className="text-amber-300 text-sm font-semibold italic">Luminai Library</p>
-              </div>
+            </div>
+
+            <div className="flex-1 text-center md:text-left">
+              <h1
+                className="text-4xl md:text-5xl font-extrabold mb-2"
+                style={{
+                  color: "#5a4a2a",
+                  textShadow: "3px 3px 0 rgba(0,0,0,0.2)",
+                }}
+              >
+                Luminai Library
+              </h1>
+              <p className="text-lg" style={{ color: "#6b5210" }}>
+                Welcome, young writer! Browse the magical bookshelves and discover stories, reviews, letters, drama, and poetry from fellow authors.
+              </p>
+            </div>
+
+            {/* Pixel coins decoration */}
+            <div className="flex gap-2">
+              {[...Array(3)].map((_, i) => (
+                <div
+                  key={i}
+                  className="w-8 h-8 animate-bounce"
+                  style={{
+                    background: "linear-gradient(135deg, #ffd700 0%, #ffaa00 100%)",
+                    border: "3px solid #cc8800",
+                    borderRadius: "50%",
+                    boxShadow: "inset -2px -2px 0 rgba(0,0,0,0.2)",
+                    animationDelay: `${i * 0.2}s`,
+                  }}
+                />
+              ))}
             </div>
           </div>
         </div>
 
-        {/* 文章分类 */}
-        <div className="space-y-6">
-          {/* Story 分类 */}
-          <div className="bg-slate-800/80 backdrop-blur-lg rounded-2xl border-2 border-purple-700/50 shadow-xl overflow-hidden">
-            <button
-              onClick={() => setSelectedType(selectedType === 'story' ? null : 'story')}
-              className="w-full p-6 flex items-center justify-between hover:bg-purple-900/30 transition-all"
-            >
-              <div className="flex items-center gap-4">
-                {selectedType === 'story' ? (
-                  <ChevronDown className="w-6 h-6 text-yellow-400" />
-                ) : (
-                  <ChevronRight className="w-6 h-6 text-yellow-400" />
-                )}
-                <Book className="w-8 h-8 text-yellow-400" />
-                <h2 className="text-2xl font-bold text-yellow-400">Stories</h2>
-                <span className="text-purple-300 text-sm bg-purple-900/50 px-3 py-1 rounded-full">
-                  {groupedArticles.story?.length || 0}
-                </span>
-              </div>
-            </button>
+        {/* Bookshelves grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+          {(Object.keys(TYPE_CONFIGS) as ArticleType[]).map(renderBookShelf)}
+        </div>
 
-            {selectedType === 'story' && (
-              <div className="p-6 pt-0 space-y-4 max-h-[600px] overflow-y-auto">
-                {groupedArticles.story?.length ? (
-                  groupedArticles.story.map((article) => (
-                    <div
-                      key={article.id}
-                      className="bg-slate-900/60 rounded-xl p-5 border border-purple-700/30 hover:border-yellow-500/50 transition-all"
-                    >
-                      <button
-                        onClick={() => toggleArticle(article.id)}
-                        className="w-full text-left flex items-center justify-between mb-2"
-                      >
-                        <div>
-                          <h3 className="text-xl font-bold text-yellow-300 mb-1">{article.title}</h3>
-                          <p className="text-purple-300 text-sm">by {article.author} • {formatDate(article.timestamp) || 'Loading...'}</p>
-                        </div>
-                        {expandedArticles.has(article.id) ? (
-                          <ChevronDown className="w-5 h-5 text-yellow-400" />
-                        ) : (
-                          <ChevronRight className="w-5 h-5 text-yellow-400" />
-                        )}
-                      </button>
-                      {expandedArticles.has(article.id) && (
-                        <>
-                          <div className="mt-4 p-4 bg-slate-950/60 rounded-lg border border-purple-800/30">
-                            <pre className="text-purple-100 whitespace-pre-wrap text-sm leading-relaxed font-serif">
-                              {article.content}
-                            </pre>
-                          </div>
-                          {renderLeaveReview(article, "purple")}
-                        </>
-                      )}
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-purple-400 text-center py-8">No stories yet. Students' creative tales will appear here!</p>
-                )}
-              </div>
-            )}
+        {/* Article list */}
+        {renderArticleList()}
+
+        {/* Stats bar */}
+        <div
+          className="mt-8 p-4 flex items-center justify-center gap-8 flex-wrap"
+          style={{
+            background: "#3d2817",
+            border: "4px solid #5a3d1a",
+            boxShadow: "inset 0 2px 0 rgba(255,255,255,0.1)",
+          }}
+        >
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4" style={{ background: "#7ec850", border: "2px solid #5a9a32" }} />
+            <span className="font-bold" style={{ color: "#e8c547" }}>
+              Total Works: {articles.length}
+            </span>
           </div>
-
-          {/* Book Review 分类 */}
-          <div className="bg-slate-800/80 backdrop-blur-lg rounded-2xl border-2 border-indigo-700/50 shadow-xl overflow-hidden">
-            <button
-              onClick={() => setSelectedType(selectedType === 'bookReview' ? null : 'bookReview')}
-              className="w-full p-6 flex items-center justify-between hover:bg-indigo-900/30 transition-all"
-            >
-              <div className="flex items-center gap-4">
-                {selectedType === 'bookReview' ? (
-                  <ChevronDown className="w-6 h-6 text-blue-400" />
-                ) : (
-                  <ChevronRight className="w-6 h-6 text-blue-400" />
-                )}
-                <FileText className="w-8 h-8 text-blue-400" />
-                <h2 className="text-2xl font-bold text-blue-400">Book Reviews</h2>
-                <span className="text-indigo-300 text-sm bg-indigo-900/50 px-3 py-1 rounded-full">
-                  {groupedArticles.bookReview?.length || 0}
-                </span>
-              </div>
-            </button>
-
-            {selectedType === 'bookReview' && (
-              <div className="p-6 pt-0 space-y-4 max-h-[600px] overflow-y-auto">
-                {groupedArticles.bookReview?.length ? (
-                  groupedArticles.bookReview.map((article) => (
-                    <div
-                      key={article.id}
-                      className="bg-slate-900/60 rounded-xl p-5 border border-indigo-700/30 hover:border-blue-500/50 transition-all"
-                    >
-                      <button
-                        onClick={() => toggleArticle(article.id)}
-                        className="w-full text-left flex items-center justify-between mb-2"
-                      >
-                        <div>
-                          <h3 className="text-xl font-bold text-blue-300 mb-1">{article.title}</h3>
-                          <p className="text-indigo-300 text-sm">by {article.author} • {formatDate(article.timestamp) || 'Loading...'}</p>
-                        </div>
-                        {expandedArticles.has(article.id) ? (
-                          <ChevronDown className="w-5 h-5 text-blue-400" />
-                        ) : (
-                          <ChevronRight className="w-5 h-5 text-blue-400" />
-                        )}
-                      </button>
-                      {expandedArticles.has(article.id) && (
-                        <div className="mt-4 space-y-3">
-                          {article.coverUrl && (
-                            <div className="relative w-32 h-48 mx-auto rounded-lg overflow-hidden border-2 border-indigo-600/50">
-                              <Image
-                                src={article.coverUrl}
-                                alt={article.bookTitle || "Book cover"}
-                                fill
-                                className="object-cover"
-                                unoptimized
-                              />
-                            </div>
-                          )}
-                          <div className="p-4 bg-slate-950/60 rounded-lg border border-indigo-800/30">
-                            <pre className="text-indigo-100 whitespace-pre-wrap text-sm leading-relaxed font-serif">
-                              {article.content}
-                            </pre>
-                          </div>
-                          {renderLeaveReview(article, "indigo")}
-                        </div>
-                      )}
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-indigo-400 text-center py-8">No book reviews yet. Students' thoughtful reviews will appear here!</p>
-                )}
-              </div>
-            )}
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4" style={{ background: "#87ceeb", border: "2px solid #5bc0de" }} />
+            <span className="font-bold" style={{ color: "#87ceeb" }}>
+              Authors: {new Set(articles.map(a => a.author)).size}
+            </span>
           </div>
-
-          {/* Letter 分类 */}
-          <div className="bg-slate-800/80 backdrop-blur-lg rounded-2xl border-2 border-pink-700/50 shadow-xl overflow-hidden">
-            <button
-              onClick={() => setSelectedType(selectedType === 'letter' ? null : 'letter')}
-              className="w-full p-6 flex items-center justify-between hover:bg-pink-900/30 transition-all"
-            >
-              <div className="flex items-center gap-4">
-                {selectedType === 'letter' ? (
-                  <ChevronDown className="w-6 h-6 text-pink-400" />
-                ) : (
-                  <ChevronRight className="w-6 h-6 text-pink-400" />
-                )}
-                <Mail className="w-8 h-8 text-pink-400" />
-                <h2 className="text-2xl font-bold text-pink-400">Letters</h2>
-                <span className="text-pink-300 text-sm bg-pink-900/50 px-3 py-1 rounded-full">
-                  {groupedArticles.letter?.length || 0}
-                </span>
-              </div>
-            </button>
-
-            {selectedType === 'letter' && (
-              <div className="p-6 pt-0 space-y-4 max-h-[600px] overflow-y-auto">
-                {groupedArticles.letter?.length ? (
-                  groupedArticles.letter.map((article) => (
-                    <div
-                      key={article.id}
-                      className="bg-slate-900/60 rounded-xl p-5 border border-pink-700/30 hover:border-pink-500/50 transition-all"
-                    >
-                      <button
-                        onClick={() => toggleArticle(article.id)}
-                        className="w-full text-left flex items-center justify-between mb-2"
-                      >
-                        <div>
-                          <h3 className="text-xl font-bold text-pink-300 mb-1">{article.title}</h3>
-                          {article.occasion && (
-                            <p className="text-pink-400 text-xs mb-1">{article.occasion}</p>
-                          )}
-                          <p className="text-pink-300 text-sm">by {article.author} • {formatDate(article.timestamp) || 'Loading...'}</p>
-                        </div>
-                        {expandedArticles.has(article.id) ? (
-                          <ChevronDown className="w-5 h-5 text-pink-400" />
-                        ) : (
-                          <ChevronRight className="w-5 h-5 text-pink-400" />
-                        )}
-                      </button>
-                      {expandedArticles.has(article.id) && (
-                        <>
-                          <div className="mt-4 p-4 bg-slate-950/60 rounded-lg border border-pink-800/30">
-                            <pre className="text-pink-100 whitespace-pre-wrap text-sm leading-relaxed font-serif" style={{ fontFamily: 'Patrick Hand, cursive' }}>
-                              {article.content}
-                            </pre>
-                          </div>
-                          {renderLeaveReview(article, "pink")}
-                        </>
-                      )}
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-pink-400 text-center py-8">No letters yet. Students' heartfelt letters will appear here!</p>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* Drama 分类 */}
-          <div className="bg-slate-800/80 backdrop-blur-lg rounded-2xl border-2 border-amber-700/50 shadow-xl overflow-hidden">
-            <button
-              onClick={() => setSelectedType(selectedType === 'drama' ? null : 'drama')}
-              className="w-full p-6 flex items-center justify-between hover:bg-amber-900/30 transition-all"
-            >
-              <div className="flex items-center gap-4">
-                {selectedType === 'drama' ? (
-                  <ChevronDown className="w-6 h-6 text-amber-400" />
-                ) : (
-                  <ChevronRight className="w-6 h-6 text-amber-400" />
-                )}
-                <Clapperboard className="w-8 h-8 text-amber-400" />
-                <h2 className="text-2xl font-bold text-amber-400">Drama</h2>
-                <span className="text-amber-300 text-sm bg-amber-900/50 px-3 py-1 rounded-full">
-                  {groupedArticles.drama?.length || 0}
-                </span>
-              </div>
-            </button>
-
-            {selectedType === 'drama' && (
-              <div className="p-6 pt-0 space-y-4 max-h-[600px] overflow-y-auto">
-                {groupedArticles.drama?.length ? (
-                  groupedArticles.drama.map((article) => (
-                    <div
-                      key={article.id}
-                      className="bg-slate-900/60 rounded-xl p-5 border border-amber-700/30 hover:border-amber-500/50 transition-all"
-                    >
-                      <button
-                        onClick={() => toggleArticle(article.id)}
-                        className="w-full text-left flex items-center justify-between mb-2"
-                      >
-                        <div>
-                          <h3 className="text-xl font-bold text-amber-300 mb-1">{article.title}</h3>
-                          <p className="text-amber-300 text-sm">by {article.author} • {formatDate(article.timestamp) || 'Loading...'}</p>
-                        </div>
-                        {expandedArticles.has(article.id) ? (
-                          <ChevronDown className="w-5 h-5 text-amber-400" />
-                        ) : (
-                          <ChevronRight className="w-5 h-5 text-amber-400" />
-                        )}
-                      </button>
-                      {expandedArticles.has(article.id) && (
-                        <>
-                          {article.summary && (
-                            <p className="mt-2 text-amber-200/90 text-sm italic">{article.summary}</p>
-                          )}
-                          <div className="mt-4 p-4 bg-slate-950/60 rounded-lg border border-amber-800/30">
-                            <pre className="text-amber-100 whitespace-pre-wrap text-sm leading-relaxed font-serif">
-                              {article.content}
-                            </pre>
-                          </div>
-                          {renderLeaveReview(article, "purple")}
-                        </>
-                      )}
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-amber-400 text-center py-8">No drama scripts yet. Students' drama works will appear here!</p>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* Poetry 分类 */}
-          <div className="bg-slate-800/80 backdrop-blur-lg rounded-2xl border-2 border-emerald-700/50 shadow-xl overflow-hidden">
-            <button
-              onClick={() => setSelectedType(selectedType === 'poetry' ? null : 'poetry')}
-              className="w-full p-6 flex items-center justify-between hover:bg-emerald-900/30 transition-all"
-            >
-              <div className="flex items-center gap-4">
-                {selectedType === 'poetry' ? (
-                  <ChevronDown className="w-6 h-6 text-emerald-400" />
-                ) : (
-                  <ChevronRight className="w-6 h-6 text-emerald-400" />
-                )}
-                <Feather className="w-8 h-8 text-emerald-400" />
-                <h2 className="text-2xl font-bold text-emerald-400">Poetry</h2>
-                <span className="text-emerald-300 text-sm bg-emerald-900/50 px-3 py-1 rounded-full">
-                  {groupedArticles.poetry?.length || 0}
-                </span>
-              </div>
-            </button>
-
-            {selectedType === 'poetry' && (
-              <div className="p-6 pt-0 space-y-4 max-h-[600px] overflow-y-auto">
-                {groupedArticles.poetry?.length ? (
-                  groupedArticles.poetry.map((article) => (
-                    <div
-                      key={article.id}
-                      className="bg-slate-900/60 rounded-xl p-5 border border-emerald-700/30 hover:border-emerald-500/50 transition-all"
-                    >
-                      <button
-                        onClick={() => toggleArticle(article.id)}
-                        className="w-full text-left flex items-center justify-between mb-2"
-                      >
-                        <div>
-                          <h3 className="text-xl font-bold text-emerald-300 mb-1">{article.title}</h3>
-                          <p className="text-emerald-300 text-sm">by {article.author} • {formatDate(article.timestamp) || 'Loading...'}</p>
-                        </div>
-                        {expandedArticles.has(article.id) ? (
-                          <ChevronDown className="w-5 h-5 text-emerald-400" />
-                        ) : (
-                          <ChevronRight className="w-5 h-5 text-emerald-400" />
-                        )}
-                      </button>
-                      {expandedArticles.has(article.id) && (
-                        <>
-                          <div className="mt-4 p-4 bg-slate-950/60 rounded-lg border border-emerald-800/30">
-                            <pre className="text-emerald-100 whitespace-pre-wrap text-sm leading-relaxed font-serif" style={{ fontFamily: 'Patrick Hand, cursive' }}>
-                              {article.content}
-                            </pre>
-                          </div>
-                          {renderLeaveReview(article, "purple")}
-                        </>
-                      )}
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-emerald-400 text-center py-8">No poems yet. Students' poetry will appear here!</p>
-                )}
-              </div>
-            )}
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4" style={{ background: "#ffd700", border: "2px solid #cc8800" }} />
+            <span className="font-bold" style={{ color: "#ffd700" }}>
+              Categories: 5
+            </span>
           </div>
         </div>
       </div>
+
+      {/* Article modal */}
+      {renderArticleModal()}
+
+      {/* Custom animation styles */}
+      <style jsx>{`
+        @keyframes twinkle {
+          0%, 100% { opacity: 1; transform: scale(1); }
+          50% { opacity: 0.5; transform: scale(0.8); }
+        }
+        .animate-twinkle {
+          animation: twinkle 2s ease-in-out infinite;
+        }
+      `}</style>
     </div>
   )
 }
-
