@@ -686,15 +686,14 @@ Emma`,
           <div className="flex flex-col md:flex-row items-center gap-6">
             {/* Librarian image */}
             <div
-              className="relative w-32 h-32 flex-shrink-0"
-              style={{ border: "4px solid #8b6914" }}
+              className="relative w-40 h-40 flex-shrink-0 overflow-hidden"
+              style={{ border: "4px solid #8b6914", background: "#d9c9a6" }}
             >
               <Image
                 src="/libraryMan.png"
                 alt="Luminai Librarian"
                 fill
-                className="object-contain"
-                style={{ background: "#d9c9a6" }}
+                className="object-cover scale-110"
                 unoptimized
               />
             </div>
