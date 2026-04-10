@@ -71,10 +71,15 @@ export function useGalleryData(options: UseGalleryDataOptions = {}) {
 
   const articles = useMemo(() => {
     const merged = mergeArticleLists(globalArticles, mineArticles)
-    return merged.length > 0
-      ? [...merged, ...EXAMPLE_ARTICLES].sort((a, b) => b.timestamp - a.timestamp)
-      : EXAMPLE_ARTICLES
-  }, [globalArticles, mineArticles])
+    // 只有在“还没拿到远端数据/请求失败”时才展示示例作品，避免数据库为空时误以为没连库
+    const hasRemote =
+      Array.isArray(globalArticles) || (mineKey ? Array.isArray(mineArticles) : false)
+    const hasError = !!(errorGlobal ?? errorMine)
+    if (!hasRemote || hasError) {
+      return EXAMPLE_ARTICLES
+    }
+    return merged.sort((a, b) => b.timestamp - a.timestamp)
+  }, [globalArticles, mineArticles, mineKey, errorGlobal, errorMine])
 
   const groupedArticles = useMemo(
     () =>
