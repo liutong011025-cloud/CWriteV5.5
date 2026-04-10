@@ -420,18 +420,19 @@ export default function Home() {
     editingWorkId,
   ])
 
-  const continuePastJourney = useCallback(() => {
+  const continuePastJourney = useCallback(async () => {
     if (!user?.username || typeof window === "undefined") return
+    const username = user.username
+
+    // 1) 优先：恢复“上次退出的页面快照”（最符合“从哪个页面退出就回到哪个页面”）
     try {
-      const raw = localStorage.getItem(RESUME_KEY(user.username))
+      const raw = localStorage.getItem(RESUME_KEY(username))
       if (!raw) {
-        toast.error("No past journey found yet.")
-        return
+        throw new Error("no_local_snapshot")
       }
       const snap = JSON.parse(raw) as JourneyResumeSnapshot
-      if (!snap || snap.username !== user.username || !snap.stage) {
-        toast.error("Past journey data is invalid.")
-        return
+      if (!snap || snap.username !== username || !snap.stage) {
+        throw new Error("invalid_local_snapshot")
       }
       setJourneySelection(snap.journeySelection ?? null)
       setWritingAssessment(snap.writingAssessment ?? null)
@@ -449,9 +450,7 @@ export default function Home() {
           activeSceneIndex: (snap.drama?.activeSceneIndex as any) ?? prev.activeSceneIndex,
           dramaBook: (snap.drama?.dramaBook as any) ?? prev.dramaBook,
         }))
-      } catch {
-        // ignore
-      }
+      } catch {}
       try {
         usePoetryStore.setState((prev) => ({
           ...prev,
@@ -465,11 +464,89 @@ export default function Home() {
           showedOriginalityNotice: (snap.poetry?.showedOriginalityNotice as any) ?? prev.showedOriginalityNotice,
           phase: (snap.poetry?.phase as any) ?? prev.phase,
         }))
-      } catch {
-        // ignore
-      }
+      } catch {}
 
       setStage(snap.stage as any)
+      return
+    } catch {
+      // ignore, fallback to server
+    }
+
+    // 2) 兜底：从数据库取最新 interaction（可覆盖“未完成写作”的场景）
+    try {
+      const res = await fetch(`/api/latest-progress?user_id=${encodeURIComponent(username)}`)
+      const data = await res.json()
+      const i = data?.interaction
+      if (!res.ok || !i) {
+        toast.error("No past journey found yet.")
+        return
+      }
+
+      // story flow
+      if (["character", "plot", "structure", "writing", "review", "storyEdit"].includes(i.stage)) {
+        setStoryState({
+          character: (i.character || i.input?.character) as any,
+          plot: (i.plot || i.input?.plot) as any,
+          structure: (i.structure || i.input?.structure) as any,
+          story: (i.story || i.output?.story || "") as any,
+        })
+        setStage(i.stage as any)
+        return
+      }
+
+      // book review flow
+      if (
+        [
+          "bookReviewWelcome",
+          "bookReviewTypeSelection",
+          "bookSelection",
+          "bookSelectionNoAi",
+          "bookReviewLoading",
+          "bookReviewWriting",
+          "bookReviewWritingNoAi",
+          "bookReviewComplete",
+          "bookReviewCompleteNoAi",
+          "bookReviewEdit",
+        ].includes(i.stage)
+      ) {
+        setBookReviewState({
+          reviewType: (i.reviewType || i.input?.reviewType || null) as any,
+          bookTitle: (i.bookTitle || i.input?.bookTitle || null) as any,
+          structure: (i.structure || i.input?.structure || null) as any,
+          review: (i.review || i.output?.review || "") as any,
+          bookCoverUrl: (i.bookCoverUrl || i.output?.bookCoverUrl) as any,
+          bookSummary: (i.bookSummary || i.output?.bookSummary) as any,
+        })
+        setStage(i.stage as any)
+        return
+      }
+
+      // letter flow
+      if (["letterAdventure", "letterGame", "letterPuzzle", "letterComplete", "letterEdit"].includes(i.stage)) {
+        setLetterState({
+          recipient: (i.recipient || i.input?.recipient || null) as any,
+          occasion: (i.occasion || i.input?.occasion || null) as any,
+          guidance: (i.guidance || i.output?.guidance || null) as any,
+          readerImageUrl: (i.readerImageUrl || i.output?.readerImageUrl || null) as any,
+          sections: (i.sections || i.input?.sections || []) as any,
+          letter: (i.letter || i.output?.letter || "") as any,
+        })
+        setStage(i.stage as any)
+        return
+      }
+
+      // drama / poetry
+      if (["dramaWriting", "dramaBook"].includes(i.stage)) {
+        setStage(i.stage as any)
+        return
+      }
+      if (["poetryWriting", "poetryForm", "poetryTopic", "poetryEditor", "poetryReview"].includes(i.stage)) {
+        setStage(i.stage as any)
+        return
+      }
+
+      // unknown stage: go home
+      setStage("home")
     } catch {
       toast.error("Failed to continue past journey.")
     }
