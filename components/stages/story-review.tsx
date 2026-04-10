@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useRef, useState, type ReactNode } from "react"
 import { Button } from "@/components/ui/button"
 import type { Language, StoryState } from "@/app/page"
 import StageHeader from "@/components/stage-header"
@@ -233,7 +233,7 @@ export default function StoryReview({ storyState, onReset, onEdit, onBack, userI
       parts.push({ text: currentStory.substring(lastIndex), isError: false })
     }
 
-    const result: JSX.Element[] = []
+    const result: ReactNode[] = []
 
     parts.forEach((part, partIndex) => {
       const lines = part.text.split('\n')
@@ -554,6 +554,118 @@ Created with Story Writer
                 Story Summary
               </h3>
               <div className="space-y-2">
+                {/* AI评分（像素风星星）- 放在最上面 */}
+                <div
+                  className="p-4 relative overflow-hidden"
+                  style={{
+                    background: "linear-gradient(180deg, #fff 0%, #f5e6c8 100%)",
+                    border: "3px solid #8b6914",
+                    boxShadow: "inset 2px 2px 0 rgba(255,255,255,0.6), 3px 3px 0 rgba(0,0,0,0.15)",
+                  }}
+                >
+                  <div className="flex items-center justify-between gap-3 mb-2">
+                    <p className="text-sm font-extrabold" style={{ color: "#5a4a2a" }}>
+                      AI Score
+                    </p>
+                    <span className="ai-score-sparkle text-lg" aria-hidden="true">✦</span>
+                  </div>
+                  {aiRatingLoading && (
+                    <div className="space-y-2">
+                      <p className="text-sm font-bold" style={{ color: "#6b5210" }}>Scoring...</p>
+                      <div className="h-2 w-full" style={{ background: "#d9c9a6", border: "2px solid #8b6914" }}>
+                        <div className="ai-score-bar h-full" style={{ background: "#7ec850" }} />
+                      </div>
+                    </div>
+                  )}
+                  {!aiRatingLoading && aiScores && (
+                    <div className="space-y-2">
+                      <div className="space-y-1.5">
+                        {(Object.keys(aiScores) as Array<keyof typeof aiScores>).map((k) => (
+                          <div key={String(k)} className="flex items-center justify-between gap-3">
+                            <span className="text-xs font-extrabold" style={{ color: "#6b5210" }}>
+                              {String(k)}
+                            </span>
+                            <div className="ai-star-wrap">
+                              <PixelStarRating value={aiScores[k] as number} pixel={3} gap={6} />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {!!aiPraise && (
+                        <div
+                          className="mt-2 p-3"
+                          style={{
+                            background: "#d4e8b4",
+                            border: "2px solid #5a9a32",
+                            boxShadow: "inset 2px 2px 0 rgba(255,255,255,0.35)",
+                          }}
+                        >
+                          <p className="text-sm font-bold leading-relaxed" style={{ color: "#2d5016" }}>
+                            {aiPraise}
+                          </p>
+                        </div>
+                      )}
+
+                      {aiImprovements.length > 0 && (
+                        <div
+                          className="mt-2 p-3 ai-tips"
+                          style={{
+                            background: "#c5e4f5",
+                            border: "2px solid #5bc0de",
+                            boxShadow: "inset 2px 2px 0 rgba(255,255,255,0.35)",
+                          }}
+                        >
+                          <p className="text-sm font-extrabold mb-2" style={{ color: "#1a4a6a" }}>
+                            Tips to improve
+                          </p>
+                          <div className="space-y-1.5">
+                            {aiImprovements.slice(0, 4).map((tip, idx) => (
+                              <div key={idx} className="flex gap-2 items-start ai-tip-line">
+                                <span className="mt-0.5" aria-hidden="true" style={{ color: "#e8c547" }}>✶</span>
+                                <p className="text-sm leading-relaxed" style={{ color: "#2a5a7a" }}>
+                                  {tip}
+                                </p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      <style jsx>{`
+                        .ai-score-sparkle {
+                          color: #e8c547;
+                          text-shadow: 2px 2px 0 rgba(0,0,0,0.25);
+                          animation: sparkle 1.6s ease-in-out infinite;
+                        }
+                        .ai-score-bar {
+                          width: 35%;
+                          animation: loadingbar 1.05s ease-in-out infinite;
+                        }
+                        .ai-tip-line {
+                          animation: tipin 420ms ease both;
+                        }
+                        .ai-tip-line:nth-child(2) { animation-delay: 70ms; }
+                        .ai-tip-line:nth-child(3) { animation-delay: 140ms; }
+                        .ai-tip-line:nth-child(4) { animation-delay: 210ms; }
+                        @keyframes sparkle {
+                          0%, 100% { transform: translateY(0) rotate(0deg); opacity: 0.9; }
+                          50% { transform: translateY(-2px) rotate(6deg); opacity: 1; }
+                        }
+                        @keyframes loadingbar {
+                          0% { transform: translateX(-10%); width: 20%; }
+                          50% { transform: translateX(60%); width: 40%; }
+                          100% { transform: translateX(-10%); width: 20%; }
+                        }
+                        @keyframes tipin {
+                          from { opacity: 0; transform: translateY(3px); }
+                          to { opacity: 1; transform: translateY(0); }
+                        }
+                      `}</style>
+                    </div>
+                  )}
+                </div>
+
                 <div className="p-2.5" style={{ background: "#d4e8b4", border: "3px solid #5a9a32" }}>
                   <p className="text-xs font-bold mb-0.5" style={{ color: "#3d5a1f" }}>Character</p>
                   <p className="text-sm font-extrabold" style={{ color: "#2d5016" }}>{storyState.character?.name}</p>
@@ -567,39 +679,6 @@ Created with Story Writer
                 <div className="p-2.5" style={{ background: "#f5e6c8", border: "3px solid #c4a020" }}>
                   <p className="text-xs font-bold mb-0.5" style={{ color: "#8b6914" }}>Setting</p>
                   <p className="text-sm font-extrabold" style={{ color: "#6b5210" }}>{storyState.plot?.setting}</p>
-                </div>
-                {/* AI评分（像素风星星） */}
-                <div className="p-3" style={{ background: "#fff", border: "3px solid #8b6914" }}>
-                  <p className="text-xs font-bold mb-1" style={{ color: "#5a4a2a" }}>AI Score</p>
-                  {aiRatingLoading && (
-                    <p className="text-xs font-bold" style={{ color: "#6b5210" }}>Scoring...</p>
-                  )}
-                  {!aiRatingLoading && aiScores && (
-                    <div className="space-y-1">
-                      {(Object.keys(aiScores) as Array<keyof typeof aiScores>).map((k) => (
-                        <div key={String(k)} className="flex items-center justify-between gap-2">
-                          <span className="text-xs font-bold" style={{ color: "#6b5210" }}>
-                            {String(k)}
-                          </span>
-                          <PixelStarRating value={aiScores[k] as number} pixel={2} gap={5} />
-                        </div>
-                      ))}
-                      {!!aiPraise && (
-                        <div className="mt-2 text-xs font-bold" style={{ color: "#3d5a1f" }}>
-                          {aiPraise}
-                        </div>
-                      )}
-                      {aiImprovements.length > 0 && (
-                        <div className="mt-2 space-y-1">
-                          {aiImprovements.slice(0, 3).map((tip, idx) => (
-                            <div key={idx} className="text-xs" style={{ color: "#5a4a2a" }}>
-                              - {tip}
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
                 </div>
                 <div className="p-2.5" style={{ background: "#e8d4f5", border: "3px solid #9b59b6" }}>
                   <p className="text-xs font-bold mb-0.5" style={{ color: "#7b3f96" }}>Type</p>
