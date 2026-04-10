@@ -47,6 +47,7 @@ interface HomePageProps {
   onStartBookReview?: () => void
   onStartLetter?: () => void
   onStartPlan?: () => void
+  onContinuePastJourney?: () => void
   onVisitFarm?: () => void
   onStartWrite?: () => void
   onViewAbout?: () => void
@@ -66,18 +67,20 @@ const translations = {
     subtitleTop: "The Future of Creative Writing",
     subtitleBottom: "in the AI Era",
     tagline: "Unleash Creativity, Empower Expression",
-    startButton: "Start Your Journey",
+    startButton: "Start a new journey",
+    continueButton: "Continue past journey",
   },
   zh: {
     welcome: "歡迎來到",
     subtitleTop: "創意寫作的未來",
     subtitleBottom: "在 AI 時代",
     tagline: "釋放創意，賦能表達",
-    startButton: "開始你的旅程",
+    startButton: "开始新的旅程",
+    continueButton: "继续上次旅程",
   },
 }
 
-export default function HomePage({ language = "en", onStartPlan, onVisitFarm }: HomePageProps) {
+export default function HomePage({ language = "en", onStartPlan, onContinuePastJourney, onVisitFarm }: HomePageProps) {
   const [isLoaded, setIsLoaded] = useState(false)
   const [activeGenre, setActiveGenre] = useState<string | null>(null)
   const [isPixelating, setIsPixelating] = useState(false)
@@ -87,6 +90,7 @@ export default function HomePage({ language = "en", onStartPlan, onVisitFarm }: 
   const shaderContainerRef = useRef<HTMLDivElement>(null)
   const pixelRootRef = useRef<HTMLDivElement>(null)
   const startButtonRef = useRef<HTMLButtonElement>(null)
+  const continueButtonRef = useRef<HTMLButtonElement>(null)
   const farmButtonRef = useRef<HTMLButtonElement>(null)
   const startJourneyAudioRef = useRef<HTMLAudioElement | null>(null)
   const lastStartSoundAtRef = useRef(0)
@@ -214,6 +218,11 @@ export default function HomePage({ language = "en", onStartPlan, onVisitFarm }: 
   const handleStartJourneyClick = () => {
     playStartJourneySound()
     handlePixelJourney(startButtonRef.current, onStartPlan)
+  }
+
+  const handleContinuePastJourneyClick = () => {
+    playStartJourneySound()
+    handlePixelJourney(continueButtonRef.current, onContinuePastJourney)
   }
 
   const handleVisitFarmClick = () => {
@@ -553,11 +562,134 @@ export default function HomePage({ language = "en", onStartPlan, onVisitFarm }: 
               transition={{ duration: 0.8, delay: 2.5 }}
               className="mt-10"
             >
-              <div className="flex flex-col items-center justify-center gap-4 sm:flex-row sm:gap-6">
+              <div className="flex flex-col items-center justify-center gap-4">
+                {/* Start a new journey */}
+                {pixelPhase >= 1 ? (
+                  <motion.button
+                    ref={startButtonRef}
+                    data-pixel-item
+                    data-pixel-kind="button"
+                    disabled
+                    className="focus:outline-none disabled:cursor-not-allowed"
+                    initial={{ scale: 1 }}
+                    animate={{
+                      scale: [1, 1.1, 1.05],
+                      boxShadow: [
+                        "4px 4px 0 rgba(0,0,0,0.3)",
+                        "6px 6px 0 rgba(0,0,0,0.4)",
+                        "8px 8px 0 rgba(0,0,0,0.3)",
+                      ],
+                    }}
+                    transition={{ duration: 0.5 }}
+                    style={{
+                      background: "linear-gradient(180deg, #6fcf6f 0%, #4ca84c 100%)",
+                      border: "4px solid #3d8a3d",
+                      boxShadow:
+                        "inset -4px -4px 0 rgba(0,0,0,0.25), inset 4px 4px 0 rgba(255,255,255,0.25), 6px 6px 0 rgba(0,0,0,0.3)",
+                      padding: "20px 48px",
+                      imageRendering: "pixelated",
+                    }}
+                  >
+                    <span
+                      className="flex items-center gap-3 text-xl font-bold whitespace-nowrap text-white md:text-2xl lg:text-3xl"
+                      style={{ textShadow: "2px 2px 0 rgba(0,0,0,0.3)" }}
+                    >
+                      {t.startButton}
+                      <span className="text-2xl md:text-3xl lg:text-4xl">&#9992;</span>
+                    </span>
+                  </motion.button>
+                ) : (
+                  <button
+                    ref={startButtonRef}
+                    onPointerDown={playStartJourneySound}
+                    onClick={handleStartJourneyClick}
+                    disabled={isPixelating}
+                    data-pixel-item
+                    data-pixel-kind="button"
+                    data-click-sound="start-journey"
+                    className="group rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70 disabled:cursor-not-allowed transition-transform duration-200 hover:scale-[1.04] active:scale-[1.0]"
+                  >
+                    <GlassSurface
+                      width="auto"
+                      height="auto"
+                      borderRadius={50}
+                      borderWidth={0.08}
+                      brightness={55}
+                      opacity={0.85}
+                      blur={12}
+                      displace={0.3}
+                    >
+                      <span className="flex items-center gap-3 px-12 py-5 text-xl font-bold whitespace-nowrap text-white md:px-16 md:py-6 md:text-2xl lg:text-3xl transition-all duration-200 group-hover:brightness-110">
+                        {t.startButton}
+                        <span className="text-2xl md:text-3xl lg:text-4xl">&#9992;</span>
+                      </span>
+                    </GlassSurface>
+                  </button>
+                )}
+
+                {/* Continue past journey */}
+                {pixelPhase >= 1 ? (
+                  <motion.button
+                    ref={continueButtonRef}
+                    data-pixel-item
+                    data-pixel-kind="button"
+                    disabled
+                    className="focus:outline-none disabled:cursor-not-allowed"
+                    initial={{ scale: 1 }}
+                    animate={{ scale: [1, 1.06, 1.03] }}
+                    transition={{ duration: 0.5 }}
+                    style={{
+                      background: "linear-gradient(180deg, #6aa8ff 0%, #3b82f6 100%)",
+                      border: "4px solid #1d4ed8",
+                      boxShadow:
+                        "inset -4px -4px 0 rgba(0,0,0,0.25), inset 4px 4px 0 rgba(255,255,255,0.25), 6px 6px 0 rgba(0,0,0,0.3)",
+                      padding: "18px 44px",
+                      imageRendering: "pixelated",
+                    }}
+                  >
+                    <span
+                      className="flex items-center gap-3 text-xl font-bold whitespace-nowrap text-white md:text-2xl lg:text-3xl"
+                      style={{ textShadow: "2px 2px 0 rgba(0,0,0,0.3)" }}
+                    >
+                      {t.continueButton}
+                      <span className="text-2xl md:text-3xl lg:text-4xl">⏮️</span>
+                    </span>
+                  </motion.button>
+                ) : (
+                  <button
+                    ref={continueButtonRef}
+                    onPointerDown={playStartJourneySound}
+                    onClick={handleContinuePastJourneyClick}
+                    disabled={isPixelating}
+                    data-pixel-item
+                    data-pixel-kind="button"
+                    data-click-sound="continue-journey"
+                    className="group rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70 disabled:cursor-not-allowed transition-transform duration-200 hover:scale-[1.04] active:scale-[1.0]"
+                  >
+                    <GlassSurface
+                      width="auto"
+                      height="auto"
+                      borderRadius={50}
+                      borderWidth={0.08}
+                      brightness={55}
+                      opacity={0.85}
+                      blur={12}
+                      displace={0.3}
+                    >
+                      <span className="flex items-center gap-3 px-10 py-5 text-xl font-bold whitespace-nowrap text-white md:px-14 md:py-6 md:text-2xl lg:text-3xl transition-all duration-200 group-hover:brightness-110">
+                        {t.continueButton}
+                        <span className="text-2xl md:text-3xl lg:text-4xl">⏮️</span>
+                      </span>
+                    </GlassSurface>
+                  </button>
+                )}
+
                 {/* Visit my farm */}
                 {pixelPhase >= 1 ? (
                   <motion.button
                     ref={farmButtonRef}
+                    data-pixel-item
+                    data-pixel-kind="button"
                     disabled
                     className="focus:outline-none disabled:cursor-not-allowed"
                     initial={{ scale: 1 }}
@@ -591,55 +723,6 @@ export default function HomePage({ language = "en", onStartPlan, onVisitFarm }: 
                       <span className="flex items-center gap-3 px-10 py-5 text-xl font-bold whitespace-nowrap text-white md:px-14 md:py-6 md:text-2xl lg:text-3xl transition-all duration-200 group-hover:brightness-110">
                         Visit my farm
                         <span className="text-2xl md:text-3xl lg:text-4xl">🏠</span>
-                      </span>
-                    </GlassSurface>
-                  </button>
-                )}
-
-                {/* Start journey */}
-                {pixelPhase >= 1 ? (
-                  <motion.button
-                    ref={startButtonRef}
-                    disabled
-                    className="focus:outline-none disabled:cursor-not-allowed"
-                    initial={{ scale: 1 }}
-                    animate={{
-                      scale: [1, 1.1, 1.05],
-                      boxShadow: [
-                        "4px 4px 0 rgba(0,0,0,0.3)",
-                        "6px 6px 0 rgba(0,0,0,0.4)",
-                        "8px 8px 0 rgba(0,0,0,0.3)",
-                      ],
-                    }}
-                    transition={{ duration: 0.5 }}
-                    style={{
-                      background: "linear-gradient(180deg, #6fcf6f 0%, #4ca84c 100%)",
-                      border: "4px solid #3d8a3d",
-                      boxShadow: "inset -4px -4px 0 rgba(0,0,0,0.25), inset 4px 4px 0 rgba(255,255,255,0.25), 6px 6px 0 rgba(0,0,0,0.3)",
-                      padding: "20px 48px",
-                      imageRendering: "pixelated",
-                    }}
-                  >
-                    <span className="flex items-center gap-3 text-xl font-bold whitespace-nowrap text-white md:text-2xl lg:text-3xl" style={{ textShadow: "2px 2px 0 rgba(0,0,0,0.3)" }}>
-                      {t.startButton}
-                      <span className="text-2xl md:text-3xl lg:text-4xl">&#9992;</span>
-                    </span>
-                  </motion.button>
-                ) : (
-                  <button
-                    ref={startButtonRef}
-                    onPointerDown={playStartJourneySound}
-                    onClick={handleStartJourneyClick}
-                    disabled={isPixelating}
-                    data-pixel-item
-                    data-pixel-kind="button"
-                    data-click-sound="start-journey"
-                    className="group rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70 disabled:cursor-not-allowed transition-transform duration-200 hover:scale-[1.04] active:scale-[1.0]"
-                  >
-                    <GlassSurface width="auto" height="auto" borderRadius={50} borderWidth={0.08} brightness={55} opacity={0.85} blur={12} displace={0.3}>
-                      <span className="flex items-center gap-3 px-12 py-5 text-xl font-bold whitespace-nowrap text-white md:px-16 md:py-6 md:text-2xl lg:text-3xl transition-all duration-200 group-hover:brightness-110">
-                        {t.startButton}
-                        <span className="text-2xl md:text-3xl lg:text-4xl">&#9992;</span>
                       </span>
                     </GlassSurface>
                   </button>
