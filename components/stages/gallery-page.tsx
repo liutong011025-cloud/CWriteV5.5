@@ -1,28 +1,11 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import Image from "next/image"
-import { BookOpen, Book, Mail, FileText, ChevronDown, ChevronRight, ArrowLeft, MessageSquare, Clapperboard, Feather, X } from "lucide-react"
+import { Book, Mail, FileText, Clapperboard, Feather, X } from "lucide-react"
 import { toast } from "sonner"
-
-type ArticleType = "story" | "bookReview" | "letter" | "drama" | "poetry"
-
-interface Article {
-  id: string
-  title: string
-  author: string
-  type: ArticleType
-  content: string
-  timestamp: number
-  coverUrl?: string
-  recipient?: string
-  occasion?: string
-  bookTitle?: string
-  summary?: string
-  form?: string
-  topic?: string
-}
+import { useGalleryData, type ArticleType, type Article } from "@/lib/use-gallery-data"
 
 interface GalleryPageProps {
   currentUser?: string | null
@@ -88,190 +71,17 @@ const TYPE_CONFIGS = {
 export default function GalleryPage({ currentUser = null, currentUserRole = null, fromEdit = false, editType, onBackToEdit }: GalleryPageProps) {
   const [selectedType, setSelectedType] = useState<ArticleType | null>(null)
   const [expandedArticle, setExpandedArticle] = useState<Article | null>(null)
-  const [interactions, setInteractions] = useState<any[]>([])
   const [mounted, setMounted] = useState(false)
   const [reviewContent, setReviewContent] = useState<Record<string, string>>({})
   const [reviewSubmitting, setReviewSubmitting] = useState<string | null>(null)
   const [hoveredShelf, setHoveredShelf] = useState<ArticleType | null>(null)
 
-  // Pre-fetch interactions on mount for faster loading
-  const fetchInteractions = useCallback(async () => {
-    try {
-      const response = await fetch('/api/interactions')
-      const data = await response.json()
-      setInteractions(data.interactions || [])
-    } catch (error) {
-      console.error("Error fetching interactions:", error)
-    }
-  }, [])
+  // Use SWR hook for pre-cached data (preloaded when app starts)
+  const { articles, groupedArticles, isLoading } = useGalleryData()
 
   useEffect(() => {
     setMounted(true)
-    fetchInteractions()
-    const interval = setInterval(fetchInteractions, 10000) // Reduced frequency
-    return () => clearInterval(interval)
-  }, [fetchInteractions])
-
-  // Extract articles from interactions
-  const extractArticles = useCallback((): Article[] => {
-    const articles: Article[] = []
-
-    // Stories
-    interactions
-      .filter(i => i.story && (i.stage === 'review' || i.story.trim().length > 0))
-      .forEach((i) => {
-        const story = typeof i.story === 'string' ? i.story : (i.output?.story || '')
-        if (story.trim()) {
-          articles.push({
-            id: `story-${i.user_id}-${i.timestamp}`,
-            title: `${i.character?.name || 'Unknown'}'s Adventure`,
-            author: i.user_id,
-            type: 'story',
-            content: story,
-            timestamp: i.timestamp,
-          })
-        }
-      })
-
-    // Book Reviews
-    interactions
-      .filter(i => {
-        const hasReview = i.review && (typeof i.review === 'string' ? i.review.trim().length > 0 : false)
-        const isCompleteStage = i.stage === 'bookReviewComplete' || i.stage === 'bookReviewCompleteNoAi'
-        return hasReview || isCompleteStage
-      })
-      .forEach((i) => {
-        const review = typeof i.review === 'string' ? i.review : (i.output?.review || i.data?.review || '')
-        const reviewText = review.trim()
-        if (reviewText && reviewText.length > 50) {
-          articles.push({
-            id: `review-${i.user_id}-${i.timestamp || Date.now()}`,
-            title: `${i.reviewType || i.data?.reviewType || 'Book'} Review: ${i.bookTitle || i.data?.bookTitle || 'Unknown Book'}`,
-            author: i.user_id,
-            type: 'bookReview',
-            content: review,
-            timestamp: i.timestamp || Date.now(),
-            bookTitle: i.bookTitle || i.data?.bookTitle,
-            coverUrl: i.bookCoverUrl || i.data?.bookCoverUrl,
-          })
-        }
-      })
-
-    // Letters
-    interactions
-      .filter(i => i.letter && (i.stage === 'letterComplete' || i.letter.trim().length > 0))
-      .forEach((i) => {
-        const letter = typeof i.letter === 'string' ? i.letter : (i.output?.letter || '')
-        if (letter.trim()) {
-          articles.push({
-            id: `letter-${i.user_id}-${i.timestamp}`,
-            title: `Letter to ${i.recipient || 'Someone'}`,
-            author: i.user_id,
-            type: 'letter',
-            content: letter,
-            timestamp: i.timestamp,
-            recipient: i.recipient,
-            occasion: i.occasion,
-          })
-        }
-      })
-
-    // Drama
-    interactions
-      .filter(i => i.drama && (i.stage === 'dramaBook' || (typeof i.drama === 'string' && i.drama.trim().length > 0)))
-      .forEach((i) => {
-        const drama = typeof i.drama === 'string' ? i.drama : ''
-        if (drama.trim()) {
-          articles.push({
-            id: `drama-${i.user_id}-${i.timestamp}`,
-            title: i.dramaTitle || 'Untitled Drama',
-            author: i.user_id,
-            type: 'drama',
-            content: drama,
-            timestamp: i.timestamp,
-            summary: i.dramaSummary,
-          })
-        }
-      })
-
-    // Poetry
-    interactions
-      .filter(i => i.poetry && (typeof i.poetry === 'string' && i.poetry.trim().length > 0))
-      .forEach((i) => {
-        const poetry = typeof i.poetry === 'string' ? i.poetry : ''
-        if (poetry.trim()) {
-          articles.push({
-            id: `poetry-${i.user_id}-${i.timestamp}`,
-            title: [i.poetryForm, i.poetryTopic].filter(Boolean).join(' — ') || 'Poem',
-            author: i.user_id,
-            type: 'poetry',
-            content: poetry,
-            timestamp: i.timestamp,
-            form: i.poetryForm,
-            topic: i.poetryTopic,
-          })
-        }
-      })
-
-    // Example articles
-    const now = mounted ? Date.now() : 1704067200000
-    const examples: Article[] = [
-      {
-        id: 'example-story-1',
-        title: "The Brave Little Dragon",
-        author: "libraryman",
-        type: 'story',
-        content: `Once upon a time, there was a little dragon named Sparkle who was afraid of fire. All the other dragons laughed at him because dragons are supposed to breathe fire, but Sparkle couldn't.
-
-One day, Sparkle found a lost kitten in the forest. The kitten was cold and scared. Sparkle wanted to help, but he didn't know how. Suddenly, he felt a warm feeling in his belly. It was his first fire! He breathed a gentle flame to keep the kitten warm.
-
-The other dragons saw how brave Sparkle was and stopped laughing. Sparkle learned that being different is okay, and helping others is what truly makes you brave.`,
-        timestamp: now - 86400000,
-      },
-      {
-        id: 'example-review-1',
-        title: "Book Review: The Magic Treehouse",
-        author: "libraryman",
-        type: 'bookReview',
-        content: `The Magic Treehouse is an amazing adventure book! Jack and Annie discover a magical treehouse filled with books. When they point to a picture in a book, the treehouse spins and takes them to that place!
-
-I loved reading about their adventures in ancient Egypt and meeting mummies. The book is exciting and teaches you about history too. I recommend this book to kids who love adventure and magic!`,
-        timestamp: now - 172800000,
-        bookTitle: "The Magic Treehouse",
-      },
-      {
-        id: 'example-letter-1',
-        title: "Letter to Grandma",
-        author: "libraryman",
-        type: 'letter',
-        content: `Dear Grandma,
-
-Hello! How are you? I miss you so much!
-
-I'm writing to tell you about my summer vacation. I went to the beach with my family and built the biggest sandcastle ever! We found so many pretty shells.
-
-I hope to see you soon! Thank you for the birthday present you sent me. I love it!
-
-Love,
-Emma`,
-        timestamp: now - 259200000,
-        recipient: "Grandma",
-        occasion: "Sharing summer news",
-      },
-    ]
-
-    return [...articles, ...examples].sort((a, b) => b.timestamp - a.timestamp)
-  }, [interactions, mounted])
-
-  const articles = extractArticles()
-
-  const groupedArticles = articles.reduce((acc, article) => {
-    if (!acc[article.type]) {
-      acc[article.type] = []
-    }
-    acc[article.type].push(article)
-    return acc
-  }, {} as Record<ArticleType, Article[]>)
+  }, [])
 
   const formatDate = (timestamp: number) => {
     if (!mounted) return ''
