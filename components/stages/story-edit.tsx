@@ -9,6 +9,7 @@ import { Sparkles, Save, ArrowLeft } from "lucide-react"
 import Image from "next/image"
 import type { Language, StoryState } from "@/app/page"
 import { getCurrentLevel } from "@/lib/current-level"
+import { CheckCircle2, Loader2 } from "lucide-react"
 
 interface StoryEditProps {
   language: Language
@@ -32,6 +33,7 @@ export default function StoryEdit({
   const [editedStory, setEditedStory] = useState(storyState.story || "")
   const [originalStory, setOriginalStory] = useState(storyState.story || "")
   const [isSaving, setIsSaving] = useState(false)
+  const [showUploadDialog, setShowUploadDialog] = useState(false)
   const [aiSuggestion, setAiSuggestion] = useState<string | null>(null)
   const [isLoadingSuggestion, setIsLoadingSuggestion] = useState(false)
   const lastModifiedRef = useRef<string>("")
@@ -129,6 +131,7 @@ export default function StoryEdit({
       if (data.success) {
         toast.success("Story updated successfully! ✨")
         onSave(updatedStoryState)
+        setShowUploadDialog(false)
       } else {
         toast.error("Failed to save story")
       }
@@ -140,9 +143,63 @@ export default function StoryEdit({
     }
   }
 
+  const handleClickSave = () => {
+    // 保存前先确认是否上传到 Luminai Library（隐私管理）
+    setShowUploadDialog(true)
+  }
+
   return (
     <div className="min-h-screen py-8 px-6 bg-gradient-to-br from-indigo-100 via-purple-50 via-pink-50 to-orange-50 relative" style={{ paddingTop: '120px', paddingBottom: '120px' }}>
       <StageHeader language={language} />
+
+      {/* 上传确认弹窗 */}
+      {showUploadDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={() => setShowUploadDialog(false)}>
+          <div className="relative pixel-panel p-8 max-w-md w-full mx-4 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="text-center">
+              <div className="mb-6">
+                <Sparkles className="w-16 h-16 mx-auto mb-4 animate-pulse" style={{ color: "#e8c547" }} />
+                <h2 className="text-3xl font-bold mb-2 pixel-text" style={{ color: "#6b5210" }}>Upload to Luminai Library?</h2>
+                <p className="text-lg pixel-text" style={{ color: "#5a4a2a" }}>
+                  Do you want to upload your updated story to Luminai Library?
+                </p>
+              </div>
+              <div className="flex gap-4 justify-center">
+                <Button
+                  onClick={handleSave}
+                  disabled={isSaving}
+                  className="pixel-btn pixel-btn-green shadow-lg py-3 px-8 text-lg font-bold hover:scale-105 transition-all disabled:opacity-50"
+                >
+                  {isSaving ? (
+                    <>
+                      <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                      Uploading...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="w-5 h-5 mr-2" />
+                      Yes, Upload
+                    </>
+                  )}
+                </Button>
+                <Button
+                  onClick={() => {
+                    setShowUploadDialog(false)
+                    // 本地先更新（不上传）
+                    onSave({ ...storyState, story: editedStory })
+                    toast.success("Saved locally. You can upload later.")
+                  }}
+                  disabled={isSaving}
+                  variant="outline"
+                  className="pixel-btn pixel-btn-wood shadow-lg font-bold py-3 px-8 text-lg hover:scale-105 transition-all disabled:opacity-50"
+                >
+                  Maybe Later
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       
       <div className="max-w-5xl mx-auto">
         <div className="mb-6">
@@ -267,7 +324,7 @@ export default function StoryEdit({
             {/* 保存按钮 */}
             <div className="flex gap-4 mt-6">
               <Button
-                onClick={handleSave}
+                onClick={handleClickSave}
                 disabled={isSaving || editedStory === originalStory}
                 className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white border-0 shadow-xl py-6 text-lg font-bold disabled:opacity-50"
               >
