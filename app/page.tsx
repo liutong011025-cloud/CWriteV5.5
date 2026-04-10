@@ -55,6 +55,7 @@ import {
   VALUES_CHECK_STAGES,
 } from "@/lib/cagent-context"
 import { toast } from "sonner"
+import { preloadGalleryData } from "@/lib/use-gallery-data"
 
 export type Language = "en" | "zh"
 
@@ -658,6 +659,12 @@ export default function Home() {
       }
     })
     return () => { cancelled = true }
+  }, [user?.username])
+
+  // 登录后后台预取图书馆数据，点击 Luminai Library 时 SWR 通常已有缓存
+  useEffect(() => {
+    if (!user?.username) return
+    preloadGalleryData()
   }, [user?.username])
 
   // Refetch and update header when profile/reviews change (e.g. after marking reviews read)
