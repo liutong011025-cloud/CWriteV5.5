@@ -2,11 +2,16 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { extractArticlesFromInteractions } from "@/lib/gallery-articles"
 
-const DEFAULT_LIMIT = 200
-const MAX_LIMIT = 400
+/** 全站Feed：控制体量，避免一次拉整库 */
+const GLOBAL_DEFAULT_LIMIT = 300
+const GLOBAL_MAX_LIMIT = 600
+/** 指定 user_id 时：拉该用户自己的交互（与旧版「全量 interactions」对个人而言一致） */
+const SELF_DEFAULT_LIMIT = 10000
+const SELF_MAX_LIMIT = 15000
 
 /**
  * 图书馆专用：只查最近 N 条交互及关联作品，不返回 input/output/apiCalls 等大字段。
+ * 不带 user_id：全站最近 GLOBAL_*；带 user_id：该用户最近 SELF_*（上限更高）。
  */
 export async function GET(request: NextRequest) {
   try {
@@ -17,13 +22,6 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const userId = searchParams.get("user_id")
     const rawLimit = searchParams.get("limit")
-    let limit = DEFAULT_LIMIT
-    if (rawLimit) {
-      const n = parseInt(rawLimit, 10)
-      if (Number.isFinite(n) && n > 0) {
-        limit = Math.min(n, MAX_LIMIT)
-      }
-    }
 
     let user: { id: string } | null = null
     if (userId) {
@@ -31,6 +29,20 @@ export async function GET(request: NextRequest) {
         where: { username: userId },
         select: { id: true },
       })
+      if (!user) {
+        return NextResponse.json({ articles: [] })
+      }
+    }
+
+    const isSelfScope = !!user
+    const defaultLimit = isSelfScope ? SELF_DEFAULT_LIMIT : GLOBAL_DEFAULT_LIMIT
+    const maxLimit = isSelfScope ? SELF_MAX_LIMIT : GLOBAL_MAX_LIMIT
+    let limit = defaultLimit
+    if (rawLimit) {
+      const n = parseInt(rawLimit, 10)
+      if (Number.isFinite(n) && n > 0) {
+        limit = Math.min(n, maxLimit)
+      }
     }
 
     const where = user ? { userId: user.id } : {}
