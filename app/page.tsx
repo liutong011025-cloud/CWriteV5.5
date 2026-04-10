@@ -661,10 +661,10 @@ export default function Home() {
     return () => { cancelled = true }
   }, [user?.username])
 
-  // 登录后后台预取图书馆数据，点击 Luminai Library 时 SWR 通常已有缓存
+  // 登录后后台预取：全站 Feed + 当前用户自己的全部作品（合并键与图书馆页一致）
   useEffect(() => {
     if (!user?.username) return
-    preloadGalleryData()
+    preloadGalleryData(user.username)
   }, [user?.username])
 
   // Refetch and update header when profile/reviews change (e.g. after marking reviews read)
