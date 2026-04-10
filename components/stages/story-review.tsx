@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button"
 import type { Language, StoryState } from "@/app/page"
 import StageHeader from "@/components/stage-header"
 import { toast } from "sonner"
-import { Wand2, Check, HelpCircle } from "lucide-react"
+import { Wand2, Check, HelpCircle, Sparkles, Loader2, CheckCircle2 } from "lucide-react"
+import { PixelStarRating } from "@/components/ui/pixel-star-rating"
 
 interface GrammarError {
   start: number
@@ -19,15 +20,14 @@ interface StoryReviewProps {
   language: Language
   storyState: StoryState
   onReset: (finalStory: string) => void
-  onEdit: (stage: "character" | "plot" | "structure" | "writing") => void
+  onEdit: (stage: "character" | "plot" | "structure" | "writing" | "storyEdit") => void
   onBack: () => void
   userId?: string
   workId?: string | null
 }
 
 export default function StoryReview({ storyState, onReset, onEdit, onBack, userId, workId }: StoryReviewProps) {
-  const hasSavedRef = useRef(false)
-  const savedStoryRef = useRef<string>("")
+  const uploadPromptShownRef = useRef(false)
   
   const [isReviewing, setIsReviewing] = useState(false)
   const [grammarErrors, setGrammarErrors] = useState<GrammarError[]>([])
@@ -36,47 +36,23 @@ export default function StoryReview({ storyState, onReset, onEdit, onBack, userI
   const [hoveredCorrectionIndex, setHoveredCorrectionIndex] = useState<number | null>(null)
   const [currentStory, setCurrentStory] = useState(storyState.story || "")
 
+  const [showUploadDialog, setShowUploadDialog] = useState(false)
+  const [isUploading, setIsUploading] = useState(false)
+
+  type Dim = "Vocabulary" | "Grammar" | "Coherence" | "Creativity" | "Structure"
+  const [aiScores, setAiScores] = useState<Record<Dim, number> | null>(null)
+  const [aiPraise, setAiPraise] = useState<string>("")
+  const [aiImprovements, setAiImprovements] = useState<string[]>([])
+  const [aiRatingLoading, setAiRatingLoading] = useState(false)
+
   useEffect(() => {
-    if (storyState.story && userId && (!hasSavedRef.current || savedStoryRef.current !== storyState.story)) {
-      hasSavedRef.current = true
-      savedStoryRef.current = storyState.story
-      
-      fetch("/api/interactions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          user_id: userId,
-          stage: "review",
-          input: {
-            character: storyState.character,
-            plot: storyState.plot,
-            structure: storyState.structure,
-          },
-          output: {
-            story: currentStory,
-          },
-          story: currentStory,
-          character: storyState.character,
-          plot: storyState.plot,
-          structure: storyState.structure,
-          workId: workId || undefined,
-        }),
-      })
-      .then(res => res.json())
-      .then(data => {
-        console.log('Story saved successfully:', data)
-        if (data.success) {
-          console.log('Story saved to database')
-        }
-      })
-      .catch((error) => {
-        console.error("Error saving story to interactions:", error)
-        hasSavedRef.current = false
-      })
-    }
-  }, [storyState.story, userId, storyState.character, storyState.plot, storyState.structure])
+    // 首次进入完成页：询问是否上传到 Luminai Library（仅对新作品弹一次；编辑旧作品不弹）
+    if (!storyState.story || !userId) return
+    if (workId) return
+    if (uploadPromptShownRef.current) return
+    uploadPromptShownRef.current = true
+    setShowUploadDialog(true)
+  }, [storyState.story, userId, workId])
 
   useEffect(() => {
     if (storyState.story) {
@@ -117,6 +93,75 @@ export default function StoryReview({ storyState, onReset, onEdit, onBack, userI
       }
     }
   }, [storyState.story, userId])
+
+  useEffect(() => {
+    if (!storyState.story || !userId) return
+    let cancelled = false
+    setAiRatingLoading(true)
+    fetch("/api/story-ai-rating", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        text: storyState.story,
+        character: storyState.character,
+        plot: storyState.plot,
+        structure: storyState.structure,
+        user_id: userId,
+      }),
+    })
+      .then((r) => r.json())
+      .then((data) => {
+        if (cancelled) return
+        if (data?.scores) {
+          setAiScores(data.scores)
+          setAiPraise(String(data.praise || ""))
+          setAiImprovements(Array.isArray(data.improvements) ? data.improvements : [])
+        }
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setAiRatingLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [storyState.story, userId])
+
+  const handleUploadToLibrary = async () => {
+    if (!userId || !storyState.story) return
+    setIsUploading(true)
+    try {
+      const res = await fetch("/api/interactions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          user_id: userId,
+          stage: "review",
+          input: {
+            character: storyState.character,
+            plot: storyState.plot,
+            structure: storyState.structure,
+          },
+          output: {
+            story: currentStory,
+          },
+          story: currentStory,
+          character: storyState.character,
+          plot: storyState.plot,
+          structure: storyState.structure,
+          workId: workId || undefined,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok || !data?.success) throw new Error(data?.error || "Failed")
+      toast.success("Story uploaded to Luminai Library! ✨")
+      setShowUploadDialog(false)
+    } catch (e: any) {
+      toast.error(e?.message || "Failed to upload")
+    } finally {
+      setIsUploading(false)
+    }
+  }
 
   const handleApplyCorrection = (errorIndex: number) => {
     const error = grammarErrors[errorIndex]
@@ -342,6 +387,57 @@ Created with Story Writer
 
   return (
     <div className="min-h-screen py-8 px-6 relative overflow-hidden pixel-theme" style={{ paddingTop: '120px', paddingBottom: '120px' }}>
+      {/* 上传确认弹窗（隐私管理） */}
+      {showUploadDialog && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+          onClick={() => setShowUploadDialog(false)}
+        >
+          <div
+            className="relative pixel-panel p-8 max-w-md w-full mx-4 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="text-center">
+              <div className="mb-6">
+                <Sparkles className="w-16 h-16 mx-auto mb-4 animate-pulse" style={{ color: "#e8c547" }} />
+                <h2 className="text-3xl font-bold mb-2 pixel-text" style={{ color: "#6b5210" }}>
+                  Upload to Luminai Library?
+                </h2>
+                <p className="text-lg pixel-text" style={{ color: "#5a4a2a" }}>
+                  Would you like to save this story to your Luminai Library? You can edit it later.
+                </p>
+              </div>
+              <div className="flex gap-4 justify-center">
+                <Button
+                  onClick={handleUploadToLibrary}
+                  disabled={isUploading}
+                  className="pixel-btn pixel-btn-green shadow-lg py-3 px-8 text-lg font-bold hover:scale-105 transition-all disabled:opacity-50"
+                >
+                  {isUploading ? (
+                    <>
+                      <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                      Uploading...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="w-5 h-5 mr-2" />
+                      Yes, Upload
+                    </>
+                  )}
+                </Button>
+                <Button
+                  onClick={() => setShowUploadDialog(false)}
+                  disabled={isUploading}
+                  variant="outline"
+                  className="pixel-btn pixel-btn-wood shadow-lg font-bold py-3 px-8 text-lg hover:scale-105 transition-all disabled:opacity-50"
+                >
+                  Maybe Later
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Pixel art background */}
       <div className="fixed inset-0 z-0" style={{
         background: `linear-gradient(180deg, 
@@ -471,6 +567,39 @@ Created with Story Writer
                 <div className="p-2.5" style={{ background: "#f5e6c8", border: "3px solid #c4a020" }}>
                   <p className="text-xs font-bold mb-0.5" style={{ color: "#8b6914" }}>Setting</p>
                   <p className="text-sm font-extrabold" style={{ color: "#6b5210" }}>{storyState.plot?.setting}</p>
+                </div>
+                {/* AI评分（像素风星星） */}
+                <div className="p-3" style={{ background: "#fff", border: "3px solid #8b6914" }}>
+                  <p className="text-xs font-bold mb-1" style={{ color: "#5a4a2a" }}>AI Score</p>
+                  {aiRatingLoading && (
+                    <p className="text-xs font-bold" style={{ color: "#6b5210" }}>Scoring...</p>
+                  )}
+                  {!aiRatingLoading && aiScores && (
+                    <div className="space-y-1">
+                      {(Object.keys(aiScores) as Array<keyof typeof aiScores>).map((k) => (
+                        <div key={String(k)} className="flex items-center justify-between gap-2">
+                          <span className="text-xs font-bold" style={{ color: "#6b5210" }}>
+                            {String(k)}
+                          </span>
+                          <PixelStarRating value={aiScores[k] as number} pixel={2} gap={5} />
+                        </div>
+                      ))}
+                      {!!aiPraise && (
+                        <div className="mt-2 text-xs font-bold" style={{ color: "#3d5a1f" }}>
+                          {aiPraise}
+                        </div>
+                      )}
+                      {aiImprovements.length > 0 && (
+                        <div className="mt-2 space-y-1">
+                          {aiImprovements.slice(0, 3).map((tip, idx) => (
+                            <div key={idx} className="text-xs" style={{ color: "#5a4a2a" }}>
+                              - {tip}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
                 <div className="p-2.5" style={{ background: "#e8d4f5", border: "3px solid #9b59b6" }}>
                   <p className="text-xs font-bold mb-0.5" style={{ color: "#7b3f96" }}>Type</p>
