@@ -87,6 +87,7 @@ export default function HomePage({ language = "en", onStartPlan, onContinuePastJ
   const [pixelPhase, setPixelPhase] = useState(0) // 0=none, 1=transform elements then navigate
   const [pixelOrigin, setPixelOrigin] = useState({ x: 0, y: 0 })
   const [showPixelSky, setShowPixelSky] = useState(false)
+  const resetTimeoutRef = useRef<number | null>(null)
   const shaderContainerRef = useRef<HTMLDivElement>(null)
   const pixelRootRef = useRef<HTMLDivElement>(null)
   const startButtonRef = useRef<HTMLButtonElement>(null)
@@ -162,6 +163,24 @@ export default function HomePage({ language = "en", onStartPlan, onContinuePastJ
     setActiveGenre(null)
   }
 
+  const resetPixelTransitionIfStillHome = () => {
+    try {
+      const main = document.querySelector("main[data-stage]")
+      const stage = main?.getAttribute("data-stage")
+      if (stage && stage !== "home") return
+    } catch {
+      // ignore
+    }
+    setIsPixelating(false)
+    setPixelPhase(0)
+    setShowPixelSky(false)
+    try {
+      pixelRootRef.current?.classList.remove("pixel-farm-transition-active")
+    } catch {
+      // ignore
+    }
+  }
+
   const handlePixelJourney = (originEl: HTMLElement | null, navigate?: () => void) => {
     if (originEl) {
       const rect = originEl.getBoundingClientRect()
@@ -213,6 +232,13 @@ export default function HomePage({ language = "en", onStartPlan, onContinuePastJ
     setTimeout(() => {
       navigate?.()
     }, 900)
+
+    // 如果导航没有发生（例如“Continue past journey”没有可恢复内容），避免页面卡在禁用态
+    if (resetTimeoutRef.current) window.clearTimeout(resetTimeoutRef.current)
+    resetTimeoutRef.current = window.setTimeout(() => {
+      resetPixelTransitionIfStillHome()
+      resetTimeoutRef.current = null
+    }, 1400)
   }
 
   const handleStartJourneyClick = () => {
@@ -562,7 +588,17 @@ export default function HomePage({ language = "en", onStartPlan, onContinuePastJ
               transition={{ duration: 0.8, delay: 2.5 }}
               className="mt-10"
             >
-              <div className="flex flex-col items-center justify-center gap-4">
+              <div className="flex flex-col items-center justify-center gap-6">
+                {/* Shared sizing so 3 buttons are equal */}
+                <style jsx>{`
+                  .home-action-btn {
+                    width: min(520px, 92vw);
+                  }
+                  .home-action-inner {
+                    width: 100%;
+                    justify-content: center;
+                  }
+                `}</style>
                 {/* Start a new journey */}
                 {pixelPhase >= 1 ? (
                   <motion.button
@@ -570,7 +606,7 @@ export default function HomePage({ language = "en", onStartPlan, onContinuePastJ
                     data-pixel-item
                     data-pixel-kind="button"
                     disabled
-                    className="focus:outline-none disabled:cursor-not-allowed"
+                    className="focus:outline-none disabled:cursor-not-allowed home-action-btn"
                     initial={{ scale: 1 }}
                     animate={{
                       scale: [1, 1.1, 1.05],
@@ -586,12 +622,12 @@ export default function HomePage({ language = "en", onStartPlan, onContinuePastJ
                       border: "4px solid #3d8a3d",
                       boxShadow:
                         "inset -4px -4px 0 rgba(0,0,0,0.25), inset 4px 4px 0 rgba(255,255,255,0.25), 6px 6px 0 rgba(0,0,0,0.3)",
-                      padding: "20px 48px",
+                      padding: "20px 44px",
                       imageRendering: "pixelated",
                     }}
                   >
                     <span
-                      className="flex items-center gap-3 text-xl font-bold whitespace-nowrap text-white md:text-2xl lg:text-3xl"
+                      className="flex items-center gap-3 text-xl font-bold whitespace-nowrap text-white md:text-2xl lg:text-3xl home-action-inner"
                       style={{ textShadow: "2px 2px 0 rgba(0,0,0,0.3)" }}
                     >
                       {t.startButton}
@@ -607,7 +643,7 @@ export default function HomePage({ language = "en", onStartPlan, onContinuePastJ
                     data-pixel-item
                     data-pixel-kind="button"
                     data-click-sound="start-journey"
-                    className="group rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70 disabled:cursor-not-allowed transition-transform duration-200 hover:scale-[1.04] active:scale-[1.0]"
+                    className="group rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70 disabled:cursor-not-allowed transition-transform duration-200 hover:scale-[1.04] active:scale-[1.0] home-action-btn"
                   >
                     <GlassSurface
                       width="auto"
@@ -619,7 +655,7 @@ export default function HomePage({ language = "en", onStartPlan, onContinuePastJ
                       blur={12}
                       displace={0.3}
                     >
-                      <span className="flex items-center gap-3 px-12 py-5 text-xl font-bold whitespace-nowrap text-white md:px-16 md:py-6 md:text-2xl lg:text-3xl transition-all duration-200 group-hover:brightness-110">
+                      <span className="flex items-center gap-3 px-12 py-6 text-xl font-bold whitespace-nowrap text-white md:px-16 md:py-6 md:text-2xl lg:text-3xl transition-all duration-200 group-hover:brightness-110 home-action-inner">
                         {t.startButton}
                         <span className="text-2xl md:text-3xl lg:text-4xl">&#9992;</span>
                       </span>
@@ -634,7 +670,7 @@ export default function HomePage({ language = "en", onStartPlan, onContinuePastJ
                     data-pixel-item
                     data-pixel-kind="button"
                     disabled
-                    className="focus:outline-none disabled:cursor-not-allowed"
+                    className="focus:outline-none disabled:cursor-not-allowed home-action-btn"
                     initial={{ scale: 1 }}
                     animate={{ scale: [1, 1.06, 1.03] }}
                     transition={{ duration: 0.5 }}
@@ -643,12 +679,12 @@ export default function HomePage({ language = "en", onStartPlan, onContinuePastJ
                       border: "4px solid #1d4ed8",
                       boxShadow:
                         "inset -4px -4px 0 rgba(0,0,0,0.25), inset 4px 4px 0 rgba(255,255,255,0.25), 6px 6px 0 rgba(0,0,0,0.3)",
-                      padding: "18px 44px",
+                      padding: "20px 44px",
                       imageRendering: "pixelated",
                     }}
                   >
                     <span
-                      className="flex items-center gap-3 text-xl font-bold whitespace-nowrap text-white md:text-2xl lg:text-3xl"
+                      className="flex items-center gap-3 text-xl font-bold whitespace-nowrap text-white md:text-2xl lg:text-3xl home-action-inner"
                       style={{ textShadow: "2px 2px 0 rgba(0,0,0,0.3)" }}
                     >
                       {t.continueButton}
@@ -664,7 +700,7 @@ export default function HomePage({ language = "en", onStartPlan, onContinuePastJ
                     data-pixel-item
                     data-pixel-kind="button"
                     data-click-sound="continue-journey"
-                    className="group rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70 disabled:cursor-not-allowed transition-transform duration-200 hover:scale-[1.04] active:scale-[1.0]"
+                    className="group rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70 disabled:cursor-not-allowed transition-transform duration-200 hover:scale-[1.04] active:scale-[1.0] home-action-btn"
                   >
                     <GlassSurface
                       width="auto"
@@ -676,7 +712,7 @@ export default function HomePage({ language = "en", onStartPlan, onContinuePastJ
                       blur={12}
                       displace={0.3}
                     >
-                      <span className="flex items-center gap-3 px-10 py-5 text-xl font-bold whitespace-nowrap text-white md:px-14 md:py-6 md:text-2xl lg:text-3xl transition-all duration-200 group-hover:brightness-110">
+                      <span className="flex items-center gap-3 px-12 py-6 text-xl font-bold whitespace-nowrap text-white md:px-16 md:py-6 md:text-2xl lg:text-3xl transition-all duration-200 group-hover:brightness-110 home-action-inner">
                         {t.continueButton}
                         <span className="text-2xl md:text-3xl lg:text-4xl">⏮️</span>
                       </span>
@@ -691,7 +727,7 @@ export default function HomePage({ language = "en", onStartPlan, onContinuePastJ
                     data-pixel-item
                     data-pixel-kind="button"
                     disabled
-                    className="focus:outline-none disabled:cursor-not-allowed"
+                    className="focus:outline-none disabled:cursor-not-allowed home-action-btn"
                     initial={{ scale: 1 }}
                     animate={{ scale: [1, 1.06, 1.03] }}
                     transition={{ duration: 0.5 }}
@@ -699,11 +735,11 @@ export default function HomePage({ language = "en", onStartPlan, onContinuePastJ
                       background: "linear-gradient(180deg, #d9c9a6 0%, #c4a574 100%)",
                       border: "4px solid #8b6914",
                       boxShadow: "inset -4px -4px 0 rgba(0,0,0,0.25), inset 4px 4px 0 rgba(255,255,255,0.25), 6px 6px 0 rgba(0,0,0,0.3)",
-                      padding: "20px 40px",
+                      padding: "20px 44px",
                       imageRendering: "pixelated",
                     }}
                   >
-                    <span className="flex items-center gap-3 text-xl font-bold whitespace-nowrap text-white md:text-2xl lg:text-3xl" style={{ textShadow: "2px 2px 0 rgba(0,0,0,0.3)" }}>
+                    <span className="flex items-center gap-3 text-xl font-bold whitespace-nowrap text-white md:text-2xl lg:text-3xl home-action-inner" style={{ textShadow: "2px 2px 0 rgba(0,0,0,0.3)" }}>
                       Visit my farm
                       <span className="text-2xl md:text-3xl lg:text-4xl">🏠</span>
                     </span>
@@ -717,10 +753,10 @@ export default function HomePage({ language = "en", onStartPlan, onContinuePastJ
                     data-pixel-item
                     data-pixel-kind="button"
                     data-click-sound="visit-farm"
-                    className="group rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70 disabled:cursor-not-allowed transition-transform duration-200 hover:scale-[1.04] active:scale-[1.0]"
+                    className="group rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70 disabled:cursor-not-allowed transition-transform duration-200 hover:scale-[1.04] active:scale-[1.0] home-action-btn"
                   >
                     <GlassSurface width="auto" height="auto" borderRadius={50} borderWidth={0.08} brightness={55} opacity={0.85} blur={12} displace={0.3}>
-                      <span className="flex items-center gap-3 px-10 py-5 text-xl font-bold whitespace-nowrap text-white md:px-14 md:py-6 md:text-2xl lg:text-3xl transition-all duration-200 group-hover:brightness-110">
+                      <span className="flex items-center gap-3 px-12 py-6 text-xl font-bold whitespace-nowrap text-white md:px-16 md:py-6 md:text-2xl lg:text-3xl transition-all duration-200 group-hover:brightness-110 home-action-inner">
                         Visit my farm
                         <span className="text-2xl md:text-3xl lg:text-4xl">🏠</span>
                       </span>
