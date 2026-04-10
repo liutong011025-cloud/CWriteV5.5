@@ -564,9 +564,7 @@ Created with Story Writer
                   }}
                 >
                   <div className="flex items-center justify-between gap-3 mb-2">
-                    <p className="text-sm font-extrabold" style={{ color: "#5a4a2a" }}>
-                      AI Score
-                    </p>
+                    <span />
                     <span className="ai-score-sparkle text-lg" aria-hidden="true">✦</span>
                   </div>
                   {aiRatingLoading && (
