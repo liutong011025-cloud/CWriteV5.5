@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import Image from "next/image"
-import { Book, Mail, FileText, Clapperboard, Feather, X } from "lucide-react"
+import { Book, Mail, FileText, Clapperboard, Feather, X, ChevronRight, MessageSquare, ArrowLeft } from "lucide-react"
 import { toast } from "sonner"
 import { useGalleryData, type ArticleType, type Article } from "@/lib/use-gallery-data"
 
