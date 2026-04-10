@@ -77,7 +77,7 @@ export default function GalleryPage({ currentUser = null, currentUserRole = null
   const [hoveredShelf, setHoveredShelf] = useState<ArticleType | null>(null)
 
   // Use SWR hook for pre-cached data (preloaded when app starts)
-  const { articles, groupedArticles, isLoading } = useGalleryData()
+  const { articles, groupedArticles, isLoading } = useGalleryData({ currentUsername: currentUser })
 
   useEffect(() => {
     setMounted(true)
