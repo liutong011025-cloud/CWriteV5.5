@@ -36,7 +36,7 @@ import LetterGame from "@/components/stages/letter-game"
 import LetterGameNoAi from "@/components/stages/letter-game-no-ai"
 import LetterPuzzle from "@/components/stages/letter-puzzle"
 import LetterComplete from "@/components/stages/letter-complete"
-import ContinueWorksDialog from "@/components/auth/continue-works-dialog"
+// ContinueWorksDialog removed: login now goes straight to home
 import StoryEdit from "@/components/stages/story-edit"
 import BookReviewEdit from "@/components/stages/book-review-edit"
 import LetterEdit from "@/components/stages/letter-edit"
@@ -125,6 +125,7 @@ type ValuesGrowthDiagnostics = {
 }
 
 const getTreesStateKey = (username: string) => `cwriteTreesState:${username}`
+const RESUME_KEY = (username: string) => `cwriteJourneyResume:${username}`
 const VALUES_DIMENSION_COUNT = 12
 const VALUES_DIMENSION_NAMES = [
   "Perseverance",
@@ -238,6 +239,36 @@ function readLocalTreeGrowthDetails(username: string): Record<number, TreeGrowth
   }
 }
 
+type JourneyResumeSnapshot = {
+  username: string
+  savedAt: number
+  stage: string
+  journeySelection: { type: JourneyType; difficulty: number } | null
+  writingAssessment: WritingAssessment | null
+  storyState: StoryState
+  bookReviewState: BookReviewState
+  letterState: LetterState
+  editingWorkId: string | null
+  drama: {
+    scenes: unknown[]
+    characters: unknown[]
+    title: string
+    activeSceneIndex: number
+    dramaBook: unknown | null
+  }
+  poetry: {
+    form: unknown | null
+    topic: string
+    lines: unknown[]
+    aiLog: unknown[]
+    snapshots: unknown[]
+    aiUsageCount: number
+    maxAIUsage: number
+    showedOriginalityNotice: boolean
+    phase: string
+  }
+}
+
 function writeLocalTreeGrowthDetails(username: string, details: Record<number, TreeGrowthDetail[]>) {
   if (typeof window === "undefined") return
   try {
@@ -333,6 +364,116 @@ export default function Home() {
       setFarmEntryNonce((n: number) => n + 1)
     }
   }, [stage, user?.username])
+
+  // 自动记录“上次旅程进度”，用于首页 Continue past journey 一键恢复
+  useEffect(() => {
+    if (!user?.username || typeof window === "undefined") return
+    if (["login", "home", "dashboard"].includes(stage)) return
+    const save = () => {
+      try {
+        const dramaState = useDramaStore.getState()
+        const poetryState = usePoetryStore.getState()
+        const snap: JourneyResumeSnapshot = {
+          username: user.username,
+          savedAt: Date.now(),
+          stage,
+          journeySelection,
+          writingAssessment: writingAssessment ?? null,
+          storyState,
+          bookReviewState,
+          letterState,
+          editingWorkId,
+          drama: {
+            scenes: dramaState.scenes as unknown[],
+            characters: dramaState.characters as unknown[],
+            title: dramaState.title,
+            activeSceneIndex: dramaState.activeSceneIndex,
+            dramaBook: dramaState.dramaBook as unknown,
+          },
+          poetry: {
+            form: poetryState.form as unknown,
+            topic: poetryState.topic,
+            lines: poetryState.lines as unknown[],
+            aiLog: poetryState.aiLog as unknown[],
+            snapshots: poetryState.snapshots as unknown[],
+            aiUsageCount: poetryState.aiUsageCount,
+            maxAIUsage: poetryState.maxAIUsage,
+            showedOriginalityNotice: poetryState.showedOriginalityNotice,
+            phase: poetryState.phase,
+          },
+        }
+        localStorage.setItem(RESUME_KEY(user.username), JSON.stringify(snap))
+      } catch {
+        // ignore storage errors
+      }
+    }
+    const t = window.setTimeout(save, 350)
+    return () => window.clearTimeout(t)
+  }, [
+    user?.username,
+    stage,
+    journeySelection,
+    writingAssessment,
+    storyState,
+    bookReviewState,
+    letterState,
+    editingWorkId,
+  ])
+
+  const continuePastJourney = useCallback(() => {
+    if (!user?.username || typeof window === "undefined") return
+    try {
+      const raw = localStorage.getItem(RESUME_KEY(user.username))
+      if (!raw) {
+        toast.error("No past journey found yet.")
+        return
+      }
+      const snap = JSON.parse(raw) as JourneyResumeSnapshot
+      if (!snap || snap.username !== user.username || !snap.stage) {
+        toast.error("Past journey data is invalid.")
+        return
+      }
+      setJourneySelection(snap.journeySelection ?? null)
+      setWritingAssessment(snap.writingAssessment ?? null)
+      setStoryState(snap.storyState)
+      setBookReviewState(snap.bookReviewState)
+      setLetterState(snap.letterState)
+      setEditingWorkId(snap.editingWorkId ?? null)
+
+      try {
+        useDramaStore.setState((prev) => ({
+          ...prev,
+          scenes: (snap.drama?.scenes as any) ?? prev.scenes,
+          characters: (snap.drama?.characters as any) ?? prev.characters,
+          title: (snap.drama?.title as any) ?? prev.title,
+          activeSceneIndex: (snap.drama?.activeSceneIndex as any) ?? prev.activeSceneIndex,
+          dramaBook: (snap.drama?.dramaBook as any) ?? prev.dramaBook,
+        }))
+      } catch {
+        // ignore
+      }
+      try {
+        usePoetryStore.setState((prev) => ({
+          ...prev,
+          form: (snap.poetry?.form as any) ?? prev.form,
+          topic: (snap.poetry?.topic as any) ?? prev.topic,
+          lines: (snap.poetry?.lines as any) ?? prev.lines,
+          aiLog: (snap.poetry?.aiLog as any) ?? prev.aiLog,
+          snapshots: (snap.poetry?.snapshots as any) ?? prev.snapshots,
+          aiUsageCount: (snap.poetry?.aiUsageCount as any) ?? prev.aiUsageCount,
+          maxAIUsage: (snap.poetry?.maxAIUsage as any) ?? prev.maxAIUsage,
+          showedOriginalityNotice: (snap.poetry?.showedOriginalityNotice as any) ?? prev.showedOriginalityNotice,
+          phase: (snap.poetry?.phase as any) ?? prev.phase,
+        }))
+      } catch {
+        // ignore
+      }
+
+      setStage(snap.stage as any)
+    } catch {
+      toast.error("Failed to continue past journey.")
+    }
+  }, [user?.username])
 
   // Hydration safety: only use store-derived progress after mount
   const [isReady, setIsReady] = useState(false)
@@ -922,70 +1063,14 @@ export default function Home() {
             if (userData.role === "teacher") {
               setStage("dashboard")
             } else {
-              if (showDialog) {
-                setShowContinueDialog(true)
-              } else {
-                setStage("home")
-              }
+              // 取消“继续作品”弹窗：登录后直接进入主页
+              setShowContinueDialog(false)
+              setStage("home")
             }
           }}
         />
       )}
 
-      {/* 继续作品对话框 */}
-      {user && showContinueDialog && (
-        <ContinueWorksDialog
-          open={showContinueDialog}
-          userId={user.username}
-          onStartNew={() => {
-            setShowContinueDialog(false)
-            setStage("home")
-            setEditingWorkId(null)
-          }}
-          onContinue={(work) => {
-            setShowContinueDialog(false)
-            setEditingWorkId(work.id)
-            
-            // 根据作品类型加载内容并跳转到相应阶段
-            if (work.type === 'story') {
-              const storyData = work.data
-              setStoryState({
-                character: storyData.character as any,
-                plot: storyData.plot as any,
-                structure: storyData.structure as any,
-                story: storyData.content || "",
-              })
-              setStage("review") // 跳转到review页面，用户可以继续编辑
-            } else if (work.type === 'review') {
-              const reviewData = work.data
-              setBookReviewState({
-                reviewType: reviewData.reviewType as any,
-                bookTitle: reviewData.bookTitle || null,
-                structure: reviewData.structure as any,
-                review: reviewData.content || "",
-                bookCoverUrl: reviewData.bookCoverUrl,
-                bookSummary: reviewData.bookSummary,
-              })
-              setStage("bookReviewComplete")
-            } else if (work.type === 'letter') {
-              const letterData = work.data
-              setLetterState({
-                recipient: letterData.recipient || null,
-                occasion: letterData.occasion || null,
-                guidance: letterData.guidance || null,
-                readerImageUrl: letterData.readerImageUrl || null,
-                sections: (letterData.sections as string[]) || [],
-                letter: letterData.content || "",
-              })
-              setStage("letterComplete")
-            }
-          }}
-          onClose={() => {
-            setShowContinueDialog(false)
-            setStage("home")
-          }}
-        />
-      )}
       {stage === "home" && user && (
         <HomePage
           language={language}
@@ -1000,6 +1085,7 @@ export default function Home() {
             }
             setStage("journeyTicket")
           }}
+          onContinuePastJourney={continuePastJourney}
           onStartWrite={() => {
             setJourneySelection(null)
             setLevelBadgeUnlocked(false)
