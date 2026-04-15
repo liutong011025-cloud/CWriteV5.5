@@ -18,6 +18,8 @@ import StoryReview from "@/components/stages/story-review"
 import LoginPage from "@/components/auth/login-page"
 import Dashboard from "@/components/teacher/dashboard"
 import JourneyTicket, { type JourneyType } from "@/components/stages/journey-ticket"
+import PlanTest from "@/components/stages/plan-test"
+import JourneyMap from "@/components/stages/journey-map"
 import WriteTypeSelection from "@/components/stages/write-type-selection"
 import BookReviewTypeSelection from "@/components/stages/book-review-type-selection"
 import BookSelection from "@/components/stages/book-selection"
@@ -122,6 +124,132 @@ type ValuesGrowthDiagnostics = {
   detail?: string
   tips?: string[]
   missingEnv?: string[]
+}
+
+export interface MapFlagItem {
+  id: string
+  x: number
+  y: number
+  title: string
+  content?: string
+  workType?: "story" | "review" | "letter"
+}
+
+interface PersistedMapState {
+  mapImageUrl?: string
+  mapFlags: MapFlagItem[]
+  currentPin: { x: number; y: number } | null
+  journeySelection: { type: JourneyType; difficulty: number } | null
+  journeyActive: boolean
+  levelBadgeUnlocked: boolean
+}
+
+const getMapStateKey = (username: string) => `cwriteMapState:${username}`
+const getPlanTestResultKey = (username: string) => `cwritePlanTestResult:${username}`
+
+const getChapterBaseMapImageUrl = (chapterIndex: number) => {
+  return chapterIndex <= 0 ? "/firstmap.png" : "/secondmap.png"
+}
+
+interface PersistedMapChaptersState {
+  activeChapterIndex?: number
+  chapters?: PersistedMapState[]
+}
+
+const normalizeMapState = (raw: unknown): Partial<PersistedMapState> => {
+  if (!raw || typeof raw !== "object") return {}
+  const parsed = raw as Partial<PersistedMapState>
+  const safe: Partial<PersistedMapState> = {}
+
+  if (typeof parsed.mapImageUrl === "string" && parsed.mapImageUrl.trim()) {
+    safe.mapImageUrl = parsed.mapImageUrl
+  }
+  if (Array.isArray(parsed.mapFlags)) {
+    safe.mapFlags = parsed.mapFlags
+      .filter((f) => f && typeof f.id === "string")
+      .map((f) => {
+        const item: MapFlagItem = {
+          id: f.id,
+          x: typeof f.x === "number" ? f.x : 50,
+          y: typeof f.y === "number" ? f.y : 50,
+          title: typeof f.title === "string" ? f.title : "Journey",
+        }
+        if (typeof (f as MapFlagItem).content === "string") item.content = (f as MapFlagItem).content
+        if (["story", "review", "letter"].includes((f as MapFlagItem).workType as string)) item.workType = (f as MapFlagItem).workType
+        return item
+      })
+  }
+  if (parsed.currentPin && typeof parsed.currentPin.x === "number" && typeof parsed.currentPin.y === "number") {
+    safe.currentPin = parsed.currentPin
+  }
+  if (
+    parsed.journeySelection &&
+    typeof parsed.journeySelection.difficulty === "number" &&
+    typeof parsed.journeySelection.type === "string"
+  ) {
+    safe.journeySelection = parsed.journeySelection
+  }
+  if (typeof parsed.journeyActive === "boolean") {
+    safe.journeyActive = parsed.journeyActive
+  }
+  if (typeof parsed.levelBadgeUnlocked === "boolean") {
+    safe.levelBadgeUnlocked = parsed.levelBadgeUnlocked
+  }
+  return safe
+}
+
+const normalizeMapChaptersState = (
+  raw: unknown,
+): {
+  activeChapterIndex: number
+  chapters: PersistedMapState[]
+} => {
+  const defaults: PersistedMapState = {
+    mapImageUrl: getChapterBaseMapImageUrl(0),
+    mapFlags: [],
+    currentPin: null,
+    journeySelection: null,
+    journeyActive: false,
+    levelBadgeUnlocked: false,
+  }
+
+  if (!raw || typeof raw !== "object") {
+    return { activeChapterIndex: 0, chapters: [defaults] }
+  }
+
+  const parsed = raw as PersistedMapChaptersState & Partial<PersistedMapState>
+  const activeChapterIndex = Number.isFinite(Number(parsed.activeChapterIndex)) ? Math.max(0, Math.floor(Number(parsed.activeChapterIndex))) : 0
+
+  if (Array.isArray(parsed.chapters)) {
+    const chapters = parsed.chapters.map((c, idx) => {
+      const safe = normalizeMapState(c)
+      return {
+        mapImageUrl: typeof safe.mapImageUrl === "string" ? safe.mapImageUrl : getChapterBaseMapImageUrl(idx),
+        mapFlags: safe.mapFlags ?? [],
+        currentPin: safe.currentPin ?? null,
+        journeySelection: safe.journeySelection ?? null,
+        journeyActive: typeof safe.journeyActive === "boolean" ? safe.journeyActive : false,
+        levelBadgeUnlocked: typeof safe.levelBadgeUnlocked === "boolean" ? safe.levelBadgeUnlocked : false,
+      } satisfies PersistedMapState
+    })
+
+    return {
+      activeChapterIndex: Math.min(activeChapterIndex, Math.max(0, chapters.length - 1)),
+      chapters: chapters.length > 0 ? chapters : [defaults],
+    }
+  }
+
+  const safe = normalizeMapState(raw)
+  const chapter0: PersistedMapState = {
+    mapImageUrl: typeof safe.mapImageUrl === "string" ? safe.mapImageUrl : getChapterBaseMapImageUrl(0),
+    mapFlags: safe.mapFlags ?? [],
+    currentPin: safe.currentPin ?? null,
+    journeySelection: safe.journeySelection ?? null,
+    journeyActive: typeof safe.journeyActive === "boolean" ? safe.journeyActive : false,
+    levelBadgeUnlocked: typeof safe.levelBadgeUnlocked === "boolean" ? safe.levelBadgeUnlocked : false,
+  }
+
+  return { activeChapterIndex: 0, chapters: [chapter0] }
 }
 
 const getTreesStateKey = (username: string) => `cwriteTreesState:${username}`
@@ -309,7 +437,7 @@ type AppUser = {
 
 export default function Home() {
   const [user, setUser] = useState<AppUser | null>(null)
-  const [stage, setStage] = useState<"login" | "home" | "journeyTicket" | "writeTypeSelection" | "bookReviewWelcome" | "bookReviewTypeSelection" | "bookSelection" | "bookSelectionNoAi" | "bookReviewLoading" | "bookReviewWriting" | "bookReviewComplete" | "bookReviewWritingNoAi" | "bookReviewCompleteNoAi" | "letterAdventure" | "letterGame" | "letterPuzzle" | "letterComplete" | "character" | "storyCollab" | "storyChatbot" | "plot" | "structure" | "writing" | "review" | "dashboard" | "about" | "aboutVision" | "aboutResearch" | "gallery" | "userProfile" | "userSettings" | "storyEdit" | "bookReviewEdit" | "letterEdit" | "dramaWriting" | "dramaBook" | "poetryWriting" | "poetryForm" | "poetryTopic" | "poetryEditor" | "poetryReview" | "research" | "navigation" | "otherFarm">("login")
+  const [stage, setStage] = useState<"login" | "home" | "planTest" | "journeyMap" | "journeyTicket" | "writeTypeSelection" | "bookReviewWelcome" | "bookReviewTypeSelection" | "bookSelection" | "bookSelectionNoAi" | "bookReviewLoading" | "bookReviewWriting" | "bookReviewComplete" | "bookReviewWritingNoAi" | "bookReviewCompleteNoAi" | "letterAdventure" | "letterGame" | "letterPuzzle" | "letterComplete" | "character" | "storyCollab" | "storyChatbot" | "plot" | "structure" | "writing" | "review" | "dashboard" | "about" | "aboutVision" | "aboutResearch" | "gallery" | "userProfile" | "userSettings" | "storyEdit" | "bookReviewEdit" | "letterEdit" | "dramaWriting" | "dramaBook" | "poetryWriting" | "poetryForm" | "poetryTopic" | "poetryEditor" | "poetryReview" | "research" | "navigation" | "otherFarm">("login")
   const [language, setLanguage] = useState<Language>("en")
   const [writingAssessment, setWritingAssessment] = useState<WritingAssessment | null>(null)
   const [journeySelection, setJourneySelection] = useState<{ type: JourneyType; difficulty: number } | null>(null)
@@ -341,12 +469,21 @@ export default function Home() {
   const [editingWorkId, setEditingWorkId] = useState<string | null>(null)
   const [galleryFromEdit, setGalleryFromEdit] = useState<{ type: 'story' | 'review' | 'letter' } | null>(null)
   const [selectedOtherFarmUser, setSelectedOtherFarmUser] = useState<string | null>(null)
+  const [planTestResult, setPlanTestResult] = useState<{ score: number; level: number } | null>(null)
   const [cagentMood, setCagentMood] = useState<CagentMood>("normal")
   const [valuesMessage, setValuesMessage] = useState<string | null>(null)
   const [valuesSuggestion, setValuesSuggestion] = useState<string | null>(null)
   const [redFlashActive, setRedFlashActive] = useState(false)
   const valuesCheckTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [levelBadgeUnlocked, setLevelBadgeUnlocked] = useState(false)
+  const [journeyActive, setJourneyActive] = useState(false)
+  const [currentPin, setCurrentPin] = useState<{ x: number; y: number } | null>(null)
+  const [mapFlags, setMapFlags] = useState<MapFlagItem[]>([])
+  const [mapImageUrl, setMapImageUrl] = useState<string | undefined>(undefined)
+  const [activeMapChapterIndex, setActiveMapChapterIndex] = useState(0)
+  const [mapChapters, setMapChapters] = useState<PersistedMapState[]>([])
+  const mapStateHydratedRef = useRef(false)
+  const [pendingDramaMapTitle, setPendingDramaMapTitle] = useState<string | null>(null)
   // 12 价值观维度小树：每棵 stage 2->3->4（最多成长两次）
   const [trees, setTrees] = useState<{ id: number; stage: number }[] | null>(null)
   // 上一次写作三指标，用于判断哪一项提升最大
@@ -809,6 +946,248 @@ export default function Home() {
     setLevelBadgeUnlocked(false)
   }, [user?.username])
 
+  // Load planTestResult from localStorage
+  useEffect(() => {
+    if (!user?.username || typeof window === "undefined") return
+    try {
+      const raw = localStorage.getItem(getPlanTestResultKey(user.username))
+      if (!raw) {
+        setPlanTestResult(null)
+        return
+      }
+      const parsed = JSON.parse(raw) as { score?: number; level?: number }
+      if (typeof parsed.score === "number" && typeof parsed.level === "number") {
+        setPlanTestResult({ score: parsed.score, level: parsed.level })
+      } else {
+        setPlanTestResult(null)
+      }
+    } catch {
+      setPlanTestResult(null)
+    }
+  }, [user?.username])
+
+  // Load map state from DB / localStorage
+  useEffect(() => {
+    mapStateHydratedRef.current = false
+    if (!user?.username || typeof window === "undefined") return
+    setMapImageUrl(undefined)
+    setMapFlags([])
+    setCurrentPin(null)
+    setJourneySelection(null)
+    setJourneyActive(false)
+    setLevelBadgeUnlocked(false)
+    setActiveMapChapterIndex(0)
+    setMapChapters([])
+    let cancelled = false
+    void (async () => {
+      let loadedFromDb = false
+      try {
+        const dbRes = await fetch(`/api/user-map-state?user_id=${encodeURIComponent(user.username)}`)
+        if (dbRes.ok) {
+          const dbJson = await dbRes.json()
+          const normalized = normalizeMapChaptersState(dbJson?.state)
+          if (!cancelled) {
+            setMapChapters(normalized.chapters)
+            setActiveMapChapterIndex(normalized.activeChapterIndex)
+            const active = normalized.chapters[normalized.activeChapterIndex] || normalized.chapters[0]
+            setMapImageUrl(active?.mapImageUrl || getChapterBaseMapImageUrl(normalized.activeChapterIndex))
+            setMapFlags(active?.mapFlags ?? [])
+            setCurrentPin(active?.currentPin ?? null)
+            setJourneySelection(active?.journeySelection ?? null)
+            setJourneyActive(typeof active?.journeyActive === "boolean" ? active?.journeyActive : false)
+            setLevelBadgeUnlocked(typeof active?.levelBadgeUnlocked === "boolean" ? active?.levelBadgeUnlocked : false)
+            loadedFromDb = (active?.mapFlags?.length ?? 0) > 0 || !!active?.currentPin || !!active?.journeySelection
+          }
+        }
+      } catch {
+        // ignore db fetch errors
+      }
+
+      if (!cancelled && !loadedFromDb) {
+        try {
+          const raw = localStorage.getItem(getMapStateKey(user.username))
+          if (raw) {
+            const normalized = normalizeMapChaptersState(JSON.parse(raw))
+            setMapChapters(normalized.chapters)
+            setActiveMapChapterIndex(normalized.activeChapterIndex)
+            const active = normalized.chapters[normalized.activeChapterIndex] || normalized.chapters[0]
+            setMapImageUrl(active?.mapImageUrl || getChapterBaseMapImageUrl(normalized.activeChapterIndex))
+            setMapFlags(active?.mapFlags ?? [])
+            setCurrentPin(active?.currentPin ?? null)
+            setJourneySelection(active?.journeySelection ?? null)
+            setJourneyActive(typeof active?.journeyActive === "boolean" ? active?.journeyActive : false)
+            setLevelBadgeUnlocked(typeof active?.levelBadgeUnlocked === "boolean" ? active?.levelBadgeUnlocked : false)
+          }
+        } catch {
+          // ignore parse/storage errors
+        }
+      }
+
+      if (!cancelled) {
+        mapStateHydratedRef.current = true
+      }
+    })()
+    return () => { cancelled = true }
+  }, [user?.username])
+
+  const queueJourneyMapUpdate = useCallback(
+    (params: {
+      title: string
+      topic: string
+      mapPrompt?: string
+      summaryKey?: string
+      summaryValue?: Record<string, unknown>
+      source: string
+    }) => {
+      if (!journeyActive || !user || !currentPin) return
+      const pinSnapshot = { x: currentPin.x, y: currentPin.y }
+      const previousMapImageUrl = mapImageUrl || getChapterBaseMapImageUrl(activeMapChapterIndex)
+
+      void (async () => {
+        try {
+          const payload: Record<string, unknown> = {
+            userId: user.username,
+            title: params.title,
+            topic: params.topic,
+            mapX: pinSnapshot.x,
+            mapY: pinSnapshot.y,
+            previousMapImageUrl,
+          }
+          if (params.mapPrompt) payload.mapPrompt = params.mapPrompt
+          if (params.summaryKey && params.summaryValue) payload[params.summaryKey] = params.summaryValue
+
+          const mapRes = await fetch("/api/map-update", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          })
+          const mapJson = await mapRes.json()
+
+          if (mapRes.ok && !mapJson?.error && mapJson?.imageUrl) {
+            setMapImageUrl(mapJson.imageUrl as string)
+            setMapFlags((prev) => [
+              ...prev,
+              {
+                id: mapJson.userId && mapJson.title ? `${mapJson.userId}-${mapJson.title}-${Date.now()}` : `${Date.now()}`,
+                x: mapJson.mapX ?? pinSnapshot.x,
+                y: mapJson.mapY ?? pinSnapshot.y,
+                title: mapJson.title || params.title,
+              },
+            ])
+            setCurrentPin(null)
+            return
+          }
+          console.error(`[map-update] ${params.source} failed:`, { status: mapRes.status, body: mapJson })
+        } catch (error) {
+          console.error(`[map-update] ${params.source} error:`, error)
+        }
+      })()
+    },
+    [journeyActive, user, currentPin, mapImageUrl, activeMapChapterIndex],
+  )
+
+  const canMoveToNextChapter = (mapFlags?.length ?? 0) >= 10
+
+  const handleMoveToChapter = useCallback(
+    (targetChapterIndex: number) => {
+      if (!user?.username) return
+      if (targetChapterIndex === activeMapChapterIndex) return
+      if (targetChapterIndex < 0) return
+
+      const currentChapter: PersistedMapState = {
+        mapImageUrl,
+        mapFlags,
+        currentPin,
+        journeySelection,
+        journeyActive,
+        levelBadgeUnlocked,
+      }
+
+      setMapChapters((prev) => {
+        const updated = Array.isArray(prev) ? [...prev] : []
+        const maxIndex = Math.max(activeMapChapterIndex, targetChapterIndex)
+        while (updated.length <= maxIndex) {
+          const i = updated.length
+          updated.push({
+            mapImageUrl: getChapterBaseMapImageUrl(i),
+            mapFlags: [],
+            currentPin: null,
+            journeySelection,
+            journeyActive,
+            levelBadgeUnlocked,
+          })
+        }
+        updated[activeMapChapterIndex] = { ...currentChapter, currentPin: null }
+        if (!updated[targetChapterIndex]) {
+          updated[targetChapterIndex] = {
+            mapImageUrl: getChapterBaseMapImageUrl(targetChapterIndex),
+            mapFlags: [],
+            currentPin: null,
+            journeySelection,
+            journeyActive,
+            levelBadgeUnlocked,
+          }
+        } else {
+          updated[targetChapterIndex] = { ...updated[targetChapterIndex], currentPin: null }
+        }
+        return updated
+      })
+
+      setPendingDramaMapTitle(null)
+      setActiveMapChapterIndex(targetChapterIndex)
+      const target = mapChapters[targetChapterIndex]
+      setMapImageUrl(target?.mapImageUrl || getChapterBaseMapImageUrl(targetChapterIndex))
+      setMapFlags(target?.mapFlags ?? [])
+      setCurrentPin(null)
+    },
+    [activeMapChapterIndex, currentPin, journeyActive, journeySelection, levelBadgeUnlocked, mapChapters, mapFlags, mapImageUrl, user?.username],
+  )
+
+  // Save map state to localStorage + DB
+  useEffect(() => {
+    if (!user?.username || typeof window === "undefined") return
+    if (!mapStateHydratedRef.current) return
+    const currentChapter: PersistedMapState = {
+      mapImageUrl,
+      mapFlags,
+      currentPin,
+      journeySelection,
+      journeyActive,
+      levelBadgeUnlocked,
+    }
+
+    const chapters = Array.isArray(mapChapters) ? [...mapChapters] : []
+    const needLen = Math.max(activeMapChapterIndex + 1, chapters.length)
+    for (let i = chapters.length; i < needLen; i++) {
+      chapters.push({
+        mapImageUrl: getChapterBaseMapImageUrl(i),
+        mapFlags: [],
+        currentPin: null,
+        journeySelection: null,
+        journeyActive: false,
+        levelBadgeUnlocked: false,
+      })
+    }
+    chapters[activeMapChapterIndex] = {
+      ...currentChapter,
+      mapImageUrl: currentChapter.mapImageUrl || getChapterBaseMapImageUrl(activeMapChapterIndex),
+    }
+
+    const payload: PersistedMapChaptersState = { activeChapterIndex: activeMapChapterIndex, chapters }
+    try {
+      localStorage.setItem(getMapStateKey(user.username), JSON.stringify(payload))
+    } catch {
+      // ignore storage errors
+    }
+    void fetch("/api/user-map-state", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ user_id: user.username, state: payload }),
+    }).catch(() => {
+      // ignore network errors
+    })
+  }, [user?.username, activeMapChapterIndex, mapChapters, mapImageUrl, mapFlags, currentPin, journeySelection, journeyActive, levelBadgeUnlocked])
+
   // Notify header of current user + profile + unread reviews count
   const [headerUserInfo, setHeaderUserInfo] = useState<{ username: string; avatarUrl?: string | null; avatarEmoji?: string | null; unreadCount: number } | null>(null)
   useEffect(() => {
@@ -1091,7 +1470,7 @@ export default function Home() {
     levelBadgeUnlocked &&
     writingAssessment.level >= 1 &&
     writingAssessment.level <= 5 &&
-    !["login", "home", "journeyTicket"].includes(stage)
+    !["login", "home", "planTest", "journeyTicket", "journeyMap"].includes(stage)
 
   const isCopywriter = !!user?.isCopywriter || user?.username === "copywriting"
 
@@ -1154,13 +1533,17 @@ export default function Home() {
           user={user}
           onStartPlan={() => {
             setLevelBadgeUnlocked(false)
-            if (!journeySelection) {
-              setJourneySelection({ type: "story", difficulty: 1 })
+            // 有七題測驗結果 → 直接進地圖；否則先做測驗
+            if (planTestResult) {
+              setWritingAssessment({
+                score: planTestResult.score,
+                level: planTestResult.level,
+                mapImageStatus: "idle",
+              })
+              setStage("journeyMap")
+            } else {
+              setStage("planTest")
             }
-            if (!writingAssessment) {
-              setWritingAssessment({ score: 0, level: 1, mapImageStatus: "idle" })
-            }
-            setStage("journeyTicket")
           }}
           onContinuePastJourney={continuePastJourney}
           onStartWrite={() => {
@@ -1174,6 +1557,27 @@ export default function Home() {
           }}
         />
       )}
+      {stage === "planTest" && user && (
+        <PlanTest
+          language={language}
+          onBack={() => setStage("journeyMap")}
+          onComplete={async (result) => {
+            setWritingAssessment({
+              score: result.score,
+              level: result.level,
+              mapImageStatus: "idle",
+            })
+            if (typeof window !== "undefined" && user?.username) {
+              localStorage.setItem(
+                getPlanTestResultKey(user.username),
+                JSON.stringify({ score: result.score, level: result.level }),
+              )
+            }
+            setPlanTestResult({ score: result.score, level: result.level })
+            setStage("journeyTicket")
+          }}
+        />
+      )}
       {stage === "journeyTicket" && user && writingAssessment && (
         <JourneyTicket
           language={language}
@@ -1181,7 +1585,12 @@ export default function Home() {
           level={writingAssessment.level}
           score={writingAssessment.score}
           onBack={() => {
-            setStage("home")
+            setStage("journeyMap")
+          }}
+          onRetest={() => {
+            setWritingAssessment(null)
+            setPlanTestResult(null)
+            setStage("planTest")
           }}
           onStart={({ type, difficulty }) => {
             setJourneySelection({ type, difficulty })
@@ -1191,6 +1600,7 @@ export default function Home() {
               mapImageStatus: prev?.mapImageStatus ?? "idle",
             }))
             setLevelBadgeUnlocked(true)
+            setJourneyActive(true)
             if (type === "story") {
               setStoryState({ character: null, plot: null, structure: null, story: "" })
               setStage("character")
@@ -1219,6 +1629,34 @@ export default function Home() {
             } else if (type === "poetry") {
               setStage("poetryWriting")
             }
+          }}
+        />
+      )}
+      {stage === "journeyMap" && user && writingAssessment && journeySelection && (
+        <JourneyMap
+          language={language}
+          type={journeySelection.type}
+          mapImageUrl={mapImageUrl}
+          mapFlags={mapFlags}
+          pin={currentPin}
+          onPinChange={setCurrentPin}
+          chapterIndex={activeMapChapterIndex}
+          onPrevChapter={activeMapChapterIndex > 0 ? () => handleMoveToChapter(activeMapChapterIndex - 1) : undefined}
+          onNextChapter={canMoveToNextChapter ? () => handleMoveToChapter(activeMapChapterIndex + 1) : undefined}
+          canMoveToNextChapter={canMoveToNextChapter}
+          storyState={storyState}
+          bookReviewState={bookReviewState}
+          letterState={letterState}
+          dramaProgress={journeySelection.type === "drama" ? dramaProgress : undefined}
+          poetryProgress={journeySelection.type === "poetry" ? poetryProgress : undefined}
+          noAi={user.noAi}
+          onBack={() => setStage("userProfile")}
+          onNavigate={(targetStage) => {
+            setStage(targetStage as any)
+          }}
+          onGoProfile={() => setStage("userProfile")}
+          onFlagUpdate={(flagId, updates) => {
+            setMapFlags((prev) => prev.map((f) => (f.id === flagId ? { ...f, ...updates } : f)))
           }}
         />
       )}
@@ -1460,7 +1898,9 @@ export default function Home() {
           bookSummary={bookReviewState.bookSummary}
           structure={bookReviewState.structure}
           onReset={async (finalReview) => {
-            void evaluateValuesGrowth(finalReview, "review", bookReviewState.bookTitle ? `Review: ${bookReviewState.bookTitle}` : "Book Review")
+            const bookTitle = bookReviewState.bookTitle || "Book Review"
+            void evaluateValuesGrowth(finalReview, "review", `Review: ${bookTitle}`)
+            void queueJourneyMapUpdate({ title: bookTitle, topic: bookTitle, source: "bookReview" })
 
             setBookReviewState({
               reviewType: null,
@@ -1470,7 +1910,7 @@ export default function Home() {
               bookCoverUrl: undefined,
               bookSummary: undefined,
             })
-            setStage("home")
+            setStage(journeyActive ? "journeyMap" : "home")
           }}
           onBack={async () => {
             // 如果正在编辑已保存的作品，加载之前的内容
@@ -1508,7 +1948,9 @@ export default function Home() {
           bookTitle={bookReviewState.bookTitle}
           review={bookReviewState.review}
           onReset={async (finalReview) => {
-            void evaluateValuesGrowth(finalReview, "review", bookReviewState.bookTitle ? `Review: ${bookReviewState.bookTitle}` : "Book Review")
+            const bookTitle = bookReviewState.bookTitle || "Book Review"
+            void evaluateValuesGrowth(finalReview, "review", `Review: ${bookTitle}`)
+            void queueJourneyMapUpdate({ title: bookTitle, topic: bookTitle, source: "bookReview" })
 
             setBookReviewState({
               reviewType: null,
@@ -1518,7 +1960,7 @@ export default function Home() {
               bookCoverUrl: undefined,
               bookSummary: undefined,
             })
-            setStage("home")
+            setStage(journeyActive ? "journeyMap" : "home")
           }}
           onBack={() => setStage("bookReviewWritingNoAi")}
           userId={user.username}
@@ -1679,10 +2121,12 @@ export default function Home() {
           storyState={storyState}
           onReset={async (finalStory) => {
             const storyTitle = storyState.character?.name?.trim() ? `${storyState.character.name}'s Story` : "My Story"
+            const topic = storyState.character?.name || storyState.plot?.setting || storyTitle
             void evaluateValuesGrowth(finalStory, "story", storyTitle)
+            void queueJourneyMapUpdate({ title: storyTitle, topic, source: "storyReview" })
 
             setStoryState({ character: null, plot: null, structure: null, story: "" })
-            setStage("home")
+            setStage(journeyActive ? "journeyMap" : "home")
           }}
           onEdit={async (editStage) => {
             // 如果正在编辑已保存的作品，加载之前的内容
@@ -1866,7 +2310,9 @@ export default function Home() {
           sections={letterState.sections}
           onReset={async (finalLetter) => {
             const letterTitle = letterState.recipient ? `Letter to ${letterState.recipient}` : "My Letter"
+            const topic = letterState.recipient || letterState.occasion || letterTitle
             void evaluateValuesGrowth(finalLetter, "letter", letterTitle)
+            void queueJourneyMapUpdate({ title: letterTitle, topic, source: "letter" })
 
             setLetterState({
               recipient: null,
@@ -1876,7 +2322,7 @@ export default function Home() {
               sections: [],
               letter: "",
             })
-            setStage("home")
+            setStage(journeyActive ? "journeyMap" : "home")
           }}
           onBack={async () => {
             // 如果正在编辑已保存的作品，加载之前的内容
@@ -1984,8 +2430,9 @@ export default function Home() {
           onBack={() => {
             if (dramaBook) {
               void evaluateValuesGrowth(dramaBook.script || "", "story", "My Drama")
+              void queueJourneyMapUpdate({ title: "My Drama", topic: dramaTitle || "Drama", source: "drama" })
             }
-            setStage("writeTypeSelection")
+            setStage(journeyActive ? "journeyMap" : "writeTypeSelection")
           }}
         />
       )}
@@ -2000,9 +2447,10 @@ export default function Home() {
               const script = dramaBook.script || ""
               if (script.trim()) {
                 void evaluateValuesGrowth(script, "story", "My Drama")
+                void queueJourneyMapUpdate({ title: "My Drama", topic: dramaTitle || "Drama", source: "drama" })
               }
             }
-            setStage("writeTypeSelection")
+            setStage(journeyActive ? "journeyMap" : "writeTypeSelection")
           }}
         />
       )}
@@ -2014,8 +2462,11 @@ export default function Home() {
 
           onBack={() => setStage("writeTypeSelection")}
           onComplete={() => {
-            evaluateValuesGrowth(poetryLinesText, "story", poetryTopicValue ? `Poetry: ${poetryTopicValue}` : "My Poetry")
-            setStage("home")
+            const topic = poetryTopicValue || "Poetry"
+            const title = `Poetry: ${topic}`
+            evaluateValuesGrowth(poetryLinesText, "story", title)
+            void queueJourneyMapUpdate({ title, topic, source: "poetry" })
+            setStage(journeyActive ? "journeyMap" : "home")
           }}
         />
       )}
@@ -2026,8 +2477,11 @@ export default function Home() {
 
           onBack={() => setStage("writeTypeSelection")}
           onComplete={() => {
-            evaluateValuesGrowth(poetryLinesText, "story", poetryTopicValue ? `Poetry: ${poetryTopicValue}` : "My Poetry")
-            setStage("home")
+            const topic = poetryTopicValue || "Poetry"
+            const title = `Poetry: ${topic}`
+            evaluateValuesGrowth(poetryLinesText, "story", title)
+            void queueJourneyMapUpdate({ title, topic, source: "poetry" })
+            setStage(journeyActive ? "journeyMap" : "home")
           }}
         />
       )}
@@ -2038,8 +2492,11 @@ export default function Home() {
 
           onBack={() => setStage("writeTypeSelection")}
           onComplete={() => {
-            evaluateValuesGrowth(poetryLinesText, "story", poetryTopicValue ? `Poetry: ${poetryTopicValue}` : "My Poetry")
-            setStage("home")
+            const topic = poetryTopicValue || "Poetry"
+            const title = `Poetry: ${topic}`
+            evaluateValuesGrowth(poetryLinesText, "story", title)
+            void queueJourneyMapUpdate({ title, topic, source: "poetry" })
+            setStage(journeyActive ? "journeyMap" : "home")
           }}
         />
       )}
@@ -2050,8 +2507,11 @@ export default function Home() {
 
           onBack={() => setStage("writeTypeSelection")}
           onComplete={() => {
-            evaluateValuesGrowth(poetryLinesText, "story", poetryTopicValue ? `Poetry: ${poetryTopicValue}` : "My Poetry")
-            setStage("home")
+            const topic = poetryTopicValue || "Poetry"
+            const title = `Poetry: ${topic}`
+            evaluateValuesGrowth(poetryLinesText, "story", title)
+            void queueJourneyMapUpdate({ title, topic, source: "poetry" })
+            setStage(journeyActive ? "journeyMap" : "home")
           }}
         />
       )}
@@ -2062,8 +2522,11 @@ export default function Home() {
 
           onBack={() => setStage("writeTypeSelection")}
           onComplete={() => {
-            evaluateValuesGrowth(poetryLinesText, "story", poetryTopicValue ? `Poetry: ${poetryTopicValue}` : "My Poetry")
-            setStage("home")
+            const topic = poetryTopicValue || "Poetry"
+            const title = `Poetry: ${topic}`
+            evaluateValuesGrowth(poetryLinesText, "story", title)
+            void queueJourneyMapUpdate({ title, topic, source: "poetry" })
+            setStage(journeyActive ? "journeyMap" : "home")
           }}
         />
       )}

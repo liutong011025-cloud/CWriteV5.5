@@ -1,10 +1,8 @@
-import { NextResponse } from "next/server";
-
-const DIFY_API_URL = "https://api.dify.ai/v1/chat-messages";
-const DIFY_API_KEY = "app-TFDykrjN8LpJROY6eTRNjwo5";
+import { NextResponse } from "next/server"
+import { chat, isConfigured } from "@/lib/deepseek"
 
 /**
- * Unified Dify AI endpoint for both Drama and Poetry.
+ * Unified DeepSeek AI endpoint for both Drama and Poetry.
  *
  * body.action:
  *   -- Drama --
@@ -21,30 +19,34 @@ const DIFY_API_KEY = "app-TFDykrjN8LpJROY6eTRNjwo5";
  */
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
-    const { action } = body;
+    const body = await request.json()
+    const { action } = body
 
-    let prompt = "";
-    let parseMode: "drama" | "raw" | "feedback" = "raw";
+    let prompt = ""
+    let parseMode: "drama" | "raw" | "feedback" = "raw"
+
+    if (!isConfigured()) {
+      return NextResponse.json(getFallbackResponse(action, body))
+    }
 
     switch (action) {
       // ===================== DRAMA =====================
       case "drama_generate": {
-        const { scenes, characters, title } = body;
-        let desc = `Drama Title: "${title}"\n\nCHARACTERS:\n`;
+        const { scenes, characters, title } = body
+        let desc = `Drama Title: "${title}"\n\nCHARACTERS:\n`
         for (const char of characters) {
-          desc += `- ${char.name}: ${char.species || "Unknown species"}. ${char.appearance || "No description"}\n`;
+          desc += `- ${char.name}: ${char.species || "Unknown species"}. ${char.appearance || "No description"}\n`
         }
-        desc += "\nSCENES:\n";
+        desc += "\nSCENES:\n"
         for (let i = 0; i < scenes.length; i++) {
-          const scene = scenes[i];
-          desc += `\nScene ${i + 1}: ${scene.backgroundPrompt || "No background set"}\n`;
-          if (scene.notes) desc += `Notes: ${scene.notes}\n`;
+          const scene = scenes[i]
+          desc += `\nScene ${i + 1}: ${scene.backgroundPrompt || "No background set"}\n`
+          if (scene.notes) desc += `Notes: ${scene.notes}\n`
           for (const pc of scene.characters) {
-            const ci = characters.find((c: { id: string }) => c.id === pc.characterId);
+            const ci = characters.find((c: { id: string }) => c.id === pc.characterId)
             if (ci) {
-              if (pc.dialogue) desc += `${ci.name} says: "${pc.dialogue}"\n`;
-              if (pc.thought) desc += `${ci.name} thinks: "${pc.thought}"\n`;
+              if (pc.dialogue) desc += `${ci.name} says: "${pc.dialogue}"\n`
+              if (pc.thought) desc += `${ci.name} thinks: "${pc.thought}"\n`
             }
           }
         }
@@ -66,15 +68,15 @@ Use elementary-school-level English. Be encouraging and friendly. DO NOT add new
 
 Here is the student's drama project:
 
-${desc}`;
-        parseMode = "drama";
-        break;
+${desc}`
+        parseMode = "drama"
+        break
       }
 
       case "drama_revise": {
-        const { originalScript, modifiedScript, title } = body;
+        const { originalScript, modifiedScript, title } = body
         if (!originalScript || !modifiedScript) {
-          return NextResponse.json({ error: "Both scripts required" }, { status: 400 });
+          return NextResponse.json({ error: "Both scripts required" }, { status: 400 })
         }
         prompt = `You are a friendly creative writing teacher for young students (ages 8-14).
 
@@ -96,14 +98,14 @@ Please:
 3. If there are grammar/spelling issues, note them kindly
 4. Give the script a brief rating using stars (1-5)
 
-Reply in a friendly, encouraging tone suitable for kids. Use simple language. Keep your response concise (under 200 words).`;
-        parseMode = "feedback";
-        break;
+Reply in a friendly, encouraging tone suitable for kids. Use simple language. Keep your response concise (under 200 words).`
+        parseMode = "feedback"
+        break
       }
 
       // ===================== POETRY =====================
       case "rhyme": {
-        const { topic, word } = body;
+        const { topic, word } = body
         prompt = `You are a friendly poetry helper for kids (ages 8-12).
 The student is writing Rhyming Couplets about "${topic}".
 They need rhyming words for: "${word}"
@@ -112,33 +114,37 @@ Give exactly 8 rhyming words, sorted by difficulty:
 - 3 Medium (slightly harder)
 - 2 Fancy (challenging vocabulary)
 Format: one word per line, prefixed with [Simple], [Medium], or [Fancy].
-Only output the word list, nothing else.`;
-        break;
+Only output the word list, nothing else.`
+        break
       }
 
       case "syllable": {
-        const { topic, word, lineIndex } = body;
+        const { topic, word, lineIndex } = body
         prompt = `You are a friendly Haiku helper for kids (ages 8-12).
 The student is writing a Haiku about "${topic}".
 Line ${(lineIndex ?? 0) + 1} currently: "${word}"
 The target syllable count is ${lineIndex === 0 ? 5 : lineIndex === 1 ? 7 : 5}.
 Suggest 2 shorter alternative phrases and 2 longer alternative phrases that keep the same meaning/image.
 Format each on a new line as: [Shorter] phrase | or [Longer] phrase
-Keep suggestions under 12 words each. Use simple English.`;
-        break;
+Keep suggestions under 12 words each. Use simple English.`
+        break
       }
 
       case "rhetoric": {
-        const { topic, lines, device, activeLine } = body;
+        const { topic, lines, device, activeLine } = body
         const deviceExplanation =
-          device === "Metaphor" ? "comparing two things directly without 'like' or 'as'" :
-          device === "Simile" ? "comparing things using 'like' or 'as'" :
-          device === "Personification" ? "giving human qualities to non-human things" :
-          device === "Onomatopoeia" ? "using words that sound like what they describe" :
-          "repeating the same starting sound in nearby words";
+          device === "Metaphor"
+            ? "comparing two things directly without 'like' or 'as'"
+            : device === "Simile"
+              ? "comparing things using 'like' or 'as'"
+              : device === "Personification"
+                ? "giving human qualities to non-human things"
+                : device === "Onomatopoeia"
+                  ? "using words that sound like what they describe"
+                  : "repeating the same starting sound in nearby words"
 
-        const hasActiveLine = activeLine && activeLine.trim().length > 0;
-        const allLines = (lines || []).filter((l: string) => l.trim()).join("\n");
+        const hasActiveLine = activeLine && activeLine.trim().length > 0
+        const allLines = (lines || []).filter((l: string) => l.trim()).join("\n")
 
         prompt = hasActiveLine
           ? `You are a creative writing helper for kids (ages 8-12).
@@ -168,12 +174,12 @@ Rules:
 - Use simple English suitable for kids
 - Make the lines relevant to "${topic}" and the student's existing poem
 
-Format: one line per line, nothing else. No labels, no numbers, no explanations.`;
-        break;
+Format: one line per line, nothing else. No labels, no numbers, no explanations.`
+        break
       }
 
       case "inspiration": {
-        const { topic: insTopic } = body;
+        const { topic: insTopic } = body
         prompt = `You are a creative writing helper for kids (ages 8-12).
 The student is writing a poem about "${insTopic}".
 
@@ -192,22 +198,22 @@ Rules:
 - Use simple English that kids can understand
 - Each word should be a single adjective or verb (max 2 words)
 - Make words vivid and specific to "${insTopic}", not generic
-- Output ONLY the 5 lines in the format above, nothing else`;
-        break;
+- Output ONLY the 5 lines in the format above, nothing else`
+        break
       }
 
       case "synonym": {
-        const { topic, word } = body;
+        const { topic, word } = body
         prompt = `You are a vocabulary helper for kids (ages 8-12).
 The student selected the word: "${word}" in their poem about "${topic}".
 Suggest 5 alternative words or short phrases (max 3 words each).
 Include different tones: playful, serious, descriptive.
-Format: one suggestion per line, with tone label like [playful] word`;
-        break;
+Format: one suggestion per line, with tone label like [playful] word`
+        break
       }
 
       case "review": {
-        const { form, topic, lines } = body;
+        const { form, topic, lines } = body
         prompt = `You are an encouraging poetry teacher for kids (ages 8-12).
 Form: ${form}
 Topic: ${topic}
@@ -224,12 +230,12 @@ Form: X/5
 Language: X/5
 Creativity: X/5
 
-Use simple, friendly language. Be encouraging!`;
-        break;
+Use simple, friendly language. Be encouraging!`
+        break
       }
 
       case "poetry_revise": {
-        const { title, topic, originalPoem, modifiedPoem } = body;
+        const { title, topic, originalPoem, modifiedPoem } = body
         prompt = `You are an encouraging poetry teacher for kids (ages 8-12).
 The student revised their poem about "${title || topic}".
 
@@ -239,123 +245,131 @@ ${originalPoem}
 Updated version:
 ${modifiedPoem}
 
-Give brief, encouraging feedback (2-3 sentences) about what they changed and how it improved. Be specific about what got better. Use simple, friendly language.`;
-        parseMode = "feedback";
-        break;
+Give brief, encouraging feedback (2-3 sentences) about what they changed and how it improved. Be specific about what got better. Use simple, friendly language.`
+        parseMode = "feedback"
+        break
       }
 
       default:
-        return NextResponse.json({ error: "Unknown action" }, { status: 400 });
+        return NextResponse.json({ error: "Unknown action" }, { status: 400 })
     }
 
-    // Call Dify
-    const response = await fetch(DIFY_API_URL, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${DIFY_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        inputs: {},
-        query: prompt,
-        response_mode: "blocking",
-        user: "creative-writing-student",
-      }),
-    });
-
-    if (!response.ok) {
-      const errText = await response.text();
-      console.error("[v0] Dify error:", response.status, errText);
-      return NextResponse.json(getFallbackResponse(action, body));
+    let answer: string
+    try {
+      answer = await chat({
+        messages: [{ role: "user", content: prompt }],
+        temperature: 0.7,
+        maxTokens: 2048,
+      })
+    } catch (error) {
+      console.error("[dify] DeepSeek error:", error)
+      return NextResponse.json(getFallbackResponse(action, body))
     }
-
-    const data = await response.json();
-    const answer = data.answer || "";
 
     // Parse based on mode
     if (parseMode === "drama") {
-      return NextResponse.json(parseDramaResponse(answer, body));
+      return NextResponse.json(parseDramaResponse(answer, body))
     }
     if (parseMode === "feedback") {
-      return NextResponse.json({ feedback: answer || "Great work! Keep it up!" });
+      return NextResponse.json({ feedback: answer || "Great work! Keep it up!" })
     }
     // raw mode -- return as result
-    return NextResponse.json({ result: answer });
+    return NextResponse.json({ result: answer })
   } catch (error) {
-    console.error("[v0] Dify unified error:", error);
-    return NextResponse.json(getFallbackResponse("unknown", {}));
+    console.error("[dify] Unified DeepSeek error:", error)
+    return NextResponse.json(getFallbackResponse("unknown", {}))
   }
 }
 
 // ---- Drama response parsing ----
 function parseDramaResponse(
   answer: string,
-  body: { scenes?: unknown[]; characters?: unknown[]; title?: string },
+  body: { scenes?: unknown[]; characters?: unknown[]; title?: string }
 ) {
-  const summaryMatch = answer.match(/---SUMMARY---([\s\S]*?)(?=---SCRIPT---|$)/);
-  const scriptMatch = answer.match(/---SCRIPT---([\s\S]*?)(?=---SUGGESTIONS---|$)/);
-  const suggestionsMatch = answer.match(/---SUGGESTIONS---([\s\S]*?)$/);
+  const summaryMatch = answer.match(/---SUMMARY---([\s\S]*?)(?=---SCRIPT---|$)/)
+  const scriptMatch = answer.match(/---SCRIPT---([\s\S]*?)(?=---SUGGESTIONS---|$)/)
+  const suggestionsMatch = answer.match(/---SUGGESTIONS---([\s\S]*?)$/)
 
   const scenes = (body.scenes || []) as Array<{
-    backgroundPrompt: string;
-    notes: string;
-    characters: Array<{ characterId: string; dialogue: string; thought: string }>;
-  }>;
-  const characters = (body.characters || []) as Array<{ id: string; name: string }>;
-  const title = body.title || "Untitled";
+    backgroundPrompt: string
+    notes: string
+    characters: Array<{ characterId: string; dialogue: string; thought: string }>
+  }>
+  const characters = (body.characters || []) as Array<{ id: string; name: string }>
+  const title = body.title || "Untitled"
 
   const summary = summaryMatch
     ? summaryMatch[1].trim()
-    : `Great job creating "${title}"! Your drama has ${scenes.length} scene${scenes.length > 1 ? "s" : ""} and ${characters.length} character${characters.length > 1 ? "s" : ""}.`;
+    : `Great job creating "${title}"! Your drama has ${scenes.length} scene${scenes.length > 1 ? "s" : ""} and ${characters.length} character${characters.length > 1 ? "s" : ""}.`
 
-  const script = scriptMatch ? scriptMatch[1].trim() : generateFallbackScript(scenes, characters, title);
+  const script = scriptMatch
+    ? scriptMatch[1].trim()
+    : generateFallbackScript(scenes, characters, title)
 
-  const suggestionsText = suggestionsMatch ? suggestionsMatch[1].trim() : "";
+  const suggestionsText = suggestionsMatch ? suggestionsMatch[1].trim() : ""
   const suggestions = suggestionsText
-    ? suggestionsText.split("\n").filter((s: string) => s.trim().length > 0).map((s: string) => s.trim())
-    : ["Try adding more dialogue!", "What feelings do your characters have?", "Can you add stage directions?"];
+    ? suggestionsText
+        .split("\n")
+        .filter((s: string) => s.trim().length > 0)
+        .map((s: string) => s.trim())
+    : [
+        "Try adding more dialogue!",
+        "What feelings do your characters have?",
+        "Can you add stage directions?",
+      ]
 
-  return { summary, script, suggestions };
+  return { summary, script, suggestions }
 }
 
 function generateFallbackScript(
   scenes: Array<{
-    backgroundPrompt: string;
-    notes: string;
-    characters: Array<{ characterId: string; dialogue: string; thought: string }>;
+    backgroundPrompt: string
+    notes: string
+    characters: Array<{ characterId: string; dialogue: string; thought: string }>
   }>,
   characters: Array<{ id: string; name: string }>,
-  title: string,
+  title: string
 ): string {
-  let script = `${title}\nA Drama by a Creative Young Writer\n\n`;
+  let script = `${title}\nA Drama by a Creative Young Writer\n\n`
   for (let i = 0; i < scenes.length; i++) {
-    const scene = scenes[i];
-    script += `--- ACT ${i + 1} ---\n`;
-    script += `[Setting: ${scene.backgroundPrompt || "A mysterious place"}]\n`;
-    if (scene.notes) script += `[${scene.notes}]\n`;
-    script += "\n";
+    const scene = scenes[i]
+    script += `--- ACT ${i + 1} ---\n`
+    script += `[Setting: ${scene.backgroundPrompt || "A mysterious place"}]\n`
+    if (scene.notes) script += `[${scene.notes}]\n`
+    script += "\n"
     for (const pc of scene.characters) {
-      const char = characters.find((c) => c.id === pc.characterId);
+      const char = characters.find((c) => c.id === pc.characterId)
       if (char) {
-        if (pc.dialogue) script += `${char.name}: "${pc.dialogue}"\n`;
-        if (pc.thought) script += `[${char.name} thinks: "${pc.thought}"]\n`;
+        if (pc.dialogue) script += `${char.name}: "${pc.dialogue}"\n`
+        if (pc.thought) script += `[${char.name} thinks: "${pc.thought}"]\n`
       }
     }
-    script += "\n";
+    script += "\n"
   }
-  return script;
+  return script
 }
 
 // ---- Fallback responses ----
-function getFallbackResponse(action: string, body: Record<string, unknown>) {
+function getFallbackResponse(
+  action: string,
+  body: Record<string, unknown>
+) {
   switch (action) {
     case "drama_generate": {
       const scenes = (body.scenes || []) as Array<{
-        backgroundPrompt: string; notes: string;
-        characters: Array<{ characterId: string; dialogue: string; thought: string }>;
-      }>;
-      const characters = (body.characters || []) as Array<{ id: string; name: string }>;
-      const title = (body.title as string) || "Untitled";
+        backgroundPrompt: string
+        notes: string
+        characters: Array<{
+          characterId: string
+          dialogue: string
+          thought: string
+        }>
+      }>
+      const characters = (body.characters || []) as Array<{
+        id: string
+        name: string
+      }>
+      const title = (body.title as string) || "Untitled"
       return {
         summary: `Great job creating "${title}"!`,
         script: generateFallbackScript(scenes, characters, title),
@@ -364,22 +378,45 @@ function getFallbackResponse(action: string, body: Record<string, unknown>) {
           "What feelings do your characters have?",
           "Can you add what happens at the end?",
         ],
-      };
+      }
     }
     case "drama_revise":
     case "poetry_revise":
-      return { feedback: "Great edits! Keep writing and improving. Every revision makes it better!" };
+      return {
+        feedback:
+          "Great edits! Keep writing and improving. Every revision makes it better!",
+      }
     case "rhyme":
-      return { result: "[Simple] day\n[Simple] play\n[Simple] way\n[Medium] display\n[Medium] hooray\n[Medium] relay\n[Fancy] bouquet\n[Fancy] ballet" };
+      return {
+        result:
+          "[Simple] day\n[Simple] play\n[Simple] way\n[Medium] display\n[Medium] hooray\n[Medium] relay\n[Fancy] bouquet\n[Fancy] ballet",
+      }
     case "syllable":
-      return { result: "[Shorter] morning light\n[Shorter] soft breeze\n[Longer] the morning light shines\n[Longer] a gentle breeze blows through" };
+      return {
+        result:
+          "[Shorter] morning light\n[Shorter] soft breeze\n[Longer] the morning light shines\n[Longer] a gentle breeze blows through",
+      }
     case "rhetoric":
-      return { result: "The sun smiled down upon the earth\nTime crawled slowly by" };
+      return {
+        result:
+          "The sun smiled down upon the earth\nTime crawled slowly by",
+      }
+    case "inspiration":
+      return {
+        result:
+          "sight: bright, colorful, shining, glowing, sparkling, vivid\nsound: loud, quiet, buzzing, humming, rustling, crackling\nsmell: fresh, sweet, fragrant, earthy, minty, floral\ntouch: soft, rough, smooth, silky, warm, cool\ntaste: sweet, sour, tangy, bitter, juicy, creamy",
+      }
     case "synonym":
-      return { result: "[playful] cheerful\n[serious] solemn\n[descriptive] radiant\n[playful] bubbly\n[descriptive] vivid" };
+      return {
+        result:
+          "[playful] cheerful\n[serious] solemn\n[descriptive] radiant\n[playful] bubbly\n[descriptive] vivid",
+      }
     case "review":
-      return { result: "---FEEDBACK---\nGreat effort on your poem!\n---TIPS---\n* Try adding more sensory details\n* Read your poem aloud\n* Add one surprising image\n---SCORE---\nForm: 3/5\nLanguage: 3/5\nCreativity: 4/5" };
+      return {
+        result:
+          "---FEEDBACK---\nGreat effort on your poem!\n---TIPS---\n* Try adding more sensory details\n* Read your poem aloud\n* Add one surprising image\n---SCORE---\nForm: 3/5\nLanguage: 3/5\nCreativity: 4/5",
+      }
     default:
-      return { result: "Great work! Keep writing!" };
+      return { result: "Great work! Keep writing!" }
   }
 }

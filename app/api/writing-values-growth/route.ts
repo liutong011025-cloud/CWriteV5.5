@@ -1,9 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-
-const DIFY_API_KEY = process.env.DIFY_API_KEY || ""
-const DIFY_VALUES_GROWTH_APP_ID =
-  process.env.DIFY_VALUES_GROWTH_APP_ID || process.env.DIFY_METRICS_APP_ID || ""
-const DIFY_BASE_URL = "https://api.dify.ai/v1"
+import { chat, isConfigured } from "@/lib/deepseek"
 
 const VALUE_DIMENSIONS = [
   "Perseverance",
@@ -152,25 +148,26 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    if (!DIFY_API_KEY || !DIFY_VALUES_GROWTH_APP_ID) {
-      const missingEnv: string[] = []
-      if (!DIFY_API_KEY) missingEnv.push("DIFY_API_KEY")
-      if (!DIFY_VALUES_GROWTH_APP_ID) missingEnv.push("DIFY_VALUES_GROWTH_APP_ID")
+    if (!isConfigured()) {
       const local = localHeuristicValues(text)
       return NextResponse.json({
         matchedDimensions: local.matchedDimensions,
         evidenceByDimension: local.evidenceByDimension,
-        source: local.matchedDimensions.length > 0 ? "local_heuristic_no_config" : "fallback_no_config",
+        source:
+          local.matchedDimensions.length > 0
+            ? "local_heuristic_no_config"
+            : "fallback_no_config",
         diagnostics: buildDiagnostics(
           "fallback_no_config",
-          local.matchedDimensions.length > 0 ? "Using local values fallback" : "Values growth not configured",
           local.matchedDimensions.length > 0
-            ? "Dify config is missing, so local heuristic values analysis is used."
-            : "Dify config is missing, so tree growth analysis is skipped.",
+            ? "Using local values fallback"
+            : "Values growth not configured",
+          local.matchedDimensions.length > 0
+            ? "DeepSeek is not configured, so local heuristic values analysis is used."
+            : "DeepSeek is not configured, so tree growth analysis is skipped.",
           {
-            missingEnv,
             tips: [
-              "Set missing env vars in .env.local or deployment environment.",
+              "Set DEEPSEEK_API_KEY in .env.local or deployment environment.",
               "Restart dev server after updating env vars.",
             ],
           }
@@ -179,8 +176,7 @@ export async function POST(request: NextRequest) {
     }
 
     const type = body.type || "story"
-    const systemPrompt = `
-You are an elementary writing values assessor.
+    const systemPrompt = `You are an elementary writing values assessor.
 Assess the student's writing against 12 dimensions:
 1. Perseverance
 2. Respect for Others
@@ -212,57 +208,45 @@ Rules:
   - Prefer "sentence" when possible (quoted/copied from writing).
   - If no single sentence is enough, you may use "overall_evidence" to explain how the whole passage supports the value.
   - "reason" must explain why this evidence supports that specific value.
-  - If support is weak/unclear, DO NOT include that dimension.
-`.trim()
+  - If support is weak/unclear, DO NOT include that dimension.`
 
-    const userPrompt = `
-Writing type: ${type}
+    const userPrompt = `Writing type: ${type}
 Student writing:
-${text.slice(0, 6000)}
-`.trim()
+${text.slice(0, 6000)}`
 
-    const res = await fetch(`${DIFY_BASE_URL}/chat-messages`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${DIFY_API_KEY}`,
-      },
-      body: JSON.stringify({
-        inputs: {
-          role: "writing_values_growth",
-          writing_type: type,
-        },
-        query: `${systemPrompt}\n\n${userPrompt}`,
-        response_mode: "blocking",
-        user: body.user_id || "values-growth-user",
-        app_id: DIFY_VALUES_GROWTH_APP_ID,
-      }),
-    })
-
-    if (!res.ok) {
-      const errText = await res.text()
-      console.error("[writing-values-growth] Dify error:", res.status, errText)
+    let rawAnswer: string
+    try {
+      rawAnswer = await chat({
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
+        ],
+        temperature: 0.3,
+        maxTokens: 1024,
+      })
+    } catch (error) {
+      console.error("[writing-values-growth] DeepSeek error:", error)
       const local = localHeuristicValues(text)
       return NextResponse.json({
         matchedDimensions: local.matchedDimensions,
         evidenceByDimension: local.evidenceByDimension,
-        source: local.matchedDimensions.length > 0 ? "local_heuristic_dify_error" : "fallback_dify_error",
+        source:
+          local.matchedDimensions.length > 0
+            ? "local_heuristic_api_error"
+            : "fallback_api_error",
         diagnostics: buildDiagnostics(
-          "fallback_dify_error",
-          "Dify request failed",
-          `Dify returned HTTP ${res.status}.`,
+          "fallback_api_error",
+          "DeepSeek request failed",
+          `DeepSeek returned an error.`,
           {
             tips: [
-              "Check Dify app availability and API key permission.",
+              "Check DeepSeek API key and quota.",
               "Retry once after 2-3 seconds if this is a transient error.",
             ],
           }
         ),
       })
     }
-
-    const data = await res.json()
-    const rawAnswer = String(data.answer || "").trim()
 
     let parsed: { matched_dimensions?: unknown[] } = {}
     try {
@@ -278,15 +262,18 @@ ${text.slice(0, 6000)}
       return NextResponse.json({
         matchedDimensions: local.matchedDimensions,
         evidenceByDimension: local.evidenceByDimension,
-        source: local.matchedDimensions.length > 0 ? "local_heuristic_parse_error" : "fallback_parse_error",
+        source:
+          local.matchedDimensions.length > 0
+            ? "local_heuristic_parse_error"
+            : "fallback_parse_error",
         diagnostics: buildDiagnostics(
           "fallback_parse_error",
           "Values result parsing failed",
-          "Dify returned non-JSON content that could not be parsed.",
+          "DeepSeek returned non-JSON content that could not be parsed.",
           {
             tips: [
-              "Ensure Dify app output is strict JSON.",
-              "Check Dify logs for prompt leakage or extra text.",
+              "Ensure the model returns strict JSON.",
+              "Check API logs for prompt leakage or extra text.",
             ],
           }
         ),
@@ -301,24 +288,37 @@ ${text.slice(0, 6000)}
       : []
 
     const evidenceByDimension: Record<number, EvidenceItem> = {}
-    const rawEvidence = (parsed as { evidence_by_dimension?: unknown }).evidence_by_dimension
+    const rawEvidence = (parsed as { evidence_by_dimension?: unknown })
+      .evidence_by_dimension
     if (rawEvidence && typeof rawEvidence === "object") {
-      Object.entries(rawEvidence as Record<string, unknown>).forEach(([k, v]) => {
-        const id = clampDimensionId(k)
-        if (!id || !v || typeof v !== "object") return
-        const sentence = String((v as { sentence?: unknown }).sentence || "").trim()
-        const overallEvidence = String((v as { overall_evidence?: unknown }).overall_evidence || "").trim()
-        const reason = String((v as { reason?: unknown }).reason || "").trim()
-        if ((!sentence && !overallEvidence) || !reason) return
-        evidenceByDimension[id] = {
-          ...(sentence ? { sentence } : {}),
-          ...(overallEvidence ? { overall_evidence: overallEvidence } : {}),
-          reason,
+      Object.entries(rawEvidence as Record<string, unknown>).forEach(
+        ([k, v]) => {
+          const id = clampDimensionId(k)
+          if (!id || !v || typeof v !== "object") return
+          const sentence = String(
+            (v as { sentence?: unknown }).sentence || ""
+          ).trim()
+          const overallEvidence = String(
+            (v as { overall_evidence?: unknown }).overall_evidence || ""
+          ).trim()
+          const reason = String(
+            (v as { reason?: unknown }).reason || ""
+          ).trim()
+          if ((!sentence && !overallEvidence) || !reason) return
+          evidenceByDimension[id] = {
+            ...(sentence ? { sentence } : {}),
+            ...(overallEvidence
+              ? { overall_evidence: overallEvidence }
+              : {}),
+            reason,
+          }
         }
-      })
+      )
     }
 
-    const strictlyEvidenceBasedDimensions = matchedDimensions.filter((id) => !!evidenceByDimension[id])
+    const strictlyEvidenceBasedDimensions = matchedDimensions.filter(
+      (id) => !!evidenceByDimension[id]
+    )
 
     if (strictlyEvidenceBasedDimensions.length === 0) {
       return NextResponse.json({
@@ -343,7 +343,7 @@ ${text.slice(0, 6000)}
       matchedDimensions: strictlyEvidenceBasedDimensions,
       evidenceByDimension,
       dimensions: VALUE_DIMENSIONS,
-      source: "dify",
+      source: "deepseek",
       diagnostics: null,
     })
   } catch (error) {
@@ -360,4 +360,3 @@ ${text.slice(0, 6000)}
     })
   }
 }
-

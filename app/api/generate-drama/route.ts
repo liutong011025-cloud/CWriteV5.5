@@ -1,9 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { logApiCall } from '@/lib/log-api-call'
-
-const DIFY_API_KEY = process.env.DIFY_API_KEY || ''
-const DIFY_APP_ID = 'app-TFDykrjN8LpJROY6eTRNjwo5'
-const DIFY_BASE_URL = 'https://api.dify.ai/v1'
+import { NextRequest, NextResponse } from "next/server"
+import { chat, isConfigured } from "@/lib/deepseek"
+import { logApiCall } from "@/lib/log-api-call"
 
 export async function POST(request: NextRequest) {
   try {
@@ -41,7 +38,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const systemPrompt = `You are a friendly drama writing helper for elementary school kids (ages 8-12). 
+    const systemPrompt = `You are a friendly drama writing helper for elementary school kids (ages 8-12).
 Your job is to:
 1. Summarize the student's existing drama content - DO NOT add new story content
 2. Write it as a simple drama script with stage directions
@@ -57,8 +54,7 @@ Format your response EXACTLY like this:
 
 Use elementary-school-level English. Be encouraging and friendly. DO NOT add new characters or plot points.`
 
-    if (!DIFY_API_KEY) {
-      // Return fallback response
+    if (!isConfigured()) {
       return NextResponse.json({
         summary: `Great job creating "${title}"! Your drama has ${scenes.length} scene${scenes.length > 1 ? "s" : ""} and ${characters.length} character${characters.length > 1 ? "s" : ""}. Keep up the amazing work!`,
         script: generateFallbackScript(scenes, characters, title),
@@ -72,25 +68,18 @@ Use elementary-school-level English. Be encouraging and friendly. DO NOT add new
       })
     }
 
-    const response = await fetch(`${DIFY_BASE_URL}/chat-messages`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${DIFY_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        inputs: {},
-        query: `${systemPrompt}\n\nHere is the student's drama project:\n\n${projectDescription}`,
-        response_mode: "blocking",
-        user: userId || "drama-builder-student",
-        app_id: DIFY_APP_ID,
-      }),
-    })
-
-    if (!response.ok) {
-      const errorText = await response.text()
-      console.error("[Drama] Dify error:", errorText)
-      // Return a friendly fallback
+    let answer: string
+    try {
+      answer = await chat({
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: `Here is the student's drama project:\n\n${projectDescription}` },
+        ],
+        temperature: 0.7,
+        maxTokens: 2048,
+      })
+    } catch (error) {
+      console.error("[Drama] DeepSeek error:", error)
       return NextResponse.json({
         summary: `Great job creating "${title}"! Your drama has ${scenes.length} scene${scenes.length > 1 ? "s" : ""} and ${characters.length} character${characters.length > 1 ? "s" : ""}. Keep up the amazing work!`,
         script: generateFallbackScript(scenes, characters, title),
@@ -103,9 +92,6 @@ Use elementary-school-level English. Be encouraging and friendly. DO NOT add new
         ],
       })
     }
-
-    const data = await response.json()
-    const answer = data.answer || ""
 
     // Parse the response
     const summaryMatch = answer.match(
@@ -144,7 +130,7 @@ Use elementary-school-level English. Be encouraging and friendly. DO NOT add new
       "dramaComplete",
       "/api/generate-drama",
       { title, scenesCount: scenes.length, charactersCount: characters.length },
-      { summary, script, suggestions, conversation_id: data.conversation_id, message_id: data.id }
+      { summary, script, suggestions }
     )
 
     return NextResponse.json({ summary, script, suggestions })

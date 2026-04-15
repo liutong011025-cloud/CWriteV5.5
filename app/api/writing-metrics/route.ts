@@ -1,8 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-
-const DIFY_API_KEY = process.env.DIFY_API_KEY || ""
-const DIFY_METRICS_APP_ID = process.env.DIFY_METRICS_APP_ID || ""
-const DIFY_BASE_URL = "https://api.dify.ai/v1"
+import { chat, isConfigured } from "@/lib/deepseek"
 
 type WritingMetricsRequestBody = {
   text: string
@@ -12,18 +9,18 @@ type WritingMetricsRequestBody = {
 
 export async function POST(request: NextRequest) {
   try {
-    if (!DIFY_API_KEY || !DIFY_METRICS_APP_ID) {
+    if (!isConfigured()) {
       return NextResponse.json(
         {
-          error: "Dify not configured",
-          message: "DIFY_API_KEY or DIFY_METRICS_APP_ID is missing in environment variables.",
+          error: "DeepSeek not configured",
+          message: "DEEPSEEK_API_KEY is missing in environment variables.",
         },
         { status: 500 }
       )
     }
 
     const body = (await request.json()) as WritingMetricsRequestBody
-    const { text, type, user_id } = body
+    const { text, type, user_id: _userId } = body
 
     if (!text || !text.trim()) {
       return NextResponse.json(
@@ -37,11 +34,10 @@ export async function POST(request: NextRequest) {
 
     const safeType = type || "story"
 
-    const systemPrompt = `
-You are an expert elementary writing coach.
+    const systemPrompt = `You are an expert elementary writing coach.
 Analyze the student's writing and score it on three metrics from 0 to 100:
 
-1. vocabulary_richness: range and variety of words (higher = more varied vocabulary).
+1. vocab_richness: range and variety of words (higher = more varied vocabulary).
 2. descriptive_accuracy: clarity and precision of descriptions and details (higher = clearer, more concrete images).
 3. logical_coherence: how well ideas are connected and organized (higher = smoother flow and clear structure).
 
@@ -53,47 +49,30 @@ IMPORTANT:
     "vocab_richness": number (0-100),
     "descriptive_accuracy": number (0-100),
     "logical_coherence": number (0-100)
-  }
-`.trim()
+  }`
 
-    const userPrompt = `
-Writing type: ${safeType}
+    const userPrompt = `Writing type: ${safeType}
 
 Student writing:
-${text}
-`.trim()
+${text}`
 
-    const url = `${DIFY_BASE_URL}/chat-messages`
-
-    const res = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${DIFY_API_KEY}`,
-      },
-      body: JSON.stringify({
-        inputs: {
-          role: "writing_metrics",
-          writing_type: safeType,
-        },
-        query: `${systemPrompt}\n\n${userPrompt}`,
-        response_mode: "blocking",
-        user: user_id || "metrics-user",
-        app_id: DIFY_METRICS_APP_ID,
-      }),
-    })
-
-    if (!res.ok) {
-      const errText = await res.text()
-      console.error("[writing-metrics] Dify error:", res.status, errText)
+    let rawAnswer: string
+    try {
+      rawAnswer = await chat({
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
+        ],
+        temperature: 0.3,
+        maxTokens: 256,
+      })
+    } catch (error) {
+      console.error("[writing-metrics] DeepSeek error:", error)
       return NextResponse.json(
-        { error: "dify_error", message: "Failed to get metrics from Dify." },
+        { error: "deepseek_error", message: "Failed to get metrics from DeepSeek." },
         { status: 500 }
       )
     }
-
-    const data = await res.json()
-    const rawAnswer = String(data.answer || "").trim()
 
     let parsed: {
       vocab_richness?: number
@@ -102,18 +81,15 @@ ${text}
     } = {}
 
     try {
-      // 有些模型可能會在 JSON 外多輸出文字，嘗試抓取第一個 { 到最後一個 } 之間的內容
       const firstBrace = rawAnswer.indexOf("{")
       const lastBrace = rawAnswer.lastIndexOf("}")
       const jsonSlice =
         firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace
           ? rawAnswer.slice(firstBrace, lastBrace + 1)
           : rawAnswer
-
       parsed = JSON.parse(jsonSlice)
-    } catch (e) {
+    } catch {
       console.error("[writing-metrics] Failed to parse JSON answer:", rawAnswer)
-      // 給一組保守的預設值，避免前端崩潰
       parsed = {
         vocab_richness: 40,
         descriptive_accuracy: 40,
@@ -142,4 +118,3 @@ ${text}
     )
   }
 }
-
