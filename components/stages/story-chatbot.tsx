@@ -289,6 +289,7 @@ export default function StoryChatbot({
   const [structureExamplesLoading, setStructureExamplesLoading] = useState(false)
   const [selectedStructureType, setSelectedStructureType] = useState<StructureType | null>(storyState.structure?.type ?? null)
   const [currentSection, setCurrentSection] = useState(0)
+  const writingTextareaRef = useRef<HTMLTextAreaElement | null>(null)
   const [sectionTexts, setSectionTexts] = useState<Record<number, string>>(() =>
     parseStoryIntoSections(storyState.story || "", storyState.structure?.outline || []),
   )
@@ -736,11 +737,16 @@ Continue guiding step by step. Each response should:
     setPhase("writing")
   }
 
-  function handleSectionTextChange(sectionIndex: number, value: string) {
+  function handleSectionTextChange(sectionIndex: number, value: string, textarea: HTMLTextAreaElement | null) {
     setSectionTexts((prev) => ({
       ...prev,
       [sectionIndex]: value,
     }))
+
+    if (textarea) {
+      textarea.style.height = "auto"
+      textarea.style.height = `${textarea.scrollHeight}px`
+    }
 
     if (mode === "manual") {
       setSectionDone((prev) => ({
@@ -975,8 +981,9 @@ Continue guiding step by step. Each response should:
 
                 {(plotLoading || structureExamplesLoading || writingLoading) && (
                   <div className="flex justify-start">
-                    <div className="pixel-card px-4 py-3" style={{ background: "#fff" }}>
+                    <div className="pixel-card px-4 py-3 space-y-1" style={{ background: "#fff" }}>
                       <Loader2 className="h-5 w-5 animate-spin" style={{ color: "#7ec850" }} />
+                      <p className="text-xs" style={{ color: "#9a7b4f" }}>thinking...</p>
                     </div>
                   </div>
                 )}
@@ -1145,8 +1152,9 @@ Continue guiding step by step. Each response should:
                         {sections[currentSection] ? `Write: ${sections[currentSection]}` : "Write your story"}
                       </label>
                       <Textarea
+                        ref={writingTextareaRef}
                         value={currentSectionText}
-                        onChange={(event) => handleSectionTextChange(currentSection, event.target.value)}
+                        onChange={(event) => handleSectionTextChange(currentSection, event.target.value, event.target as HTMLTextAreaElement)}
                         placeholder={
                           sections[currentSection]
                             ? `Write the "${sections[currentSection]}" section here...`
