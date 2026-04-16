@@ -28,6 +28,8 @@ interface StoryReviewProps {
 
 export default function StoryReview({ storyState, onReset, onEdit, onBack, userId, workId }: StoryReviewProps) {
   const uploadPromptShownRef = useRef(false)
+  const grammarReviewDoneRef = useRef(false)
+  const aiRatingDoneRef = useRef(false)
   
   const [isReviewing, setIsReviewing] = useState(false)
   const [grammarErrors, setGrammarErrors] = useState<GrammarError[]>([])
@@ -52,55 +54,77 @@ export default function StoryReview({ storyState, onReset, onEdit, onBack, userI
     if (uploadPromptShownRef.current) return
     uploadPromptShownRef.current = true
     setShowUploadDialog(true)
-  }, [storyState.story, userId, workId])
+  }, [storyState.story, userId]) // intentionally omit workId — once shown, never re-shown
 
   useEffect(() => {
-    if (storyState.story) {
-      setCurrentStory(storyState.story)
-      setGrammarErrors([])
-      
-      if (storyState.story.trim().length > 0) {
-        const handleAutoReview = async () => {
-          setIsReviewing(true)
-          setGrammarErrors([])
-          try {
-            const response = await fetch("/api/dify-letter-grammar-review", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                text: storyState.story,
-                type: 'story',
-                user_id: userId || "student",
-              }),
-            })
+    if (!storyState.story || !userId) return
+    if (grammarReviewDoneRef.current) return
+    grammarReviewDoneRef.current = true
 
-            const data = await response.json()
+    setCurrentStory(storyState.story)
+    setGrammarErrors([])
 
-            if (data.success && data.errors) {
-              setGrammarErrors(data.errors)
-              if (data.errors.length > 0) {
-                toast.success(`Found ${data.errors.length} potential issue(s)`)
-              }
+    const abortController = new AbortController()
+
+    const text = storyState.story.trim()
+    if (text.length > 0) {
+      const handleAutoReview = async () => {
+        setIsReviewing(true)
+        setGrammarErrors([])
+        try {
+          const response = await fetch("/api/dify-letter-grammar-review", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            signal: abortController.signal,
+            body: JSON.stringify({
+              text: storyState.story,
+              type: 'story',
+              user_id: userId || "student",
+            }),
+          })
+
+          const data = await response.json()
+
+          if (!abortController.signal.aborted && data.success && data.errors) {
+            setGrammarErrors(data.errors)
+            if (data.errors.length > 0) {
+              toast.success(`Found ${data.errors.length} potential issue(s)`)
             }
-          } catch (error) {
-            console.error("Error reviewing story:", error)
-          } finally {
-            setIsReviewing(false)
           }
+        } catch (error) {
+          if ((error as Error).name !== 'AbortError') {
+            console.error("Error reviewing story:", error)
+          }
+        } finally {
+          setIsReviewing(false)
         }
-        
-        handleAutoReview()
       }
+
+      handleAutoReview()
+    }
+
+    return () => {
+      abortController.abort()
     }
   }, [storyState.story, userId])
 
   useEffect(() => {
     if (!storyState.story || !userId) return
+    if (aiRatingDoneRef.current) return
+    aiRatingDoneRef.current = true
+
     let cancelled = false
-    setAiRatingLoading(true)
+    const abortController = new AbortController()
+
+    setAiRatingLoading((prev) => {
+      if (!cancelled) return true
+      return prev
+    })
+
     fetch("/api/story-ai-rating", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
+      signal: abortController.signal,
       body: JSON.stringify({
         text: storyState.story,
         character: storyState.character,
@@ -111,19 +135,25 @@ export default function StoryReview({ storyState, onReset, onEdit, onBack, userI
     })
       .then((r) => r.json())
       .then((data) => {
-        if (cancelled) return
+        if (cancelled || abortController.signal.aborted) return
         if (data?.scores) {
           setAiScores(data.scores)
           setAiPraise(String(data.praise || ""))
           setAiImprovements(Array.isArray(data.improvements) ? data.improvements : [])
         }
       })
-      .catch(() => {})
-      .finally(() => {
-        if (!cancelled) setAiRatingLoading(false)
+      .catch((error) => {
+        if (error.name !== 'AbortError') {
+          console.error("AI rating error:", error)
+        }
       })
+      .finally(() => {
+        if (!cancelled && !abortController.signal.aborted) setAiRatingLoading(false)
+      })
+
     return () => {
       cancelled = true
+      abortController.abort()
     }
   }, [storyState.story, userId])
 

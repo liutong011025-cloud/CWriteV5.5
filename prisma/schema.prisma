@@ -179,3 +179,55 @@ model Poetry {
   @@index([userId])
   @@map("poetries")
 }
+
+// ─── ADMIN MODELS ───────────────────────────────────────────────────────────
+
+model Admin {
+  id            String    @id @default(cuid())
+  username      String    @unique
+  passwordHash  String
+  role          String    // "admin" | "teacher"
+  name          String?
+  email         String?
+  assignedClass String?   // e.g. "P3" — used for teacher role filtering
+  canExportData Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  lastLoginAt   DateTime?
+
+  auditLogs      AuditLog[]
+  researchNotes  ResearchNote[]
+
+  @@map("admins")
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  adminId    String
+  admin      Admin    @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  action     String   // "login" | "view_user" | "export" | "update_user" | "delete_user"
+  targetType String?
+  targetId   String?
+  details    Json?
+  createdAt  DateTime @default(now())
+
+  @@index([adminId])
+  @@index([createdAt])
+  @@index([action])
+  @@map("audit_logs")
+}
+
+model ResearchNote {
+  id        String   @id @default(cuid())
+  adminId   String
+  admin     Admin    @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  userId    String   // the student being annotated
+  workId    String?
+  workType  String?  // "story" | "review" | "letter" | "drama" | "poetry"
+  content   String   @db.Text
+  tag       String?  // "positive" | "needs_improvement" | "note"
+  createdAt DateTime @default(now())
+
+  @@index([adminId])
+  @@index([userId])
+  @@map("research_notes")
+}

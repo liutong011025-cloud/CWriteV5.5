@@ -1,8 +1,16 @@
 "use client"
 
 import Image from "next/image"
+import { usePathname } from "next/navigation"
 
 export default function Footer() {
+  const pathname = usePathname()
+
+  // Hide footer on admin routes
+  if (pathname?.startsWith('/admin')) {
+    return null
+  }
+
   return (
     <footer
       className="w-full mt-auto"

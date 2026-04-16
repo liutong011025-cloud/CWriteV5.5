@@ -1,10 +1,17 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { usePathname } from "next/navigation"
 import Header from "./header"
 
 export default function HeaderWrapper() {
+  const pathname = usePathname()
   const [shouldShowHeader, setShouldShowHeader] = useState(true)
+
+  // Hide header on admin routes
+  if (pathname?.startsWith('/admin')) {
+    return null
+  }
 
     useEffect(() => {
       const checkLoginStage = () => {
