@@ -25,6 +25,7 @@ interface StoryCollabProps {
   storyState: StoryState
   mode: StoryMode
   onPlotCreate: (plot: PlotState) => void
+  onPlotFinalize?: (plot: PlotState) => void
   onStructureSelect: (structure: StructureState) => void
   onStoryWrite: (story: string) => void
   onBack: () => void
@@ -103,6 +104,7 @@ export default function StoryCollab({
   storyState,
   mode,
   onPlotCreate,
+  onPlotFinalize,
   onStructureSelect,
   onStoryWrite,
   onBack,
@@ -414,6 +416,7 @@ export default function StoryCollab({
 
       setPlotData(nextPlot)
       onPlotCreate(nextPlot)
+      onPlotFinalize?.(nextPlot)
       updateWritingMoodFromText(text)
       setMessages((prev) => [
         ...prev,
@@ -445,7 +448,7 @@ export default function StoryCollab({
       })
     }
     void sendMessage(text)
-  }, [chatInput, isLoading, sendMessage, storyBlocks, currentWritingSection, activateTestModeAndFinish, updateWritingMoodFromText])
+  }, [chatInput, isLoading, sendMessage, storyBlocks, currentWritingSection, activateTestModeAndFinish, updateWritingMoodFromText, selectedStructure, storyState.character, plotData, onPlotCreate, onPlotFinalize])
 
   const handleSuggestionClick = useCallback(
     (suggestion: string) => {
@@ -574,7 +577,8 @@ export default function StoryCollab({
     }
     setManualPlotDone(true)
     onPlotCreate({ setting: plotData.setting, conflict: plotData.conflict, goal: plotData.goal })
-  }, [plotData, onPlotCreate])
+    onPlotFinalize?.({ setting: plotData.setting, conflict: plotData.conflict, goal: plotData.goal })
+  }, [plotData, onPlotCreate, onPlotFinalize])
 
   /* ── Render ── */
 
@@ -804,41 +808,93 @@ export default function StoryCollab({
 
                   {/* Chat input */}
                   <div className="p-4 space-y-2" style={{ borderTop: "4px solid #8b6914", background: "#d9c9a6" }}>
-                    <div className="flex gap-3">
-                      <Input
-                        value={chatInput}
-                        onChange={(e) => setChatInput(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" && !e.shiftKey) {
-                            e.preventDefault()
-                            handleSendChat()
-                          }
-                        }}
-                        placeholder={
-                          storyBlocks.length > 0 && currentWritingSection < storyBlocks.length
-                            ? `Write your ${storyBlocks[currentWritingSection].sectionName}...`
-                            : "Type your message..."
-                        }
-                        disabled={isLoading}
-                        className="flex-1 pixel-input"
-                      />
-                      <Button
-                        type="button"
-                        onClick={handleSendChat}
-                        disabled={isLoading || !chatInput.trim()}
-                        className="pixel-btn pixel-btn-green"
-                      >
-                        <Send className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        type="button"
-                        onClick={handleHelpMe}
-                        disabled={isLoading}
-                        className="pixel-btn pixel-btn-wood"
-                        title="Get a creative idea!"
-                      >
-                        <Lightbulb className="h-4 w-4" />
-                      </Button>
+                    <div className="space-y-3">
+                      {storyBlocks.length > 0 ? (
+                        <div
+                          className="rounded-sm p-3"
+                          style={{
+                            background: "#f5e6c8",
+                            border: "3px solid #8b6914",
+                            boxShadow: "inset 2px 2px 0 rgba(255,255,255,0.25)",
+                          }}
+                        >
+                          <p className="mb-2 text-xs font-extrabold uppercase tracking-wider" style={{ color: "#6b5210" }}>
+                            Writing Pad
+                          </p>
+                          <Textarea
+                            value={chatInput}
+                            onChange={(e) => setChatInput(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+                                e.preventDefault()
+                                handleSendChat()
+                              }
+                            }}
+                            placeholder={
+                              currentWritingSection < storyBlocks.length
+                                ? `Write your ${storyBlocks[currentWritingSection].sectionName} here... Use Ctrl+Enter to send.`
+                                : "Write the ending touch for your story..."
+                            }
+                            disabled={isLoading}
+                            className="min-h-[150px] resize-y pixel-input text-base leading-relaxed"
+                          />
+                        </div>
+                      ) : (
+                        <div className="flex gap-3">
+                          <Input
+                            value={chatInput}
+                            onChange={(e) => setChatInput(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" && !e.shiftKey) {
+                                e.preventDefault()
+                                handleSendChat()
+                              }
+                            }}
+                            placeholder="Type your message..."
+                            disabled={isLoading}
+                            className="flex-1 pixel-input"
+                          />
+                          <Button
+                            type="button"
+                            onClick={handleSendChat}
+                            disabled={isLoading || !chatInput.trim()}
+                            className="pixel-btn pixel-btn-green"
+                          >
+                            <Send className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            type="button"
+                            onClick={handleHelpMe}
+                            disabled={isLoading}
+                            className="pixel-btn pixel-btn-wood"
+                            title="Get a creative idea!"
+                          >
+                            <Lightbulb className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      )}
+                      {storyBlocks.length > 0 && (
+                        <div className="flex gap-3">
+                          <Button
+                            type="button"
+                            onClick={handleSendChat}
+                            disabled={isLoading || !chatInput.trim()}
+                            className="flex-1 pixel-btn pixel-btn-green"
+                          >
+                            <Send className="mr-2 h-4 w-4" />
+                            Add To Current Section
+                          </Button>
+                          <Button
+                            type="button"
+                            onClick={handleHelpMe}
+                            disabled={isLoading}
+                            className="pixel-btn pixel-btn-wood"
+                            title="Get a creative idea!"
+                          >
+                            <Lightbulb className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      )}
                     </div>
                     {/* Next Section button — appears once current section has content */}
                     {storyBlocks.length > 0 &&
