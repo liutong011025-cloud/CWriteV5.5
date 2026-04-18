@@ -24,7 +24,7 @@ export interface PoetryProgress {
 
 interface JourneyMapProps {
   language?: Language
-  type: JourneyType
+  type?: JourneyType
   mapImageUrl?: string
   mapFlags?: MapFlagItem[]
   pin?: { x: number; y: number } | null
@@ -39,6 +39,7 @@ interface JourneyMapProps {
   dramaProgress?: DramaProgress
   poetryProgress?: PoetryProgress
   noAi?: boolean
+  onStartJourney?: () => void
   onNavigate: (stage: string) => void
   onBack?: () => void
   onGoProfile?: () => void
@@ -60,6 +61,7 @@ export default function JourneyMap({
   onBack,
   onGoProfile,
   onFlagUpdate,
+  onStartJourney,
 }: JourneyMapProps) {
   const [internalPin, setInternalPin] = useState<{ x: number; y: number } | null>(pin ?? null)
   const [isPlacingPin, setIsPlacingPin] = useState(false)
@@ -96,6 +98,18 @@ export default function JourneyMap({
     setEditTitle("")
   }, [chapterIndex])
 
+  useEffect(() => {
+    if (pin) {
+      setInternalPin(pin)
+      setPinBoxHidden(true)
+      setIsPlacingPin(true)
+      return
+    }
+    setInternalPin(null)
+    setPinBoxHidden(false)
+    setIsPlacingPin(false)
+  }, [pin])
+
   const handleMapClick = (event: React.MouseEvent<HTMLDivElement>) => {
     // 只有在手上拿著圖釘時，才能在地圖上放置起點
     if (!isHoldingPin) return
@@ -114,7 +128,10 @@ export default function JourneyMap({
   const handleStartJourney = () => {
     if (!pinPosition) return
     setIsPlacingPin(false)
-    // 先進入七題測試，再開始後續流程
+    if (onStartJourney) {
+      onStartJourney()
+      return
+    }
     onNavigate("planTest")
   }
 
@@ -182,9 +199,9 @@ export default function JourneyMap({
             <button
               type="button"
               onClick={onPrevChapter}
-              className="rounded-2xl bg-white/0 hover:bg-white/10 px-3 py-1 text-[13px] font-hand font-extrabold text-white drop-shadow-[0_2px_2px_rgba(0,0,0,0.35)]"
+              className="rounded-2xl border-2 border-amber-100/90 bg-gradient-to-r from-[#c4a574] via-[#a87f52] to-[#8b6914] px-6 py-3 text-base md:text-lg font-hand font-extrabold text-white shadow-2xl hover:scale-105 hover:brightness-110 transition-all drop-shadow-[0_3px_4px_rgba(0,0,0,0.45)]"
             >
-              move to last chapter
+              ← Move to Last Chapter
             </button>
           )}
           <h1 className="font-hand text-4xl md:text-5xl font-extrabold text-purple-900 drop-shadow-[0_2px_2px_rgba(255,255,255,0.9)]">
