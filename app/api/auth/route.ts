@@ -72,28 +72,12 @@ export async function POST(request: NextRequest) {
         )
       }
 
-      const existingEmail = await prisma.userProfile.findFirst({
-        where: { email: trimmedEmail },
-      })
-
-      if (existingEmail) {
-        return NextResponse.json(
-          { success: false, error: "This email is already registered" },
-          { status: 409 },
-        )
-      }
-
       const createdUser = await prisma.user.create({
         data: {
           username: trimmedName,
           password: trimmedPassword,
           role: "student",
           noAi: false,
-          profile: {
-            create: {
-              email: trimmedEmail,
-            },
-          },
         },
       })
 
