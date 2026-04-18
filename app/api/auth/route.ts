@@ -7,8 +7,109 @@ import { prisma } from "@/lib/prisma"
 
 export async function POST(request: NextRequest) {
   try {
-    const body = (await request.json()) as { username?: string; password?: string }
-    const { username, password } = body
+    const body = (await request.json()) as {
+      action?: "login" | "register"
+      username?: string
+      password?: string
+      email?: string
+      name?: string
+    }
+    const { action = "login", username, password, email, name } = body
+
+    if (action === "register") {
+      const trimmedName = name?.trim() || ""
+      const trimmedEmail = email?.trim().toLowerCase() || ""
+      const trimmedPassword = password?.trim() || ""
+      const reservedNames = new Set(["copywriting", "student"])
+
+      if (!trimmedName || !trimmedEmail || !trimmedPassword) {
+        return NextResponse.json(
+          { success: false, error: "Name, email, and password are required" },
+          { status: 400 },
+        )
+      }
+
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+        return NextResponse.json(
+          { success: false, error: "Please enter a valid email address" },
+          { status: 400 },
+        )
+      }
+
+      if (trimmedPassword.length < 6) {
+        return NextResponse.json(
+          { success: false, error: "Password must be at least 6 characters long" },
+          { status: 400 },
+        )
+      }
+
+      if (reservedNames.has(trimmedName.toLowerCase())) {
+        return NextResponse.json(
+          { success: false, error: "This name is reserved. Please choose another one." },
+          { status: 400 },
+        )
+      }
+
+      if (!process.env.DATABASE_URL) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: "Database not configured",
+            hint: "DATABASE_URL environment variable is missing. Please configure it in Vercel project settings.",
+          },
+          { status: 500 },
+        )
+      }
+
+      const existingUser = await prisma.user.findUnique({
+        where: { username: trimmedName },
+      })
+
+      if (existingUser) {
+        return NextResponse.json(
+          { success: false, error: "This name is already registered" },
+          { status: 409 },
+        )
+      }
+
+      const existingEmail = await prisma.userProfile.findFirst({
+        where: { email: trimmedEmail },
+      })
+
+      if (existingEmail) {
+        return NextResponse.json(
+          { success: false, error: "This email is already registered" },
+          { status: 409 },
+        )
+      }
+
+      const createdUser = await prisma.user.create({
+        data: {
+          username: trimmedName,
+          password: trimmedPassword,
+          role: "student",
+          noAi: false,
+          profile: {
+            create: {
+              email: trimmedEmail,
+            },
+          },
+        },
+      })
+
+      return NextResponse.json(
+        {
+          success: true,
+          user: {
+            username: createdUser.username,
+            role: createdUser.role as "teacher" | "student",
+            noAi: createdUser.noAi || false,
+            isCopywriter: false,
+          },
+        },
+        { status: 201 },
+      )
+    }
 
     if (!username || !password) {
       return NextResponse.json(
