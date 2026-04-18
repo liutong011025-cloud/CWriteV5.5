@@ -1533,17 +1533,14 @@ export default function Home() {
           user={user}
           onStartPlan={() => {
             setLevelBadgeUnlocked(false)
-            // 有七題測驗結果 → 直接進地圖；否則先做測驗
             if (planTestResult) {
               setWritingAssessment({
                 score: planTestResult.score,
                 level: planTestResult.level,
                 mapImageStatus: "idle",
               })
-              setStage("journeyMap")
-            } else {
-              setStage("planTest")
             }
+            setStage("journeyMap")
           }}
           onContinuePastJourney={continuePastJourney}
           onStartWrite={() => {
@@ -1632,10 +1629,10 @@ export default function Home() {
           }}
         />
       )}
-      {stage === "journeyMap" && user && writingAssessment && journeySelection && (
+      {stage === "journeyMap" && user && (
         <JourneyMap
           language={language}
-          type={journeySelection.type}
+          type={journeySelection?.type}
           mapImageUrl={mapImageUrl}
           mapFlags={mapFlags}
           pin={currentPin}
@@ -1647,10 +1644,22 @@ export default function Home() {
           storyState={storyState}
           bookReviewState={bookReviewState}
           letterState={letterState}
-          dramaProgress={journeySelection.type === "drama" ? dramaProgress : undefined}
-          poetryProgress={journeySelection.type === "poetry" ? poetryProgress : undefined}
+          dramaProgress={journeySelection?.type === "drama" ? dramaProgress : undefined}
+          poetryProgress={journeySelection?.type === "poetry" ? poetryProgress : undefined}
           noAi={user.noAi}
           onBack={() => setStage("userProfile")}
+          onStartJourney={() => {
+            if (planTestResult) {
+              setWritingAssessment({
+                score: planTestResult.score,
+                level: planTestResult.level,
+                mapImageStatus: "idle",
+              })
+              setStage("journeyTicket")
+              return
+            }
+            setStage("planTest")
+          }}
           onNavigate={(targetStage) => {
             setStage(targetStage as any)
           }}
