@@ -143,6 +143,8 @@ export default function StoryCollab({
 
   // Writing phase: tracks which section the user is currently writing
   const [currentWritingSection, setCurrentWritingSection] = useState(0)
+  const [writingMood, setWritingMood] = useState<"sit" | "like" | "angry">("sit")
+  const [bearUi, setBearUi] = useState({ scale: 1, x: 0, y: 0 })
 
   const chatContainerRef = useRef<HTMLDivElement>(null)
   const chatEndRef = useRef<HTMLDivElement>(null)
@@ -164,6 +166,31 @@ export default function StoryCollab({
         .trim(),
     [storyBlocks],
   )
+
+  const bearSrc =
+    writingMood === "angry"
+      ? "/Cagentangry.png"
+      : writingMood === "like"
+        ? "/Cagentlike.png"
+        : "/Cagentsit.png"
+
+  const updateWritingMoodFromText = useCallback((text: string) => {
+    const lower = text.toLowerCase()
+    const dangerWords = ["kill", "murder", "hate", "stupid", "idiot", "fuck", "shit", "asshole", "die"]
+    const positiveWords = ["love", "happy", "kind", "friend", "help", "care", "brave", "thank", "thanks", "excited"]
+
+    if (dangerWords.some((word) => lower.includes(word))) {
+      setWritingMood("angry")
+      return
+    }
+
+    if (positiveWords.some((word) => lower.includes(word))) {
+      setWritingMood("like")
+      return
+    }
+
+    setWritingMood("sit")
+  }, [])
 
   /* ── Auto-scroll chat (only chat container; only if overflowing; only if user is near bottom) ── */
   useEffect(() => {
@@ -376,6 +403,7 @@ export default function StoryCollab({
       activateTestModeAndFinish()
       return
     }
+    updateWritingMoodFromText(text)
     // In writing phase, auto-save the user's text to the current section
     if (storyBlocks.length > 0 && currentWritingSection < storyBlocks.length) {
       setStoryBlocks((prev) => {
@@ -389,18 +417,20 @@ export default function StoryCollab({
       })
     }
     void sendMessage(text)
-  }, [chatInput, isLoading, sendMessage, storyBlocks, currentWritingSection])
+  }, [chatInput, isLoading, sendMessage, storyBlocks, currentWritingSection, activateTestModeAndFinish, updateWritingMoodFromText])
 
   const handleSuggestionClick = useCallback(
     (suggestion: string) => {
       if (isLoading) return
+      updateWritingMoodFromText(suggestion)
       void sendMessage(suggestion)
     },
-    [isLoading, sendMessage],
+    [isLoading, sendMessage, updateWritingMoodFromText],
   )
 
   const handleHelpMe = useCallback(() => {
     if (isLoading) return
+    setWritingMood("sit")
     void sendMessage("Help me write!", "help_me")
   }, [isLoading, sendMessage])
 
@@ -446,22 +476,54 @@ export default function StoryCollab({
         next[index] = { ...next[index], text }
         return next
       })
+      if (index === currentWritingSection) {
+        updateWritingMoodFromText(text)
+      }
     },
-    [],
+    [currentWritingSection, updateWritingMoodFromText],
   )
 
+  const syncStoryStateBeforeFinish = useCallback(() => {
+    if (plotComplete) {
+      onPlotCreate({
+        setting: plotData.setting.trim(),
+        conflict: plotData.conflict.trim(),
+        goal: plotData.goal.trim(),
+      })
+    }
+
+    if (selectedStructure) {
+      const structure = STRUCTURES.find((item) => item.type === selectedStructure) || STRUCTURES[0]
+      onStructureSelect({
+        type: structure.type,
+        outline: structure.outline,
+      })
+    }
+  }, [onPlotCreate, onStructureSelect, plotComplete, plotData, selectedStructure])
+
   const handleFinishStory = useCallback(() => {
+    const finalStory = composedStory.trim()
+    if (!finalStory) {
+      toast.error("Please write something before finishing the story.")
+      return
+    }
+
+    syncStoryStateBeforeFinish()
+
     if (totalWords < 20) {
       toast("Your story is quite short! Are you sure you want to finish?", {
         action: {
           label: "Yes, finish!",
-          onClick: () => onStoryWrite(composedStory),
+          onClick: () => {
+            syncStoryStateBeforeFinish()
+            onStoryWrite(finalStory)
+          },
         },
       })
       return
     }
-    onStoryWrite(composedStory)
-  }, [totalWords, composedStory, onStoryWrite])
+    onStoryWrite(finalStory)
+  }, [totalWords, composedStory, onStoryWrite, syncStoryStateBeforeFinish])
 
   /* ── Plot auto-callback ── */
   useEffect(() => {
@@ -545,7 +607,7 @@ export default function StoryCollab({
         <div className="grid lg:grid-cols-12 gap-6 mt-8">
           {/* ──── Left: Chat Panel ──── */}
           <div className="lg:col-span-7">
-            <div className="pixel-panel overflow-hidden">
+            <div className="pixel-panel overflow-hidden relative">
               {mode === "ai" ? (
                 /* ──── AI chat mode (all phases: explore → plot → structure → writing) ──── */
                 <>
@@ -756,6 +818,33 @@ export default function StoryCollab({
                           Next Section: {storyBlocks[currentWritingSection + 1].sectionName}
                         </Button>
                       )}
+                  </div>
+
+                  <div
+                    className="pointer-events-none absolute z-20 flex flex-col items-center"
+                    style={{
+                      right: "1rem",
+                      bottom: "1rem",
+                      transform: `translate(${bearUi.x}px, ${bearUi.y}px) scale(${bearUi.scale})`,
+                      transformOrigin: "bottom right",
+                    }}
+                  >
+                    {writingMood === "angry" && (
+                      <div
+                        className="mb-2 max-w-[220px] rounded-2xl px-3 py-2 text-xs font-bold text-red-700 shadow-xl"
+                        style={{
+                          background: "rgba(255,255,255,0.94)",
+                          border: "2px solid #f87171",
+                        }}
+                      >
+                        Please rewrite with safer and kinder words.
+                      </div>
+                    )}
+                    <img
+                      src={bearSrc}
+                      alt="Story writing bear"
+                      className="h-32 w-32 object-contain drop-shadow-[0_8px_12px_rgba(0,0,0,0.35)]"
+                    />
                   </div>
                 </>
               ) : (
@@ -971,6 +1060,80 @@ export default function StoryCollab({
                     Finish Story
                   </Button>
                 </div>
+
+                {mode === "ai" && (
+                  <div className="mt-4 space-y-4 rounded-xl p-4" style={{ background: "#fff7dc", border: "3px solid #8b6914" }}>
+                    <div>
+                      <h4 className="text-sm font-extrabold" style={{ color: "#5a4a2a" }}>Bear Fine-tune Tool</h4>
+                      <p className="mt-1 text-xs font-bold" style={{ color: "#6b5210" }}>
+                        调好后把下面 `size / x / y` 数值发给我，我再帮你固定成最终位置。
+                      </p>
+                    </div>
+
+                    <div>
+                      <div className="mb-1 flex items-center justify-between text-xs font-bold" style={{ color: "#8b6914" }}>
+                        <span>Size</span>
+                        <span>{bearUi.scale.toFixed(2)}</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="0.6"
+                        max="2.2"
+                        step="0.05"
+                        value={bearUi.scale}
+                        onChange={(e) => setBearUi((prev) => ({ ...prev, scale: Number(e.target.value) }))}
+                        className="w-full"
+                      />
+                    </div>
+
+                    <div>
+                      <div className="mb-1 flex items-center justify-between text-xs font-bold" style={{ color: "#8b6914" }}>
+                        <span>X</span>
+                        <span>{bearUi.x}px</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="-220"
+                        max="220"
+                        step="2"
+                        value={bearUi.x}
+                        onChange={(e) => setBearUi((prev) => ({ ...prev, x: Number(e.target.value) }))}
+                        className="w-full"
+                      />
+                    </div>
+
+                    <div>
+                      <div className="mb-1 flex items-center justify-between text-xs font-bold" style={{ color: "#8b6914" }}>
+                        <span>Y</span>
+                        <span>{bearUi.y}px</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="-220"
+                        max="220"
+                        step="2"
+                        value={bearUi.y}
+                        onChange={(e) => setBearUi((prev) => ({ ...prev, y: Number(e.target.value) }))}
+                        className="w-full"
+                      />
+                    </div>
+
+                    <div className="rounded-lg p-3 text-xs font-bold" style={{ background: "#f5e6c8", border: "2px solid #8b6914", color: "#5a4a2a" }}>
+                      Current mood: {writingMood}<br />
+                      size: {bearUi.scale.toFixed(2)}<br />
+                      x: {bearUi.x}<br />
+                      y: {bearUi.y}
+                    </div>
+
+                    <Button
+                      type="button"
+                      onClick={() => setBearUi({ scale: 1, x: 0, y: 0 })}
+                      className="w-full pixel-btn pixel-btn-wood"
+                    >
+                      Reset Bear Position
+                    </Button>
+                  </div>
+                )}
               </div>
             </div>
           </div>
