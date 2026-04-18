@@ -118,6 +118,7 @@ export default function PlanTest({ language = "en", onComplete, onBack }: PlanTe
   const isQuestionStep = currentStep < QUESTIONS.length
   const currentQuestion = QUESTIONS[currentStep]
   const progress = ((currentStep + 0.5) / QUESTIONS.length) * 100
+  const answeredCount = Object.keys(answers).length
 
   const handleAnswer = (questionId: number, label: string) => {
     setAnswers((prev) => ({ ...prev, [questionId]: label }))
@@ -137,40 +138,85 @@ export default function PlanTest({ language = "en", onComplete, onBack }: PlanTe
   }
 
   return (
-    <div className="min-h-screen relative overflow-hidden bg-gradient-to-br from-purple-50 via-pink-50 via-orange-50 to-yellow-50">
-      <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
-        <div className="absolute top-10 right-20 w-96 h-96 bg-purple-200 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse"></div>
-        <div className="absolute top-40 left-20 w-80 h-80 bg-pink-200 rounded-full mix-blend-multiply filter blur-3xl opacity-15 animate-pulse" style={{ animationDelay: "2s" }}></div>
-        <div className="absolute bottom-20 right-1/3 w-72 h-72 bg-orange-200 rounded-full mix-blend-multiply filter blur-3xl opacity-15 animate-pulse" style={{ animationDelay: "4s" }}></div>
+    <div className="min-h-screen relative overflow-hidden pixel-theme">
+      <div
+        className="fixed inset-0 z-0"
+        style={{
+          background: `linear-gradient(180deg,
+            #b8e4f9 0%,
+            #87ceeb 26%,
+            #7ec850 67%,
+            #5a9a32 100%)`,
+        }}
+      >
+        <div className="absolute top-16 left-[10%] h-12 w-24 bg-white opacity-80" style={{ clipPath: "polygon(0% 60%, 15% 40%, 30% 50%, 45% 20%, 60% 40%, 75% 30%, 90% 50%, 100% 60%, 100% 100%, 0% 100%)" }} />
+        <div className="absolute top-24 right-[15%] h-14 w-32 bg-white opacity-70" style={{ clipPath: "polygon(0% 60%, 15% 40%, 30% 50%, 45% 20%, 60% 40%, 75% 30%, 90% 50%, 100% 60%, 100% 100%, 0% 100%)" }} />
+        <div className="absolute top-32 left-[40%] h-10 w-20 bg-white opacity-75" style={{ clipPath: "polygon(0% 60%, 20% 30%, 50% 50%, 80% 25%, 100% 60%, 100% 100%, 0% 100%)" }} />
+
+        <div className="absolute bottom-0 left-0 right-0 h-32 pointer-events-none">
+          {[...Array(20)].map((_, i) => (
+            <div
+              key={`grass-${i}`}
+              className="absolute bottom-0"
+              style={{
+                left: `${i * 5 + Math.random() * 2}%`,
+                width: "8px",
+                height: `${20 + Math.random() * 16}px`,
+                background: i % 3 === 0 ? "#5a9a32" : "#7ec850",
+              }}
+            />
+          ))}
+          {[...Array(8)].map((_, i) => (
+            <div key={`flower-${i}`} className="absolute bottom-4" style={{ left: `${10 + i * 11}%` }}>
+              <div
+                className="h-3 w-3 rounded-full"
+                style={{
+                  background: ["#ff9999", "#ffcc66", "#ff66b2", "#66ccff"][i % 4],
+                  boxShadow: `3px 0 0 ${["#ff9999", "#ffcc66", "#ff66b2", "#66ccff"][i % 4]}, -3px 0 0 ${["#ff9999", "#ffcc66", "#ff66b2", "#66ccff"][i % 4]}, 0 3px 0 ${["#ff9999", "#ffcc66", "#ff66b2", "#66ccff"][i % 4]}, 0 -3px 0 ${["#ff9999", "#ffcc66", "#ff66b2", "#66ccff"][i % 4]}`,
+                }}
+              />
+            </div>
+          ))}
+        </div>
       </div>
 
       <div className="relative z-10 min-h-screen px-6 lg:px-12 py-12 lg:py-20 pl-16 lg:pl-20" style={{ paddingTop: "128px", paddingBottom: "120px" }}>
         {onBack && <BackButton onClick={onBack} variant="purple" />}
 
         <div className="text-center mb-8">
-          <h1 className="text-5xl md:text-6xl lg:text-7xl font-black mb-4 bg-gradient-to-r from-purple-600 via-pink-600 to-orange-600 bg-clip-text text-transparent">
-            Start with a Plan
+          <h1
+            className="text-5xl md:text-6xl lg:text-7xl font-black mb-4"
+            style={{ color: "#8b6914", textShadow: "3px 3px 0 #6b5210, 5px 5px 0 rgba(0,0,0,0.2)" }}
+          >
+            Writing Level Quest
           </h1>
-          <p className="text-lg md:text-xl text-gray-600">Let’s check your writing level first.</p>
-        </div>
-
-        <div className="max-w-3xl mx-auto mb-8">
-          <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
-            <div
-              className="bg-gradient-to-r from-purple-600 via-pink-600 to-orange-600 h-full rounded-full transition-all duration-300"
-              style={{ width: `${progress}%` }}
-            ></div>
-          </div>
-          <p className="text-sm text-gray-600 mt-2 text-center">
-            Question {currentStep + 1} of {QUESTIONS.length}
+          <p className="text-lg md:text-xl font-bold" style={{ color: "#5a4a2a" }}>
+            Place your first pin, then clear these 7 questions to unlock your journey ticket.
           </p>
         </div>
 
-        <div className="max-w-3xl mx-auto">
-          <div className="bg-white/95 backdrop-blur-lg rounded-3xl p-8 md:p-10 border-2 border-purple-200 shadow-2xl">
+        <div className="max-w-3xl mx-auto mb-8">
+          <div className="w-full h-4 overflow-hidden" style={{ background: "#d9c9a6", border: "3px solid #8b6914" }}>
+            <div
+              className="h-full transition-all duration-300"
+              style={{ background: "linear-gradient(90deg, #e8c547 0%, #7ec850 100%)", width: `${progress}%` }}
+            />
+          </div>
+          <div className="mt-3 flex items-center justify-between text-sm font-bold" style={{ color: "#5a4a2a" }}>
+            <span>{isQuestionStep ? `Question ${currentStep + 1} / ${QUESTIONS.length}` : "Quest Complete"}</span>
+            <span>{answeredCount} answered</span>
+          </div>
+        </div>
+
+        <div className="max-w-4xl mx-auto">
+          <div className="pixel-panel p-8 md:p-10" style={{ background: "linear-gradient(180deg, #f9f1dd 0%, #fff8ea 100%)" }}>
             {isQuestionStep && currentQuestion ? (
               <>
-                <h2 className="text-2xl md:text-3xl font-bold text-gray-800 mb-8 text-center">
+                <div className="mb-6 flex items-center justify-center gap-3">
+                  <span className="pixel-btn pixel-btn-wood px-3 py-1 text-xs font-bold">LEVEL CHECK</span>
+                  <span className="pixel-btn pixel-btn-blue px-3 py-1 text-xs font-bold">FIRST PIN ONLY</span>
+                </div>
+                <h2 className="text-2xl md:text-3xl font-bold mb-8 text-center" style={{ color: "#5a4a2a" }}>
                   {currentQuestion.question}
                 </h2>
                 <div className="space-y-4">
@@ -178,13 +224,25 @@ export default function PlanTest({ language = "en", onComplete, onBack }: PlanTe
                     <button
                       key={option.label}
                       onClick={() => handleAnswer(currentQuestion.id, option.label)}
-                      className="w-full text-left bg-gradient-to-r from-purple-50 via-pink-50 to-orange-50 hover:from-purple-100 hover:via-pink-100 hover:to-orange-100 border-2 border-purple-200 hover:border-purple-400 rounded-2xl p-6 transition-all duration-300 hover:scale-105 hover:shadow-lg group"
+                      className="w-full text-left p-5 transition-all duration-200 hover:-translate-y-1"
+                      style={{
+                        background: "linear-gradient(180deg, #fff 0%, #f5e6c8 100%)",
+                        border: "4px solid #8b6914",
+                        boxShadow: "4px 4px 0 rgba(0,0,0,0.22)",
+                      }}
                     >
                       <div className="flex items-start gap-4">
-                        <div className="flex-shrink-0 w-10 h-10 bg-gradient-to-r from-purple-600 via-pink-600 to-orange-600 rounded-full flex items-center justify-center text-white font-bold text-lg group-hover:scale-110 transition-transform">
+                        <div
+                          className="flex-shrink-0 w-10 h-10 flex items-center justify-center text-white font-bold text-lg"
+                          style={{
+                            background: "linear-gradient(180deg, #7ec850 0%, #5a9a32 100%)",
+                            border: "3px solid #3d8a3d",
+                            boxShadow: "2px 2px 0 rgba(0,0,0,0.18)",
+                          }}
+                        >
                           {option.label}
                         </div>
-                        <p className="flex-1 text-lg md:text-xl text-gray-700 font-medium leading-relaxed">
+                        <p className="flex-1 text-lg md:text-xl font-medium leading-relaxed" style={{ color: "#5a4a2a" }}>
                           {option.text}
                         </p>
                       </div>
@@ -193,24 +251,27 @@ export default function PlanTest({ language = "en", onComplete, onBack }: PlanTe
                 </div>
               </>
             ) : (
-              <div className="space-y-6">
-                <h2 className="text-2xl md:text-3xl font-bold text-gray-800 text-center">
+              <div className="space-y-6 text-center">
+                <div className="mx-auto w-fit pixel-btn pixel-btn-green px-4 py-2 text-sm font-bold">
+                  JOURNEY TICKET UNLOCKED
+                </div>
+                <h2 className="text-2xl md:text-3xl font-bold" style={{ color: "#5a4a2a" }}>
                   Great job finishing the questions!
                 </h2>
-                <p className="text-center text-gray-600">
-                  We will use your answers to pick a good starting level for your writing journey.
+                <p className="font-bold" style={{ color: "#6b5210" }}>
+                  We will use your answers to choose a good starting level for your writing journey.
                 </p>
                 <Button
                   onClick={handleFinish}
                   size="lg"
-                  className="w-full bg-gradient-to-r from-purple-600 via-pink-600 to-orange-600 hover:opacity-90 text-white border-0 shadow-2xl py-6 text-xl md:text-2xl font-bold hover:scale-[1.02] transition-all duration-300 rounded-full"
+                  className="w-full pixel-btn pixel-btn-green py-6 text-xl md:text-2xl font-bold"
                 >
-                  Continue
+                  Continue to Journey Ticket
                 </Button>
               </div>
             )}
           </div>
-          <div className="mt-4 text-right text-xs text-gray-500">
+          <div className="mt-4 text-right text-xs font-bold" style={{ color: "#5a4a2a" }}>
             Questions are designed based on CEFR writing levels (A2–B2).
           </div>
         </div>
