@@ -2004,10 +2004,10 @@ export default function Home() {
           storyState={storyState}
           mode={user.noAi ? "manual" : "ai"}
           onPlotCreate={(plot) => {
-            setStoryState((prev) => ({ ...prev, plot, structure: null, story: "" }))
+            setStoryState((prev) => ({ ...prev, plot, structure: null, story: prev.story }))
           }}
           onStructureSelect={(structure) => {
-            setStoryState((prev) => ({ ...prev, structure, story: "" }))
+            setStoryState((prev) => ({ ...prev, structure, story: prev.story }))
           }}
           onStoryWrite={(story) => {
             setStoryState((prev) => ({ ...prev, story }))
@@ -2026,10 +2026,25 @@ export default function Home() {
           storyState={storyState}
           mode={user.noAi ? "manual" : "ai"}
           onPlotCreate={(plot) => {
-            setStoryState((prev) => ({ ...prev, plot, structure: null, story: "" }))
+            setStoryState((prev) => ({ ...prev, plot, structure: null, story: prev.story }))
+          }}
+          onPlotFinalize={(plot) => {
+            const storyTitle = storyState.character?.name?.trim() ? `${storyState.character.name}'s Story` : "My Story"
+            const topic = plot.setting || storyState.character?.name || storyTitle
+            void queueJourneyMapUpdate({
+              title: storyTitle,
+              topic,
+              source: "storyPlot",
+              summaryKey: "storySummary",
+              summaryValue: {
+                characterName: storyState.character?.name || null,
+                species: storyState.character?.species || null,
+                setting: plot.setting || null,
+              },
+            })
           }}
           onStructureSelect={(structure) => {
-            setStoryState((prev) => ({ ...prev, structure, story: "" }))
+            setStoryState((prev) => ({ ...prev, structure, story: prev.story }))
           }}
           onStoryWrite={(story) => {
             setStoryState((prev) => ({ ...prev, story }))
