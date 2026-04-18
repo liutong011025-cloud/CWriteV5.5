@@ -20,7 +20,10 @@ interface LoginPageProps {
 }
 
 export default function LoginPage({ onLogin }: LoginPageProps) {
+  const [mode, setMode] = useState<"login" | "register">("login")
   const [username, setUsername] = useState("")
+  const [registerName, setRegisterName] = useState("")
+  const [registerEmail, setRegisterEmail] = useState("")
   const [password, setPassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)
 
@@ -60,6 +63,45 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
       console.error("Login error:", error)
       const errorMessage = error instanceof Error ? error.message : "Unknown error"
       toast.error(`Login failed: ${errorMessage}. Please check if the server is running.`)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleRegister = async () => {
+    if (!registerName.trim() || !registerEmail.trim() || !password.trim()) {
+      toast.error("Please enter your name, email, and password")
+      return
+    }
+
+    setIsLoading(true)
+    try {
+      const response = await fetch("/api/auth", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          action: "register",
+          name: registerName,
+          email: registerEmail,
+          password,
+        }),
+      })
+
+      const data = await response.json().catch(() => ({ error: `HTTP ${response.status}: ${response.statusText}` }))
+
+      if (!response.ok || !data.success) {
+        toast.error(data.error || `Register failed (${response.status})`)
+        return
+      }
+
+      toast.success(`Welcome, ${data.user.username}! Your account is ready.`)
+      onLogin(data.user, false)
+    } catch (error) {
+      console.error("Register error:", error)
+      const errorMessage = error instanceof Error ? error.message : "Unknown error"
+      toast.error(`Register failed: ${errorMessage}. Please check if the server is running.`)
     } finally {
       setIsLoading(false)
     }
@@ -106,46 +148,119 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
               />
             </div>
             <p className="text-white font-semibold whitespace-nowrap text-base md:text-lg">
-              Login to start your creative journey
+              {mode === "login" ? "Login to start your creative journey" : "Register to begin your creative journey"}
             </p>
           </div>
 
           <div className="space-y-5">
-            <div>
-              <label className="block text-sm font-bold mb-2 text-white">Username</label>
-              <Input
-                type="text"
-                placeholder="Enter your username"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") handleLogin()
-                }}
-                className="text-base py-3 border-2 border-purple-200 focus:border-purple-500 rounded-xl bg-white/80 focus:bg-white text-gray-900"
-              />
-            </div>
+            {mode === "login" ? (
+              <>
+                <div>
+                  <label className="block text-sm font-bold mb-2 text-white">Username</label>
+                  <Input
+                    type="text"
+                    placeholder="Enter your username"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") handleLogin()
+                    }}
+                    className="text-base py-3 border-2 border-purple-200 focus:border-purple-500 rounded-xl bg-white/80 focus:bg-white text-gray-900"
+                  />
+                </div>
 
-            <div>
-              <label className="block text-sm font-bold mb-2 text-white">Password</label>
-              <Input
-                type="password"
-                placeholder="Enter your password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") handleLogin()
-                }}
-                className="text-base py-3 border-2 border-pink-200 focus:border-pink-500 rounded-xl bg-white/80 focus:bg-white text-gray-900"
-              />
-            </div>
+                <div>
+                  <label className="block text-sm font-bold mb-2 text-white">Password</label>
+                  <Input
+                    type="password"
+                    placeholder="Enter your password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") handleLogin()
+                    }}
+                    className="text-base py-3 border-2 border-pink-200 focus:border-pink-500 rounded-xl bg-white/80 focus:bg-white text-gray-900"
+                  />
+                </div>
 
-            <Button
-              onClick={handleLogin}
-              disabled={isLoading}
-              className="w-full bg-gradient-to-r from-purple-600 via-pink-600 to-orange-600 hover:from-purple-700 hover:via-pink-700 hover:to-orange-700 text-white border-0 shadow-xl py-6 text-lg font-bold disabled:opacity-50"
-            >
-              {isLoading ? "Logging in..." : "🚀 Login"}
-            </Button>
+                <Button
+                  onClick={handleLogin}
+                  disabled={isLoading}
+                  className="w-full bg-gradient-to-r from-purple-600 via-pink-600 to-orange-600 hover:from-purple-700 hover:via-pink-700 hover:to-orange-700 text-white border-0 shadow-xl py-6 text-lg font-bold disabled:opacity-50"
+                >
+                  {isLoading ? "Logging in..." : "🚀 Login"}
+                </Button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMode("register")
+                    setPassword("")
+                  }}
+                  className="w-full rounded-xl border border-white/40 bg-white/10 py-3 text-sm font-bold text-white backdrop-blur-md transition hover:bg-white/20"
+                >
+                  Create a new account
+                </button>
+              </>
+            ) : (
+              <>
+                <div>
+                  <label className="block text-sm font-bold mb-2 text-white">Email</label>
+                  <Input
+                    type="email"
+                    placeholder="Enter your email"
+                    value={registerEmail}
+                    onChange={(e) => setRegisterEmail(e.target.value)}
+                    className="text-base py-3 border-2 border-cyan-200 focus:border-cyan-500 rounded-xl bg-white/80 focus:bg-white text-gray-900"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-bold mb-2 text-white">Name</label>
+                  <Input
+                    type="text"
+                    placeholder="Enter your name"
+                    value={registerName}
+                    onChange={(e) => setRegisterName(e.target.value)}
+                    className="text-base py-3 border-2 border-purple-200 focus:border-purple-500 rounded-xl bg-white/80 focus:bg-white text-gray-900"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-bold mb-2 text-white">Password</label>
+                  <Input
+                    type="password"
+                    placeholder="Create your password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") handleRegister()
+                    }}
+                    className="text-base py-3 border-2 border-pink-200 focus:border-pink-500 rounded-xl bg-white/80 focus:bg-white text-gray-900"
+                  />
+                </div>
+
+                <Button
+                  onClick={handleRegister}
+                  disabled={isLoading}
+                  className="w-full bg-gradient-to-r from-cyan-500 via-purple-600 to-pink-600 hover:from-cyan-600 hover:via-purple-700 hover:to-pink-700 text-white border-0 shadow-xl py-6 text-lg font-bold disabled:opacity-50"
+                >
+                  {isLoading ? "Creating account..." : "✨ Register"}
+                </Button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMode("login")
+                    setUsername(registerName)
+                    setPassword("")
+                  }}
+                  className="w-full rounded-xl border border-white/40 bg-white/10 py-3 text-sm font-bold text-white backdrop-blur-md transition hover:bg-white/20"
+                >
+                  Back to login
+                </button>
+              </>
+            )}
           </div>
         </SpotlightCard>
       </div>
