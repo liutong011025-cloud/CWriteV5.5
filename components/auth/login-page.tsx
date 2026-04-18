@@ -46,7 +46,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
       if (!response.ok) {
         // 如果响应不成功，尝试读取错误信息
         const errorData = await response.json().catch(() => ({ error: `HTTP ${response.status}: ${response.statusText}` }))
-        toast.error(errorData.error || `Login failed (${response.status})`)
+        toast.error(errorData.error || errorData.hint || `Login failed (${response.status})`)
         return
       }
 
@@ -92,7 +92,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
       const data = await response.json().catch(() => ({ error: `HTTP ${response.status}: ${response.statusText}` }))
 
       if (!response.ok || !data.success) {
-        toast.error(data.error || `Register failed (${response.status})`)
+        toast.error(data.error || data.hint || `Register failed (${response.status})`)
         return
       }
 
