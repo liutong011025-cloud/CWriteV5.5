@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { Loader2, Lightbulb, Send, Plus, Check, Sparkles } from "lucide-react"
+import { Loader2, Lightbulb, Send, Check, Sparkles } from "lucide-react"
 import { toast } from "sonner"
 
 import type { Language, StoryState } from "@/app/page"
@@ -149,8 +149,11 @@ function mergePadIntoSection(committed: string, pad: string): string {
   return `${c} ${p}`
 }
 
+/** Before a structure is chosen (plot chat, structure cards): fixed position. */
+const BEAR_PLOT_CHAT = { x: 16, y: -34, scale: 1.05 } as const
+
+/** After structure is selected: writing vs next-section-unlocked. */
 const BEAR_LAYOUT = {
-  preStructure: { x: 16, y: -82, scale: 1.05 },
   writing: { x: 16, y: -32, scale: 0.94 },
   nextUnlocked: { x: 11, y: -15, scale: 1.08 },
 } as const
@@ -234,7 +237,7 @@ export default function StoryCollab({
   const activeBear = useMemo(() => {
     const hasNext = storyBlocks.length > 0 && currentWritingSection < storyBlocks.length - 1
     const passed = sectionGateStatus[currentWritingSection] === "passed"
-    if (!selectedStructure) return BEAR_LAYOUT.preStructure
+    if (!selectedStructure) return BEAR_PLOT_CHAT
     if (hasNext && passed) return BEAR_LAYOUT.nextUnlocked
     return BEAR_LAYOUT.writing
   }, [selectedStructure, storyBlocks.length, currentWritingSection, sectionGateStatus])
@@ -405,6 +408,8 @@ export default function StoryCollab({
             plot_state: plotData,
             structure_type: selectedStructure,
             story_blocks: storyBlocksPayload,
+            current_writing_section_index:
+              selectedStructure && storyBlocks.length > 0 ? currentWritingSection : null,
             current_phase: phase,
             user_id: userId || "anonymous",
             level: levelForApi,
@@ -666,32 +671,6 @@ export default function StoryCollab({
     void sendMessage("Help me write!", "help_me")
   }, [isLoading, sendMessage])
 
-  const handleAddToStory = useCallback(
-    (snippet: string) => {
-      if (!storyBlocks.length) {
-        toast.error("Choose a story structure first!")
-        return
-      }
-      if (mode === "ai") {
-        setChatInput((prev) => (prev.trim() ? `${prev.trim()} ${snippet}` : snippet))
-        toast.success("Added to your Writing Pad!")
-        return
-      }
-      const idx = Math.min(currentWritingSection, storyBlocks.length - 1)
-      setStoryBlocks((prev) => {
-        const next = [...prev]
-        const existing = next[idx].text.trim()
-        next[idx] = {
-          ...next[idx],
-          text: existing ? `${existing} ${snippet}` : snippet,
-        }
-        return next
-      })
-      toast.success(`Added to ${storyBlocks[idx].sectionName}!`)
-    },
-    [storyBlocks, currentWritingSection, mode],
-  )
-
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const handleStructureSelect = useCallback(
     (type: StructureType) => {
@@ -935,26 +914,6 @@ export default function StoryCollab({
                                     {suggestion}
                                   </button>
                                 ))}
-                              </div>
-                            )}
-
-                            {/* Add to Story button */}
-                            {msg.role === "assistant" && msg.storySnippet && (
-                              <div className="mt-3">
-                                <button
-                                  type="button"
-                                  onClick={() => handleAddToStory(msg.storySnippet!)}
-                                  className="flex items-center gap-1.5 px-3 py-1 text-xs font-bold transition hover:scale-105"
-                                  style={{
-                                    background: "#87ceeb",
-                                    border: "2px solid #5bc0de",
-                                    color: "#2a5a7a",
-                                    boxShadow: "2px 2px 0 rgba(0,0,0,0.2)"
-                                  }}
-                                >
-                                  <Plus className="h-3 w-3" />
-                                  Add to Story
-                                </button>
                               </div>
                             )}
                           </div>
