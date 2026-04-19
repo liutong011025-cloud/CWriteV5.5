@@ -2120,6 +2120,7 @@ export default function Home() {
         <StoryCollab
           language={language}
           storyState={storyState}
+          writingLevel={writingAssessment?.level ?? planTestResult?.level ?? 1}
           mode={user.noAi ? "manual" : "ai"}
           onPlotCreate={(plot) => {
             setStoryState((prev) => ({ ...prev, plot, structure: null, story: prev.story }))
@@ -2332,7 +2333,7 @@ export default function Home() {
           currentUserRole={user.role}
           avatarUrl={headerUserInfo?.avatarUrl}
           avatarEmoji={headerUserInfo?.avatarEmoji}
-          onBack={() => setStage("home")}
+          onBack={() => setStage("journeyMap")}
           onOpenSettings={() => setStage("userSettings")}
           trees={trees ?? undefined}
           treeGrowthDetails={treeGrowthDetails}
