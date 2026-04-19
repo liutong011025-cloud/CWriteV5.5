@@ -89,6 +89,16 @@ const countWords = (text: string): number => {
   return chineseChars + englishWords
 }
 
+/** 用户输入 start writing / let's start writing 等即进入结构选择 */
+function wantsStartWriting(raw: string): boolean {
+  const t = raw.toLowerCase().trim()
+  if (t === "start writing") return true
+  if (/^start\s+writing[!.\s]*$/i.test(t)) return true
+  if (/^let['']?s\s+(start\s+)?writing\b/i.test(t)) return true
+  if (/^begin\s+writing\b/i.test(t)) return true
+  return false
+}
+
 const cleanAiDisplayText = (text: string) =>
   text
     .replace(/The plot is getting clearer![\s\S]*?talk about\?/gi, "")
@@ -343,6 +353,49 @@ export default function StoryCollab({
 
   /* ── Handlers ── */
 
+  const openStructureSelection = useCallback(
+    (userLine?: string) => {
+      if (selectedStructure) return
+      if (!plotComplete) {
+        toast.error("Finish setting, conflict, and goal first — chat a bit more with the AI!")
+        return
+      }
+      const characterName = storyState.character?.name || "the hero"
+      const nextPlot = {
+        setting: plotData.setting.trim() || "a bright little town",
+        conflict: plotData.conflict.trim() || `${characterName} faces a tricky problem`,
+        goal: plotData.goal.trim() || `${characterName} wants to solve the problem`,
+      }
+      setPlotData(nextPlot)
+      onPlotCreate(nextPlot)
+      onPlotFinalize?.(nextPlot)
+      const extra: CollabMessage[] = []
+      if (userLine !== undefined) {
+        extra.push({ id: `user-${Date.now()}`, role: "user", content: userLine })
+      }
+      extra.push({
+        id: `ai-struct-${Date.now()}`,
+        role: "assistant",
+        content: "Great — choose a story structure for your story:",
+        suggestions: [],
+        structureCards: true,
+      })
+      setMessages((prev) => [...prev, ...extra])
+      setChatInput("")
+      setPhase("structure")
+    },
+    [
+      selectedStructure,
+      plotComplete,
+      plotData.setting,
+      plotData.conflict,
+      plotData.goal,
+      storyState.character?.name,
+      onPlotCreate,
+      onPlotFinalize,
+    ],
+  )
+
   const activateTestModeAndFinish = useCallback(() => {
     setTestMode(true)
 
@@ -406,31 +459,9 @@ export default function StoryCollab({
       return
     }
 
-    if (text.toLowerCase() === "start writing" && !selectedStructure) {
-      const characterName = storyState.character?.name || "the hero"
-      const nextPlot = {
-        setting: plotData.setting.trim() || "a bright little town",
-        conflict: plotData.conflict.trim() || `${characterName} faces a tricky problem`,
-        goal: plotData.goal.trim() || `${characterName} wants to solve the problem`,
-      }
-
-      setPlotData(nextPlot)
-      onPlotCreate(nextPlot)
-      onPlotFinalize?.(nextPlot)
+    if (wantsStartWriting(text) && !selectedStructure) {
       updateWritingMoodFromText(text)
-      setMessages((prev) => [
-        ...prev,
-        { id: `user-${Date.now()}`, role: "user", content: text },
-        {
-          id: `ai-${Date.now() + 1}`,
-          role: "assistant",
-          content: "Great, let's choose your story structure first.",
-          suggestions: [],
-          structureCards: true,
-        },
-      ])
-      setChatInput("")
-      setPhase("structure")
+      openStructureSelection(text)
       return
     }
 
@@ -448,7 +479,17 @@ export default function StoryCollab({
       })
     }
     void sendMessage(text)
-  }, [chatInput, isLoading, sendMessage, storyBlocks, currentWritingSection, activateTestModeAndFinish, updateWritingMoodFromText, selectedStructure, storyState.character, plotData, onPlotCreate, onPlotFinalize])
+  }, [
+    chatInput,
+    isLoading,
+    sendMessage,
+    storyBlocks,
+    currentWritingSection,
+    activateTestModeAndFinish,
+    updateWritingMoodFromText,
+    selectedStructure,
+    openStructureSelection,
+  ])
 
   const handleSuggestionClick = useCallback(
     (suggestion: string) => {
@@ -840,37 +881,49 @@ export default function StoryCollab({
                           />
                         </div>
                       ) : (
-                        <div className="flex gap-3">
-                          <Input
-                            value={chatInput}
-                            onChange={(e) => setChatInput(e.target.value)}
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter" && !e.shiftKey) {
-                                e.preventDefault()
-                                handleSendChat()
-                              }
-                            }}
-                            placeholder="Type your message..."
-                            disabled={isLoading}
-                            className="flex-1 pixel-input"
-                          />
-                          <Button
-                            type="button"
-                            onClick={handleSendChat}
-                            disabled={isLoading || !chatInput.trim()}
-                            className="pixel-btn pixel-btn-green"
-                          >
-                            <Send className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            type="button"
-                            onClick={handleHelpMe}
-                            disabled={isLoading}
-                            className="pixel-btn pixel-btn-wood"
-                            title="Get a creative idea!"
-                          >
-                            <Lightbulb className="h-4 w-4" />
-                          </Button>
+                        <div className="w-full space-y-3">
+                          {plotComplete && !selectedStructure && (
+                            <Button
+                              type="button"
+                              onClick={() => openStructureSelection()}
+                              disabled={isLoading}
+                              className="w-full py-3 text-sm font-extrabold pixel-btn pixel-btn-blue"
+                            >
+                              Choose story structure
+                            </Button>
+                          )}
+                          <div className="flex gap-3">
+                            <Input
+                              value={chatInput}
+                              onChange={(e) => setChatInput(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter" && !e.shiftKey) {
+                                  e.preventDefault()
+                                  handleSendChat()
+                                }
+                              }}
+                              placeholder="Type your message… (or tap the button above)"
+                              disabled={isLoading}
+                              className="min-w-0 flex-1 pixel-input"
+                            />
+                            <Button
+                              type="button"
+                              onClick={handleSendChat}
+                              disabled={isLoading || !chatInput.trim()}
+                              className="pixel-btn pixel-btn-green"
+                            >
+                              <Send className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              type="button"
+                              onClick={handleHelpMe}
+                              disabled={isLoading}
+                              className="pixel-btn pixel-btn-wood"
+                              title="Get a creative idea!"
+                            >
+                              <Lightbulb className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </div>
                       )}
                       {storyBlocks.length > 0 && (
@@ -1099,7 +1152,7 @@ export default function StoryCollab({
                           {mode === "ai" ? (
                             /* Read-only display in AI mode */
                             <div
-                              className="min-h-[80px] p-3 text-sm whitespace-pre-wrap transition-all duration-300"
+                              className="min-h-[80px] min-w-0 max-w-full break-words p-3 text-sm whitespace-pre-wrap transition-all duration-300"
                               style={{
                                 background: isActive ? "#f5e6c8" : isDone ? "#d4e8b4" : "#e8dcc0",
                                 border: `3px solid ${isActive ? "#c4a020" : isDone ? "#5a9a32" : "#8b6914"}`,
