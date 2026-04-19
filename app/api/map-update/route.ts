@@ -18,7 +18,11 @@ type MapUpdateRequestBody = {
     characterName?: string | null
     species?: string | null
     setting?: string | null
+    conflict?: string | null
+    goal?: string | null
+    plotSummary?: string | null
   } | null
+  mapPrompt?: string
 }
 
 const clampPercent = (value: unknown, fallback: number) => {
@@ -50,7 +54,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = (await request.json()) as MapUpdateRequestBody
-    const { userId, title, topic, mapX, mapY, previousMapImageUrl, storySummary } = body
+    const { userId, title, topic, mapX, mapY, previousMapImageUrl, storySummary, mapPrompt } = body
     const safeMapX = clampPercent(mapX, 50)
     const safeMapY = clampPercent(mapY, 50)
     const safeTopic = (topic || "").trim()
@@ -76,6 +80,10 @@ export async function POST(request: NextRequest) {
     const characterName = storySummary?.characterName || null
     const species = storySummary?.species || null
     const detailedSetting = storySummary?.setting || null
+    const detailedConflict = storySummary?.conflict || null
+    const detailedGoal = storySummary?.goal || null
+    const plotSummary = storySummary?.plotSummary || null
+    const extraPrompt = (mapPrompt || "").trim()
 
     const prompt = `
 You are updating a student's personal writing adventure map using image editing.
@@ -85,7 +93,6 @@ Base image:
 
 Coordinate system (very important for placement):
 - Treat the map as a 2D canvas where (0, 0) is the TOP‑LEFT corner and (100, 100) is the BOTTOM‑RIGHT corner.
-- The student's new step is centered near (${mapX}, ${mapY}) in this normalized coordinate system. Place the MAIN new visual focus close to this point.
 - The student's new step is centered near (${safeMapX}, ${safeMapY}) in this normalized coordinate system. Place the MAIN new visual focus close to this point.
 
 Student's new writing step:
@@ -95,10 +102,14 @@ Student's new writing step:
 
 Story details (for inspiration only, do not render text):
 - Setting detail: "${detailedSetting || safeTopic || "unspecified"}"
+- Conflict detail: "${detailedConflict || "unspecified"}"
+- Goal detail: "${detailedGoal || "unspecified"}"
+- Plot summary: "${plotSummary || "unspecified"}"
 
 Task:
-- Focus your main new visual content on a **small local patch** centered very close to (${safeMapX}, ${safeMapY}), roughly a circle with radius about 3–5% of the map width. The strongest new shapes and colors should sit in this patch.
-- Inside this small area, add or modify terrain, paths, rivers, buildings, plants, or other objects that clearly reflect this new topic and the character's journey, but keep these additions relatively small in scale compared to the whole map.
+- Focus your main new visual content on a **tiny local patch** centered very close to (${safeMapX}, ${safeMapY}), roughly a circle with radius about 2–3% of the map width. The strongest new shapes and colors should stay inside this tiny patch.
+- Inside this small area, add or modify only compact terrain details, tiny paths, miniature buildings, small plants, icons, or props that clearly reflect this new topic, the plot, and the character species. Keep them noticeably smaller than before.
+- Avoid oversized landmarks, giant buildings, huge forests, or large terrain blocks. New elements must feel subtle and map-scale, not poster-scale.
 - You may also sprinkle a few very small, subtle details related to this topic elsewhere on the map (for example, tiny props, hints of color, or distant shapes), but they should feel naturally integrated and must not dominate the image.
 - Outside the local patch, the map should remain almost completely unchanged at a glance.
 
@@ -106,6 +117,8 @@ Very important:
 - This MUST look like a natural evolution of the previous map, not a brand‑new style.
 - Keep the same overall palette, camera angle, and rendering style as the base image.
 - Do NOT add UI, text labels, or logos. Leave space so the interface can overlay flags or titles later.
+- Use the story's character species and plot beats as inspiration for tiny environmental storytelling details near the patch.
+- ${extraPrompt || "Do not invent a whole new region; just evolve the existing map carefully."}
 `.trim()
 
     const result = await fal.subscribe(FAL_NANO_BANANA_EDIT_MODEL, {
