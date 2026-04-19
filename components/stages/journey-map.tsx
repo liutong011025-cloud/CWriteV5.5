@@ -1,11 +1,11 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, type MouseEvent } from "react"
 import { Button } from "@/components/ui/button"
 import { BackButton } from "@/components/ui/back-button"
-import { Flag } from "lucide-react"
+import { Flag, PencilLine } from "lucide-react"
 import Image from "next/image"
-import type { Language, StoryState, BookReviewState, LetterState, MapFlagItem } from "@/app/page"
+import type { Language, StoryState, BookReviewState, LetterState, MapFlagItem, MapWorkType } from "@/app/page"
 import type { JourneyType } from "@/components/stages/journey-ticket"
 import Antigravity from "@/components/effects/antigravity"
 import ShapeBlur from "@/components/effects/shape-blur"
@@ -71,6 +71,7 @@ export default function JourneyMap({
   const [selectedFlag, setSelectedFlag] = useState<MapFlagItem | null>(null)
   const [editContent, setEditContent] = useState("")
   const [editTitle, setEditTitle] = useState("")
+  const [isEditingFlag, setIsEditingFlag] = useState(false)
   const flags = mapFlags ?? []
 
   const pinPosition = pin ?? internalPin
@@ -96,7 +97,16 @@ export default function JourneyMap({
     setSelectedFlag(null)
     setEditContent("")
     setEditTitle("")
+    setIsEditingFlag(false)
   }, [chapterIndex])
+
+  const getWorkTypeLabel = (workType?: MapWorkType) => {
+    if (workType === "review") return "Book Review"
+    if (workType === "letter") return "Letter"
+    if (workType === "drama") return "Drama"
+    if (workType === "poetry") return "Poetry"
+    return "Story"
+  }
 
   useEffect(() => {
     if (pin) {
@@ -110,7 +120,7 @@ export default function JourneyMap({
     setIsPlacingPin(false)
   }, [pin])
 
-  const handleMapClick = (event: React.MouseEvent<HTMLDivElement>) => {
+  const handleMapClick = (event: MouseEvent<HTMLDivElement>) => {
     // 只有在手上拿著圖釘時，才能在地圖上放置起點
     if (!isHoldingPin) return
     const rect = event.currentTarget.getBoundingClientRect()
@@ -221,10 +231,10 @@ export default function JourneyMap({
               <img
                 src="/myfarm.png"
                 alt="My Farm"
-                className="w-40 h-auto object-contain drop-shadow-lg transition-transform duration-200 hover:scale-110"
+                className="w-32 h-auto object-contain drop-shadow-lg transition-transform duration-200 hover:scale-105"
                 draggable={false}
               />
-              <div className="mt-1 text-xl md:text-2xl font-hand font-extrabold text-white drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]">
+              <div className="mt-1 text-lg md:text-xl font-hand font-extrabold text-white drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]">
                 My Farm
               </div>
             </button>
@@ -235,7 +245,7 @@ export default function JourneyMap({
               type="button"
               variant="ghost"
               onClick={onNextChapter}
-              className="absolute right-10 top-6 z-20 rounded-2xl border-2 border-yellow-200/90 bg-gradient-to-r from-amber-500 via-orange-500 to-pink-500 px-6 py-5 text-base font-extrabold text-white shadow-2xl animate-pulse hover:scale-105 hover:from-amber-600 hover:via-orange-600 hover:to-pink-600"
+              className="absolute right-8 top-6 z-20 rounded-2xl border-2 border-yellow-200/90 bg-gradient-to-r from-amber-500 via-orange-500 to-pink-500 px-5 py-4 text-sm font-extrabold text-white shadow-2xl animate-pulse hover:scale-105 hover:from-amber-600 hover:via-orange-600 hover:to-pink-600"
             >
               ✨ Move to Next Chapter →
             </Button>
@@ -261,7 +271,7 @@ export default function JourneyMap({
                 <img
                   src="/box.png"
                   alt="Pin box"
-                  className="w-36 h-auto object-contain drop-shadow-lg transition-transform duration-200 hover:scale-110"
+                  className="w-28 h-auto object-contain drop-shadow-lg transition-transform duration-200 hover:scale-105"
                   draggable={false}
                 />
               </button>
@@ -325,6 +335,7 @@ export default function JourneyMap({
                       setSelectedFlag(flag)
                       setEditTitle(flag.title)
                       setEditContent(flag.content ?? "")
+                      setIsEditingFlag(false)
                     } else {
                       onNavigate("review")
                     }
@@ -334,10 +345,10 @@ export default function JourneyMap({
                   aria-label={flag.title}
                 >
                   <div
-                    className={`rounded-2xl bg-gradient-to-r ${colorClass} px-4 py-2 shadow-xl flex items-center gap-2 group-hover:brightness-110 transition`}
+                    className={`max-w-[160px] rounded-2xl bg-gradient-to-r ${colorClass} px-3 py-1.5 shadow-xl flex items-center gap-2 group-hover:brightness-110 transition`}
                   >
-                    <Flag className="w-4 h-4 text-slate-800 drop-shadow" />
-                    <span className="font-hand text-sm font-extrabold text-slate-900 whitespace-nowrap drop-shadow-[0_1px_1px_rgba(255,255,255,0.9)]">
+                    <Flag className="h-3.5 w-3.5 shrink-0 text-slate-800 drop-shadow" />
+                    <span className="font-hand text-xs font-extrabold leading-tight text-slate-900 break-words [overflow-wrap:anywhere] drop-shadow-[0_1px_1px_rgba(255,255,255,0.9)]">
                       {flag.title}
                     </span>
                   </div>
@@ -364,42 +375,77 @@ export default function JourneyMap({
             aria-hidden
           />
           <div
-            className="relative w-full max-w-2xl max-h-[90vh] overflow-hidden rounded-2xl border-2 border-purple-200 bg-white shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
+            className="relative w-full max-w-3xl max-h-[90vh] overflow-hidden rounded-2xl border-2 border-purple-200 bg-white shadow-2xl"
+            onClick={(e: MouseEvent<HTMLDivElement>) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between gap-3 border-b border-purple-200 bg-purple-50/80 px-4 py-3">
-              <h2 id="article-dialog-title" className="text-lg font-bold text-purple-900">
-                Article
-              </h2>
-              <button
-                type="button"
-                onClick={() => setSelectedFlag(null)}
-                className="rounded-full p-2 text-purple-700 hover:bg-purple-200/60 focus:outline-none focus:ring-2 focus:ring-purple-400"
-                aria-label="Close"
-              >
-                <span className="text-xl leading-none">×</span>
-              </button>
+              <div className="min-w-0">
+                <h2 id="article-dialog-title" className="text-lg font-bold text-purple-900">
+                  {isEditingFlag ? "Edit Article" : "Article"}
+                </h2>
+                <p className="text-xs font-semibold text-purple-600">
+                  {getWorkTypeLabel(selectedFlag.workType)}
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsEditingFlag((prev: boolean) => !prev)}
+                  className="inline-flex items-center gap-1 rounded-full px-3 py-2 text-sm font-semibold text-purple-700 hover:bg-purple-200/60 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                  aria-label={isEditingFlag ? "Stop editing article" : "Edit article"}
+                >
+                  <PencilLine className="h-4 w-4" />
+                  {isEditingFlag ? "Preview" : "Edit"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedFlag(null)}
+                  className="rounded-full p-2 text-purple-700 hover:bg-purple-200/60 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                  aria-label="Close"
+                >
+                  <span className="text-xl leading-none">×</span>
+                </button>
+              </div>
             </div>
             <div className="overflow-y-auto p-4 space-y-4 max-h-[calc(90vh-8rem)]">
-              <div>
-                <label className="block text-sm font-semibold text-purple-800 mb-1">Title</label>
-                <input
-                  type="text"
-                  value={editTitle}
-                  onChange={(e) => setEditTitle(e.target.value)}
-                  className="w-full rounded-lg border border-purple-200 px-3 py-2 text-purple-900 focus:outline-none focus:ring-2 focus:ring-purple-400"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-purple-800 mb-1">Full article</label>
-                <textarea
-                  value={editContent}
-                  onChange={(e) => setEditContent(e.target.value)}
-                  rows={14}
-                  className="w-full rounded-lg border border-purple-200 px-3 py-2 text-purple-900 focus:outline-none focus:ring-2 focus:ring-purple-400 resize-y"
-                  placeholder="No content stored for this article."
-                />
-              </div>
+              {isEditingFlag ? (
+                <>
+                  <div>
+                    <label className="mb-1 block text-sm font-semibold text-purple-800">Title</label>
+                    <input
+                      type="text"
+                      value={editTitle}
+                      onChange={(e) => setEditTitle(e.target.value)}
+                      className="w-full rounded-lg border border-purple-200 px-3 py-2 text-purple-900 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-sm font-semibold text-purple-800">Full article</label>
+                    <textarea
+                      value={editContent}
+                      onChange={(e) => setEditContent(e.target.value)}
+                      rows={14}
+                      className="w-full resize-y rounded-lg border border-purple-200 px-3 py-2 text-purple-900 whitespace-pre-wrap break-words [overflow-wrap:anywhere] focus:outline-none focus:ring-2 focus:ring-purple-400"
+                      placeholder="No content stored for this article."
+                    />
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="rounded-2xl border border-purple-200 bg-purple-50/40 px-4 py-3">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-purple-600">Title</p>
+                    <h3 className="mt-1 text-xl font-bold text-purple-950 break-words [overflow-wrap:anywhere]">
+                      {editTitle || selectedFlag.title}
+                    </h3>
+                  </div>
+                  <div className="rounded-2xl border border-purple-200 bg-white px-4 py-4">
+                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-purple-600">Full article</p>
+                    <div className="max-h-[50vh] overflow-y-auto whitespace-pre-wrap break-words text-sm leading-7 text-purple-900 [overflow-wrap:anywhere]">
+                      {editContent?.trim() ? editContent : "No content stored for this article yet."}
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
             <div className="flex justify-end gap-2 border-t border-purple-200 bg-purple-50/50 px-4 py-3">
               <Button
@@ -407,19 +453,21 @@ export default function JourneyMap({
                 onClick={() => setSelectedFlag(null)}
                 className="border-purple-300 text-purple-800"
               >
-                Cancel
+                {isEditingFlag ? "Cancel" : "Close"}
               </Button>
-              <Button
-                onClick={() => {
-                  if (onFlagUpdate && selectedFlag) {
-                    onFlagUpdate(selectedFlag.id, { title: editTitle.trim() || selectedFlag.title, content: editContent })
-                    setSelectedFlag(null)
-                  }
-                }}
-                className="bg-purple-600 hover:bg-purple-700 text-white"
-              >
-                Save
-              </Button>
+              {isEditingFlag && (
+                <Button
+                  onClick={() => {
+                    if (onFlagUpdate && selectedFlag) {
+                      onFlagUpdate(selectedFlag.id, { title: editTitle.trim() || selectedFlag.title, content: editContent })
+                      setSelectedFlag(null)
+                    }
+                  }}
+                  className="bg-purple-600 hover:bg-purple-700 text-white"
+                >
+                  Save
+                </Button>
+              )}
             </div>
           </div>
         </div>
