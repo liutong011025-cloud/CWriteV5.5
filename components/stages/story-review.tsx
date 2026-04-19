@@ -7,6 +7,7 @@ import StageHeader from "@/components/stage-header"
 import { toast } from "sonner"
 import { Wand2, Check, HelpCircle, Sparkles, Loader2, CheckCircle2 } from "lucide-react"
 import { PixelStarRating } from "@/components/ui/pixel-star-rating"
+import { getStoryStructureLabel } from "@/lib/story-structure-display"
 
 interface GrammarError {
   start: number
@@ -24,6 +25,65 @@ interface StoryReviewProps {
   onBack: () => void
   userId?: string
   workId?: string | null
+}
+
+/** 英文按词分段；无空格长串（中文整段、URL 等）按字符插入软断点，避免撑破边框 */
+const STORY_LINE_MAX_WORDS = 20
+const STORY_MAX_CHARS_PER_RUN = 44
+
+function chunkLongRuns(text: string, keyBase: string): ReactNode {
+  if (text.length <= STORY_MAX_CHARS_PER_RUN) return text
+  const nodes: ReactNode[] = []
+  for (let i = 0; i < text.length; i += STORY_MAX_CHARS_PER_RUN) {
+    if (i > 0) nodes.push(<wbr key={`${keyBase}-wbr-${i}`} />)
+    nodes.push(text.slice(i, i + STORY_MAX_CHARS_PER_RUN))
+  }
+  return <>{nodes}</>
+}
+
+function softBreakLongLine(line: string, keyBase: string, maxWords = STORY_LINE_MAX_WORDS): ReactNode {
+  const words = line.split(/\s+/).filter((w) => w.length > 0)
+  if (words.length === 0) {
+    return line ? (
+      <span
+        className="whitespace-pre-wrap"
+        style={{ overflowWrap: "anywhere", wordBreak: "break-word" }}
+      >
+        {chunkLongRuns(line, `${keyBase}-empty`)}
+      </span>
+    ) : null
+  }
+  const nodes: ReactNode[] = []
+  for (let i = 0; i < words.length; i += maxWords) {
+    const chunkWords = words.slice(i, i + maxWords)
+    nodes.push(
+      <span key={`${keyBase}-${i}`}>
+        {i > 0 ? <wbr /> : null}
+        {chunkWords.map((w, wi) => (
+          <span key={`${keyBase}-${i}-tok${wi}`}>
+            {wi > 0 ? " " : null}
+            {chunkLongRuns(w, `${keyBase}-${i}-w${wi}`)}
+          </span>
+        ))}
+      </span>,
+    )
+  }
+  return <>{nodes}</>
+}
+
+/** 保留原文 \n，并对每一逻辑行做词块软断行 */
+function storyBodyWithSoftBreaks(fullText: string): ReactNode {
+  const lines = fullText.split("\n")
+  return (
+    <>
+      {lines.map((line, li) => (
+        <span key={`story-line-${li}`}>
+          {li > 0 ? <br /> : null}
+          {softBreakLongLine(line, `sl-${li}`)}
+        </span>
+      ))}
+    </>
+  )
 }
 
 export default function StoryReview({ storyState, onReset, onEdit, onBack, userId, workId }: StoryReviewProps) {
@@ -230,7 +290,18 @@ export default function StoryReview({ storyState, onReset, onEdit, onBack, userI
 
   const renderHighlightedText = () => {
     if (grammarErrors.length === 0) {
-      return <p className="leading-relaxed whitespace-pre-wrap text-base" style={{ overflowWrap: 'break-word', color: "#5a4a2a" }}>{currentStory}</p>
+      return (
+        <div
+          className="w-full min-w-0 max-w-full overflow-x-hidden leading-relaxed text-base"
+          style={{
+            overflowWrap: "anywhere",
+            wordBreak: "break-word",
+            color: "#5a4a2a",
+          }}
+        >
+          {storyBodyWithSoftBreaks(currentStory)}
+        </div>
+      )
     }
 
     const parts: Array<{ text: string; isError: boolean; errorIndex?: number }> = []
@@ -280,21 +351,23 @@ export default function StoryReview({ storyState, onReset, onEdit, onBack, userI
           result.push(
             <span
               key={`error-${partIndex}-${lineIdx}`}
-              className="relative inline-block"
+              className="relative inline max-w-full min-w-0 break-words align-baseline"
               onMouseEnter={() => setHoveredErrorIndex(part.errorIndex!)}
               onMouseLeave={() => setHoveredErrorIndex(null)}
               onClick={() => setClickedErrorIndex(clickedErrorIndex === part.errorIndex ? null : part.errorIndex!)}
             >
               <span
                 className="cursor-pointer px-1"
-                style={{ 
+                style={{
                   backgroundColor: isHovered ? '#e74c3c' : '#c0392b',
                   color: '#fff',
                   textDecoration: 'underline',
-                  textDecorationColor: '#fff'
+                  textDecorationColor: '#fff',
+                  overflowWrap: "anywhere",
+                  wordBreak: "break-word",
                 }}
               >
-                {line}
+                {softBreakLongLine(line, `err-${partIndex}-${lineIdx}`)}
               </span>
               {isHovered && !isClicked && (
                 <div className="absolute z-50 bottom-full left-0 mb-2 px-3 py-2 text-sm whitespace-nowrap" style={{
@@ -360,18 +433,34 @@ export default function StoryReview({ storyState, onReset, onEdit, onBack, userI
             </span>
           )
         } else {
-          line.split('').forEach((char, charIdx) => {
-            result.push(
-              <span key={`normal-${partIndex}-${lineIdx}-${charIdx}`}>
-                {char === ' ' ? '\u00A0' : char}
-              </span>
-            )
-          })
+          result.push(
+            <span
+              key={`normal-${partIndex}-${lineIdx}`}
+              className="inline max-w-full min-w-0 break-words align-baseline"
+              style={{
+                overflowWrap: "anywhere",
+                wordBreak: "break-word",
+              }}
+            >
+              {softBreakLongLine(line, `ok-${partIndex}-${lineIdx}`)}
+            </span>,
+          )
         }
       })
     })
 
-    return <p className="leading-relaxed whitespace-pre-wrap text-base" style={{ color: "#5a4a2a" }}>{result}</p>
+    return (
+      <div
+        className="w-full min-w-0 max-w-full overflow-x-hidden leading-relaxed text-base"
+        style={{
+          color: "#5a4a2a",
+          overflowWrap: "anywhere",
+          wordBreak: "break-word",
+        }}
+      >
+        {result}
+      </div>
+    )
   }
 
   useEffect(() => {
@@ -393,7 +482,7 @@ SETTING: ${storyState.plot?.setting}
 CONFLICT: ${storyState.plot?.conflict}
 GOAL: ${storyState.plot?.goal}
 
-STORY TYPE: ${storyState.structure?.type}
+STORY STRUCTURE: ${getStoryStructureLabel(storyState.structure?.type)}
 
 ---
 
@@ -507,12 +596,12 @@ Created with Story Writer
       <div className="max-w-7xl mx-auto relative z-10">
         <StageHeader stage={5} title="Your Story is Complete!" onBack={onBack} />
 
-        <div className="grid lg:grid-cols-12 gap-6 mt-8">
+        <div className="grid lg:grid-cols-12 gap-6 mt-8 min-w-0">
           {/* Story content with grammar highlights */}
-          <div className="lg:col-span-8 space-y-6">
-            <div className="pixel-panel p-8">
+          <div className="lg:col-span-8 space-y-6 min-w-0">
+            <div className="pixel-panel p-8 min-w-0">
               <h2 
-                className="text-3xl font-extrabold mb-4"
+                className="text-3xl font-extrabold mb-4 min-w-0 max-w-full break-words"
                 style={{ 
                   color: "#5a4a2a",
                   textShadow: "2px 2px 0 rgba(0,0,0,0.2)"
@@ -520,14 +609,26 @@ Created with Story Writer
               >
                 {storyState.character?.name}&apos;s Adventure
               </h2>
-              <p className="text-base font-bold mb-6" style={{ color: "#6b5210" }}>
-                {storyState.plot?.setting} | {storyState.structure?.type}
+              <p
+                className="text-base font-bold mb-6 min-w-0 max-w-full break-words"
+                style={{ color: "#6b5210", overflowWrap: "anywhere", wordBreak: "break-word" }}
+              >
+                {storyState.plot?.setting}
+                {storyState.structure?.type ? (
+                  <>
+                    {" "}
+                    <span className="opacity-70">|</span> {getStoryStructureLabel(storyState.structure?.type)}
+                  </>
+                ) : null}
               </p>
-              <div className="p-6" style={{ 
-                background: "#fff",
-                border: "4px solid #8b6914",
-                boxShadow: "inset -3px -3px 0 rgba(0,0,0,0.1), inset 3px 3px 0 rgba(255,255,255,0.3)"
-              }}>
+              <div
+                className="box-border p-6 min-w-0 w-full max-w-full overflow-x-hidden overflow-y-visible"
+                style={{
+                  background: "#fff",
+                  border: "4px solid #8b6914",
+                  boxShadow: "inset -3px -3px 0 rgba(0,0,0,0.1), inset 3px 3px 0 rgba(255,255,255,0.3)",
+                }}
+              >
                 {isReviewing ? (
                     <div className="flex flex-col items-center justify-center py-12">
                       <div className="relative mx-auto mb-6 w-16 h-16">
@@ -578,7 +679,7 @@ Created with Story Writer
           </div>
 
           {/* Story Summary */}
-          <div className="lg:col-span-4 space-y-6">
+          <div className="lg:col-span-4 space-y-6 min-w-0">
             <div className="pixel-panel p-5">
               <h3 className="text-lg font-extrabold mb-3" style={{ color: "#5a4a2a", textShadow: "1px 1px 0 rgba(0,0,0,0.2)" }}>
                 Story Summary
@@ -704,13 +805,18 @@ Created with Story Writer
                     <p className="text-sm font-extrabold" style={{ color: "#1a4a6a" }}>{storyState.character.species}</p>
                   </div>
                 )}
-                <div className="p-2.5" style={{ background: "#f5e6c8", border: "3px solid #c4a020" }}>
+                <div className="p-2.5 min-w-0" style={{ background: "#f5e6c8", border: "3px solid #c4a020" }}>
                   <p className="text-xs font-bold mb-0.5" style={{ color: "#8b6914" }}>Setting</p>
-                  <p className="text-sm font-extrabold" style={{ color: "#6b5210" }}>{storyState.plot?.setting}</p>
+                  <p className="text-sm font-extrabold break-words" style={{ color: "#6b5210", overflowWrap: "anywhere" }}>{storyState.plot?.setting}</p>
                 </div>
-                <div className="p-2.5" style={{ background: "#e8d4f5", border: "3px solid #9b59b6" }}>
-                  <p className="text-xs font-bold mb-0.5" style={{ color: "#7b3f96" }}>Type</p>
-                  <p className="text-sm font-extrabold capitalize" style={{ color: "#5a2f76" }}>{storyState.structure?.type}</p>
+                <div className="p-2.5 min-w-0" style={{ background: "#e8d4f5", border: "3px solid #9b59b6" }}>
+                  <p className="text-xs font-bold mb-0.5" style={{ color: "#7b3f96" }}>Structure</p>
+                  <p
+                    className="text-sm font-extrabold leading-snug break-words"
+                    style={{ color: "#5a2f76", overflowWrap: "anywhere" }}
+                  >
+                    {getStoryStructureLabel(storyState.structure?.type)}
+                  </p>
                 </div>
               </div>
             </div>
