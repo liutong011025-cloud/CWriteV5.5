@@ -26,11 +26,7 @@ const SPECIES = [
   { name: "Rabbit", icon: "🐰" },
   { name: "Bear", icon: "🐻" },
   { name: "Fox", icon: "🦊" },
-  { name: "Lion", icon: "🦁" },
-  { name: "Tiger", icon: "🐯" },
   { name: "Dragon", icon: "🐉" },
-  { name: "Unicorn", icon: "🦄" },
-  { name: "Panda", icon: "🐼" },
 ]
 
 const PIXEL_TRAIT_COLORS = [
@@ -82,8 +78,8 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
     bubbleScale: 1.20,
     sketchX: 0,
     sketchY: -12,
-    sketchWidth: 2200,
-    sketchHeight: 500,
+    sketchWidth: 2400,
+    sketchHeight: 620,
   })
 
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -555,7 +551,7 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
               showDetailsPanel
                 ? { transform: `translate(${layoutConfig.sketchX - 12}px, ${layoutConfig.sketchY}px) scale(0.94)` }
                 : {
-                    width: "2200px",
+                    width: `${layoutConfig.sketchWidth}px`,
                     maxWidth: "calc(98vw - 110px)",
                     transform: `translate(${layoutConfig.sketchX}px, ${layoutConfig.sketchY}px)`,
                   }
@@ -567,8 +563,8 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
             </div>
 
             <div className="mb-4">
-              <label className="block text-sm font-extrabold mb-2 pixel-text" style={{ color: "#5a4a2a", textShadow: "1px 1px 0 rgba(0,0,0,0.15)" }}>Species (Required first)</label>
-              <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-2">
+              <label className="block text-lg font-extrabold mb-3 pixel-text" style={{ color: "#5a4a2a", textShadow: "1px 1px 0 rgba(0,0,0,0.15)" }}>Species (Required first)</label>
+              <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3">
                 {SPECIES.map((spec) => {
                   const selected = species === spec.name
                   return (
@@ -576,25 +572,26 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
                       key={spec.name}
                       type="button"
                       onClick={() => setSpecies(spec.name)}
-                      className={`px-3 py-2 text-sm font-bold transition pixel-btn ${
+                      className={`flex min-h-[88px] flex-col items-center justify-center gap-1 px-3 py-3 text-base font-bold transition pixel-btn ${
                         selected ? "pixel-btn-green pixel-selected" : "pixel-btn-wood"
                       }`}
                     >
-                      <span className="mr-1">{spec.icon}</span>
-                      {spec.name}
+                      <span className="text-4xl leading-none">{spec.icon}</span>
+                      <span className="text-base leading-tight">{spec.name}</span>
                     </button>
                   )
                 })}
                 <button
                   type="button"
                   onClick={() => setSpecies("Custom")}
-                  className={`px-3 py-2 text-sm font-bold transition pixel-btn ${
+                  className={`flex min-h-[88px] flex-col items-center justify-center gap-1 px-3 py-3 text-base font-bold transition pixel-btn ${
                     species === "Custom"
                       ? "pixel-btn-green pixel-selected"
                       : "pixel-btn-wood"
                   }`}
                 >
-                  ✏️ Custom
+                  <span className="text-4xl leading-none">✏️</span>
+                  <span className="text-base leading-tight">Custom</span>
                 </button>
               </div>
               {species === "Custom" && (
