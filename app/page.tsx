@@ -505,6 +505,8 @@ export default function Home() {
   const mapStateHydratedRef = useRef(false)
   const mapUpdateInFlightRef = useRef(false)
   const pendingStoryFlagFinalizationRef = useRef<{ title: string; content: string } | null>(null)
+  /** 首次地圖迭代成功後會清空 currentPin；後續 Fal 請求仍用此座標 */
+  const lastJourneyPinRef = useRef<{ x: number; y: number } | null>(null)
   const [pendingDramaMapTitle, setPendingDramaMapTitle] = useState<string | null>(null)
   // 12 价值观维度小树：每棵 stage 2->3->4（最多成长两次）
   const [trees, setTrees] = useState<{ id: number; stage: number }[] | null>(null)
@@ -968,6 +970,10 @@ export default function Home() {
     setLevelBadgeUnlocked(false)
   }, [user?.username])
 
+  useEffect(() => {
+    if (currentPin) lastJourneyPinRef.current = currentPin
+  }, [currentPin])
+
   // Load planTestResult from localStorage
   useEffect(() => {
     if (!user?.username || typeof window === "undefined") return
@@ -995,6 +1001,7 @@ export default function Home() {
     setMapImageUrl(undefined)
     setMapFlags([])
     setCurrentPin(null)
+    lastJourneyPinRef.current = null
     setJourneySelection(null)
     setJourneyActive(false)
     setLevelBadgeUnlocked(false)
@@ -1063,8 +1070,9 @@ export default function Home() {
       workType?: MapWorkType
       source: string
     }) => {
-      if (!journeyActive || !user || !currentPin) return
-      const pinSnapshot = { x: currentPin.x, y: currentPin.y }
+      if (!journeyActive || !user) return
+      const pinSnapshot = currentPin ?? lastJourneyPinRef.current ?? { x: 50, y: 50 }
+      lastJourneyPinRef.current = pinSnapshot
       const previousMapImageUrl = mapImageUrl || getChapterBaseMapImageUrl(activeMapChapterIndex)
 
       void (async () => {
@@ -1117,6 +1125,38 @@ export default function Home() {
       })()
     },
     [journeyActive, user, currentPin, mapImageUrl, activeMapChapterIndex],
+  )
+
+  const runStoryJourneyMapAtStructureSelect = useCallback(
+    (
+      character: StoryState["character"],
+      plot: NonNullable<StoryState["plot"]>,
+      structure: { type: string },
+    ) => {
+      if (!journeyActive || !user) return
+      const storyTitle = character?.name?.trim() ? `${character.name}'s Story` : "My Story"
+      const topic = plot.setting || character?.name || storyTitle
+      const plotSummary = buildStoryPlotSummary(character, plot)
+      pendingStoryFlagFinalizationRef.current = null
+      void queueJourneyMapUpdate({
+        title: storyTitle,
+        topic,
+        content: [plotSummary, `Story structure: ${structure.type}`].filter(Boolean).join("\n"),
+        workType: "story",
+        source: "storyStructure",
+        summaryKey: "storySummary",
+        summaryValue: {
+          characterName: character?.name || null,
+          species: character?.species || null,
+          setting: plot.setting || null,
+          conflict: plot.conflict || null,
+          goal: plot.goal || null,
+          plotSummary: plotSummary || null,
+          structureType: structure.type,
+        },
+      })
+    },
+    [journeyActive, user, queueJourneyMapUpdate],
   )
 
   const canMoveToNextChapter = (mapFlags?.length ?? 0) >= 10
@@ -2061,6 +2101,9 @@ export default function Home() {
           }}
           onStructureSelect={(structure) => {
             setStoryState((prev) => ({ ...prev, structure, story: prev.story }))
+            const plot = storyState.plot
+            const character = storyState.character
+            if (plot && character) runStoryJourneyMapAtStructureSelect(character, plot, structure)
           }}
           onStoryWrite={(story) => {
             setStoryState((prev) => ({ ...prev, story }))
@@ -2081,29 +2124,11 @@ export default function Home() {
           onPlotCreate={(plot) => {
             setStoryState((prev) => ({ ...prev, plot, structure: null, story: prev.story }))
           }}
-          onPlotFinalize={(plot) => {
-            const storyTitle = storyState.character?.name?.trim() ? `${storyState.character.name}'s Story` : "My Story"
-            const topic = plot.setting || storyState.character?.name || storyTitle
-            pendingStoryFlagFinalizationRef.current = null
-            void queueJourneyMapUpdate({
-              title: storyTitle,
-              topic,
-              content: buildStoryPlotSummary(storyState.character, plot),
-              workType: "story",
-              source: "storyPlot",
-              summaryKey: "storySummary",
-              summaryValue: {
-                characterName: storyState.character?.name || null,
-                species: storyState.character?.species || null,
-                setting: plot.setting || null,
-                conflict: plot.conflict || null,
-                goal: plot.goal || null,
-                plotSummary: buildStoryPlotSummary(storyState.character, plot) || null,
-              },
-            })
-          }}
           onStructureSelect={(structure) => {
             setStoryState((prev) => ({ ...prev, structure, story: prev.story }))
+            const plot = storyState.plot
+            const character = storyState.character
+            if (plot && character) runStoryJourneyMapAtStructureSelect(character, plot, structure)
           }}
           onStoryWrite={(story) => {
             setStoryState((prev) => ({ ...prev, story }))
@@ -2150,6 +2175,9 @@ export default function Home() {
               onStructureSelect={(structure) => {
                 setStoryState(prev => ({ ...prev, structure }))
                 setStage("writing")
+                const plot = storyState.plot
+                const character = storyState.character
+                if (plot && character) runStoryJourneyMapAtStructureSelect(character, plot, structure)
               }}
               onBack={() => setStage("plot")}
             />
@@ -2161,6 +2189,9 @@ export default function Home() {
               onStructureSelect={(structure) => {
                 setStoryState(prev => ({ ...prev, structure }))
                 setStage("writing")
+                const plot = storyState.plot
+                const character = storyState.character
+                if (plot && character) runStoryJourneyMapAtStructureSelect(character, plot, structure)
               }}
               onBack={() => setStage("plot")}
               userId={user.username}
@@ -2209,7 +2240,7 @@ export default function Home() {
             const updatedExistingStoryFlag = finalizeLatestStoryFlag(storyTitle, finalStory)
             if (!updatedExistingStoryFlag) {
               pendingStoryFlagFinalizationRef.current = { title: storyTitle, content: finalStory }
-              if (!mapUpdateInFlightRef.current && currentPin) {
+              if (!mapUpdateInFlightRef.current) {
                 void queueJourneyMapUpdate({
                   title: storyTitle,
                   topic,
