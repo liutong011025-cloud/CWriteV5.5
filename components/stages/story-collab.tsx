@@ -23,7 +23,7 @@ type StructureType = StructureState["type"]
 interface StoryCollabProps {
   language: Language
   storyState: StoryState
-  /** Plan Test / journey 难度 1–5，用于小节审核门槛 */
+  /** Plan Test / journey 难度 1–5（传给协作 API） */
   writingLevel?: number
   mode: StoryMode
   onPlotCreate: (plot: PlotState) => void
@@ -141,6 +141,20 @@ function stripAdvanceNextSectionPhrases(text: string): string {
   return t.replace(/\s{2,}/g, " ").trim()
 }
 
+function mergePadIntoSection(committed: string, pad: string): string {
+  const c = committed.trim()
+  const p = pad.trim()
+  if (!c) return p
+  if (!p) return c
+  return `${c} ${p}`
+}
+
+const BEAR_LAYOUT = {
+  preStructure: { x: 16, y: -82, scale: 1.05 },
+  writing: { x: 16, y: -32, scale: 0.94 },
+  nextUnlocked: { x: 11, y: -15, scale: 1.08 },
+} as const
+
 /* ── Component ───────────────────────────────────────── */
 
 export default function StoryCollab({
@@ -193,18 +207,6 @@ export default function StoryCollab({
   // Writing phase: tracks which section the user is currently writing
   const [currentWritingSection, setCurrentWritingSection] = useState(0)
   const [writingMood, setWritingMood] = useState<"sit" | "like" | "angry">("sit")
-  type BearPos = { x: number; y: number; scale: number }
-  const [bearLayout, setBearLayout] = useState<{
-    preStructure: BearPos
-    writing: BearPos
-    nextUnlocked: BearPos
-  }>({
-    preStructure: { x: 16, y: -34, scale: 1.05 },
-    writing: { x: 16, y: -34, scale: 1.05 },
-    nextUnlocked: { x: 10, y: -40, scale: 1.08 },
-  })
-  const [showBearLayoutTool, setShowBearLayoutTool] = useState(false)
-
   type GateStatus = "idle" | "passed"
   const [sectionGateStatus, setSectionGateStatus] = useState<Record<number, GateStatus>>({})
   const gatePassSnapshotRef = useRef<Record<number, string>>({})
@@ -214,30 +216,38 @@ export default function StoryCollab({
   const chatWasNearBottomRef = useRef(true)
 
   /* ── Derived ── */
-  const totalWords = useMemo(
-    () => storyBlocks.reduce((sum, b) => sum + countWords(b.text), 0),
-    [storyBlocks],
-  )
+  const totalWords = useMemo(() => {
+    let sum = 0
+    for (let i = 0; i < storyBlocks.length; i++) {
+      const b = storyBlocks[i]
+      const text =
+        mode === "ai" && i === currentWritingSection
+          ? mergePadIntoSection(b.text, chatInput)
+          : b.text
+      sum += countWords(text)
+    }
+    return sum
+  }, [storyBlocks, currentWritingSection, chatInput, mode])
 
   const plotComplete = !!(plotData.setting && plotData.conflict && plotData.goal)
 
   const activeBear = useMemo(() => {
     const hasNext = storyBlocks.length > 0 && currentWritingSection < storyBlocks.length - 1
     const passed = sectionGateStatus[currentWritingSection] === "passed"
-    if (!selectedStructure) return bearLayout.preStructure
-    if (hasNext && passed) return bearLayout.nextUnlocked
-    return bearLayout.writing
-  }, [
-    selectedStructure,
-    storyBlocks.length,
-    currentWritingSection,
-    sectionGateStatus,
-    bearLayout,
-  ])
+    if (!selectedStructure) return BEAR_LAYOUT.preStructure
+    if (hasNext && passed) return BEAR_LAYOUT.nextUnlocked
+    return BEAR_LAYOUT.writing
+  }, [selectedStructure, storyBlocks.length, currentWritingSection, sectionGateStatus])
+
+  const currentSectionMergedDraft = useMemo(() => {
+    const idx = currentWritingSection
+    if (idx < 0 || idx >= storyBlocks.length) return ""
+    return mergePadIntoSection(storyBlocks[idx]?.text ?? "", chatInput)
+  }, [storyBlocks, currentWritingSection, chatInput])
 
   useEffect(() => {
     const idx = currentWritingSection
-    const t = storyBlocks[idx]?.text ?? ""
+    const t = currentSectionMergedDraft
     const snap = gatePassSnapshotRef.current[idx]
     if (snap !== undefined && t !== snap) {
       setSectionGateStatus((prev) => {
@@ -245,15 +255,42 @@ export default function StoryCollab({
         return { ...prev, [idx]: "idle" }
       })
     }
-  }, [storyBlocks, currentWritingSection])
+  }, [currentSectionMergedDraft, currentWritingSection])
 
   const composedStory = useMemo(
     () =>
       storyBlocks
-        .map((b) => `${b.sectionName}:\n${b.text.trim()}`.trimEnd())
+        .map((b, i) => {
+          const body =
+            mode === "ai" && i === currentWritingSection
+              ? mergePadIntoSection(b.text, chatInput)
+              : b.text.trim()
+          return `${b.sectionName}:\n${body}`.trimEnd()
+        })
         .join("\n\n")
         .trim(),
-    [storyBlocks],
+    [storyBlocks, currentWritingSection, chatInput, mode],
+  )
+
+  const everySectionHasContentForFinish = useMemo(() => {
+    if (storyBlocks.length === 0) return false
+    return storyBlocks.every((block, i) => {
+      if (mode === "ai" && i === currentWritingSection) {
+        return !!mergePadIntoSection(block.text, chatInput).trim()
+      }
+      return !!block.text.trim()
+    })
+  }, [storyBlocks, mode, currentWritingSection, chatInput])
+
+  const sectionsProgressCount = useMemo(
+    () =>
+      storyBlocks.filter((b, i) => {
+        if (mode === "ai" && i === currentWritingSection) {
+          return !!mergePadIntoSection(b.text, chatInput).trim()
+        }
+        return !!b.text.trim()
+      }).length,
+    [storyBlocks, mode, currentWritingSection, chatInput],
   )
 
   const bearSrc =
@@ -329,12 +366,22 @@ export default function StoryCollab({
 
   /* ── API call ── */
   const sendMessage = useCallback(
-    async (
-      text: string,
-      action?: "help_me" | "chat",
-      opts?: { appendUserTextToSection?: boolean },
-    ) => {
+    async (text: string, action?: "help_me" | "chat") => {
       if (isLoading) return
+
+      const padSnapshot =
+        mode === "ai" && storyBlocks.length > 0 && currentWritingSection < storyBlocks.length
+          ? chatInput.trim()
+          : ""
+      const keepWritingPad =
+        mode === "ai" && storyBlocks.length > 0 && currentWritingSection < storyBlocks.length
+
+      const storyBlocksPayload = storyBlocks.map((b, i) => ({
+        section: b.sectionName,
+        text:
+          i === currentWritingSection ? mergePadIntoSection(b.text, padSnapshot) : b.text,
+      }))
+
       setIsLoading(true)
 
       const userMsg: CollabMessage = {
@@ -343,7 +390,7 @@ export default function StoryCollab({
         content: text,
       }
       setMessages((prev) => [...prev, userMsg])
-      setChatInput("")
+      if (!keepWritingPad) setChatInput("")
 
       const newHistory = [...conversationHistory, { role: "user", content: text }]
 
@@ -357,7 +404,7 @@ export default function StoryCollab({
             character: storyState.character,
             plot_state: plotData,
             structure_type: selectedStructure,
-            story_blocks: storyBlocks.map((b) => ({ section: b.sectionName, text: b.text })),
+            story_blocks: storyBlocksPayload,
             current_phase: phase,
             user_id: userId || "anonymous",
             level: levelForApi,
@@ -402,15 +449,9 @@ export default function StoryCollab({
           currentWritingSection < storyBlocks.length - 1
         ) {
           const idx = currentWritingSection
-          const existing = (storyBlocks[idx]?.text ?? "").trim()
-          const userSent = text.trim()
-          const merged = opts?.appendUserTextToSection
-            ? existing
-              ? `${existing} ${userSent}`
-              : userSent
-            : existing
-          if (merged.trim()) {
-            gatePassSnapshotRef.current[idx] = merged.trim()
+          const mergedForGate = mergePadIntoSection(storyBlocks[idx]?.text ?? "", padSnapshot)
+          if (mergedForGate.trim()) {
+            gatePassSnapshotRef.current[idx] = mergedForGate.trim()
             setSectionGateStatus((prev) => ({ ...prev, [idx]: "passed" }))
           }
         }
@@ -461,6 +502,8 @@ export default function StoryCollab({
       userId,
       levelForApi,
       currentWritingSection,
+      chatInput,
+      mode,
     ],
   )
 
@@ -579,30 +622,34 @@ export default function StoryCollab({
     }
 
     updateWritingMoodFromText(text)
-    // In writing phase, auto-save the user's text to the current section
-    if (storyBlocks.length > 0 && currentWritingSection < storyBlocks.length) {
-      setStoryBlocks((prev) => {
-        const next = [...prev]
-        const existing = next[currentWritingSection].text.trim()
-        next[currentWritingSection] = {
-          ...next[currentWritingSection],
-          text: existing ? `${existing} ${text}` : text,
-        }
-        return next
-      })
-    }
-    void sendMessage(text, undefined, { appendUserTextToSection: true })
+    void sendMessage(text)
   }, [
     chatInput,
     isLoading,
     sendMessage,
-    storyBlocks,
-    currentWritingSection,
     activateTestModeAndFinish,
     updateWritingMoodFromText,
     selectedStructure,
     openStructureSelection,
   ])
+
+  const handleNextSection = useCallback(() => {
+    const idx = currentWritingSection
+    if (idx < 0 || idx >= storyBlocks.length) return
+    const merged = mergePadIntoSection(storyBlocks[idx].text, chatInput).trim()
+    if (!merged) {
+      toast.error("Write something in the Writing Pad first.")
+      return
+    }
+    setStoryBlocks((prev) => {
+      const next = [...prev]
+      next[idx] = { ...next[idx], text: merged }
+      return next
+    })
+    gatePassSnapshotRef.current[idx] = merged
+    setChatInput("")
+    setCurrentWritingSection((prev) => prev + 1)
+  }, [currentWritingSection, storyBlocks, chatInput])
 
   const handleSuggestionClick = useCallback(
     (suggestion: string) => {
@@ -625,7 +672,11 @@ export default function StoryCollab({
         toast.error("Choose a story structure first!")
         return
       }
-      // Target the current writing section (or last section if all done)
+      if (mode === "ai") {
+        setChatInput((prev) => (prev.trim() ? `${prev.trim()} ${snippet}` : snippet))
+        toast.success("Added to your Writing Pad!")
+        return
+      }
       const idx = Math.min(currentWritingSection, storyBlocks.length - 1)
       setStoryBlocks((prev) => {
         const next = [...prev]
@@ -638,7 +689,7 @@ export default function StoryCollab({
       })
       toast.success(`Added to ${storyBlocks[idx].sectionName}!`)
     },
-    [storyBlocks, currentWritingSection],
+    [storyBlocks, currentWritingSection, mode],
   )
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -693,8 +744,7 @@ export default function StoryCollab({
       return
     }
 
-    const allSectionsFilled = storyBlocks.length > 0 && storyBlocks.every((block) => block.text.trim())
-    if (!allSectionsFilled) {
+    if (!everySectionHasContentForFinish) {
       toast.error("Please write something in every structure section before finishing the story.")
       return
     }
@@ -714,7 +764,7 @@ export default function StoryCollab({
       return
     }
     onStoryWrite(finalStory)
-  }, [totalWords, composedStory, onStoryWrite, syncStoryStateBeforeFinish, storyBlocks])
+  }, [totalWords, composedStory, onStoryWrite, syncStoryStateBeforeFinish, everySectionHasContentForFinish])
 
   /* ── Plot auto-callback ── */
   useEffect(() => {
@@ -986,7 +1036,7 @@ export default function StoryCollab({
                             }}
                             placeholder={
                               currentWritingSection < storyBlocks.length
-                                ? `Write your ${storyBlocks[currentWritingSection].sectionName} here... Use Ctrl+Enter to send.`
+                                ? `Write your ${storyBlocks[currentWritingSection].sectionName} in the pad… Tap Finish! to chat with the AI (text stays here). Ctrl+Enter = Finish!`
                                 : "Write the ending touch for your story..."
                             }
                             disabled={isLoading}
@@ -1047,8 +1097,7 @@ export default function StoryCollab({
                             disabled={isLoading || !chatInput.trim()}
                             className="flex-1 pixel-btn pixel-btn-green"
                           >
-                            <Send className="mr-2 h-4 w-4" />
-                            Add To Current Section
+                            Finish!
                           </Button>
                           <Button
                             type="button"
@@ -1062,15 +1111,15 @@ export default function StoryCollab({
                         </div>
                       )}
                     </div>
-                    {/* Next Section：聊天 AI 在回复中给出可识别句（如 You can move to the next section.）后解锁 */}
+                    {/* Next Section：AI 认可后解锁；点击后把 Writing Pad 正文写入当前小节并进入下一节 */}
                     {storyBlocks.length > 0 &&
                       currentWritingSection < storyBlocks.length - 1 &&
-                      storyBlocks[currentWritingSection].text.trim() &&
+                      currentSectionMergedDraft.trim() &&
                       sectionGateStatus[currentWritingSection] === "passed" && (
                         <div className="space-y-2">
                           <Button
                             type="button"
-                            onClick={() => setCurrentWritingSection((prev) => prev + 1)}
+                            onClick={handleNextSection}
                             className="w-full text-xs pixel-btn pixel-btn-blue"
                           >
                             Next Section: {storyBlocks[currentWritingSection + 1].sectionName}
@@ -1078,73 +1127,6 @@ export default function StoryCollab({
                         </div>
                       )}
                   </div>
-
-                  <button
-                    type="button"
-                    onClick={() => setShowBearLayoutTool((v) => !v)}
-                    className="fixed bottom-4 left-4 z-[60] rounded-xl border-2 border-[#8b6914] bg-[#f5e6c8] px-2 py-1.5 text-[10px] font-bold text-[#5a4a2a] shadow pointer-events-auto"
-                  >
-                    {showBearLayoutTool ? "Hide" : "Bear"} layout
-                  </button>
-                  {showBearLayoutTool && (
-                    <div className="fixed bottom-14 left-4 z-[60] max-h-[55vh] w-72 overflow-y-auto rounded-2xl border-4 border-[#8b6914] bg-[#f5e6c8] p-3 text-[10px] shadow-2xl pointer-events-auto">
-                      <h4 className="mb-2 font-extrabold text-[#6b5210]">Story bear (3 phases)</h4>
-                      {(["preStructure", "writing", "nextUnlocked"] as const).map((phase) => (
-                        <div key={phase} className="mb-3 space-y-1 border-b border-[#c4a020] pb-2 last:border-0">
-                          <p className="font-bold text-[#5a4a2a]">
-                            {phase === "preStructure" && "Before structure"}
-                            {phase === "writing" && "Writing"}
-                            {phase === "nextUnlocked" && "Next unlocked"}
-                          </p>
-                          <label className="block text-[#5a4a2a]">X px: {bearLayout[phase].x.toFixed(0)}</label>
-                          <input
-                            type="range"
-                            min={-80}
-                            max={120}
-                            step={1}
-                            value={bearLayout[phase].x}
-                            onChange={(e) =>
-                              setBearLayout((prev) => ({
-                                ...prev,
-                                [phase]: { ...prev[phase], x: Number(e.target.value) },
-                              }))
-                            }
-                            className="w-full"
-                          />
-                          <label className="block text-[#5a4a2a]">Y px: {bearLayout[phase].y.toFixed(0)}</label>
-                          <input
-                            type="range"
-                            min={-120}
-                            max={80}
-                            step={1}
-                            value={bearLayout[phase].y}
-                            onChange={(e) =>
-                              setBearLayout((prev) => ({
-                                ...prev,
-                                [phase]: { ...prev[phase], y: Number(e.target.value) },
-                              }))
-                            }
-                            className="w-full"
-                          />
-                          <label className="block text-[#5a4a2a]">Scale: {bearLayout[phase].scale.toFixed(2)}</label>
-                          <input
-                            type="range"
-                            min={0.5}
-                            max={1.6}
-                            step={0.01}
-                            value={bearLayout[phase].scale}
-                            onChange={(e) =>
-                              setBearLayout((prev) => ({
-                                ...prev,
-                                [phase]: { ...prev[phase], scale: Number(e.target.value) },
-                              }))
-                            }
-                            className="w-full"
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  )}
 
                   <div
                     className="pointer-events-none absolute z-20 flex flex-col items-center"
@@ -1343,7 +1325,10 @@ export default function StoryCollab({
                                 fontStyle: block.text ? "normal" : "italic"
                               }}
                             >
-                              {block.text || (isActive ? "Your writing will appear here..." : "Not written yet")}
+                              {block.text ||
+                                (isActive
+                                  ? "Text stays in the Writing Pad until you tap Next Section (or finish the whole story)."
+                                  : "Not written yet")}
                             </div>
                           ) : (
                             /* Editable in manual mode */
@@ -1372,14 +1357,14 @@ export default function StoryCollab({
                     Words: <span style={{ color: "#5a4a2a" }}>{totalWords}</span>
                     {storyBlocks.length > 0 && (
                       <>
-                        {" | "}Sections: <span style={{ color: "#5a4a2a" }}>{storyBlocks.filter((b) => b.text.trim()).length}/{storyBlocks.length}</span>
+                        {" | "}Sections: <span style={{ color: "#5a4a2a" }}>{sectionsProgressCount}/{storyBlocks.length}</span>
                       </>
                     )}
                   </div>
                   <Button
                     type="button"
                     onClick={handleFinishStory}
-                    disabled={storyBlocks.length === 0 || totalWords === 0 || !storyBlocks.every((block) => block.text.trim())}
+                    disabled={storyBlocks.length === 0 || totalWords === 0 || !everySectionHasContentForFinish}
                     className="pixel-btn pixel-btn-green"
                   >
                     <Sparkles className="h-4 w-4 mr-1" />
