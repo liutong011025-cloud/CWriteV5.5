@@ -21,6 +21,7 @@ type MapUpdateRequestBody = {
     conflict?: string | null
     goal?: string | null
     plotSummary?: string | null
+    structureType?: string | null
   } | null
   mapPrompt?: string
 }
@@ -83,6 +84,7 @@ export async function POST(request: NextRequest) {
     const detailedConflict = storySummary?.conflict || null
     const detailedGoal = storySummary?.goal || null
     const plotSummary = storySummary?.plotSummary || null
+    const structureType = storySummary?.structureType || null
     const extraPrompt = (mapPrompt || "").trim()
 
     const prompt = `
@@ -105,6 +107,7 @@ Story details (for inspiration only, do not render text):
 - Conflict detail: "${detailedConflict || "unspecified"}"
 - Goal detail: "${detailedGoal || "unspecified"}"
 - Plot summary: "${plotSummary || "unspecified"}"
+- Story structure (if any): "${structureType || "unspecified"}"
 
 Task:
 - Focus your main new visual content on a **tiny local patch** centered very close to (${safeMapX}, ${safeMapY}), roughly a circle with radius about 2–3% of the map width. The strongest new shapes and colors should stay inside this tiny patch.
