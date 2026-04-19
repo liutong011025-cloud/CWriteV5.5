@@ -39,7 +39,7 @@ function determinePhase(req: CollabRequest): CollabPhase {
     return sum + cn + en
   }, 0)
 
-  if (msgCount < 3 && !hasPlot) return "explore"
+  if (msgCount < 2 && !hasPlot) return "explore"
   if (!hasPlot) return "plot"
   if (!hasStructure) return "structure"
   if (totalWords < 100) return "writing"
@@ -220,9 +220,17 @@ export async function POST(request: NextRequest) {
     const rawAnswer = await chat({ messages, timeout: 60_000 })
     const { answer, meta } = parseResponse(rawAnswer)
 
+    const hasPlot = !!(req.plot_state?.setting && req.plot_state?.conflict && req.plot_state?.goal)
+    const hasStructure = !!req.structure_type
+    // 模型 META 里的 phase 常会写成 plot/explore，覆盖后用户要多聊几轮才出现结构卡片
+    let finalPhase = (meta.phase as CollabPhase) || phase
+    if (hasPlot && !hasStructure) {
+      finalPhase = "structure"
+    }
+
     const response: CollabResponse = {
       answer: answer || rawAnswer,
-      phase: meta.phase || phase,
+      phase: finalPhase,
       suggestions: meta.suggestions?.length ? meta.suggestions : ["Tell me more", "What happens next?", "Help me"],
       story_snippet: meta.story_snippet || null,
       plot_update: meta.plot_update || null,
