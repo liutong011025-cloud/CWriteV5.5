@@ -23,6 +23,8 @@ type StructureType = StructureState["type"]
 interface StoryCollabProps {
   language: Language
   storyState: StoryState
+  /** Plan Test / journey 难度 1–5，用于小节审核门槛 */
+  writingLevel?: number
   mode: StoryMode
   onPlotCreate: (plot: PlotState) => void
   onPlotFinalize?: (plot: PlotState) => void
@@ -112,6 +114,7 @@ const cleanAiDisplayText = (text: string) =>
 export default function StoryCollab({
   language,
   storyState,
+  writingLevel: writingLevelProp,
   mode,
   onPlotCreate,
   onPlotFinalize,
@@ -121,6 +124,8 @@ export default function StoryCollab({
   userId,
   onDraftChange,
 }: StoryCollabProps) {
+  const writingLevel = writingLevelProp ?? getCurrentLevel()
+
   /* ── State ── */
   const [phase, setPhase] = useState<CollabPhase>("explore")
   const [messages, setMessages] = useState<CollabMessage[]>([])
@@ -156,7 +161,21 @@ export default function StoryCollab({
   // Writing phase: tracks which section the user is currently writing
   const [currentWritingSection, setCurrentWritingSection] = useState(0)
   const [writingMood, setWritingMood] = useState<"sit" | "like" | "angry">("sit")
-  const bearUi = { scale: 1.05, x: 16, y: -34 }
+  type BearPos = { x: number; y: number; scale: number }
+  const [bearLayout, setBearLayout] = useState<{
+    preStructure: BearPos
+    writing: BearPos
+    nextUnlocked: BearPos
+  }>({
+    preStructure: { x: 16, y: -34, scale: 1.05 },
+    writing: { x: 16, y: -34, scale: 1.05 },
+    nextUnlocked: { x: 10, y: -40, scale: 1.08 },
+  })
+  const [showBearLayoutTool, setShowBearLayoutTool] = useState(false)
+
+  type GateStatus = "idle" | "checking" | "passed" | "failed"
+  const [sectionGateStatus, setSectionGateStatus] = useState<Record<number, GateStatus>>({})
+  const gatePassSnapshotRef = useRef<Record<number, string>>({})
 
   const chatContainerRef = useRef<HTMLDivElement>(null)
   const chatEndRef = useRef<HTMLDivElement>(null)
@@ -169,6 +188,32 @@ export default function StoryCollab({
   )
 
   const plotComplete = !!(plotData.setting && plotData.conflict && plotData.goal)
+
+  const activeBear = useMemo(() => {
+    const hasNext = storyBlocks.length > 0 && currentWritingSection < storyBlocks.length - 1
+    const passed = sectionGateStatus[currentWritingSection] === "passed"
+    if (!selectedStructure) return bearLayout.preStructure
+    if (hasNext && passed) return bearLayout.nextUnlocked
+    return bearLayout.writing
+  }, [
+    selectedStructure,
+    storyBlocks.length,
+    currentWritingSection,
+    sectionGateStatus,
+    bearLayout,
+  ])
+
+  useEffect(() => {
+    const idx = currentWritingSection
+    const t = storyBlocks[idx]?.text ?? ""
+    const snap = gatePassSnapshotRef.current[idx]
+    if (snap !== undefined && t !== snap) {
+      setSectionGateStatus((prev) => {
+        if (prev[idx] !== "passed") return prev
+        return { ...prev, [idx]: "idle" }
+      })
+    }
+  }, [storyBlocks, currentWritingSection])
 
   const composedStory = useMemo(
     () =>
@@ -505,6 +550,44 @@ export default function StoryCollab({
     setWritingMood("sit")
     void sendMessage("Help me write!", "help_me")
   }, [isLoading, sendMessage])
+
+  const handleCheckSection = useCallback(async () => {
+    const idx = currentWritingSection
+    const text = (storyBlocks[idx]?.text ?? "").trim()
+    if (!text) {
+      toast.error("Write something in this section first.")
+      return
+    }
+    if (!selectedStructure) return
+    setSectionGateStatus((s) => ({ ...s, [idx]: "checking" }))
+    try {
+      const struct = STRUCTURES.find((s) => s.type === selectedStructure) || STRUCTURES[0]
+      const res = await fetch("/api/story-section-gate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sectionName: storyBlocks[idx].sectionName,
+          sectionText: text,
+          plot: plotData,
+          character: storyState.character,
+          structureOutline: struct.outline,
+          level: writingLevel,
+        }),
+      })
+      const data = await res.json()
+      if (data.pass) {
+        gatePassSnapshotRef.current[idx] = text
+        setSectionGateStatus((s) => ({ ...s, [idx]: "passed" }))
+        toast.success(typeof data.feedback === "string" ? data.feedback : "Section approved — you can go on!")
+      } else {
+        setSectionGateStatus((s) => ({ ...s, [idx]: "failed" }))
+        toast.error(typeof data.feedback === "string" ? data.feedback : "Keep improving this section.")
+      }
+    } catch {
+      toast.error("Could not check this section. Try again.")
+      setSectionGateStatus((s) => ({ ...s, [idx]: "idle" }))
+    }
+  }, [currentWritingSection, storyBlocks, plotData, storyState.character, selectedStructure, writingLevel])
 
   const handleAddToStory = useCallback(
     (snippet: string) => {
@@ -949,26 +1032,114 @@ export default function StoryCollab({
                         </div>
                       )}
                     </div>
-                    {/* Next Section button — appears once current section has content */}
+                    {/* Next Section：AI 模式需先通过小节审核 */}
                     {storyBlocks.length > 0 &&
                       currentWritingSection < storyBlocks.length - 1 &&
                       storyBlocks[currentWritingSection].text.trim() && (
-                        <Button
-                          type="button"
-                          onClick={() => setCurrentWritingSection((prev) => prev + 1)}
-                          className="w-full text-xs pixel-btn pixel-btn-blue"
-                        >
-                          Next Section: {storyBlocks[currentWritingSection + 1].sectionName}
-                        </Button>
+                        <div className="space-y-2">
+                          {sectionGateStatus[currentWritingSection] !== "passed" && (
+                            <Button
+                              type="button"
+                              onClick={() => void handleCheckSection()}
+                              disabled={sectionGateStatus[currentWritingSection] === "checking" || isLoading}
+                              className="w-full text-xs pixel-btn pixel-btn-wood"
+                            >
+                              {sectionGateStatus[currentWritingSection] === "checking" ? (
+                                <>
+                                  <Loader2 className="mr-2 inline h-4 w-4 animate-spin" />
+                                  Checking…
+                                </>
+                              ) : (
+                                <>Check section (Level {writingLevel}) — unlock Next</>
+                              )}
+                            </Button>
+                          )}
+                          {sectionGateStatus[currentWritingSection] === "passed" && (
+                            <Button
+                              type="button"
+                              onClick={() => setCurrentWritingSection((prev) => prev + 1)}
+                              className="w-full text-xs pixel-btn pixel-btn-blue"
+                            >
+                              Next Section: {storyBlocks[currentWritingSection + 1].sectionName}
+                            </Button>
+                          )}
+                        </div>
                       )}
                   </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setShowBearLayoutTool((v) => !v)}
+                    className="fixed bottom-4 left-4 z-[60] rounded-xl border-2 border-[#8b6914] bg-[#f5e6c8] px-2 py-1.5 text-[10px] font-bold text-[#5a4a2a] shadow pointer-events-auto"
+                  >
+                    {showBearLayoutTool ? "Hide" : "Bear"} layout
+                  </button>
+                  {showBearLayoutTool && (
+                    <div className="fixed bottom-14 left-4 z-[60] max-h-[55vh] w-72 overflow-y-auto rounded-2xl border-4 border-[#8b6914] bg-[#f5e6c8] p-3 text-[10px] shadow-2xl pointer-events-auto">
+                      <h4 className="mb-2 font-extrabold text-[#6b5210]">Story bear (3 phases)</h4>
+                      {(["preStructure", "writing", "nextUnlocked"] as const).map((phase) => (
+                        <div key={phase} className="mb-3 space-y-1 border-b border-[#c4a020] pb-2 last:border-0">
+                          <p className="font-bold text-[#5a4a2a]">
+                            {phase === "preStructure" && "Before structure"}
+                            {phase === "writing" && "Writing"}
+                            {phase === "nextUnlocked" && "Next unlocked"}
+                          </p>
+                          <label className="block text-[#5a4a2a]">X px: {bearLayout[phase].x.toFixed(0)}</label>
+                          <input
+                            type="range"
+                            min={-80}
+                            max={120}
+                            step={1}
+                            value={bearLayout[phase].x}
+                            onChange={(e) =>
+                              setBearLayout((prev) => ({
+                                ...prev,
+                                [phase]: { ...prev[phase], x: Number(e.target.value) },
+                              }))
+                            }
+                            className="w-full"
+                          />
+                          <label className="block text-[#5a4a2a]">Y px: {bearLayout[phase].y.toFixed(0)}</label>
+                          <input
+                            type="range"
+                            min={-120}
+                            max={80}
+                            step={1}
+                            value={bearLayout[phase].y}
+                            onChange={(e) =>
+                              setBearLayout((prev) => ({
+                                ...prev,
+                                [phase]: { ...prev[phase], y: Number(e.target.value) },
+                              }))
+                            }
+                            className="w-full"
+                          />
+                          <label className="block text-[#5a4a2a]">Scale: {bearLayout[phase].scale.toFixed(2)}</label>
+                          <input
+                            type="range"
+                            min={0.5}
+                            max={1.6}
+                            step={0.01}
+                            value={bearLayout[phase].scale}
+                            onChange={(e) =>
+                              setBearLayout((prev) => ({
+                                ...prev,
+                                [phase]: { ...prev[phase], scale: Number(e.target.value) },
+                              }))
+                            }
+                            className="w-full"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  )}
 
                   <div
                     className="pointer-events-none absolute z-20 flex flex-col items-center"
                     style={{
                       right: "1rem",
                       bottom: "1rem",
-                      transform: `translate(${bearUi.x}px, ${bearUi.y}px) scale(${bearUi.scale})`,
+                      transform: `translate(${activeBear.x}px, ${activeBear.y}px) scale(${activeBear.scale})`,
                       transformOrigin: "bottom right",
                     }}
                   >
@@ -1179,7 +1350,7 @@ export default function StoryCollab({
                   <div className="flex items-center justify-center h-[200px] text-sm font-bold" style={{ color: "#8b6914" }}>
                     {selectedStructure
                       ? "Loading sections..."
-                      : "Choose a story structure to start writing!"}
+                      : "Talk with the AI to summarize your plot."}
                   </div>
                 )}
 
