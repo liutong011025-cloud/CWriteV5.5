@@ -127,7 +127,10 @@ function buildSystemPrompt(req: CollabRequest, phase: CollabPhase): string {
           : `Later parts (${laterNames.map((n) => `"${n}"`).join(", ")}) are written in **later steps** — do not require those to be done now.\n`) +
         `Feedback and encouragement must focus on "${cur.section}" only.\n` +
         (isLastSection
-          ? `Do NOT end with "You can move to the next section." (there is no next section).\n`
+          ? `Do NOT use "You can move to the next section." (there is no next section).\n` +
+            `When "${cur.section}" is good enough **for this final beat alone** (not the entire story in one box), end your reply with this exact sentence on its own line at the very end (before META): ` +
+            `Great job!\n` +
+            `If "${cur.section}" still needs work, do NOT write "Great job!"; keep helping with this part only.\n`
           : `When "${cur.section}" is good enough **for this structural beat alone** (not the whole story), end your reply with this exact sentence on its own line at the very end (before META): ` +
             `You can move to the next section.\n` +
             `If "${cur.section}" still needs improvement, do NOT use that sentence; keep helping with this part only.\n`)
