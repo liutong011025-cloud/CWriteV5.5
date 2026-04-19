@@ -809,15 +809,17 @@ Created with Story Writer
                   <p className="text-xs font-bold mb-0.5" style={{ color: "#8b6914" }}>Setting</p>
                   <p className="text-sm font-extrabold break-words" style={{ color: "#6b5210", overflowWrap: "anywhere" }}>{storyState.plot?.setting}</p>
                 </div>
-                <div className="p-2.5 min-w-0" style={{ background: "#e8d4f5", border: "3px solid #9b59b6" }}>
-                  <p className="text-xs font-bold mb-0.5" style={{ color: "#7b3f96" }}>Structure</p>
-                  <p
-                    className="text-sm font-extrabold leading-snug break-words"
-                    style={{ color: "#5a2f76", overflowWrap: "anywhere" }}
-                  >
-                    {getStoryStructureLabel(storyState.structure?.type)}
-                  </p>
-                </div>
+                {storyState.structure?.type ? (
+                  <div className="p-2.5 min-w-0" style={{ background: "#e8d4f5", border: "3px solid #9b59b6" }}>
+                    <p className="text-xs font-bold mb-0.5" style={{ color: "#7b3f96" }}>Structure</p>
+                    <p
+                      className="text-sm font-extrabold leading-snug break-words"
+                      style={{ color: "#5a2f76", overflowWrap: "anywhere" }}
+                    >
+                      {getStoryStructureLabel(storyState.structure.type)}
+                    </p>
+                  </div>
+                ) : null}
               </div>
             </div>
 
