@@ -109,6 +109,38 @@ const cleanAiDisplayText = (text: string) =>
     .replace(/\s{2,}/g, " ")
     .trim()
 
+function detectAdvanceNextSectionSignal(answer: string): boolean {
+  if (!answer || typeof answer !== "string") return false
+  const t = answer.trim()
+  if (!t) return false
+  return (
+    /\byou can move to the next section\b/i.test(t) ||
+    /\byou may move to the next section\b/i.test(t) ||
+    /\byou'?re ready to move to the next section\b/i.test(t) ||
+    /\bready for the next section\b/i.test(t) ||
+    /可以进入下一节/.test(t) ||
+    /可以进入下一部分/.test(t) ||
+    /可以進入下一節/.test(t)
+  )
+}
+
+function stripAdvanceNextSectionPhrases(text: string): string {
+  let t = text
+  const removals: RegExp[] = [
+    /\n*You can move to the next section\.?\s*$/i,
+    /\n*You may move to the next section\.?\s*$/i,
+    /\n*You'?re ready to move to the next section\.?\s*$/i,
+    /\n*Ready for the next section\.?\s*$/i,
+    /\n*可以进入下一节[。.]?\s*$/,
+    /\n*可以进入下一部分[。.]?\s*$/,
+    /\n*可以進入下一節[。.]?\s*$/,
+  ]
+  for (const re of removals) {
+    t = t.replace(re, "")
+  }
+  return t.replace(/\s{2,}/g, " ").trim()
+}
+
 /* ── Component ───────────────────────────────────────── */
 
 export default function StoryCollab({
@@ -124,7 +156,7 @@ export default function StoryCollab({
   userId,
   onDraftChange,
 }: StoryCollabProps) {
-  const writingLevel = writingLevelProp ?? getCurrentLevel()
+  const levelForApi = writingLevelProp ?? getCurrentLevel()
 
   /* ── State ── */
   const [phase, setPhase] = useState<CollabPhase>("explore")
@@ -173,7 +205,7 @@ export default function StoryCollab({
   })
   const [showBearLayoutTool, setShowBearLayoutTool] = useState(false)
 
-  type GateStatus = "idle" | "checking" | "passed" | "failed"
+  type GateStatus = "idle" | "passed"
   const [sectionGateStatus, setSectionGateStatus] = useState<Record<number, GateStatus>>({})
   const gatePassSnapshotRef = useRef<Record<number, string>>({})
 
@@ -297,7 +329,11 @@ export default function StoryCollab({
 
   /* ── API call ── */
   const sendMessage = useCallback(
-    async (text: string, action?: "help_me" | "chat") => {
+    async (
+      text: string,
+      action?: "help_me" | "chat",
+      opts?: { appendUserTextToSection?: boolean },
+    ) => {
       if (isLoading) return
       setIsLoading(true)
 
@@ -324,7 +360,7 @@ export default function StoryCollab({
             story_blocks: storyBlocks.map((b) => ({ section: b.sectionName, text: b.text })),
             current_phase: phase,
             user_id: userId || "anonymous",
-            level: getCurrentLevel(),
+            level: levelForApi,
             action: action || "chat",
           }),
         })
@@ -358,8 +394,29 @@ export default function StoryCollab({
           else if (matchType.includes("fichtean")) handleStructureSelect("fichtean")
         }
 
+        const rawAnswer = data.answer || ""
+        if (
+          detectAdvanceNextSectionSignal(rawAnswer) &&
+          selectedStructure &&
+          storyBlocks.length > 0 &&
+          currentWritingSection < storyBlocks.length - 1
+        ) {
+          const idx = currentWritingSection
+          const existing = (storyBlocks[idx]?.text ?? "").trim()
+          const userSent = text.trim()
+          const merged = opts?.appendUserTextToSection
+            ? existing
+              ? `${existing} ${userSent}`
+              : userSent
+            : existing
+          if (merged.trim()) {
+            gatePassSnapshotRef.current[idx] = merged.trim()
+            setSectionGateStatus((prev) => ({ ...prev, [idx]: "passed" }))
+          }
+        }
+
         // Build assistant message
-        const cleaned = cleanAiDisplayText(data.answer)
+        const cleaned = stripAdvanceNextSectionPhrases(cleanAiDisplayText(rawAnswer))
         const showStructureCards = data.phase === "structure" && !selectedStructure
 
         const aiMsg: CollabMessage = {
@@ -375,7 +432,7 @@ export default function StoryCollab({
         // Update conversation history
         setConversationHistory([
           ...newHistory,
-          { role: "assistant", content: data.answer },
+          { role: "assistant", content: rawAnswer },
         ])
       } catch (err) {
         const errMsg = err instanceof Error ? err.message : "Something went wrong"
@@ -393,7 +450,18 @@ export default function StoryCollab({
         setIsLoading(false)
       }
     },
-    [isLoading, conversationHistory, storyState.character, plotData, selectedStructure, storyBlocks, phase, userId],
+    [
+      isLoading,
+      conversationHistory,
+      storyState.character,
+      plotData,
+      selectedStructure,
+      storyBlocks,
+      phase,
+      userId,
+      levelForApi,
+      currentWritingSection,
+    ],
   )
 
   /* ── Handlers ── */
@@ -523,7 +591,7 @@ export default function StoryCollab({
         return next
       })
     }
-    void sendMessage(text)
+    void sendMessage(text, undefined, { appendUserTextToSection: true })
   }, [
     chatInput,
     isLoading,
@@ -550,44 +618,6 @@ export default function StoryCollab({
     setWritingMood("sit")
     void sendMessage("Help me write!", "help_me")
   }, [isLoading, sendMessage])
-
-  const handleCheckSection = useCallback(async () => {
-    const idx = currentWritingSection
-    const text = (storyBlocks[idx]?.text ?? "").trim()
-    if (!text) {
-      toast.error("Write something in this section first.")
-      return
-    }
-    if (!selectedStructure) return
-    setSectionGateStatus((s) => ({ ...s, [idx]: "checking" }))
-    try {
-      const struct = STRUCTURES.find((s) => s.type === selectedStructure) || STRUCTURES[0]
-      const res = await fetch("/api/story-section-gate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          sectionName: storyBlocks[idx].sectionName,
-          sectionText: text,
-          plot: plotData,
-          character: storyState.character,
-          structureOutline: struct.outline,
-          level: writingLevel,
-        }),
-      })
-      const data = await res.json()
-      if (data.pass) {
-        gatePassSnapshotRef.current[idx] = text
-        setSectionGateStatus((s) => ({ ...s, [idx]: "passed" }))
-        toast.success(typeof data.feedback === "string" ? data.feedback : "Section approved — you can go on!")
-      } else {
-        setSectionGateStatus((s) => ({ ...s, [idx]: "failed" }))
-        toast.error(typeof data.feedback === "string" ? data.feedback : "Keep improving this section.")
-      }
-    } catch {
-      toast.error("Could not check this section. Try again.")
-      setSectionGateStatus((s) => ({ ...s, [idx]: "idle" }))
-    }
-  }, [currentWritingSection, storyBlocks, plotData, storyState.character, selectedStructure, writingLevel])
 
   const handleAddToStory = useCallback(
     (snippet: string) => {
@@ -1032,37 +1062,19 @@ export default function StoryCollab({
                         </div>
                       )}
                     </div>
-                    {/* Next Section：AI 模式需先通过小节审核 */}
+                    {/* Next Section：聊天 AI 在回复中给出可识别句（如 You can move to the next section.）后解锁 */}
                     {storyBlocks.length > 0 &&
                       currentWritingSection < storyBlocks.length - 1 &&
-                      storyBlocks[currentWritingSection].text.trim() && (
+                      storyBlocks[currentWritingSection].text.trim() &&
+                      sectionGateStatus[currentWritingSection] === "passed" && (
                         <div className="space-y-2">
-                          {sectionGateStatus[currentWritingSection] !== "passed" && (
-                            <Button
-                              type="button"
-                              onClick={() => void handleCheckSection()}
-                              disabled={sectionGateStatus[currentWritingSection] === "checking" || isLoading}
-                              className="w-full text-xs pixel-btn pixel-btn-wood"
-                            >
-                              {sectionGateStatus[currentWritingSection] === "checking" ? (
-                                <>
-                                  <Loader2 className="mr-2 inline h-4 w-4 animate-spin" />
-                                  Checking…
-                                </>
-                              ) : (
-                                <>Check section (Level {writingLevel}) — unlock Next</>
-                              )}
-                            </Button>
-                          )}
-                          {sectionGateStatus[currentWritingSection] === "passed" && (
-                            <Button
-                              type="button"
-                              onClick={() => setCurrentWritingSection((prev) => prev + 1)}
-                              className="w-full text-xs pixel-btn pixel-btn-blue"
-                            >
-                              Next Section: {storyBlocks[currentWritingSection + 1].sectionName}
-                            </Button>
-                          )}
+                          <Button
+                            type="button"
+                            onClick={() => setCurrentWritingSection((prev) => prev + 1)}
+                            className="w-full text-xs pixel-btn pixel-btn-blue"
+                          >
+                            Next Section: {storyBlocks[currentWritingSection + 1].sectionName}
+                          </Button>
                         </div>
                       )}
                   </div>
