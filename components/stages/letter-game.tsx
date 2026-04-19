@@ -30,9 +30,6 @@ const LETTER_SECTIONS = [
   { name: "Signature", emoji: "✍️", placeholder: "Love, [Your name]" }
 ]
 
-const LETTER_BEAR_POSITION = { x: 79.7, y: 20.1, scale: 1.0 }
-const LETTER_HANG_POSITION = { x: 79.7, y: 38.3, scale: 1.0 }
-
 export default function LetterGame({
   recipient,
   occasion,
@@ -53,13 +50,27 @@ export default function LetterGame({
   const [readerImageUrl, setReaderImageUrl] = useState<string | null>(readerImageUrlProp)
   const [writingMood, setWritingMood] = useState<"sit" | "like" | "angry" | "hang">("sit")
   const [isHoveringHang, setIsHoveringHang] = useState(false)
+  const [showLayoutTool, setShowLayoutTool] = useState(false)
+  const [bearLayout, setBearLayout] = useState({
+    bearX: 79.7,
+    bearY: 20.1,
+    hangY: 38.3,
+    bearScale: 1,
+    bubbleY: 0,
+    bubbleWidth: 300,
+    bubbleScale: 1,
+  })
   const hangTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   const currentSectionText = sectionTexts[currentSection] || ""
   const allTextLower = Object.values(sectionTexts).join(" ").toLowerCase()
   const hasDangerKeyword = ["fuck", "shit", "asshole"].some((w) => allTextLower.includes(w))
   const hasLoveKeyword = ["love", "peace", "like"].some((w) => allTextLower.includes(w))
-  const activeBearPosition = writingMood === "hang" ? LETTER_HANG_POSITION : LETTER_BEAR_POSITION
+  const activeBearPosition = {
+    x: bearLayout.bearX,
+    y: writingMood === "hang" ? bearLayout.hangY : bearLayout.bearY,
+    scale: bearLayout.bearScale,
+  }
 
   const shortEvaluation = (() => {
     const content = aiEvaluation.trim().replace(/\s+/g, " ")
@@ -291,6 +302,50 @@ export default function LetterGame({
       <div className="max-w-7xl mx-auto relative">
         <StageHeader onBack={onBack} />
 
+        <button
+          type="button"
+          onClick={() => setShowLayoutTool((prev) => !prev)}
+          className="fixed bottom-4 right-4 z-50 rounded-xl border-2 border-[#8b6914] bg-[#f5e6c8] px-3 py-2 text-xs font-bold text-[#5a4a2a] shadow-lg"
+        >
+          {showLayoutTool ? "Hide" : "Adjust"} Bear
+        </button>
+
+        {showLayoutTool && (
+          <div className="fixed bottom-16 right-4 z-50 w-72 max-h-[70vh] overflow-y-auto rounded-2xl border-4 border-[#8b6914] bg-[#f5e6c8] p-4 text-xs shadow-2xl">
+            <h4 className="mb-3 text-sm font-extrabold text-[#6b5210]">Letter Bear Layout</h4>
+            <div className="space-y-3">
+              <div>
+                <label className="mb-1 block font-bold text-[#5a4a2a]">Bear X: {bearLayout.bearX.toFixed(1)}</label>
+                <input type="range" min={50} max={95} step={0.1} value={bearLayout.bearX} onChange={(e) => setBearLayout((prev) => ({ ...prev, bearX: Number(e.target.value) }))} className="w-full" />
+              </div>
+              <div>
+                <label className="mb-1 block font-bold text-[#5a4a2a]">Bear Y: {bearLayout.bearY.toFixed(1)}</label>
+                <input type="range" min={0} max={55} step={0.1} value={bearLayout.bearY} onChange={(e) => setBearLayout((prev) => ({ ...prev, bearY: Number(e.target.value) }))} className="w-full" />
+              </div>
+              <div>
+                <label className="mb-1 block font-bold text-[#5a4a2a]">Hang Y: {bearLayout.hangY.toFixed(1)}</label>
+                <input type="range" min={10} max={70} step={0.1} value={bearLayout.hangY} onChange={(e) => setBearLayout((prev) => ({ ...prev, hangY: Number(e.target.value) }))} className="w-full" />
+              </div>
+              <div>
+                <label className="mb-1 block font-bold text-[#5a4a2a]">Bear Scale: {bearLayout.bearScale.toFixed(2)}</label>
+                <input type="range" min={0.6} max={1.8} step={0.01} value={bearLayout.bearScale} onChange={(e) => setBearLayout((prev) => ({ ...prev, bearScale: Number(e.target.value) }))} className="w-full" />
+              </div>
+              <div>
+                <label className="mb-1 block font-bold text-[#5a4a2a]">Bubble Y: {bearLayout.bubbleY.toFixed(0)}</label>
+                <input type="range" min={-40} max={80} step={1} value={bearLayout.bubbleY} onChange={(e) => setBearLayout((prev) => ({ ...prev, bubbleY: Number(e.target.value) }))} className="w-full" />
+              </div>
+              <div>
+                <label className="mb-1 block font-bold text-[#5a4a2a]">Bubble Width: {bearLayout.bubbleWidth}px</label>
+                <input type="range" min={200} max={420} step={2} value={bearLayout.bubbleWidth} onChange={(e) => setBearLayout((prev) => ({ ...prev, bubbleWidth: Number(e.target.value) }))} className="w-full" />
+              </div>
+              <div>
+                <label className="mb-1 block font-bold text-[#5a4a2a]">Bubble Scale: {bearLayout.bubbleScale.toFixed(2)}</label>
+                <input type="range" min={0.7} max={1.6} step={0.01} value={bearLayout.bubbleScale} onChange={(e) => setBearLayout((prev) => ({ ...prev, bubbleScale: Number(e.target.value) }))} className="w-full" />
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* 标题 */}
         <div className="text-center mb-8">
           <div className="mb-4 flex justify-center items-center gap-3">
@@ -392,19 +447,39 @@ export default function LetterGame({
                     </button>
                   </div>
                   {writingMood === "hang" && isHoveringHang && (
-                    <div className="absolute left-1/2 top-full z-10 mt-1 -translate-x-1/2 rounded-full bg-black/70 px-3 py-1 text-[11px] text-white shadow-lg">
+                    <div
+                      className="absolute left-1/2 top-full z-10 mt-1 rounded-full bg-black/70 px-3 py-1 text-[11px] text-white shadow-lg"
+                      style={{
+                        transform: `translateX(-50%) translateY(${bearLayout.bubbleY}px) scale(${bearLayout.bubbleScale})`,
+                        transformOrigin: "top center",
+                      }}
+                    >
                       Save me!
                     </div>
                   )}
                   {(isLoadingEvaluation || shortEvaluation) && (
-                    <div className="absolute left-1/2 top-full z-10 mt-1 w-[min(300px,82vw)] max-h-[min(220px,40vh)] -translate-x-1/2 rounded-2xl border border-purple-300 bg-white/95 px-3 py-2 text-xs text-purple-800 shadow-xl">
+                    <div
+                      className="absolute left-1/2 top-full z-10 mt-1 max-h-[min(220px,40vh)] rounded-2xl border border-purple-300 bg-white/95 px-3 py-2 text-xs text-purple-800 shadow-xl"
+                      style={{
+                        width: `min(${bearLayout.bubbleWidth}px, 82vw)`,
+                        transform: `translateX(-50%) translateY(${bearLayout.bubbleY}px) scale(${bearLayout.bubbleScale})`,
+                        transformOrigin: "top center",
+                      }}
+                    >
                       <div className="max-h-[min(200px,34vh)] overflow-y-auto whitespace-pre-wrap [overflow-anchor:none]">
                         {isLoadingEvaluation ? "Cagent is reading your writing" : shortEvaluation}
                       </div>
                     </div>
                   )}
                   {writingMood === "angry" && (
-                    <div className="absolute left-1/2 top-full z-10 mt-[4.25rem] w-[min(300px,82vw)] -translate-x-1/2 rounded-2xl border border-red-300 bg-white/95 px-3 py-2 text-xs text-red-700 shadow-xl">
+                    <div
+                      className="absolute left-1/2 top-full z-10 mt-[4.25rem] -translate-x-1/2 rounded-2xl border border-red-300 bg-white/95 px-3 py-2 text-xs text-red-700 shadow-xl"
+                      style={{
+                        width: `min(${bearLayout.bubbleWidth}px, 82vw)`,
+                        transform: `translateX(-50%) translateY(${bearLayout.bubbleY}px) scale(${bearLayout.bubbleScale})`,
+                        transformOrigin: "top center",
+                      }}
+                    >
                       This text contains offensive words. Please rewrite politely.
                     </div>
                   )}
