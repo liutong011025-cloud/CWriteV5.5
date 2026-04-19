@@ -113,7 +113,10 @@ function buildSystemPrompt(req: CollabRequest, phase: CollabPhase): string {
       "Now help the student write their story section by section. " +
       "Offer starter sentences, vocabulary suggestions, and ideas. " +
       "When you suggest actual story text, put it in story_snippet in META. " +
-      "Be enthusiastic about what they write!",
+      "Be enthusiastic about what they write! " +
+      "When the current section is clearly written well enough to continue, end your reply with this exact sentence on its own line at the very end (after your main message, before META): " +
+      "You can move to the next section. " +
+      "Do not use that sentence if the section still needs more work.",
     polish:
       "The story is taking shape! Help polish: suggest stronger words, " +
       "smoother transitions, or a better ending. Celebrate their progress!",
