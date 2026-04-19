@@ -118,6 +118,8 @@ interface WritingAssessment {
   mapImageStatus: "idle" | "loading" | "ready" | "error"
 }
 
+export type MapWorkType = "story" | "review" | "letter" | "drama" | "poetry"
+
 type ValuesGrowthDiagnostics = {
   code?: string
   title?: string
@@ -132,7 +134,7 @@ export interface MapFlagItem {
   y: number
   title: string
   content?: string
-  workType?: "story" | "review" | "letter"
+  workType?: MapWorkType
 }
 
 interface PersistedMapState {
@@ -175,7 +177,9 @@ const normalizeMapState = (raw: unknown): Partial<PersistedMapState> => {
           title: typeof f.title === "string" ? f.title : "Journey",
         }
         if (typeof (f as MapFlagItem).content === "string") item.content = (f as MapFlagItem).content
-        if (["story", "review", "letter"].includes((f as MapFlagItem).workType as string)) item.workType = (f as MapFlagItem).workType
+        if (["story", "review", "letter", "drama", "poetry"].includes((f as MapFlagItem).workType as string)) {
+          item.workType = (f as MapFlagItem).workType
+        }
         return item
       })
   }
@@ -274,6 +278,22 @@ const normalizeTreeStage = (stage: number) => {
   if (stage >= 4) return 4
   if (stage >= 3) return 3
   return 2
+}
+
+const buildStoryPlotSummary = (
+  character: StoryState["character"],
+  plot: StoryState["plot"] | null,
+) => {
+  if (!plot) return ""
+  return [
+    character?.name ? `Character: ${character.name}` : "",
+    character?.species ? `Species: ${character.species}` : "",
+    plot.setting ? `Setting: ${plot.setting}` : "",
+    plot.conflict ? `Conflict: ${plot.conflict}` : "",
+    plot.goal ? `Goal: ${plot.goal}` : "",
+  ]
+    .filter(Boolean)
+    .join("\n")
 }
 
 const createDefaultValuesTrees = () =>
@@ -483,6 +503,8 @@ export default function Home() {
   const [activeMapChapterIndex, setActiveMapChapterIndex] = useState(0)
   const [mapChapters, setMapChapters] = useState<PersistedMapState[]>([])
   const mapStateHydratedRef = useRef(false)
+  const mapUpdateInFlightRef = useRef(false)
+  const pendingStoryFlagFinalizationRef = useRef<{ title: string; content: string } | null>(null)
   const [pendingDramaMapTitle, setPendingDramaMapTitle] = useState<string | null>(null)
   // 12 价值观维度小树：每棵 stage 2->3->4（最多成长两次）
   const [trees, setTrees] = useState<{ id: number; stage: number }[] | null>(null)
@@ -1037,6 +1059,8 @@ export default function Home() {
       mapPrompt?: string
       summaryKey?: string
       summaryValue?: Record<string, unknown>
+      content?: string
+      workType?: MapWorkType
       source: string
     }) => {
       if (!journeyActive || !user || !currentPin) return
@@ -1044,6 +1068,7 @@ export default function Home() {
       const previousMapImageUrl = mapImageUrl || getChapterBaseMapImageUrl(activeMapChapterIndex)
 
       void (async () => {
+        mapUpdateInFlightRef.current = true
         try {
           const payload: Record<string, unknown> = {
             userId: user.username,
@@ -1065,21 +1090,29 @@ export default function Home() {
 
           if (mapRes.ok && !mapJson?.error && mapJson?.imageUrl) {
             setMapImageUrl(mapJson.imageUrl as string)
-            setMapFlags((prev) => [
-              ...prev,
-              {
-                id: mapJson.userId && mapJson.title ? `${mapJson.userId}-${mapJson.title}-${Date.now()}` : `${Date.now()}`,
-                x: mapJson.mapX ?? pinSnapshot.x,
-                y: mapJson.mapY ?? pinSnapshot.y,
-                title: mapJson.title || params.title,
-              },
-            ])
+            setMapFlags((prev: MapFlagItem[]) => {
+              const pendingStoryFinal = params.workType === "story" ? pendingStoryFlagFinalizationRef.current : null
+              if (pendingStoryFinal) pendingStoryFlagFinalizationRef.current = null
+              return [
+                ...prev,
+                {
+                  id: mapJson.userId && mapJson.title ? `${mapJson.userId}-${mapJson.title}-${Date.now()}` : `${Date.now()}`,
+                  x: mapJson.mapX ?? pinSnapshot.x,
+                  y: mapJson.mapY ?? pinSnapshot.y,
+                  title: pendingStoryFinal?.title || mapJson.title || params.title,
+                  content: pendingStoryFinal?.content || params.content,
+                  workType: params.workType,
+                },
+              ]
+            })
             setCurrentPin(null)
             return
           }
           console.error(`[map-update] ${params.source} failed:`, { status: mapRes.status, body: mapJson })
         } catch (error) {
           console.error(`[map-update] ${params.source} error:`, error)
+        } finally {
+          mapUpdateInFlightRef.current = false
         }
       })()
     },
@@ -1260,9 +1293,17 @@ export default function Home() {
 
   // 登录后后台预取：全站 Feed + 当前用户自己的全部作品（合并键与图书馆页一致）
   useEffect(() => {
-    if (!user?.username) return
-    preloadGalleryData(user.username)
+    preloadGalleryData(user?.username)
   }, [user?.username])
+
+  const finalizeLatestStoryFlag = useCallback((title: string, content: string) => {
+    const targetIndex = [...mapFlags].map((_, index) => index).reverse().find((index) => mapFlags[index]?.workType === "story")
+    if (targetIndex === undefined) return false
+    setMapFlags((prev: MapFlagItem[]) => prev.map((flag: MapFlagItem, index: number) => (
+      index === targetIndex ? { ...flag, title, content, workType: "story" } : flag
+    )))
+    return true
+  }, [mapFlags])
 
   // Refetch and update header when profile/reviews change (e.g. after marking reviews read)
   useEffect(() => {
@@ -1909,7 +1950,13 @@ export default function Home() {
           onReset={async (finalReview) => {
             const bookTitle = bookReviewState.bookTitle || "Book Review"
             void evaluateValuesGrowth(finalReview, "review", `Review: ${bookTitle}`)
-            void queueJourneyMapUpdate({ title: bookTitle, topic: bookTitle, source: "bookReview" })
+            void queueJourneyMapUpdate({
+              title: bookTitle,
+              topic: bookTitle,
+              content: finalReview,
+              workType: "review",
+              source: "bookReview",
+            })
 
             setBookReviewState({
               reviewType: null,
@@ -1959,7 +2006,13 @@ export default function Home() {
           onReset={async (finalReview) => {
             const bookTitle = bookReviewState.bookTitle || "Book Review"
             void evaluateValuesGrowth(finalReview, "review", `Review: ${bookTitle}`)
-            void queueJourneyMapUpdate({ title: bookTitle, topic: bookTitle, source: "bookReview" })
+            void queueJourneyMapUpdate({
+              title: bookTitle,
+              topic: bookTitle,
+              content: finalReview,
+              workType: "review",
+              source: "bookReview",
+            })
 
             setBookReviewState({
               reviewType: null,
@@ -2031,15 +2084,21 @@ export default function Home() {
           onPlotFinalize={(plot) => {
             const storyTitle = storyState.character?.name?.trim() ? `${storyState.character.name}'s Story` : "My Story"
             const topic = plot.setting || storyState.character?.name || storyTitle
+            pendingStoryFlagFinalizationRef.current = null
             void queueJourneyMapUpdate({
               title: storyTitle,
               topic,
+              content: buildStoryPlotSummary(storyState.character, plot),
+              workType: "story",
               source: "storyPlot",
               summaryKey: "storySummary",
               summaryValue: {
                 characterName: storyState.character?.name || null,
                 species: storyState.character?.species || null,
                 setting: plot.setting || null,
+                conflict: plot.conflict || null,
+                goal: plot.goal || null,
+                plotSummary: buildStoryPlotSummary(storyState.character, plot) || null,
               },
             })
           }}
@@ -2147,7 +2206,28 @@ export default function Home() {
             const storyTitle = storyState.character?.name?.trim() ? `${storyState.character.name}'s Story` : "My Story"
             const topic = storyState.character?.name || storyState.plot?.setting || storyTitle
             void evaluateValuesGrowth(finalStory, "story", storyTitle)
-            void queueJourneyMapUpdate({ title: storyTitle, topic, source: "storyReview" })
+            const updatedExistingStoryFlag = finalizeLatestStoryFlag(storyTitle, finalStory)
+            if (!updatedExistingStoryFlag) {
+              pendingStoryFlagFinalizationRef.current = { title: storyTitle, content: finalStory }
+              if (!mapUpdateInFlightRef.current && currentPin) {
+                void queueJourneyMapUpdate({
+                  title: storyTitle,
+                  topic,
+                  content: finalStory,
+                  workType: "story",
+                  source: "storyReview",
+                  summaryKey: "storySummary",
+                  summaryValue: {
+                    characterName: storyState.character?.name || null,
+                    species: storyState.character?.species || null,
+                    setting: storyState.plot?.setting || null,
+                    conflict: storyState.plot?.conflict || null,
+                    goal: storyState.plot?.goal || null,
+                    plotSummary: buildStoryPlotSummary(storyState.character, storyState.plot) || null,
+                  },
+                })
+              }
+            }
 
             setStoryState({ character: null, plot: null, structure: null, story: "" })
             setStage(journeyActive ? "journeyMap" : "home")
@@ -2336,7 +2416,13 @@ export default function Home() {
             const letterTitle = letterState.recipient ? `Letter to ${letterState.recipient}` : "My Letter"
             const topic = letterState.recipient || letterState.occasion || letterTitle
             void evaluateValuesGrowth(finalLetter, "letter", letterTitle)
-            void queueJourneyMapUpdate({ title: letterTitle, topic, source: "letter" })
+            void queueJourneyMapUpdate({
+              title: letterTitle,
+              topic,
+              content: finalLetter,
+              workType: "letter",
+              source: "letter",
+            })
 
             setLetterState({
               recipient: null,
@@ -2454,7 +2540,13 @@ export default function Home() {
           onBack={() => {
             if (dramaBook) {
               void evaluateValuesGrowth(dramaBook.script || "", "story", "My Drama")
-              void queueJourneyMapUpdate({ title: "My Drama", topic: dramaTitle || "Drama", source: "drama" })
+              void queueJourneyMapUpdate({
+                title: "My Drama",
+                topic: dramaTitle || "Drama",
+                content: dramaBook.script || dramaBook.summary || "",
+                workType: "drama",
+                source: "drama",
+              })
             }
             setStage(journeyActive ? "journeyMap" : "writeTypeSelection")
           }}
@@ -2471,7 +2563,13 @@ export default function Home() {
               const script = dramaBook.script || ""
               if (script.trim()) {
                 void evaluateValuesGrowth(script, "story", "My Drama")
-                void queueJourneyMapUpdate({ title: "My Drama", topic: dramaTitle || "Drama", source: "drama" })
+                void queueJourneyMapUpdate({
+                  title: "My Drama",
+                  topic: dramaTitle || "Drama",
+                  content: script,
+                  workType: "drama",
+                  source: "drama",
+                })
               }
             }
             setStage(journeyActive ? "journeyMap" : "writeTypeSelection")
@@ -2489,7 +2587,7 @@ export default function Home() {
             const topic = poetryTopicValue || "Poetry"
             const title = `Poetry: ${topic}`
             evaluateValuesGrowth(poetryLinesText, "story", title)
-            void queueJourneyMapUpdate({ title, topic, source: "poetry" })
+            void queueJourneyMapUpdate({ title, topic, content: poetryLinesText, workType: "poetry", source: "poetry" })
             setStage(journeyActive ? "journeyMap" : "home")
           }}
         />
@@ -2504,7 +2602,7 @@ export default function Home() {
             const topic = poetryTopicValue || "Poetry"
             const title = `Poetry: ${topic}`
             evaluateValuesGrowth(poetryLinesText, "story", title)
-            void queueJourneyMapUpdate({ title, topic, source: "poetry" })
+            void queueJourneyMapUpdate({ title, topic, content: poetryLinesText, workType: "poetry", source: "poetry" })
             setStage(journeyActive ? "journeyMap" : "home")
           }}
         />
@@ -2519,7 +2617,7 @@ export default function Home() {
             const topic = poetryTopicValue || "Poetry"
             const title = `Poetry: ${topic}`
             evaluateValuesGrowth(poetryLinesText, "story", title)
-            void queueJourneyMapUpdate({ title, topic, source: "poetry" })
+            void queueJourneyMapUpdate({ title, topic, content: poetryLinesText, workType: "poetry", source: "poetry" })
             setStage(journeyActive ? "journeyMap" : "home")
           }}
         />
@@ -2534,7 +2632,7 @@ export default function Home() {
             const topic = poetryTopicValue || "Poetry"
             const title = `Poetry: ${topic}`
             evaluateValuesGrowth(poetryLinesText, "story", title)
-            void queueJourneyMapUpdate({ title, topic, source: "poetry" })
+            void queueJourneyMapUpdate({ title, topic, content: poetryLinesText, workType: "poetry", source: "poetry" })
             setStage(journeyActive ? "journeyMap" : "home")
           }}
         />
@@ -2549,7 +2647,7 @@ export default function Home() {
             const topic = poetryTopicValue || "Poetry"
             const title = `Poetry: ${topic}`
             evaluateValuesGrowth(poetryLinesText, "story", title)
-            void queueJourneyMapUpdate({ title, topic, source: "poetry" })
+            void queueJourneyMapUpdate({ title, topic, content: poetryLinesText, workType: "poetry", source: "poetry" })
             setStage(journeyActive ? "journeyMap" : "home")
           }}
         />
