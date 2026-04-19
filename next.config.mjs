@@ -9,10 +9,10 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
   webpack: (config) => {
-    // 避免 @react-three/fiber / drei 与直接 import three 打成两份 bundle，消除控制台 Multiple instances of Three.js 警告
+    // 只把裸导入 `three` 指到单文件；不要用目录别名，否则会破坏 package exports（如 `three/tsl` → three.webgpu）
     config.resolve.alias = {
       ...config.resolve.alias,
-      three: path.resolve(__dirname, "node_modules/three"),
+      three$: path.resolve(__dirname, "node_modules/three/build/three.module.js"),
     }
     return config
   },
