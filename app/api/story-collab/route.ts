@@ -12,6 +12,8 @@ interface CollabRequest {
   plot_state: { setting?: string; conflict?: string; goal?: string }
   structure_type: "freytag" | "threeAct" | "fichtean" | null
   story_blocks: Array<{ section: string; text: string }>
+  /** 0-based index of the structural section the student is writing now (Writing Pad = this part only). */
+  current_writing_section_index?: number | null
   current_phase: CollabPhase
   user_id: string
   level: number
@@ -86,11 +88,50 @@ function buildSystemPrompt(req: CollabRequest, phase: CollabPhase): string {
     parts.push(`\nChosen structure: ${names[req.structure_type] || req.structure_type}.`)
   }
 
-  // Story progress
-  const filledBlocks = req.story_blocks.filter((b) => b.text.trim())
-  if (filledBlocks.length > 0) {
-    const progress = filledBlocks.map((b) => `${b.section}: "${b.text.slice(0, 80)}..."`).join("; ")
-    parts.push(`\nStory progress: ${progress}`)
+  // Story sections: show full outline + where the student is (avoid "write the whole story in one box")
+  if (req.story_blocks?.length) {
+    const idx =
+      typeof req.current_writing_section_index === "number" &&
+      req.current_writing_section_index >= 0 &&
+      req.current_writing_section_index < req.story_blocks.length
+        ? req.current_writing_section_index
+        : null
+    const lines = req.story_blocks.map((b, i) => {
+      const here =
+        idx !== null && i === idx ? "  ← STUDENT IS WRITING THIS PART NOW (coach & judge only this beat)" : ""
+      const preview = b.text.trim()
+        ? `"${b.text.length > 200 ? `${b.text.slice(0, 200)}…` : b.text}"`
+        : "(not written yet)"
+      return `- ${i + 1}. ${b.section}: ${preview}${here}`
+    })
+    parts.push(`\nStory by structure (one section at a time — later parts are filled in separate steps):\n${lines.join("\n")}`)
+  }
+
+  const idx =
+    typeof req.current_writing_section_index === "number" &&
+    req.current_writing_section_index >= 0 &&
+    req.current_writing_section_index < (req.story_blocks?.length ?? 0)
+      ? req.current_writing_section_index
+      : null
+  if (req.structure_type && idx !== null && req.story_blocks[idx]) {
+    const cur = req.story_blocks[idx]
+    const later = req.story_blocks.slice(idx + 1)
+    const laterNames = later.map((b) => b.section)
+    const isLastSection = later.length === 0
+    parts.push(
+      `\n[CRITICAL — section-only writing]\n` +
+        `The student is working ONLY on "${cur.section}" (part ${idx + 1} of ${req.story_blocks.length}). ` +
+        `They must NOT be asked to write the entire story in one go or to cover every outline part in this single turn. ` +
+        (isLastSection
+          ? `This is the **last** structural part — still focus feedback on "${cur.section}" only, not on demanding a "complete" full manuscript in one message.\n`
+          : `Later parts (${laterNames.map((n) => `"${n}"`).join(", ")}) are written in **later steps** — do not require those to be done now.\n`) +
+        `Feedback and encouragement must focus on "${cur.section}" only.\n` +
+        (isLastSection
+          ? `Do NOT end with "You can move to the next section." (there is no next section).\n`
+          : `When "${cur.section}" is good enough **for this structural beat alone** (not the whole story), end your reply with this exact sentence on its own line at the very end (before META): ` +
+            `You can move to the next section.\n` +
+            `If "${cur.section}" still needs improvement, do NOT use that sentence; keep helping with this part only.\n`)
+    )
   }
 
   // Phase-specific instructions
@@ -110,13 +151,10 @@ function buildSystemPrompt(req: CollabRequest, phase: CollabPhase): string {
       "Fichtean Curve (crisis, crisis, crisis, climax, resolution). " +
       "Ask which sounds most fun. Set structure_suggestion in META when they choose.",
     writing:
-      "Now help the student write their story section by section. " +
-      "Offer starter sentences, vocabulary suggestions, and ideas. " +
-      "When you suggest actual story text, put it in story_snippet in META. " +
-      "Be enthusiastic about what they write! " +
-      "When the current section is clearly written well enough to continue, end your reply with this exact sentence on its own line at the very end (after your main message, before META): " +
-      "You can move to the next section. " +
-      "Do not use that sentence if the section still needs more work.",
+      "Help the student write **one structural section at a time** (see [CRITICAL — section-only writing] if present). " +
+      "Offer starter sentences, vocabulary suggestions, and ideas for **that section only**. " +
+      "When you suggest sample text, put it in story_snippet in META. " +
+      "Be enthusiastic. Never imply they should complete every part of the structure in a single Writing Pad turn.",
     polish:
       "The story is taking shape! Help polish: suggest stronger words, " +
       "smoother transitions, or a better ending. Celebrate their progress!",
