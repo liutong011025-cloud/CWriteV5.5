@@ -912,9 +912,9 @@ export default function StoryCollab({
           </div>
         )}
 
-        <div className="grid lg:grid-cols-12 gap-6 mt-8">
+        <div className="grid lg:grid-cols-12 gap-6 mt-8 min-w-0">
           {/* ──── Left: Chat Panel ──── */}
-          <div className="lg:col-span-7">
+          <div className="lg:col-span-7 min-w-0">
             <div className="pixel-panel overflow-hidden relative">
               {mode === "ai" ? (
                 /* ──── AI chat mode (all phases: explore → plot → structure → writing) ──── */
@@ -1137,23 +1137,21 @@ export default function StoryCollab({
                           </div>
                         </div>
                       )}
-                      {storyBlocks.length > 0 && (
+                      {storyBlocks.length > 0 && !hideFinishShowContinueLast && (
                         <div className="flex gap-3">
-                          {!hideFinishShowContinueLast && (
-                            <Button
-                              type="button"
-                              onClick={handleSendChat}
-                              disabled={isLoading || !chatInput.trim()}
-                              className="flex-1 pixel-btn pixel-btn-green"
-                            >
-                              Finish!
-                            </Button>
-                          )}
+                          <Button
+                            type="button"
+                            onClick={handleSendChat}
+                            disabled={isLoading || !chatInput.trim()}
+                            className="flex-1 pixel-btn pixel-btn-green"
+                          >
+                            Finish!
+                          </Button>
                           <Button
                             type="button"
                             onClick={handleHelpMe}
                             disabled={isLoading}
-                            className={hideFinishShowContinueLast ? "flex-1 pixel-btn pixel-btn-wood" : "pixel-btn pixel-btn-wood"}
+                            className="pixel-btn pixel-btn-wood"
                             title="Get a creative idea!"
                           >
                             <Lightbulb className="h-4 w-4" />
@@ -1319,9 +1317,9 @@ export default function StoryCollab({
           </div>
 
           {/* ──── Right: Story Editor ──── */}
-          <div className="lg:col-span-5">
-            <div className="pixel-panel overflow-hidden">
-              <div className="p-6 space-y-4" style={{ background: "#f5e6c8" }}>
+          <div className="lg:col-span-5 min-w-0">
+            <div className="pixel-panel overflow-hidden min-w-0">
+              <div className="p-6 space-y-4 min-w-0" style={{ background: "#f5e6c8" }}>
                 <h3 className="text-lg font-extrabold flex items-center gap-2" style={{ color: "#5a4a2a", textShadow: "1px 1px 0 rgba(0,0,0,0.2)" }}>
                   <Sparkles className="h-5 w-5" style={{ color: "#7ec850" }} />
                   Story Editor
@@ -1364,13 +1362,13 @@ export default function StoryCollab({
 
                 {/* Story blocks */}
                 {storyBlocks.length > 0 ? (
-                  <div className="space-y-3 max-h-[380px] overflow-y-auto pr-1">
+                  <div className="space-y-3 max-h-[380px] min-w-0 max-w-full overflow-y-auto overflow-x-hidden pr-1">
                     {storyBlocks.map((block, index) => {
                       const isActive = mode === "ai" && index === currentWritingSection && index < storyBlocks.length
                       const isDone =
                         mode === "ai" ? index < currentWritingSection || !!block.text.trim() : !!block.text.trim()
                       return (
-                        <div key={block.sectionName} className="space-y-1">
+                        <div key={block.sectionName} className="space-y-1 min-w-0 max-w-full">
                           <div className="flex items-center gap-1.5">
                             <label className="text-xs font-bold uppercase tracking-wider" style={{
                               color: isDone ? "#3d5a1f" : isActive ? "#c4a020" : "#8b6914"
@@ -1383,12 +1381,14 @@ export default function StoryCollab({
                           {mode === "ai" ? (
                             /* Read-only display in AI mode */
                             <div
-                              className="min-h-[80px] min-w-0 max-w-full break-words p-3 text-sm whitespace-pre-wrap transition-all duration-300"
+                              className="min-h-[80px] min-w-0 max-w-full overflow-hidden break-words p-3 text-sm whitespace-pre-wrap transition-all duration-300"
                               style={{
                                 background: isActive ? "#f5e6c8" : isDone ? "#d4e8b4" : "#e8dcc0",
                                 border: `3px solid ${isActive ? "#c4a020" : isDone ? "#5a9a32" : "#8b6914"}`,
                                 color: isDone ? "#5a4a2a" : "#8b6914",
-                                fontStyle: block.text ? "normal" : "italic"
+                                fontStyle: block.text ? "normal" : "italic",
+                                overflowWrap: "anywhere",
+                                wordBreak: "break-word",
                               }}
                             >
                               {block.text ||
