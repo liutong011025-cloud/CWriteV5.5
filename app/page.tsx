@@ -2097,7 +2097,12 @@ export default function Home() {
           storyState={storyState}
           mode={user.noAi ? "manual" : "ai"}
           onPlotCreate={(plot) => {
-            setStoryState((prev) => ({ ...prev, plot, structure: null, story: prev.story }))
+            setStoryState((prev) => ({
+              ...prev,
+              plot,
+              ...(prev.structure ? {} : { structure: null }),
+              story: prev.story,
+            }))
           }}
           onStructureSelect={(structure) => {
             setStoryState((prev) => ({ ...prev, structure, story: prev.story }))
@@ -2123,7 +2128,12 @@ export default function Home() {
           writingLevel={writingAssessment?.level ?? planTestResult?.level ?? 1}
           mode={user.noAi ? "manual" : "ai"}
           onPlotCreate={(plot) => {
-            setStoryState((prev) => ({ ...prev, plot, structure: null, story: prev.story }))
+            setStoryState((prev) => ({
+              ...prev,
+              plot,
+              ...(prev.structure ? {} : { structure: null }),
+              story: prev.story,
+            }))
           }}
           onStructureSelect={(structure) => {
             setStoryState((prev) => ({ ...prev, structure, story: prev.story }))
