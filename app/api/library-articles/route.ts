@@ -29,7 +29,7 @@ function mergeFromOutput(
   return out
 }
 
-/** 全站Feed：控制体量，避免一次拉整库 */
+/** 全站Feed：默认限流；用户要求全量时可显式 all=1 */
 const GLOBAL_DEFAULT_LIMIT = 300
 const GLOBAL_MAX_LIMIT = 600
 /** 指定 user_id 时：拉该用户自己的交互（与旧版「全量 interactions」对个人而言一致） */
@@ -49,6 +49,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const userId = searchParams.get("user_id")
     const rawLimit = searchParams.get("limit")
+    const requestAll = searchParams.get("all") === "1"
 
     let user: { id: string } | null = null
     if (userId) {
@@ -77,7 +78,7 @@ export async function GET(request: NextRequest) {
     const interactions = await prisma.interaction.findMany({
       where,
       orderBy: { timestamp: "desc" },
-      take: limit,
+      take: requestAll ? undefined : limit,
       select: {
         id: true,
         stage: true,
