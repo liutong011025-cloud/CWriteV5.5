@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { prisma } from "@/lib/prisma"
+import { prisma, isDatabaseUrlConfigured } from "@/lib/prisma"
 
 // 登錄邏輯：
 // - 特殊帳號：copywriting / yinyin2948 → 文案編輯模式（不依賴資料庫）
@@ -50,12 +50,12 @@ export async function POST(request: NextRequest) {
         )
       }
 
-      if (!process.env.DATABASE_URL) {
+      if (!isDatabaseUrlConfigured()) {
         return NextResponse.json(
           {
             success: false,
             error: "Database not configured",
-            hint: "DATABASE_URL environment variable is missing. Please configure it in Vercel project settings.",
+            hint: "Database URL is missing. Set DATABASE_URL or POSTGRES_URL in Vercel / .env.",
           },
           { status: 500 },
         )
@@ -135,13 +135,13 @@ export async function POST(request: NextRequest) {
     }
 
     // 2) 其他帳號：需要資料庫
-    if (!process.env.DATABASE_URL) {
-      console.error("DATABASE_URL is not configured")
+    if (!isDatabaseUrlConfigured()) {
+      console.error("Database URL is not configured")
       return NextResponse.json(
         {
           success: false,
           error: "Database not configured",
-          hint: "DATABASE_URL environment variable is missing. Please configure it in Vercel project settings.",
+          hint: "Database URL is missing. Set DATABASE_URL or POSTGRES_URL in Vercel / .env.",
         },
         { status: 500 },
       )
@@ -202,7 +202,7 @@ export async function POST(request: NextRequest) {
       errorMessage.includes("P1001") ||
       errorMessage.includes("Can't reach database")
 
-    const hasDatabaseUrl = !!process.env.DATABASE_URL
+    const hasDatabaseUrl = isDatabaseUrlConfigured()
 
     return NextResponse.json(
       {
