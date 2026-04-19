@@ -124,6 +124,14 @@ function detectAdvanceNextSectionSignal(answer: string): boolean {
   )
 }
 
+/** Last section: AI ends with this when the final beat is good enough → show Continue, hide Finish! */
+function detectLastSectionGreatJobSignal(answer: string): boolean {
+  if (!answer || typeof answer !== "string") return false
+  const t = answer.trim()
+  if (!t) return false
+  return /\bgreat job\b/i.test(t) || /太棒了/.test(t) || /做得好/.test(t)
+}
+
 function stripAdvanceNextSectionPhrases(text: string): string {
   let t = text
   const removals: RegExp[] = [
@@ -139,6 +147,15 @@ function stripAdvanceNextSectionPhrases(text: string): string {
     t = t.replace(re, "")
   }
   return t.replace(/\s{2,}/g, " ").trim()
+}
+
+function stripLastSectionGreatJobPhrases(text: string): string {
+  return text
+    .replace(/\n*Great job!?\.?\s*$/i, "")
+    .replace(/\n*太棒了[！!。.]?\s*$/, "")
+    .replace(/\n*做得好[！!。.]?\s*$/, "")
+    .replace(/\s{2,}/g, " ")
+    .trim()
 }
 
 function mergePadIntoSection(committed: string, pad: string): string {
@@ -235,10 +252,12 @@ export default function StoryCollab({
   const plotComplete = !!(plotData.setting && plotData.conflict && plotData.goal)
 
   const activeBear = useMemo(() => {
-    const hasNext = storyBlocks.length > 0 && currentWritingSection < storyBlocks.length - 1
+    const n = storyBlocks.length
+    const hasNext = n > 0 && currentWritingSection < n - 1
+    const onLast = n > 0 && currentWritingSection === n - 1
     const passed = sectionGateStatus[currentWritingSection] === "passed"
     if (!selectedStructure) return BEAR_PLOT_CHAT
-    if (hasNext && passed) return BEAR_LAYOUT.nextUnlocked
+    if (passed && (hasNext || onLast)) return BEAR_LAYOUT.nextUnlocked
     return BEAR_LAYOUT.writing
   }, [selectedStructure, storyBlocks.length, currentWritingSection, sectionGateStatus])
 
@@ -275,26 +294,37 @@ export default function StoryCollab({
     [storyBlocks, currentWritingSection, chatInput, mode],
   )
 
+  /** 仅右侧已保存的正文（不含 Pad）；Finish Story 在 AI 模式下用此拼接终稿 */
+  const composedStoryCommitted = useMemo(
+    () =>
+      storyBlocks
+        .map((b) => `${b.sectionName}:\n${b.text.trim()}`.trimEnd())
+        .join("\n\n")
+        .trim(),
+    [storyBlocks],
+  )
+
+  /** Finish Story：仅统计已出现在右侧编辑区的正文；Pad 里未点 Next/Continue 的不算。 */
   const everySectionHasContentForFinish = useMemo(() => {
     if (storyBlocks.length === 0) return false
-    return storyBlocks.every((block, i) => {
-      if (mode === "ai" && i === currentWritingSection) {
-        return !!mergePadIntoSection(block.text, chatInput).trim()
-      }
-      return !!block.text.trim()
-    })
-  }, [storyBlocks, mode, currentWritingSection, chatInput])
+    return storyBlocks.every((block) => !!block.text.trim())
+  }, [storyBlocks])
 
   const sectionsProgressCount = useMemo(
-    () =>
-      storyBlocks.filter((b, i) => {
-        if (mode === "ai" && i === currentWritingSection) {
-          return !!mergePadIntoSection(b.text, chatInput).trim()
-        }
-        return !!b.text.trim()
-      }).length,
-    [storyBlocks, mode, currentWritingSection, chatInput],
+    () => storyBlocks.filter((b) => !!b.text.trim()).length,
+    [storyBlocks],
   )
+
+  const hideFinishShowContinueLast = useMemo(() => {
+    const n = storyBlocks.length
+    if (n === 0) return false
+    const last = n - 1
+    return (
+      mode === "ai" &&
+      currentWritingSection === last &&
+      sectionGateStatus[last] === "passed"
+    )
+  }, [storyBlocks.length, mode, currentWritingSection, sectionGateStatus])
 
   const bearSrc =
     writingMood === "angry"
@@ -461,8 +491,24 @@ export default function StoryCollab({
           }
         }
 
+        if (
+          detectLastSectionGreatJobSignal(rawAnswer) &&
+          selectedStructure &&
+          storyBlocks.length > 0 &&
+          currentWritingSection === storyBlocks.length - 1
+        ) {
+          const idx = currentWritingSection
+          const mergedForGate = mergePadIntoSection(storyBlocks[idx]?.text ?? "", padSnapshot)
+          if (mergedForGate.trim()) {
+            gatePassSnapshotRef.current[idx] = mergedForGate.trim()
+            setSectionGateStatus((prev) => ({ ...prev, [idx]: "passed" }))
+          }
+        }
+
         // Build assistant message
-        const cleaned = stripAdvanceNextSectionPhrases(cleanAiDisplayText(rawAnswer))
+        const cleaned = stripLastSectionGreatJobPhrases(
+          stripAdvanceNextSectionPhrases(cleanAiDisplayText(rawAnswer)),
+        )
         const showStructureCards = data.phase === "structure" && !selectedStructure
 
         const aiMsg: CollabMessage = {
@@ -614,6 +660,17 @@ export default function StoryCollab({
   const handleSendChat = useCallback(() => {
     const text = chatInput.trim()
     if (!text || isLoading) return
+    const n = storyBlocks.length
+    const last = n - 1
+    if (
+      n > 0 &&
+      mode === "ai" &&
+      currentWritingSection === last &&
+      sectionGateStatus[last] === "passed"
+    ) {
+      toast.info("Tap Continue to save this part to the editor first.")
+      return
+    }
     if (text.toLowerCase() === "test") {
       setChatInput("")
       activateTestModeAndFinish()
@@ -636,6 +693,10 @@ export default function StoryCollab({
     updateWritingMoodFromText,
     selectedStructure,
     openStructureSelection,
+    storyBlocks.length,
+    mode,
+    currentWritingSection,
+    sectionGateStatus,
   ])
 
   const handleNextSection = useCallback(() => {
@@ -654,6 +715,24 @@ export default function StoryCollab({
     gatePassSnapshotRef.current[idx] = merged
     setChatInput("")
     setCurrentWritingSection((prev) => prev + 1)
+  }, [currentWritingSection, storyBlocks, chatInput])
+
+  const handleLastSectionContinue = useCallback(() => {
+    const idx = storyBlocks.length - 1
+    if (idx < 0 || currentWritingSection !== idx) return
+    const merged = mergePadIntoSection(storyBlocks[idx].text, chatInput).trim()
+    if (!merged) {
+      toast.error("Write something in the Writing Pad first.")
+      return
+    }
+    setStoryBlocks((prev) => {
+      const next = [...prev]
+      next[idx] = { ...next[idx], text: merged }
+      return next
+    })
+    gatePassSnapshotRef.current[idx] = merged
+    setChatInput("")
+    setSectionGateStatus((prev) => ({ ...prev, [idx]: "idle" }))
   }, [currentWritingSection, storyBlocks, chatInput])
 
   const handleSuggestionClick = useCallback(
@@ -717,7 +796,7 @@ export default function StoryCollab({
   }, [onPlotCreate, onStructureSelect, plotComplete, plotData, selectedStructure])
 
   const handleFinishStory = useCallback(() => {
-    const finalStory = composedStory.trim()
+    const finalStory = (mode === "ai" ? composedStoryCommitted : composedStory).trim()
     if (!finalStory) {
       toast.error("Please write something before finishing the story.")
       return
@@ -736,14 +815,22 @@ export default function StoryCollab({
           label: "Yes, finish!",
           onClick: () => {
             syncStoryStateBeforeFinish()
-            onStoryWrite(finalStory)
+            onStoryWrite((mode === "ai" ? composedStoryCommitted : composedStory).trim())
           },
         },
       })
       return
     }
     onStoryWrite(finalStory)
-  }, [totalWords, composedStory, onStoryWrite, syncStoryStateBeforeFinish, everySectionHasContentForFinish])
+  }, [
+    totalWords,
+    composedStory,
+    composedStoryCommitted,
+    mode,
+    onStoryWrite,
+    syncStoryStateBeforeFinish,
+    everySectionHasContentForFinish,
+  ])
 
   /* ── Plot auto-callback ── */
   useEffect(() => {
@@ -995,7 +1082,9 @@ export default function StoryCollab({
                             }}
                             placeholder={
                               currentWritingSection < storyBlocks.length
-                                ? `Write your ${storyBlocks[currentWritingSection].sectionName} in the pad… Tap Finish! to chat with the AI (text stays here). Ctrl+Enter = Finish!`
+                                ? currentWritingSection === storyBlocks.length - 1
+                                  ? `Last part (${storyBlocks[currentWritingSection].sectionName}): Finish! to chat. When the AI says Great job!, tap Continue to put it on the right — Finish Story only counts text saved in the editor.`
+                                  : `Write your ${storyBlocks[currentWritingSection].sectionName} in the pad… Tap Finish! to chat with the AI (text stays here). Ctrl+Enter = Finish!`
                                 : "Write the ending touch for your story..."
                             }
                             disabled={isLoading}
@@ -1050,19 +1139,21 @@ export default function StoryCollab({
                       )}
                       {storyBlocks.length > 0 && (
                         <div className="flex gap-3">
-                          <Button
-                            type="button"
-                            onClick={handleSendChat}
-                            disabled={isLoading || !chatInput.trim()}
-                            className="flex-1 pixel-btn pixel-btn-green"
-                          >
-                            Finish!
-                          </Button>
+                          {!hideFinishShowContinueLast && (
+                            <Button
+                              type="button"
+                              onClick={handleSendChat}
+                              disabled={isLoading || !chatInput.trim()}
+                              className="flex-1 pixel-btn pixel-btn-green"
+                            >
+                              Finish!
+                            </Button>
+                          )}
                           <Button
                             type="button"
                             onClick={handleHelpMe}
                             disabled={isLoading}
-                            className="pixel-btn pixel-btn-wood"
+                            className={hideFinishShowContinueLast ? "flex-1 pixel-btn pixel-btn-wood" : "pixel-btn pixel-btn-wood"}
                             title="Get a creative idea!"
                           >
                             <Lightbulb className="h-4 w-4" />
@@ -1082,6 +1173,21 @@ export default function StoryCollab({
                             className="w-full text-xs pixel-btn pixel-btn-blue"
                           >
                             Next Section: {storyBlocks[currentWritingSection + 1].sectionName}
+                          </Button>
+                        </div>
+                      )}
+                    {/* Last section：Great job! 后出现 Continue，把末段写入右侧后才能 Finish Story */}
+                    {storyBlocks.length > 0 &&
+                      currentWritingSection === storyBlocks.length - 1 &&
+                      currentSectionMergedDraft.trim() &&
+                      sectionGateStatus[storyBlocks.length - 1] === "passed" && (
+                        <div className="space-y-2">
+                          <Button
+                            type="button"
+                            onClick={handleLastSectionContinue}
+                            className="w-full text-xs pixel-btn pixel-btn-blue"
+                          >
+                            Continue
                           </Button>
                         </div>
                       )}
@@ -1261,7 +1367,8 @@ export default function StoryCollab({
                   <div className="space-y-3 max-h-[380px] overflow-y-auto pr-1">
                     {storyBlocks.map((block, index) => {
                       const isActive = mode === "ai" && index === currentWritingSection && index < storyBlocks.length
-                      const isDone = mode === "ai" ? index < currentWritingSection : !!block.text.trim()
+                      const isDone =
+                        mode === "ai" ? index < currentWritingSection || !!block.text.trim() : !!block.text.trim()
                       return (
                         <div key={block.sectionName} className="space-y-1">
                           <div className="flex items-center gap-1.5">
@@ -1286,7 +1393,9 @@ export default function StoryCollab({
                             >
                               {block.text ||
                                 (isActive
-                                  ? "Text stays in the Writing Pad until you tap Next Section (or finish the whole story)."
+                                  ? index === storyBlocks.length - 1
+                                    ? "Finish Story only counts text saved here. After Great job!, tap Continue to move your pad writing to this box."
+                                    : "Text stays in the Writing Pad until you tap Next Section."
                                   : "Not written yet")}
                             </div>
                           ) : (
