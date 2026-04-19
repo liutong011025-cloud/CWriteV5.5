@@ -6,8 +6,8 @@ import { EXAMPLE_ARTICLES, type Article, type ArticleType } from "@/lib/gallery-
 
 export type { Article, ArticleType }
 
-/** 全站最近作品（轻量）；个人旧作靠「我的」请求合并，避免只显示全站 Top N 时把自己漏掉 */
-export const LIBRARY_GLOBAL_KEY = "/api/library-articles?limit=300"
+/** 全站作品：进入网站后就后台预拉，图书馆打开时直接命中缓存。 */
+export const LIBRARY_GLOBAL_KEY = "/api/library-articles?all=1"
 
 export function libraryArticlesMineKey(username: string): string {
   return `/api/library-articles?user_id=${encodeURIComponent(username)}&limit=10000`
