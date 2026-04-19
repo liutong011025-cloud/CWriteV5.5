@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { prisma } from "@/lib/prisma"
+import { prisma, isDatabaseUrlConfigured } from "@/lib/prisma"
 import { extractArticlesFromInteractions } from "@/lib/gallery-articles"
 
 function asRecord(v: unknown): Record<string, unknown> {
@@ -42,7 +42,7 @@ const SELF_MAX_LIMIT = 15000
  */
 export async function GET(request: NextRequest) {
   try {
-    if (!process.env.DATABASE_URL) {
+    if (!isDatabaseUrlConfigured()) {
       return NextResponse.json({ articles: [] })
     }
 
@@ -182,26 +182,27 @@ export async function GET(request: NextRequest) {
         result.story = story.content || asStr(asRecord(out).story)
         result.character = story.character
       }
-      const rawReview = asStr(review?.content) || reviewFromOut.review
+      // asStr(x) || y 在 x 为 "" 且 y 为 undefined 时会得到 undefined，禁止对 undefined 调 .trim()
+      const rawReview = asStr(review?.content || reviewFromOut.review)
       if (rawReview.trim()) {
         result.review = rawReview
         result.reviewType = review?.reviewType ?? reviewFromOut.reviewType ?? undefined
         result.bookTitle = review?.bookTitle ?? reviewFromOut.bookTitle ?? undefined
         result.bookCoverUrl = review?.bookCoverUrl ?? reviewFromOut.bookCoverUrl ?? undefined
       }
-      const rawLetter = asStr(letter?.content) || letterFromOut.letter
+      const rawLetter = asStr(letter?.content || letterFromOut.letter)
       if (rawLetter.trim()) {
         result.letter = rawLetter
         result.recipient = letter?.recipient ?? letterFromOut.recipient ?? undefined
         result.occasion = letter?.occasion ?? letterFromOut.occasion ?? undefined
       }
-      const rawDrama = asStr(drama?.content) || dramaFromOut.drama
+      const rawDrama = asStr(drama?.content || dramaFromOut.drama)
       if (rawDrama.trim()) {
         result.drama = rawDrama
         result.dramaTitle = drama?.title ?? dramaFromOut.dramaTitle ?? undefined
         result.dramaSummary = drama?.summary ?? dramaFromOut.dramaSummary ?? undefined
       }
-      const rawPoetry = asStr(poetry?.content) || poetryFromOut.poetry
+      const rawPoetry = asStr(poetry?.content || poetryFromOut.poetry)
       if (rawPoetry.trim()) {
         result.poetry = rawPoetry
         result.poetryForm = poetry?.form ?? poetryFromOut.poetryForm ?? undefined
