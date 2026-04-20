@@ -2,6 +2,13 @@ import { NextRequest, NextResponse } from "next/server"
 import { logApiCall } from "@/lib/log-api-call"
 import { getLevelPromptSuffix } from "@/lib/level-details"
 import { chat, isConfigured, DeepSeekError } from "@/lib/deepseek"
+import {
+  GOOD_ENOUGH_CODE,
+  buildPassPromptRule,
+  detectPassSignal,
+  evaluateLetterWriting,
+  finalizeEvaluationMessage,
+} from "@/lib/cagent-writing-rubric"
 
 function isGibberishOrMeaningless(text: string): boolean {
   if (!text || text.trim().length < 3) return false
@@ -55,10 +62,15 @@ export async function POST(request: NextRequest) {
     const textToCheck = currentText || ""
     const isGibberish = isGibberishOrMeaningless(textToCheck)
     const hasMeaning = hasBasicMeaning(textToCheck)
+    const quality = evaluateLetterWriting(textToCheck, currentSection, level, recipient, occasion)
 
     if (isGibberish || !hasMeaning) {
       return NextResponse.json({
         message: `I see you're trying to write, but this doesn't look like meaningful text yet. Please write something real about ${currentSection.toLowerCase()} for ${recipient}. Try to express your thoughts clearly! ✨`,
+        done: false,
+        secretCodeDetected: false,
+        secretCode: null,
+        quality,
       })
     }
 
@@ -66,13 +78,22 @@ export async function POST(request: NextRequest) {
 
 CRITICAL:
 - All your feedback MUST be in English only. Do not use Chinese or any other language.
-- Only say "you can move to the next part" when text is meaningful, grammatically correct, relevant to section, and shows real effort.
+- Use level ${level} only as a light guide. Do not be too strict during testing.
+- Pass if the writing is real, not too short for this part, clearly fits the current letter section, and is safe.
+- Reject if it is gibberish, too short, clearly unrelated to the letter section, or unsafe.
 - STRICTLY REJECT gibberish, random characters, keyboard mashing, or meaningless text.
+- ${buildPassPromptRule(currentSection, level)}
 - Give brief feedback with emojis in English.${levelSuffix}`
 
     const message = await chat({
       messages: [{ role: "user", content: prompt }],
     })
+    const done = detectPassSignal(message) && quality.pass
+    const finalMessage = finalizeEvaluationMessage(
+      message,
+      { ...quality, pass: done },
+      `Please revise the ${currentSection.toLowerCase()} part with clearer, safer, and more suitable English.`
+    )
 
     try {
       await logApiCall(
@@ -80,13 +101,23 @@ CRITICAL:
         "letterGuide",
         "/api/dify-letter-guide",
         { recipient, occasion, currentSection },
-        { message }
+        {
+          message: finalMessage,
+          done,
+          quality,
+        }
       )
     } catch (logError) {
       console.error("Error logging API call:", logError)
     }
 
-    return NextResponse.json({ message })
+    return NextResponse.json({
+      message: finalMessage,
+      done,
+      secretCodeDetected: done,
+      secretCode: done ? GOOD_ENOUGH_CODE : null,
+      quality,
+    })
   } catch (error) {
     console.error("Error in letter guide API:", error)
     if (error instanceof DeepSeekError && error.isTimeout) {
