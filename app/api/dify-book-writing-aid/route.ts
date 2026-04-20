@@ -2,6 +2,13 @@ import { NextRequest, NextResponse } from "next/server"
 import { logApiCall } from "@/lib/log-api-call"
 import { getLevelPromptSuffix } from "@/lib/level-details"
 import { chat, isConfigured, DeepSeekError } from "@/lib/deepseek"
+import {
+  GOOD_ENOUGH_CODE,
+  buildPassPromptRule,
+  detectPassSignal,
+  evaluateBookWriting,
+  finalizeEvaluationMessage,
+} from "@/lib/cagent-writing-rubric"
 
 export const maxDuration = 120
 
@@ -25,6 +32,7 @@ export async function POST(request: NextRequest) {
 
     const currentSectionName =
       currentSection !== undefined ? structure?.outline?.[currentSection] || "" : ""
+    const quality = evaluateBookWriting(String(text || ""), currentSectionName, level, bookTitle)
 
     const prompt = `You are Luna, a friendly book review writing teacher for elementary students.
 
@@ -35,43 +43,43 @@ Student's writing: "${text || ""}"
 EVALUATION RULES:
 1. Give brief, encouraging feedback (1-2 sentences) with emojis ✨
 2. Be supportive and encouraging
-3. EVALUATE BASED ON CONTENT QUALITY, NOT WORD COUNT:
-   - Different sections have different length expectations:
-     * Introduction: Usually 1-2 sentences to introduce the book
-     * Body sections: Usually 2-3+ sentences with some details
-     * Conclusion: Usually 1-2 sentences to wrap up
-   - Focus on whether the writing:
-     * Makes basic sense and is readable
-     * Relates to the section and book
-     * Shows some effort
-     * Fulfills the basic purpose of the section
-4. Say "you can move to the next part" when:
-   - The content is meaningful and makes sense
-   - The writing relates to the section and book
-   - The writing shows reasonable effort
-   - The writing is NOT just random characters or complete gibberish
-   - The writing fulfills the basic purpose of the ${currentSectionName} section
-5. Be generous - approve if the student has written something reasonable, even if it's brief
-6. Only reject if:
-   - Text is completely random characters or gibberish
-   - Text has no relation to the book or section at all
-   - Text is completely empty or just placeholder text
+3. Use level ${level} only as a light guide. Do NOT be too strict during testing.
+4. Pass the writing if it is real, not too short for this section, clearly related to the book review, and safe.
+5. Reject if it is gibberish, too short, clearly unrelated to the book review, or unsafe.
+6. ${buildPassPromptRule(currentSectionName || "current section", level)}
+7. If the writing does not pass, explain what to improve and do NOT output the pass sentence or code.
 
-Remember: Be encouraging and supportive. Approve reasonable writing that shows effort, even if brief. Only say "you can move to the next part" when the writing is good enough for its purpose or his total number of words is beyond 10.如果有乱码组成或者显然没有逻辑，一定不要说you can move to the next part这句话${levelSuffix}`
+Remember: focus on basic quality control, not strict scoring. Slightly raise expectations for higher levels, but keep testing-friendly.${levelSuffix}`
 
     const message = await chat({
       messages: [{ role: "user", content: prompt }],
     })
+    const done = detectPassSignal(message) && quality.pass
+    const finalMessage = finalizeEvaluationMessage(
+      message,
+      { ...quality, pass: done },
+      "Please revise this review section with clearer ideas and stronger detail."
+    )
 
     await logApiCall(
       user_id || "default-user",
       "bookReviewWriting",
       "/api/dify-book-writing-aid",
       { text, reviewType, bookTitle, structure, currentSection },
-      { answer: message }
+      {
+        answer: finalMessage,
+        done,
+        quality,
+      }
     )
 
-    return NextResponse.json({ message })
+    return NextResponse.json({
+      message: finalMessage,
+      done,
+      secretCodeDetected: done,
+      secretCode: done ? GOOD_ENOUGH_CODE : null,
+      quality,
+    })
   } catch (error) {
     console.error("Book writing aid API error:", error)
     if (error instanceof DeepSeekError && error.isTimeout) {
