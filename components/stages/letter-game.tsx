@@ -187,13 +187,8 @@ export default function LetterGame({
           if (data.message) {
             setAiEvaluation(data.message)
             
-            // 检查是否包含 "you can move to the next part" 或 "done"
             const messageLower = data.message.toLowerCase().trim()
-            const canMove = messageLower.endsWith("you can move to the next part") ||
-                           messageLower.includes("you can move to the next part") ||
-                           messageLower.endsWith("done") ||
-                           messageLower.includes("\ndone") ||
-                           messageLower === "done"
+            const canMove = Boolean(data.done)
             
             setCanMoveNext(canMove)
             if (hasDangerKeyword) setWritingMood("angry")
