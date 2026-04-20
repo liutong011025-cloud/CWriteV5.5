@@ -206,11 +206,7 @@ export default function BookReviewWriting({
           }
           setAiEvaluation(message)
 
-          // 检查是否可以移动到下一部分（当AI说"you can move to the next part"时）
-          const canMoveToNext = message.toLowerCase().includes("you can move to the next part") || 
-                                message.toLowerCase().includes("move to the next part") ||
-                                message.toLowerCase().includes("move to the next section") ||
-                                message.toLowerCase().includes("ready to move to the next part")
+          const canMoveToNext = Boolean(data.done)
           
           if (canMoveToNext) {
             console.log('Luna says student can move to next part! ✅')
