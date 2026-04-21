@@ -26,31 +26,31 @@ export async function POST(request: NextRequest) {
     }
 
     const entries = [
-      ...user.stories.map((item) => ({
+      ...user.stories.map((item: (typeof user.stories)[number]) => ({
         type: "Story",
         title: "Story",
         content: item.content ?? "",
         date: item.createdAt.toISOString(),
       })),
-      ...user.reviews.map((item) => ({
+      ...user.reviews.map((item: (typeof user.reviews)[number]) => ({
         type: "Book Review",
         title: item.bookTitle ?? "Book Review",
         content: item.content ?? "",
         date: item.createdAt.toISOString(),
       })),
-      ...user.letters.map((item) => ({
+      ...user.letters.map((item: (typeof user.letters)[number]) => ({
         type: "Letter",
         title: item.recipient ? `Letter to ${item.recipient}` : "Letter",
         content: item.content ?? "",
         date: item.createdAt.toISOString(),
       })),
-      ...user.dramas.map((item) => ({
+      ...user.dramas.map((item: (typeof user.dramas)[number]) => ({
         type: "Drama",
         title: item.title ?? "Drama",
         content: item.content ?? "",
         date: item.createdAt.toISOString(),
       })),
-      ...user.poetries.map((item) => ({
+      ...user.poetries.map((item: (typeof user.poetries)[number]) => ({
         type: "Poetry",
         title: item.topic ?? "Poetry",
         content: item.content ?? "",
@@ -96,7 +96,14 @@ Analyze the student's full writing portfolio and provide:
 3) 2-3 concrete strengths,
 4) 2 specific growth priorities with practical classroom guidance.
 
-Output in one polished paragraph (170-260 words), professional and evidence-based.
+Output as clearly structured markdown:
+- Heading: "## Student Writing Insight"
+- Four subsections with short bullet points:
+  - "### Preferences"
+  - "### Progress"
+  - "### Strengths"
+  - "### Next Actions"
+Keep total length around 160-240 words, professional and evidence-based.
 
 Writing corpus:
 ${articlePayload}

@@ -15,6 +15,34 @@ interface WritingRecord {
   interactionId: string | null
 }
 
+function normalizeApiCalls(input: unknown): Array<{ endpoint?: string; request?: unknown; response?: unknown }> {
+  if (!input) return []
+  if (Array.isArray(input)) {
+    return input.map((item) => {
+      if (item && typeof item === "object") {
+        const row = item as Record<string, unknown>
+        return {
+          endpoint: typeof row.endpoint === "string" ? row.endpoint : undefined,
+          request: row.request,
+          response: row.response,
+        }
+      }
+      return {}
+    })
+  }
+  if (typeof input === "object") {
+    const row = input as Record<string, unknown>
+    return [
+      {
+        endpoint: typeof row.endpoint === "string" ? row.endpoint : undefined,
+        request: row.request,
+        response: row.response,
+      },
+    ]
+  }
+  return []
+}
+
 export async function GET(_request: NextRequest, { params }: Params) {
   try {
     const { username } = await params
@@ -50,7 +78,7 @@ export async function GET(_request: NextRequest, { params }: Params) {
     }
 
     const writings: WritingRecord[] = [
-      ...user.stories.map((item) => ({
+      ...user.stories.map((item: (typeof user.stories)[number]) => ({
         id: item.id,
         type: "story" as const,
         title: "Story",
@@ -59,7 +87,7 @@ export async function GET(_request: NextRequest, { params }: Params) {
         updatedAt: item.updatedAt,
         interactionId: item.interactionId ?? null,
       })),
-      ...user.reviews.map((item) => ({
+      ...user.reviews.map((item: (typeof user.reviews)[number]) => ({
         id: item.id,
         type: "review" as const,
         title: item.bookTitle ? `Book Review - ${item.bookTitle}` : "Book Review",
@@ -68,7 +96,7 @@ export async function GET(_request: NextRequest, { params }: Params) {
         updatedAt: item.updatedAt,
         interactionId: item.interactionId ?? null,
       })),
-      ...user.letters.map((item) => ({
+      ...user.letters.map((item: (typeof user.letters)[number]) => ({
         id: item.id,
         type: "letter" as const,
         title: item.recipient ? `Letter to ${item.recipient}` : "Letter",
@@ -77,7 +105,7 @@ export async function GET(_request: NextRequest, { params }: Params) {
         updatedAt: item.updatedAt,
         interactionId: item.interactionId ?? null,
       })),
-      ...user.dramas.map((item) => ({
+      ...user.dramas.map((item: (typeof user.dramas)[number]) => ({
         id: item.id,
         type: "drama" as const,
         title: item.title ? `Drama - ${item.title}` : "Drama",
@@ -86,7 +114,7 @@ export async function GET(_request: NextRequest, { params }: Params) {
         updatedAt: item.updatedAt,
         interactionId: item.interactionId ?? null,
       })),
-      ...user.poetries.map((item) => ({
+      ...user.poetries.map((item: (typeof user.poetries)[number]) => ({
         id: item.id,
         type: "poetry" as const,
         title: item.topic ? `Poetry - ${item.topic}` : "Poetry",
@@ -109,14 +137,12 @@ export async function GET(_request: NextRequest, { params }: Params) {
       take: 200,
     })
 
-    const apiLogs = interactions
-      .map((item) => ({
-        id: item.id,
-        stage: item.stage,
-        timestamp: item.timestamp.toISOString(),
-        apiCalls: Array.isArray(item.apiCalls) ? item.apiCalls : [],
-      }))
-      .filter((item) => item.apiCalls.length > 0)
+    const apiLogs = interactions.map((item: (typeof interactions)[number]) => ({
+      id: item.id,
+      stage: item.stage,
+      timestamp: item.timestamp.toISOString(),
+      apiCalls: normalizeApiCalls(item.apiCalls),
+    }))
 
     return NextResponse.json({
       user: {
