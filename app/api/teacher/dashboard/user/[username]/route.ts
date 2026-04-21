@@ -15,32 +15,9 @@ interface WritingRecord {
   interactionId: string | null
 }
 
-function normalizeApiCalls(input: unknown): Array<{ endpoint?: string; request?: unknown; response?: unknown }> {
-  if (!input) return []
-  if (Array.isArray(input)) {
-    return input.map((item) => {
-      if (item && typeof item === "object") {
-        const row = item as Record<string, unknown>
-        return {
-          endpoint: typeof row.endpoint === "string" ? row.endpoint : undefined,
-          request: row.request,
-          response: row.response,
-        }
-      }
-      return {}
-    })
-  }
-  if (typeof input === "object") {
-    const row = input as Record<string, unknown>
-    return [
-      {
-        endpoint: typeof row.endpoint === "string" ? row.endpoint : undefined,
-        request: row.request,
-        response: row.response,
-      },
-    ]
-  }
-  return []
+interface MessageItem {
+  role: "user" | "assistant" | "system"
+  content: string
 }
 
 export async function GET(_request: NextRequest, { params }: Params) {
@@ -78,19 +55,16 @@ export async function GET(_request: NextRequest, { params }: Params) {
     }
 
     const writings: WritingRecord[] = [
-      ...user.stories.map((item: (typeof user.stories)[number]) => ({
+      ...user.stories.map((item) => ({
         id: item.id,
         type: "story" as const,
-        title:
-          item.content.trim().length > 0
-            ? `Story - ${item.content.replace(/\s+/g, " ").slice(0, 80)}`
-            : `Story - ${item.createdAt.toISOString().slice(0, 10)}`,
+        title: deriveTitle(item.content, "Story"),
         content: item.content ?? "",
         createdAt: item.createdAt,
         updatedAt: item.updatedAt,
         interactionId: item.interactionId ?? null,
       })),
-      ...user.reviews.map((item: (typeof user.reviews)[number]) => ({
+      ...user.reviews.map((item) => ({
         id: item.id,
         type: "review" as const,
         title: item.bookTitle ? `Book Review - ${item.bookTitle}` : "Book Review",
@@ -99,16 +73,16 @@ export async function GET(_request: NextRequest, { params }: Params) {
         updatedAt: item.updatedAt,
         interactionId: item.interactionId ?? null,
       })),
-      ...user.letters.map((item: (typeof user.letters)[number]) => ({
+      ...user.letters.map((item) => ({
         id: item.id,
         type: "letter" as const,
-        title: item.recipient ? `Letter to ${item.recipient}` : "Letter",
+        title: item.recipient ? `Letter to ${item.recipient}: ${deriveTitle(item.content, "Letter")}` : deriveTitle(item.content, "Letter"),
         content: item.content ?? "",
         createdAt: item.createdAt,
         updatedAt: item.updatedAt,
         interactionId: item.interactionId ?? null,
       })),
-      ...user.dramas.map((item: (typeof user.dramas)[number]) => ({
+      ...user.dramas.map((item) => ({
         id: item.id,
         type: "drama" as const,
         title: item.title ? `Drama - ${item.title}` : "Drama",
@@ -117,7 +91,7 @@ export async function GET(_request: NextRequest, { params }: Params) {
         updatedAt: item.updatedAt,
         interactionId: item.interactionId ?? null,
       })),
-      ...user.poetries.map((item: (typeof user.poetries)[number]) => ({
+      ...user.poetries.map((item) => ({
         id: item.id,
         type: "poetry" as const,
         title: item.topic ? `Poetry - ${item.topic}` : "Poetry",
@@ -136,15 +110,19 @@ export async function GET(_request: NextRequest, { params }: Params) {
         stage: true,
         timestamp: true,
         apiCalls: true,
+        input: true,
+        output: true,
       },
       take: 200,
     })
 
-    const apiLogs = interactions.map((item: (typeof interactions)[number]) => ({
+    const apiLogs = interactions.map((item) => ({
       id: item.id,
       stage: item.stage,
       timestamp: item.timestamp.toISOString(),
+      tokenEstimate: estimateTokens(item.apiCalls, item.input, item.output),
       apiCalls: normalizeApiCalls(item.apiCalls),
+      messages: extractMessages(item.input, item.output),
     }))
 
     return NextResponse.json({
@@ -174,4 +152,82 @@ export async function GET(_request: NextRequest, { params }: Params) {
     console.error("[teacher dashboard user] GET failed:", error)
     return NextResponse.json({ error: "Failed to load user dashboard data" }, { status: 500 })
   }
+}
+
+function normalizeApiCalls(raw: unknown): Array<{ endpoint?: string }> {
+  if (!Array.isArray(raw)) return []
+  return raw.map((item) => {
+    if (!item || typeof item !== "object") return {}
+    const endpoint = "endpoint" in item && typeof item.endpoint === "string" ? item.endpoint : undefined
+    return { endpoint }
+  })
+}
+
+function extractMessages(input: unknown, output: unknown): MessageItem[] {
+  const messages: MessageItem[] = []
+  const inputMessages = getArrayPath(input, ["messages"])
+  if (Array.isArray(inputMessages)) {
+    inputMessages.forEach((item) => {
+      if (!item || typeof item !== "object") return
+      const role = typeof item.role === "string" ? item.role : "user"
+      const content = typeof item.content === "string" ? item.content : ""
+      if (!content.trim()) return
+      messages.push({
+        role: role === "assistant" || role === "system" ? role : "user",
+        content,
+      })
+    })
+  }
+
+  const outputText = extractOutputText(output)
+  if (outputText && !messages.some((item) => item.content === outputText)) {
+    messages.push({ role: "assistant", content: outputText })
+  }
+
+  return messages.slice(0, 24)
+}
+
+function getArrayPath(value: unknown, path: string[]): unknown {
+  let current = value
+  for (const key of path) {
+    if (!current || typeof current !== "object" || !(key in current)) return undefined
+    current = (current as Record<string, unknown>)[key]
+  }
+  return current
+}
+
+function extractOutputText(output: unknown): string {
+  if (!output || typeof output !== "object") return ""
+  const record = output as Record<string, unknown>
+  const candidates = ["response", "answer", "result", "content", "story", "review", "letter", "drama", "poetry"]
+  for (const key of candidates) {
+    const value = record[key]
+    if (typeof value === "string" && value.trim()) {
+      return value.trim()
+    }
+  }
+  return ""
+}
+
+function estimateTokens(apiCalls: unknown, input: unknown, output: unknown): number {
+  const chunks = [apiCalls, input, output]
+  const chars = chunks.reduce((sum, item) => {
+    try {
+      return sum + JSON.stringify(item ?? "").length
+    } catch {
+      return sum
+    }
+  }, 0)
+  return Math.max(0, Math.round(chars / 4))
+}
+
+function deriveTitle(content: string | null | undefined, fallback: string): string {
+  const normalized = (content ?? "")
+    .replace(/\r/g, "")
+    .split("\n")
+    .map((line) => line.trim())
+    .find((line) => line.length > 0)
+
+  if (!normalized) return fallback
+  return normalized.length > 90 ? `${normalized.slice(0, 90)}...` : normalized
 }

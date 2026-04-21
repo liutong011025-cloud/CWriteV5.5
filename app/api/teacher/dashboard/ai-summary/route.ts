@@ -26,31 +26,31 @@ export async function POST(request: NextRequest) {
     }
 
     const entries = [
-      ...user.stories.map((item: (typeof user.stories)[number]) => ({
+      ...user.stories.map((item) => ({
         type: "Story",
         title: "Story",
         content: item.content ?? "",
         date: item.createdAt.toISOString(),
       })),
-      ...user.reviews.map((item: (typeof user.reviews)[number]) => ({
+      ...user.reviews.map((item) => ({
         type: "Book Review",
         title: item.bookTitle ?? "Book Review",
         content: item.content ?? "",
         date: item.createdAt.toISOString(),
       })),
-      ...user.letters.map((item: (typeof user.letters)[number]) => ({
+      ...user.letters.map((item) => ({
         type: "Letter",
         title: item.recipient ? `Letter to ${item.recipient}` : "Letter",
         content: item.content ?? "",
         date: item.createdAt.toISOString(),
       })),
-      ...user.dramas.map((item: (typeof user.dramas)[number]) => ({
+      ...user.dramas.map((item) => ({
         type: "Drama",
         title: item.title ?? "Drama",
         content: item.content ?? "",
         date: item.createdAt.toISOString(),
       })),
-      ...user.poetries.map((item: (typeof user.poetries)[number]) => ({
+      ...user.poetries.map((item) => ({
         type: "Poetry",
         title: item.topic ?? "Poetry",
         content: item.content ?? "",
@@ -90,14 +90,19 @@ export async function POST(request: NextRequest) {
 Student: ${username}
 Total writings: ${entries.length}
 
-Analyze the student's full writing portfolio and provide:
-1) writing preferences and favored genres/topics,
-2) the biggest progress between the first and the latest writing,
-3) 2-3 concrete strengths,
-4) 2 specific growth priorities with practical classroom guidance.
+Analyze the student's full writing portfolio and produce a structured report using exactly these headings:
+1) Writing Preferences
+2) Growth from First to Latest Piece
+3) Key Strengths
+4) Priorities for Improvement
+5) Instructional Recommendations
 
-Output in one coherent paragraph (170-240 words), professional and evidence-based.
-It must closely reflect this student's actual writing with concrete evidence from the corpus, including at least two short quoted phrases from different writings.
+Requirements:
+- English only
+- Professional and evidence-based
+- 190-280 words total
+- Use clear paragraphs under each heading
+- Mention specific observable patterns from the writing corpus
 
 Writing corpus:
 ${articlePayload}

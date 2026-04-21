@@ -46,54 +46,39 @@ export async function GET() {
 
     const now = new Date()
     const periodStart = subDays(startOfDay(now), 13)
-    const dayKeys = Array.from({ length: 14 }).map((_, index) =>
-      format(addDays(periodStart, index), "yyyy-MM-dd"),
-    )
-    const registrationsMap = new Map(dayKeys.map((key) => [key, 0]))
-    const apiCallsMap = new Map(dayKeys.map((key) => [key, 0]))
-    const tokensMap = new Map(dayKeys.map((key) => [key, 0]))
-    const hourlyKeys = Array.from({ length: 24 }).map((_, index) => {
-      const d = subHours(now, 23 - index)
-      return format(d, "MM-dd HH:00")
-    })
-    const hourlyTokensMap = new Map(hourlyKeys.map((key) => [key, 0]))
+    const dayKeys = Array.from({ length: 14 }).map((_, index) => format(addDays(periodStart, index), "yyyy-MM-dd"))
+    const tokenDailyMap = new Map(dayKeys.map((key) => [key, 0]))
+    const hourlyTokenMap = new Map(Array.from({ length: 24 }).map((_, hour) => [String(hour).padStart(2, "0"), 0]))
 
-    users.forEach((item: (typeof users)[number]) => {
-      const key = format(item.createdAt, "yyyy-MM-dd")
-      if (registrationsMap.has(key)) {
-        registrationsMap.set(key, (registrationsMap.get(key) ?? 0) + 1)
-      }
+    users.forEach((item) => {
+      // keep warm for future class allocation logic
+      void item.createdAt
     })
 
     const activeUserIds = new Set<string>()
     const activeThreshold = subHours(now, 24)
     let totalApiCalls = 0
 
-    interactions.forEach((interaction: (typeof interactions)[number]) => {
+    interactions.forEach((interaction) => {
       if (interaction.timestamp >= activeThreshold) {
         activeUserIds.add(interaction.userId)
       }
-      const calls = normalizeApiCalls(interaction.apiCalls)
-      const apiCallsLength = calls.length
+      const apiCallsLength = Array.isArray(interaction.apiCalls) ? interaction.apiCalls.length : 0
+      const tokenEstimate = estimateTokensFromApiCalls(interaction.apiCalls)
       totalApiCalls += apiCallsLength
-      const tokenCount = calls.reduce((sum, call) => sum + estimateTokens(call), 0)
 
       const key = format(interaction.timestamp, "yyyy-MM-dd")
-      if (apiCallsMap.has(key)) {
-        apiCallsMap.set(key, (apiCallsMap.get(key) ?? 0) + apiCallsLength)
+      if (tokenDailyMap.has(key)) {
+        tokenDailyMap.set(key, (tokenDailyMap.get(key) ?? 0) + tokenEstimate)
       }
-      if (tokensMap.has(key)) {
-        tokensMap.set(key, (tokensMap.get(key) ?? 0) + tokenCount)
-      }
-
-      const hourKey = format(interaction.timestamp, "MM-dd HH:00")
-      if (hourlyTokensMap.has(hourKey)) {
-        hourlyTokensMap.set(hourKey, (hourlyTokensMap.get(hourKey) ?? 0) + tokenCount)
+      const hourKey = String(interaction.timestamp.getHours()).padStart(2, "0")
+      if (hourlyTokenMap.has(hourKey)) {
+        hourlyTokenMap.set(hourKey, (hourlyTokenMap.get(hourKey) ?? 0) + tokenEstimate)
       }
     })
 
     const latestActivityMap = new Map<string, Date>()
-    interactions.forEach((interaction: (typeof interactions)[number]) => {
+    interactions.forEach((interaction) => {
       const previous = latestActivityMap.get(interaction.userId)
       if (!previous || interaction.timestamp > previous) {
         latestActivityMap.set(interaction.userId, interaction.timestamp)
@@ -115,26 +100,18 @@ export async function GET() {
         poetries: totalPoetries,
       },
       trends: {
-        dailyRegistrations: dayKeys.map((date) => ({ date, count: registrationsMap.get(date) ?? 0 })),
-        dailyApiCalls: dayKeys.map((date) => ({ date, count: apiCallsMap.get(date) ?? 0 })),
-      },
-      analytics: {
-        articleTypePie: [
-          { name: "Story", value: totalStories },
-          { name: "Review", value: totalReviews },
-          { name: "Letter", value: totalLetters },
-          { name: "Drama", value: totalDramas },
-          { name: "Poetry", value: totalPoetries },
-        ],
-        tokenUsageDaily: dayKeys.map((date) => ({ date, tokens: tokensMap.get(date) ?? 0 })),
-        tokenPeakHourly: hourlyKeys.map((time) => ({ time, tokens: hourlyTokensMap.get(time) ?? 0 })),
+        dailyTokenUsage: dayKeys.map((date) => ({ date, tokens: tokenDailyMap.get(date) ?? 0 })),
+        hourlyTokenPeaks: Array.from(hourlyTokenMap.entries()).map(([hour, tokens]) => ({
+          hour: `${hour}:00`,
+          tokens,
+        })),
       },
       classGroups: [
         {
           id: "class1",
           name: "Class 1",
           users: users
-            .map((item: (typeof users)[number]) => ({
+            .map((item) => ({
               id: item.id,
               username: item.username,
               role: item.role,
@@ -149,16 +126,7 @@ export async function GET() {
                 item._count.poetries,
               latestActiveAt: latestActivityMap.get(item.id)?.toISOString() ?? null,
             }))
-            .sort(
-              (
-                a: {
-                  username: string
-                },
-                b: {
-                  username: string
-                },
-              ) => a.username.localeCompare(b.username),
-            ),
+            .sort((a, b) => a.username.localeCompare(b.username)),
         },
       ],
       updatedAt: now.toISOString(),
@@ -175,28 +143,14 @@ function addDays(date: Date, days: number) {
   return next
 }
 
-function normalizeApiCalls(input: unknown): Array<Record<string, unknown>> {
-  if (!input) return []
-  if (Array.isArray(input)) return input.filter((item) => item && typeof item === "object") as Array<Record<string, unknown>>
-  if (typeof input === "object") return [input as Record<string, unknown>]
-  return []
-}
-
-function estimateTokens(call: Record<string, unknown>): number {
-  const directTotal = Number(call.total_tokens ?? call.totalTokens ?? 0)
-  if (Number.isFinite(directTotal) && directTotal > 0) return directTotal
-
-  const usage = call.usage
-  if (usage && typeof usage === "object") {
-    const usageObj = usage as Record<string, unknown>
-    const usageTotal = Number(usageObj.total_tokens ?? usageObj.totalTokens ?? 0)
-    if (Number.isFinite(usageTotal) && usageTotal > 0) return usageTotal
-    const prompt = Number(usageObj.prompt_tokens ?? usageObj.promptTokens ?? 0)
-    const completion = Number(usageObj.completion_tokens ?? usageObj.completionTokens ?? 0)
-    const sum = (Number.isFinite(prompt) ? prompt : 0) + (Number.isFinite(completion) ? completion : 0)
-    if (sum > 0) return sum
-  }
-
-  const roughChars = JSON.stringify(call.request ?? {}).length + JSON.stringify(call.response ?? {}).length
-  return Math.max(1, Math.round(roughChars / 4))
+function estimateTokensFromApiCalls(apiCalls: unknown): number {
+  if (!Array.isArray(apiCalls)) return 0
+  return apiCalls.reduce((sum, call) => {
+    try {
+      const payload = JSON.stringify(call)
+      return sum + Math.max(0, Math.round(payload.length / 4))
+    } catch {
+      return sum
+    }
+  }, 0)
 }
