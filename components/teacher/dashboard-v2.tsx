@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react"
 import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
 import { Bot, ChevronDown, ChevronRight, LogOut, RefreshCw, Upload } from "lucide-react"
 import { Button } from "@/ui/button"
@@ -35,19 +35,25 @@ interface UserDetail {
   apiLogs: Array<{ id: string; stage: string; timestamp: string; tokenEstimate: number; apiCalls: Array<{ endpoint?: string }>; messages: Array<{ role: string; content: string }> }>
 }
 
-type Draft = Record<string, { quote: string; replaceWith: string; comment: string; saving: boolean }>
+type Annotation = { id: string; quote: string; replaceWith: string; comment: string; saving: boolean }
+type AnnotationMap = Record<string, Annotation[]>
 const PIE = ["#6366f1", "#06b6d4", "#22c55e", "#f59e0b", "#ec4899"]
 
-function renderWithHighlight(text: string, quote: string) {
-  if (!quote.trim() || !text.includes(quote)) return <pre className="whitespace-pre-wrap text-sm">{text}</pre>
-  const idx = text.indexOf(quote)
-  return (
-    <pre className="whitespace-pre-wrap text-sm">
-      <span>{text.slice(0, idx)}</span>
-      <mark className="rounded bg-amber-200 px-1">{quote}</mark>
-      <span>{text.slice(idx + quote.length)}</span>
-    </pre>
-  )
+function splitSentences(text: string): string[] {
+  return text
+    .split(/(?<=[.!?。！？])\s+/)
+    .map((item) => item.trim())
+    .filter(Boolean)
+}
+
+function createAnnotation(quote: string): Annotation {
+  return {
+    id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    quote,
+    replaceWith: "",
+    comment: "",
+    saving: false,
+  }
 }
 
 export default function DashboardV2({ user, onBack }: DashboardProps) {
@@ -58,7 +64,8 @@ export default function DashboardV2({ user, onBack }: DashboardProps) {
   const [panel, setPanel] = useState<"writings" | "api">("writings")
   const [openWriting, setOpenWriting] = useState<string | null>(null)
   const [openLog, setOpenLog] = useState<string | null>(null)
-  const [draft, setDraft] = useState<Draft>({})
+  const [annotations, setAnnotations] = useState<AnnotationMap>({})
+  const [activeAnnotationId, setActiveAnnotationId] = useState<string | null>(null)
   const [classFileName, setClassFileName] = useState("")
   const [classPreview, setClassPreview] = useState<string[]>([])
   const fileRef = useRef<HTMLInputElement | null>(null)
@@ -113,10 +120,15 @@ export default function DashboardV2({ user, onBack }: DashboardProps) {
     ].filter((x) => x.value > 0)
   }, [data])
 
-  async function saveCorrection(w: UserDetail["writings"][number]) {
-    const item = draft[w.id]
+  async function saveCorrection(w: UserDetail["writings"][number], annotationId: string) {
+    const item = (annotations[w.id] ?? []).find((annotation) => annotation.id === annotationId)
     if (!detail || !item?.quote || !item?.replaceWith || !item?.comment) return
-    setDraft((d) => ({ ...d, [w.id]: { ...item, saving: true } }))
+    setAnnotations((prev) => ({
+      ...prev,
+      [w.id]: (prev[w.id] ?? []).map((annotation) =>
+        annotation.id === annotationId ? { ...annotation, saving: true } : annotation,
+      ),
+    }))
     const content = `Teacher sentence-level correction\nOriginal sentence: "${item.quote}"\nSuggested revision: "${item.replaceWith}"\nTeacher note: ${item.comment}`
     const res = await fetch("/api/reviews", {
       method: "POST",
@@ -133,14 +145,46 @@ export default function DashboardV2({ user, onBack }: DashboardProps) {
       }),
     })
     if (res.ok) toast.success("Sentence-level correction saved.")
-    setDraft((d) => ({ ...d, [w.id]: { quote: "", replaceWith: "", comment: "", saving: false } }))
+    setAnnotations((prev) => ({
+      ...prev,
+      [w.id]: (prev[w.id] ?? []).map((annotation) =>
+        annotation.id === annotationId
+          ? { ...annotation, quote: "", replaceWith: "", comment: "", saving: false }
+          : annotation,
+      ),
+    }))
   }
 
   function captureSelection(w: UserDetail["writings"][number]) {
     const s = window.getSelection()?.toString().trim() ?? ""
     if (!s) return
-    setDraft((d) => ({ ...d, [w.id]: { ...(d[w.id] ?? { quote: "", replaceWith: "", comment: "", saving: false }), quote: s } }))
+    const next = createAnnotation(s)
+    setAnnotations((prev) => ({ ...prev, [w.id]: [next, ...(prev[w.id] ?? [])] }))
+    setActiveAnnotationId(next.id)
     toast.success("Sentence selected.")
+  }
+
+  function addSentenceAnnotation(writingId: string, sentence: string) {
+    const next = createAnnotation(sentence)
+    setAnnotations((prev) => ({ ...prev, [writingId]: [next, ...(prev[writingId] ?? [])] }))
+    setActiveAnnotationId(next.id)
+  }
+
+  function updateAnnotation(writingId: string, annotationId: string, patch: Partial<Annotation>) {
+    setAnnotations((prev) => ({
+      ...prev,
+      [writingId]: (prev[writingId] ?? []).map((annotation) =>
+        annotation.id === annotationId ? { ...annotation, ...patch } : annotation,
+      ),
+    }))
+  }
+
+  function removeAnnotation(writingId: string, annotationId: string) {
+    setAnnotations((prev) => ({
+      ...prev,
+      [writingId]: (prev[writingId] ?? []).filter((annotation) => annotation.id !== annotationId),
+    }))
+    if (activeAnnotationId === annotationId) setActiveAnnotationId(null)
   }
 
   function uploadDemo(file: File) {
@@ -232,7 +276,8 @@ export default function DashboardV2({ user, onBack }: DashboardProps) {
 
                 {panel === "writings" && detail.writings.map((w) => {
                   const open = openWriting === w.id
-                  const d = draft[w.id] ?? { quote: "", replaceWith: "", comment: "", saving: false }
+                  const sentenceList = splitSentences(w.content || "")
+                  const writingAnnotations = annotations[w.id] ?? []
                   return (
                     <Card key={w.id}>
                       <CardHeader className="py-3">
@@ -240,15 +285,96 @@ export default function DashboardV2({ user, onBack }: DashboardProps) {
                           <p className="text-sm font-medium">[{w.type.toUpperCase()}] {w.title}</p>{open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                         </button>
                       </CardHeader>
-                      {open && <CardContent className="space-y-2">
-                        <div className="max-h-52 overflow-auto rounded border bg-slate-50 p-3" onMouseUp={() => captureSelection(w)}>
-                          {renderWithHighlight(w.content, d.quote)}
-                        </div>
-                        <Input placeholder="Selected sentence" value={d.quote} onChange={(e) => setDraft((prev) => ({ ...prev, [w.id]: { ...d, quote: e.target.value } }))} />
-                        <Input placeholder="Suggested revision" value={d.replaceWith} onChange={(e) => setDraft((prev) => ({ ...prev, [w.id]: { ...d, replaceWith: e.target.value } }))} />
-                        <Textarea placeholder="Teacher note" value={d.comment} onChange={(e) => setDraft((prev) => ({ ...prev, [w.id]: { ...d, comment: e.target.value } }))} />
-                        <Button disabled={d.saving} onClick={() => void saveCorrection(w)}>{d.saving ? "Saving..." : "Save sentence-level correction"}</Button>
-                      </CardContent>}
+                      {open && (
+                        <CardContent className="space-y-3">
+                          <div className="grid gap-3 lg:grid-cols-3">
+                            <div className="rounded border bg-slate-50 p-3 lg:col-span-2">
+                              <p className="mb-2 text-xs font-semibold text-slate-500">Original Text (click sentence to annotate)</p>
+                              <div className="max-h-72 space-y-1 overflow-auto" onMouseUp={() => captureSelection(w)}>
+                                {sentenceList.length === 0 ? (
+                                  <p className="text-sm text-slate-400">(empty content)</p>
+                                ) : (
+                                  sentenceList.map((sentence, idx) => {
+                                    const isActive = writingAnnotations.some(
+                                      (annotation) => annotation.id === activeAnnotationId && annotation.quote === sentence,
+                                    )
+                                    const isAnnotated = writingAnnotations.some((annotation) => annotation.quote === sentence)
+                                    return (
+                                      <button
+                                        key={`${w.id}-${idx}`}
+                                        type="button"
+                                        onClick={() => addSentenceAnnotation(w.id, sentence)}
+                                        className={`block w-full rounded px-2 py-1 text-left text-sm leading-6 transition ${
+                                          isActive
+                                            ? "bg-amber-200"
+                                            : isAnnotated
+                                              ? "bg-amber-100"
+                                              : "hover:bg-slate-200"
+                                        }`}
+                                      >
+                                        {sentence}
+                                      </button>
+                                    )
+                                  })
+                                )}
+                              </div>
+                            </div>
+
+                            <div className="rounded border bg-white p-3">
+                              <p className="mb-2 text-xs font-semibold text-slate-500">Comments Sidebar</p>
+                              <div className="max-h-72 space-y-2 overflow-auto">
+                                {writingAnnotations.length === 0 ? (
+                                  <p className="text-xs text-slate-400">Select a sentence from the text to create comments.</p>
+                                ) : (
+                                  writingAnnotations.map((annotation) => (
+                                    <div
+                                      key={annotation.id}
+                                      className={`rounded border p-2 ${activeAnnotationId === annotation.id ? "border-indigo-400 bg-indigo-50" : "bg-slate-50"}`}
+                                      onClick={() => setActiveAnnotationId(annotation.id)}
+                                    >
+                                      <p className="mb-2 line-clamp-2 text-xs text-slate-700">{annotation.quote}</p>
+                                      <Input
+                                        placeholder="Suggested revision"
+                                        value={annotation.replaceWith}
+                                        onChange={(event) =>
+                                          updateAnnotation(w.id, annotation.id, { replaceWith: event.target.value })
+                                        }
+                                        className="mb-2 h-8 text-xs"
+                                      />
+                                      <Textarea
+                                        placeholder="Teacher note"
+                                        value={annotation.comment}
+                                        onChange={(event) =>
+                                          updateAnnotation(w.id, annotation.id, { comment: event.target.value })
+                                        }
+                                        className="mb-2 min-h-16 text-xs"
+                                      />
+                                      <div className="flex gap-1">
+                                        <Button
+                                          size="sm"
+                                          className="h-7 px-2 text-xs"
+                                          disabled={annotation.saving}
+                                          onClick={() => void saveCorrection(w, annotation.id)}
+                                        >
+                                          {annotation.saving ? "Saving" : "Save"}
+                                        </Button>
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          className="h-7 px-2 text-xs"
+                                          onClick={() => removeAnnotation(w.id, annotation.id)}
+                                        >
+                                          Remove
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  ))
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </CardContent>
+                      )}
                     </Card>
                   )
                 })}
@@ -281,6 +407,6 @@ function Stat({ label, value }: { label: string; value: number }) {
   return <div className="rounded-xl border bg-white/80 p-3"><p className="text-xs text-slate-600">{label}</p><p className="text-2xl font-semibold">{value.toLocaleString()}</p></div>
 }
 
-function ChartCard({ title, children }: { title: string; children: React.ReactNode }) {
+function ChartCard({ title, children }: { title: string; children: ReactNode }) {
   return <Card className="border-white/50 bg-white/65 backdrop-blur-xl"><CardHeader><CardTitle className="text-base">{title}</CardTitle></CardHeader><CardContent>{children}</CardContent></Card>
 }
