@@ -21,6 +21,8 @@ interface LoginPageProps {
 
 export default function LoginPage({ onLogin }: LoginPageProps) {
   const [mode, setMode] = useState<"login" | "register">("login")
+  const [entryStep, setEntryStep] = useState<"role" | "auth">("role")
+  const [selectedRole, setSelectedRole] = useState<"teacher" | "student" | null>(null)
   const [username, setUsername] = useState("")
   const [registerName, setRegisterName] = useState("")
   const [registerEmail, setRegisterEmail] = useState("")
@@ -135,26 +137,68 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
 
       <div className="max-w-sm w-full relative z-10">
         <SpotlightCard className="px-10 py-6 shadow-2xl" spotlightColor="rgba(0, 229, 255, 0.2)">
-          <div className="text-center mb-4">
-            <div className="mb-2 mt-4 flex justify-center">
-              <Image
-                src="/logo.gif"
-                alt="CWrite Logo"
-                width={220}
-                height={220}
-                className="object-contain"
-                priority
-                unoptimized
-              />
+          {entryStep === "role" ? (
+            <div className="space-y-5 py-4">
+              <div className="text-center mb-2">
+                <div className="mb-2 mt-4 flex justify-center">
+                  <Image
+                    src="/logo.gif"
+                    alt="CWrite Logo"
+                    width={200}
+                    height={200}
+                    className="object-contain"
+                    priority
+                    unoptimized
+                  />
+                </div>
+                <p className="text-white font-semibold text-lg">Choose your role to continue</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedRole("teacher")
+                  setEntryStep("auth")
+                }}
+                className="w-full rounded-2xl border border-white/40 bg-white/15 px-4 py-6 text-left text-white backdrop-blur-md transition hover:bg-white/25"
+              >
+                <div className="text-3xl mb-2">🧑‍🏫</div>
+                <div className="text-xl font-bold">I am a Teacher</div>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedRole("student")
+                  setEntryStep("auth")
+                }}
+                className="w-full rounded-2xl border border-white/40 bg-white/15 px-4 py-6 text-left text-white backdrop-blur-md transition hover:bg-white/25"
+              >
+                <div className="text-3xl mb-2">🧑‍🎓</div>
+                <div className="text-xl font-bold">I am a Student</div>
+              </button>
             </div>
-            <p className="text-white font-semibold whitespace-nowrap text-base md:text-lg">
-              {mode === "login" ? "Login to start your creative journey" : "Register to begin your creative journey"}
-            </p>
-          </div>
+          ) : (
+            <>
+              <div className="text-center mb-4">
+                <div className="mb-2 mt-4 flex justify-center">
+                  <Image
+                    src="/logo.gif"
+                    alt="CWrite Logo"
+                    width={220}
+                    height={220}
+                    className="object-contain"
+                    priority
+                    unoptimized
+                  />
+                </div>
+                <p className="text-white font-semibold text-base md:text-lg">
+                  {selectedRole === "teacher" ? "Teacher Portal" : "Student Portal"} ·{" "}
+                  {mode === "login" ? "Login to start your creative journey" : "Register to begin your creative journey"}
+                </p>
+              </div>
 
-          <div className="space-y-5">
-            {mode === "login" ? (
-              <>
+              <div className="space-y-5">
+                {mode === "login" ? (
+                  <>
                 <div>
                   <label className="block text-sm font-bold mb-2 text-white">Username</label>
                   <Input
@@ -201,9 +245,9 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
                 >
                   Create a new account
                 </button>
-              </>
-            ) : (
-              <>
+                  </>
+                ) : (
+                  <>
                 <div>
                   <label className="block text-sm font-bold mb-2 text-white">Email</label>
                   <Input
@@ -259,9 +303,18 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
                 >
                   Back to login
                 </button>
-              </>
-            )}
-          </div>
+                  </>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setEntryStep("role")}
+                  className="w-full rounded-xl border border-white/30 bg-white/10 py-2.5 text-xs font-semibold text-white hover:bg-white/20"
+                >
+                  ← Back to role selection
+                </button>
+              </div>
+            </>
+          )}
         </SpotlightCard>
       </div>
     </div>
