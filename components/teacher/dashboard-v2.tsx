@@ -19,6 +19,7 @@ interface DashboardData {
   metrics: { registeredUsers: number; activeUsers: number; totalArticles: number; totalApiCalls: number }
   workDistribution: { stories: number; reviews: number; letters: number; dramas: number; poetries: number }
   trends: {
+    dailyRegistrations: Array<{ date: string; count: number }>
     dailyTokenUsage: Array<{ date: string; tokens: number }>
     hourlyTokenPeaks: Array<{ hour: string; tokens: number }>
   }
@@ -61,6 +62,9 @@ export default function DashboardV2({ user, onBack }: DashboardProps) {
   const [selected, setSelected] = useState<string | null>(null)
   const [detail, setDetail] = useState<UserDetail | null>(null)
   const [summary, setSummary] = useState("")
+  const [loadingDashboard, setLoadingDashboard] = useState(true)
+  const [loadingDetail, setLoadingDetail] = useState(false)
+  const [loadingSummary, setLoadingSummary] = useState(false)
   const [panel, setPanel] = useState<"writings" | "api">("writings")
   const [openWriting, setOpenWriting] = useState<string | null>(null)
   const [openLog, setOpenLog] = useState<string | null>(null)
@@ -83,30 +87,56 @@ export default function DashboardV2({ user, onBack }: DashboardProps) {
   }, [selected])
 
   async function refresh() {
-    const res = await fetch("/api/teacher/dashboard", { cache: "no-store" })
-    if (!res.ok) return
-    const json = (await res.json()) as DashboardData
-    setData(json)
-    if (!selected && json.classGroups[0]?.users[0]) setSelected(json.classGroups[0].users[0].username)
+    setLoadingDashboard(true)
+    try {
+      const res = await fetch("/api/teacher/dashboard", { cache: "no-store" })
+      if (!res.ok) {
+        toast.error("Failed to load dashboard data.")
+        return
+      }
+      const json = (await res.json()) as DashboardData
+      setData(json)
+      if (!selected && json.classGroups[0]?.users[0]) setSelected(json.classGroups[0].users[0].username)
+    } finally {
+      setLoadingDashboard(false)
+    }
   }
 
   async function loadStudent(username: string) {
-    const res = await fetch(`/api/teacher/dashboard/user/${encodeURIComponent(username)}`, { cache: "no-store" })
-    if (!res.ok) return
-    setDetail((await res.json()) as UserDetail)
+    setLoadingDetail(true)
+    setDetail(null)
+    setPanel("writings")
     setOpenWriting(null)
     setOpenLog(null)
-    setPanel("writings")
+    try {
+      const res = await fetch(`/api/teacher/dashboard/user/${encodeURIComponent(username)}`, { cache: "no-store" })
+      if (!res.ok) {
+        toast.error(`Failed to load ${username}'s records.`)
+        return
+      }
+      setDetail((await res.json()) as UserDetail)
+    } finally {
+      setLoadingDetail(false)
+    }
   }
 
   async function loadSummary(username: string) {
-    const res = await fetch("/api/teacher/dashboard/ai-summary", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username }),
-    })
-    if (!res.ok) return
-    setSummary(((await res.json()) as { summary: string }).summary)
+    setLoadingSummary(true)
+    setSummary("")
+    try {
+      const res = await fetch("/api/teacher/dashboard/ai-summary", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username }),
+      })
+      if (!res.ok) {
+        setSummary("AI diagnosis is temporarily unavailable.")
+        return
+      }
+      setSummary(((await res.json()) as { summary: string }).summary)
+    } finally {
+      setLoadingSummary(false)
+    }
   }
 
   const pieData = useMemo(() => {
@@ -119,6 +149,11 @@ export default function DashboardV2({ user, onBack }: DashboardProps) {
       { name: "Poetry", value: data.workDistribution.poetries },
     ].filter((x) => x.value > 0)
   }, [data])
+
+  const registrationChartData = useMemo(
+    () => (data?.trends.dailyRegistrations ?? []).map((item) => ({ ...item, date: toDateLabel(item.date) })),
+    [data],
+  )
 
   async function saveCorrection(w: UserDetail["writings"][number], annotationId: string) {
     const item = (annotations[w.id] ?? []).find((annotation) => annotation.id === annotationId)
@@ -199,6 +234,7 @@ export default function DashboardV2({ user, onBack }: DashboardProps) {
   }
 
   const users = data?.classGroups[0]?.users ?? []
+  const maxWorks = Math.max(...users.map((item) => item.totalWorks), 1)
 
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top,#dbeafe_0%,#eef2ff_35%,#f8fafc_75%)] pt-32 pb-10 px-4">
@@ -212,14 +248,25 @@ export default function DashboardV2({ user, onBack }: DashboardProps) {
             </div>
           </CardHeader>
           <CardContent className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-            <Stat label="Registered Users" value={data?.metrics.registeredUsers ?? 0} />
-            <Stat label="Active Users (24h)" value={data?.metrics.activeUsers ?? 0} />
-            <Stat label="Articles Collected" value={data?.metrics.totalArticles ?? 0} />
-            <Stat label="API Interactions" value={data?.metrics.totalApiCalls ?? 0} />
+            <Stat label="Registered Users" value={data?.metrics.registeredUsers ?? 0} muted={loadingDashboard} />
+            <Stat label="Active Users (24h)" value={data?.metrics.activeUsers ?? 0} muted={loadingDashboard} />
+            <Stat label="Articles Collected" value={data?.metrics.totalArticles ?? 0} muted={loadingDashboard} />
+            <Stat label="API Interactions" value={data?.metrics.totalApiCalls ?? 0} muted={loadingDashboard} />
           </CardContent>
         </Card>
 
-        <div className="grid gap-4 xl:grid-cols-2">
+        <div className="grid gap-4 xl:grid-cols-3">
+          <ChartCard title="Daily Registrations">
+            <ResponsiveContainer width="100%" height={260}>
+              <BarChart data={registrationChartData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="date" />
+                <YAxis allowDecimals={false} />
+                <Tooltip />
+                <Bar dataKey="count" fill="#4f46e5" radius={[6, 6, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </ChartCard>
           <ChartCard title="Article Type Composition">
             <ResponsiveContainer width="100%" height={260}>
               <PieChart>
@@ -255,24 +302,43 @@ export default function DashboardV2({ user, onBack }: DashboardProps) {
 
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-8">
               {users.map((u) => (
-                <button key={u.id} className={`rounded-lg border p-2 ${selected === u.username ? "bg-indigo-50 border-indigo-400" : "bg-white"}`} onClick={() => setSelected(u.username)}>
+                <button
+                  key={u.id}
+                  className={`rounded-lg border p-2 transition ${selected === u.username ? "border-indigo-500 ring-2 ring-indigo-200" : "border-slate-200"} ${
+                    getUserHeatClass(u.totalWorks, maxWorks)
+                  }`}
+                  onClick={() => setSelected(u.username)}
+                  type="button"
+                >
                   <Avatar className="mx-auto mb-2 h-11 w-11">{u.avatarUrl ? <AvatarImage src={u.avatarUrl} alt={u.username} /> : null}<AvatarFallback>{u.avatarEmoji ?? u.username[0].toUpperCase()}</AvatarFallback></Avatar>
                   <p className="truncate text-xs">{u.username}</p>
+                  <p className="mt-1 text-[10px] text-slate-500">{u.totalWorks} works</p>
                 </button>
               ))}
             </div>
 
-            {detail && (
+            {(loadingDetail || detail) && (
               <div className="space-y-3 rounded-xl border bg-white/80 p-3">
-                <div className="flex items-center justify-between">
-                  <p className="text-sm font-semibold">{detail.user.username} | grade {detail.user.grade ?? "N/A"} | works {detail.user.totalWorks}</p>
-                  <Button variant="outline" size="sm" onClick={() => void loadSummary(detail.user.username)}><Bot className="mr-2 h-4 w-4" />Refresh Summary</Button>
-                </div>
-                <Card className="border-indigo-100 bg-indigo-50/70"><CardContent className="pt-4"><p className="whitespace-pre-wrap text-sm">{summary || "Loading summary..."}</p></CardContent></Card>
-                <div className="flex gap-2">
-                  <Button variant={panel === "writings" ? "default" : "outline"} onClick={() => setPanel("writings")}>Writings</Button>
-                  <Button variant={panel === "api" ? "default" : "outline"} onClick={() => setPanel("api")}>AI Interactions</Button>
-                </div>
+                {loadingDetail || !detail ? (
+                  <div className="py-10 text-center text-sm text-slate-500">Loading student records...</div>
+                ) : (
+                  <>
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-semibold">{detail.user.username} | grade {detail.user.grade ?? "N/A"} | works {detail.user.totalWorks}</p>
+                      <Button variant="outline" size="sm" onClick={() => void loadSummary(detail.user.username)}><Bot className="mr-2 h-4 w-4" />Refresh Summary</Button>
+                    </div>
+                    <Card className="border-indigo-100 bg-indigo-50/70">
+                      <CardContent className="pt-4">
+                        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-indigo-500">AI Diagnosis</p>
+                        <p className="whitespace-pre-wrap text-sm">
+                          {loadingSummary ? "AI diagnosis is generating, please wait..." : summary || "No summary available yet."}
+                        </p>
+                      </CardContent>
+                    </Card>
+                    <div className="flex gap-2">
+                      <Button type="button" variant={panel === "writings" ? "default" : "outline"} onClick={() => setPanel("writings")}>Writings</Button>
+                      <Button type="button" variant={panel === "api" ? "default" : "outline"} onClick={() => setPanel("api")}>AI Interactions</Button>
+                    </div>
 
                 {panel === "writings" && detail.writings.map((w) => {
                   const open = openWriting === w.id
@@ -281,7 +347,7 @@ export default function DashboardV2({ user, onBack }: DashboardProps) {
                   return (
                     <Card key={w.id}>
                       <CardHeader className="py-3">
-                        <button className="flex w-full items-center justify-between text-left" onClick={() => setOpenWriting(open ? null : w.id)}>
+                        <button type="button" className="flex w-full items-center justify-between text-left" onClick={() => setOpenWriting(open ? null : w.id)}>
                           <p className="text-sm font-medium">[{w.type.toUpperCase()}] {w.title}</p>{open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                         </button>
                       </CardHeader>
@@ -379,12 +445,17 @@ export default function DashboardV2({ user, onBack }: DashboardProps) {
                   )
                 })}
 
-                {panel === "api" && detail.apiLogs.map((log) => {
+                {panel === "api" && (
+                  detail.apiLogs.length === 0 ? (
+                    <div className="rounded-lg border border-dashed p-6 text-center text-sm text-slate-500">
+                      No AI interaction records were found for this student.
+                    </div>
+                  ) : detail.apiLogs.map((log) => {
                   const open = openLog === log.id
                   return (
                     <Card key={log.id}>
                       <CardHeader className="py-3">
-                        <button className="flex w-full items-center justify-between text-left" onClick={() => setOpenLog(open ? null : log.id)}>
+                        <button type="button" className="flex w-full items-center justify-between text-left" onClick={() => setOpenLog(open ? null : log.id)}>
                           <p className="text-sm font-medium">{log.stage} | token {log.tokenEstimate} | {new Date(log.timestamp).toLocaleString("en-US")}</p>{open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                         </button>
                       </CardHeader>
@@ -393,20 +464,31 @@ export default function DashboardV2({ user, onBack }: DashboardProps) {
                       </div></CardContent>}
                     </Card>
                   )
-                })}
+                }))}
+                  </>
+                )}
               </div>
             )}
           </CardContent>
         </Card>
+
       </div>
     </div>
   )
 }
 
-function Stat({ label, value }: { label: string; value: number }) {
-  return <div className="rounded-xl border bg-white/80 p-3"><p className="text-xs text-slate-600">{label}</p><p className="text-2xl font-semibold">{value.toLocaleString()}</p></div>
+function Stat({ label, value, muted = false }: { label: string; value: number; muted?: boolean }) {
+  return <div className={`rounded-xl border bg-white/80 p-3 ${muted ? "opacity-70" : ""}`}><p className="text-xs text-slate-600">{label}</p><p className="text-2xl font-semibold">{value.toLocaleString()}</p></div>
 }
 
 function ChartCard({ title, children }: { title: string; children: ReactNode }) {
   return <Card className="border-white/50 bg-white/65 backdrop-blur-xl"><CardHeader><CardTitle className="text-base">{title}</CardTitle></CardHeader><CardContent>{children}</CardContent></Card>
+}
+
+function getUserHeatClass(totalWorks: number, maxWorks: number) {
+  const ratio = maxWorks <= 0 ? 0 : totalWorks / maxWorks
+  if (ratio >= 0.75) return "bg-indigo-200 hover:bg-indigo-300"
+  if (ratio >= 0.5) return "bg-indigo-100 hover:bg-indigo-200"
+  if (ratio >= 0.25) return "bg-slate-100 hover:bg-indigo-100"
+  return "bg-white hover:bg-slate-100"
 }
