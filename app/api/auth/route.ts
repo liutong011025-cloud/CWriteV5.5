@@ -118,7 +118,23 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // 2) 臨時測試帳號：student / test123（AI mode，不查資料庫）
+    // 2) 老師帳號兜底：Nicole / yinyin2948（不查資料庫，避免 DB 連線故障時無法進入）
+    if (username === "Nicole" && password === "yinyin2948") {
+      return NextResponse.json(
+        {
+          success: true,
+          user: {
+            username: "Nicole",
+            role: "teacher" as const,
+            noAi: false,
+            isCopywriter: false,
+          },
+        },
+        { status: 200 },
+      )
+    }
+
+    // 3) 臨時測試帳號：student / test123（AI mode，不查資料庫）
     if (username === "student" && password === "test123") {
       return NextResponse.json(
         {
@@ -134,7 +150,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // 2) 其他帳號：需要資料庫
+    // 4) 其他帳號：需要資料庫
     if (!isDatabaseUrlConfigured()) {
       console.error("Database URL is not configured")
       return NextResponse.json(
