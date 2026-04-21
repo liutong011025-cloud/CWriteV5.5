@@ -75,8 +75,9 @@ export default function LetterGame({
   const shortEvaluation = (() => {
     const content = aiEvaluation.trim().replace(/\s+/g, " ")
     if (!content) return ""
-    const firstSentence = content.match(/^[^.!?。！？]{1,120}[.!?。！？]?/)?.[0] ?? content
-    return firstSentence.length > 120 ? `${firstSentence.slice(0, 120)}...` : firstSentence
+    const sentences = content.match(/[^.!?。！？]+[.!?。！？]?/g) || [content]
+    const preview = sentences.slice(0, 2).join(" ").trim()
+    return preview.length > 220 ? `${preview.slice(0, 220)}...` : preview
   })()
 
   useEffect(() => {
@@ -224,6 +225,12 @@ export default function LetterGame({
     updateWritingMoodFromText(text)
     // 重置 canMoveNext，需要重新评估
     setCanMoveNext(false)
+    setCompletedSections(prev => {
+      if (!prev.has(currentSection)) return prev
+      const next = new Set(prev)
+      next.delete(currentSection)
+      return next
+    })
     
     // 测试功能：根据当前部分输入 test1-test5，自动标记当前 section 为完成
     const testPattern = `test${currentSection + 1}`
@@ -269,13 +276,11 @@ export default function LetterGame({
       return
     }
     
-    // 检查所有部分是否都完成了
-    const allCompleted = LETTER_SECTIONS.every((_, index) => 
-      completedSections.has(index) || sectionTexts[index]?.trim().length > 0
-    )
+    // 正式模式下每一部分都必须经过 Cagent 通过
+    const allCompleted = LETTER_SECTIONS.every((_, index) => completedSections.has(index))
     
     if (!allCompleted) {
-      toast.error("Please complete all sections before finishing! ✨")
+      toast.error("Please wait until Cagent approves every section before finishing! ✨")
       return
     }
     
@@ -287,7 +292,7 @@ export default function LetterGame({
     const text = sectionTexts[index] || ""
     const testPattern = `test${index + 1}`
     if (text.toLowerCase().trim() === testPattern.toLowerCase()) return true
-    return text.trim().length > 0
+    return completedSections.has(index)
   })
 
   const progress = (completedSections.size / LETTER_SECTIONS.length) * 100
@@ -495,6 +500,44 @@ export default function LetterGame({
 
           {/* 右侧：提示和照片 */}
           <div className="lg:col-span-1 space-y-4">
+            {/* Cagent 反馈卡片 */}
+            <div className="bg-gradient-to-br from-purple-50 via-pink-50 to-rose-50 rounded-3xl p-5 border-4 border-purple-300 shadow-2xl backdrop-blur-sm relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-24 h-24 bg-purple-200 rounded-full mix-blend-multiply filter blur-2xl opacity-30"></div>
+              <div className="absolute bottom-0 left-0 w-20 h-20 bg-pink-200 rounded-full mix-blend-multiply filter blur-2xl opacity-30"></div>
+
+              <div className="relative z-10">
+                <h4 className="font-bold text-purple-700 mb-3 flex items-center gap-2 text-lg">
+                  <span className="text-2xl animate-pulse">✨</span>
+                  <span>Cagent Feedback</span>
+                </h4>
+                {isLoadingEvaluation ? (
+                  <div className="bg-white/90 rounded-xl p-4 border-3 border-purple-200 shadow-lg">
+                    <p className="text-sm text-gray-600">Cagent is reading your letter...</p>
+                  </div>
+                ) : aiEvaluation ? (
+                  <div className="bg-white/90 rounded-xl p-4 border-3 border-purple-200 shadow-lg">
+                    <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap" style={{ fontFamily: 'var(--font-comic-neue)' }}>
+                      {aiEvaluation}
+                    </p>
+                    {completedSections.has(currentSection) && (
+                      <div className="mt-3 p-3 bg-gradient-to-r from-green-100 to-emerald-100 border-3 border-green-400 rounded-lg">
+                        <p className="text-sm font-bold text-green-700 flex items-center gap-2">
+                          <span className="text-lg">✓</span>
+                          This section is approved. You can move on!
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="bg-white/70 rounded-xl p-4 border-2 border-purple-200">
+                    <p className="text-sm text-gray-600 leading-relaxed">
+                      {guidance || "Start writing this section and Cagent will give fuller feedback before you move on."}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+
             {/* 提示卡片 - 放在照片上面 */}
             <div className="bg-gradient-to-br from-yellow-50 to-orange-50 rounded-xl p-4 border-2 border-yellow-300 shadow-lg">
               <h4 className="font-bold text-yellow-800 mb-2 flex items-center gap-2">
@@ -508,6 +551,11 @@ export default function LetterGame({
                 {LETTER_SECTIONS[currentSection].name === "Closing" && "End with warm wishes! Say something nice to finish. 💝"}
                 {LETTER_SECTIONS[currentSection].name === "Signature" && "Sign your name! Add your name at the end. ✍️"}
               </p>
+              {guidance && (
+                <p className="mt-3 text-xs leading-relaxed text-yellow-800">
+                  {guidance}
+                </p>
+              )}
             </div>
 
             {/* 收信人读信照片 */}
