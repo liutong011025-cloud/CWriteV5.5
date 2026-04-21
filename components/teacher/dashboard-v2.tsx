@@ -30,6 +30,8 @@ interface DashboardData {
   }>
 }
 
+type DashboardUserListItem = DashboardData["classGroups"][number]["users"][number]
+
 interface UserDetail {
   user: { username: string; grade: string | null; totalWorks: number; latestActiveAt: string | null }
   writings: Array<{ id: string; type: string; title: string; content: string; updatedAt: string; interactionId: string | null }>
@@ -79,6 +81,13 @@ export default function DashboardV2({ user, onBack }: DashboardProps) {
   const [classFileName, setClassFileName] = useState("")
   const [classPreview, setClassPreview] = useState<string[]>([])
   const fileRef = useRef<HTMLInputElement | null>(null)
+  const selectedRef = useRef<string | null>(null)
+  const detailRequestRef = useRef(0)
+  const summaryRequestRef = useRef(0)
+
+  useEffect(() => {
+    selectedRef.current = selected
+  }, [selected])
 
   useEffect(() => {
     void refresh()
@@ -102,13 +111,18 @@ export default function DashboardV2({ user, onBack }: DashboardProps) {
       }
       const json = (await res.json()) as DashboardData
       setData(json)
-      if (!selected && json.classGroups[0]?.users[0]) setSelected(json.classGroups[0].users[0].username)
+      const availableUsers: DashboardUserListItem[] = json.classGroups[0]?.users ?? []
+      setSelected((current: string | null) => {
+        if (current && availableUsers.some((item: DashboardUserListItem) => item.username === current)) return current
+        return availableUsers[0]?.username ?? null
+      })
     } finally {
       setLoadingDashboard(false)
     }
   }
 
   async function loadStudent(username: string) {
+    const requestId = ++detailRequestRef.current
     setLoadingDetail(true)
     setDetail(null)
     setPanel("writings")
@@ -120,13 +134,18 @@ export default function DashboardV2({ user, onBack }: DashboardProps) {
         toast.error(`Failed to load ${username}'s records.`)
         return
       }
-      setDetail((await res.json()) as UserDetail)
+      const json = (await res.json()) as UserDetail
+      if (detailRequestRef.current !== requestId || selectedRef.current !== username) return
+      setDetail(json)
     } finally {
-      setLoadingDetail(false)
+      if (detailRequestRef.current === requestId) {
+        setLoadingDetail(false)
+      }
     }
   }
 
   async function loadSummary(username: string) {
+    const requestId = ++summaryRequestRef.current
     setLoadingSummary(true)
     setSummary("")
     try {
@@ -136,12 +155,18 @@ export default function DashboardV2({ user, onBack }: DashboardProps) {
         body: JSON.stringify({ username }),
       })
       if (!res.ok) {
-        setSummary("AI diagnosis is temporarily unavailable.")
+        if (summaryRequestRef.current === requestId && selectedRef.current === username) {
+          setSummary("AI diagnosis is temporarily unavailable.")
+        }
         return
       }
-      setSummary(((await res.json()) as { summary: string }).summary)
+      const json = (await res.json()) as { summary: string }
+      if (summaryRequestRef.current !== requestId || selectedRef.current !== username) return
+      setSummary(json.summary)
     } finally {
-      setLoadingSummary(false)
+      if (summaryRequestRef.current === requestId) {
+        setLoadingSummary(false)
+      }
     }
   }
 
