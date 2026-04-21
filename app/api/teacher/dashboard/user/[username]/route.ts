@@ -81,7 +81,10 @@ export async function GET(_request: NextRequest, { params }: Params) {
       ...user.stories.map((item: (typeof user.stories)[number]) => ({
         id: item.id,
         type: "story" as const,
-        title: "Story",
+        title:
+          item.content.trim().length > 0
+            ? `Story - ${item.content.replace(/\s+/g, " ").slice(0, 80)}`
+            : `Story - ${item.createdAt.toISOString().slice(0, 10)}`,
         content: item.content ?? "",
         createdAt: item.createdAt,
         updatedAt: item.updatedAt,

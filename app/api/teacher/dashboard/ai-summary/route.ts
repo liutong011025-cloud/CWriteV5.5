@@ -96,14 +96,8 @@ Analyze the student's full writing portfolio and provide:
 3) 2-3 concrete strengths,
 4) 2 specific growth priorities with practical classroom guidance.
 
-Output as clearly structured markdown:
-- Heading: "## Student Writing Insight"
-- Four subsections with short bullet points:
-  - "### Preferences"
-  - "### Progress"
-  - "### Strengths"
-  - "### Next Actions"
-Keep total length around 160-240 words, professional and evidence-based.
+Output in one coherent paragraph (170-240 words), professional and evidence-based.
+It must closely reflect this student's actual writing with concrete evidence from the corpus, including at least two short quoted phrases from different writings.
 
 Writing corpus:
 ${articlePayload}
