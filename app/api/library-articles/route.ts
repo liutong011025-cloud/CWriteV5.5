@@ -51,18 +51,7 @@ export async function GET(request: NextRequest) {
     const rawLimit = searchParams.get("limit")
     const requestAll = searchParams.get("all") === "1"
 
-    let user: { id: string } | null = null
-    if (userId) {
-      user = await prisma.user.findUnique({
-        where: { username: userId },
-        select: { id: true },
-      })
-      if (!user) {
-        return NextResponse.json({ articles: [] })
-      }
-    }
-
-    const isSelfScope = !!user
+    const isSelfScope = !!userId
     const defaultLimit = isSelfScope ? SELF_DEFAULT_LIMIT : GLOBAL_DEFAULT_LIMIT
     const maxLimit = isSelfScope ? SELF_MAX_LIMIT : GLOBAL_MAX_LIMIT
     let limit = defaultLimit
@@ -73,10 +62,8 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    const where = user ? { userId: user.id } : {}
-
     const interactions = await prisma.interaction.findMany({
-      where,
+      where: userId ? { user: { username: userId } } : undefined,
       orderBy: { timestamp: "desc" },
       take: requestAll ? undefined : limit,
       select: {
@@ -85,74 +72,54 @@ export async function GET(request: NextRequest) {
         timestamp: true,
         output: true,
         user: { select: { username: true } },
+        stories: {
+          select: {
+            content: true,
+            character: true,
+          },
+        },
+        reviews: {
+          select: {
+            content: true,
+            reviewType: true,
+            bookTitle: true,
+            bookCoverUrl: true,
+          },
+        },
+        letters: {
+          select: {
+            content: true,
+            recipient: true,
+            occasion: true,
+          },
+        },
+        drama: {
+          select: {
+            content: true,
+            title: true,
+            summary: true,
+          },
+        },
+        poetry: {
+          select: {
+            content: true,
+            form: true,
+            topic: true,
+          },
+        },
       },
     })
 
-    const storyIds = interactions.map((i) => i.id)
-    if (storyIds.length === 0) {
+    if (interactions.length === 0) {
       return NextResponse.json({ articles: [] })
     }
 
-    const [stories, reviews, letters, dramas, poetries] = await Promise.all([
-      prisma.story.findMany({
-        where: { interactionId: { in: storyIds } },
-        select: {
-          interactionId: true,
-          content: true,
-          character: true,
-        },
-      }),
-      prisma.review.findMany({
-        where: { interactionId: { in: storyIds } },
-        select: {
-          interactionId: true,
-          content: true,
-          reviewType: true,
-          bookTitle: true,
-          bookCoverUrl: true,
-        },
-      }),
-      prisma.letter.findMany({
-        where: { interactionId: { in: storyIds } },
-        select: {
-          interactionId: true,
-          content: true,
-          recipient: true,
-          occasion: true,
-        },
-      }),
-      prisma.drama.findMany({
-        where: { interactionId: { in: storyIds } },
-        select: {
-          interactionId: true,
-          content: true,
-          title: true,
-          summary: true,
-        },
-      }),
-      prisma.poetry.findMany({
-        where: { interactionId: { in: storyIds } },
-        select: {
-          interactionId: true,
-          content: true,
-          form: true,
-          topic: true,
-        },
-      }),
-    ])
-
-    const storyMap = new Map(stories.map((s) => [s.interactionId!, s]))
-    const reviewMap = new Map(reviews.map((r) => [r.interactionId!, r]))
-    const letterMap = new Map(letters.map((l) => [l.interactionId!, l]))
-    const dramaMap = new Map(dramas.map((d) => [d.interactionId!, d]))
-    const poetryMap = new Map(poetries.map((p) => [p.interactionId!, p]))
-
     const formattedInteractions = interactions.map((interaction) => {
-      const story = storyMap.get(interaction.id)
-      const review = reviewMap.get(interaction.id)
-      const letter = letterMap.get(interaction.id)
-      const drama = dramaMap.get(interaction.id)
-      const poetry = poetryMap.get(interaction.id)
+      const story = interaction.stories
+      const review = interaction.reviews
+      const letter = interaction.letters
+      const drama = interaction.drama
+      const poetry = interaction.poetry
       const out = interaction.output
 
       const reviewFromOut = mergeFromOutput(out, {
