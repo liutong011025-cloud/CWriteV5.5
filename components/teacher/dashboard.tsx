@@ -1,32 +1,9 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useState } from "react"
-import {
-  Activity,
-  BarChart3,
-  BookOpen,
-  Bot,
-  FileText,
-  LogOut,
-  MessageSquare,
-  RefreshCw,
-  Sparkles,
-  Users,
-} from "lucide-react"
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Line,
-  LineChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts"
+import { useCallback, useEffect, useMemo, useState, type ChangeEvent } from "react"
+import { Cpu, FolderTree, LogOut, Monitor, RefreshCw, Terminal, User } from "lucide-react"
+import { Bar, BarChart, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
 import { Button } from "@/ui/button"
-import { Avatar, AvatarFallback, AvatarImage } from "@/ui/avatar"
-import { Card, CardContent, CardHeader, CardTitle } from "@/ui/card"
 import { Input } from "@/ui/input"
 import { Textarea } from "@/ui/textarea"
 import { toast } from "sonner"
@@ -41,13 +18,6 @@ interface DashboardProps {
   onBack: () => void
 }
 
-interface DashboardMetrics {
-  registeredUsers: number
-  activeUsers: number
-  totalArticles: number
-  totalApiCalls: number
-}
-
 interface ClassUser {
   id: string
   username: string
@@ -59,26 +29,19 @@ interface ClassUser {
   latestActiveAt: string | null
 }
 
-interface ClassGroup {
-  id: string
-  name: string
-  users: ClassUser[]
-}
-
 interface DashboardApiData {
-  metrics: DashboardMetrics
-  workDistribution: {
-    stories: number
-    reviews: number
-    letters: number
-    dramas: number
-    poetries: number
+  metrics: {
+    registeredUsers: number
+    activeUsers: number
+    totalArticles: number
+    totalApiCalls: number
   }
-  trends: {
-    dailyRegistrations: Array<{ date: string; count: number }>
-    dailyApiCalls: Array<{ date: string; count: number }>
+  analytics: {
+    articleTypePie: Array<{ name: string; value: number }>
+    tokenUsageDaily: Array<{ date: string; tokens: number }>
+    tokenPeakHourly: Array<{ time: string; tokens: number }>
   }
-  classGroups: ClassGroup[]
+  classGroups: Array<{ id: string; name: string; users: ClassUser[] }>
   updatedAt: string
 }
 
@@ -105,478 +68,534 @@ interface UserDetailData {
   apiLogs: ApiLogItem[]
 }
 
-type DraftMap = Record<string, { quote: string; comment: string; saving: boolean }>
+type PanelType = "writings" | "api"
 
-function getInitial(username: string) {
-  return username.trim().charAt(0).toUpperCase() || "U"
-}
-
-function formatTime(time: string | null) {
-  if (!time) return "No activity yet"
-  return new Date(time).toLocaleString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
+function formatTime(value: string | null) {
+  if (!value) return "-"
+  return new Date(value).toLocaleString("en-US", {
+    year: "2-digit",
+    month: "2-digit",
+    day: "2-digit",
     hour: "2-digit",
     minute: "2-digit",
   })
 }
 
-function shorten(text: string, limit = 420) {
-  if (text.length <= limit) return text
-  return `${text.slice(0, limit)}...`
+function sizeOfText(value: string) {
+  return `${new Blob([value]).size} B`
+}
+
+function splitSentences(value: string): string[] {
+  const parts = value.match(/[^.!?\n]+[.!?]?|\n+/g) ?? []
+  return parts.filter((part) => part.length > 0)
+}
+
+function parseSummarySections(text: string) {
+  if (!text.trim()) return []
+  const lines = text.split("\n")
+  const sections: Array<{ title: string; points: string[] }> = []
+  let current: { title: string; points: string[] } | null = null
+  lines.forEach((line) => {
+    const trimmed = line.trim()
+    if (!trimmed) return
+    const title = trimmed.replace(/^#{1,4}\s*/, "")
+    if (/^#{1,4}\s/.test(trimmed)) {
+      current = { title, points: [] }
+      sections.push(current)
+      return
+    }
+    const point = trimmed.replace(/^[-*]\s*/, "")
+    if (!current) {
+      current = { title: "Insight", points: [] }
+      sections.push(current)
+    }
+    current.points.push(point)
+  })
+  return sections
 }
 
 export default function Dashboard({ user, onBack }: DashboardProps) {
   const [dashboardData, setDashboardData] = useState<DashboardApiData | null>(null)
-  const [loadingDashboard, setLoadingDashboard] = useState(true)
-
   const [activeClassId, setActiveClassId] = useState("class1")
-  const [selectedUsername, setSelectedUsername] = useState<string | null>(null)
+  const [activeUsername, setActiveUsername] = useState<string | null>(null)
+  const [activePanel, setActivePanel] = useState<PanelType>("writings")
 
   const [userDetail, setUserDetail] = useState<UserDetailData | null>(null)
-  const [loadingUserDetail, setLoadingUserDetail] = useState(false)
+  const [activeWritingId, setActiveWritingId] = useState<string | null>(null)
+  const [aiSummary, setAiSummary] = useState("")
 
-  const [aiSummary, setAiSummary] = useState<string>("")
-  const [loadingAiSummary, setLoadingAiSummary] = useState(false)
+  const [selectedSentence, setSelectedSentence] = useState("")
+  const [revisedSentence, setRevisedSentence] = useState("")
+  const [teacherComment, setTeacherComment] = useState("")
 
-  const [activePanel, setActivePanel] = useState<"writings" | "api">("writings")
-  const [drafts, setDrafts] = useState<DraftMap>({})
+  const [draftByWritingId, setDraftByWritingId] = useState<Record<string, string>>({})
+  const [loading, setLoading] = useState(true)
+  const [loadingDetail, setLoadingDetail] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [uploadedClassFile, setUploadedClassFile] = useState<string | null>(null)
 
   const fetchDashboard = useCallback(async () => {
-    try {
-      const res = await fetch("/api/teacher/dashboard", { cache: "no-store" })
-      if (!res.ok) throw new Error("Failed to fetch teacher dashboard")
-      const data: DashboardApiData = await res.json()
-      setDashboardData(data)
-
-      const class1 = data.classGroups.find((group) => group.id === "class1")
-      if (class1 && class1.users.length > 0 && !selectedUsername) {
-        setSelectedUsername(class1.users[0].username)
-      }
-    } catch (error) {
-      console.error(error)
-      toast.error("Unable to load realtime dashboard data.")
-    } finally {
-      setLoadingDashboard(false)
-    }
-  }, [selectedUsername])
+    const res = await fetch("/api/teacher/dashboard", { cache: "no-store" })
+    if (!res.ok) throw new Error("dashboard fetch failed")
+    return (await res.json()) as DashboardApiData
+  }, [])
 
   const fetchUserDetail = useCallback(async (username: string) => {
-    setLoadingUserDetail(true)
-    setUserDetail(null)
-    try {
-      const res = await fetch(`/api/teacher/dashboard/user/${encodeURIComponent(username)}`, {
-        cache: "no-store",
-      })
-      if (!res.ok) throw new Error("Failed to fetch user detail")
-      const data: UserDetailData = await res.json()
-      setUserDetail(data)
-      setActivePanel("writings")
-      setDrafts({})
-    } catch (error) {
-      console.error(error)
-      toast.error("Unable to load student details.")
-    } finally {
-      setLoadingUserDetail(false)
-    }
+    const res = await fetch(`/api/teacher/dashboard/user/${encodeURIComponent(username)}`, {
+      cache: "no-store",
+    })
+    if (!res.ok) throw new Error("user detail fetch failed")
+    return (await res.json()) as UserDetailData
   }, [])
 
   const fetchAiSummary = useCallback(async (username: string) => {
-    setLoadingAiSummary(true)
-    try {
-      const res = await fetch("/api/teacher/dashboard/ai-summary", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username }),
-      })
-      if (!res.ok) throw new Error("Failed to generate AI summary")
-      const data = (await res.json()) as { summary: string }
-      setAiSummary(data.summary)
-    } catch (error) {
-      console.error(error)
-      toast.error("DeepSeek summary is unavailable now.")
-      setAiSummary("Summary temporarily unavailable. Please retry.")
-    } finally {
-      setLoadingAiSummary(false)
-    }
+    const res = await fetch("/api/teacher/dashboard/ai-summary", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username }),
+    })
+    if (!res.ok) throw new Error("summary fetch failed")
+    const data = (await res.json()) as { summary: string }
+    return data.summary
   }, [])
 
   useEffect(() => {
-    fetchDashboard()
-    const timer = window.setInterval(fetchDashboard, 15000)
-    return () => window.clearInterval(timer)
+    let alive = true
+    ;(async () => {
+      try {
+        const data = await fetchDashboard()
+        if (!alive) return
+        setDashboardData(data)
+        const firstClass = data.classGroups.find((c: { id: string }) => c.id === "class1") ?? data.classGroups[0]
+        const firstUser = firstClass?.users[0]?.username ?? null
+        setActiveClassId(firstClass?.id ?? "class1")
+        setActiveUsername(firstUser)
+      } catch (error) {
+        console.error(error)
+        toast.error("Failed to load dashboard.")
+      } finally {
+        if (alive) setLoading(false)
+      }
+    })()
+    return () => {
+      alive = false
+    }
   }, [fetchDashboard])
 
   useEffect(() => {
-    if (!selectedUsername) return
+    if (!activeUsername) return
+    let alive = true
+    setLoadingDetail(true)
     setAiSummary("")
-    void fetchUserDetail(selectedUsername)
-    void fetchAiSummary(selectedUsername)
-  }, [selectedUsername, fetchUserDetail, fetchAiSummary])
+    setActiveWritingId(null)
+    ;(async () => {
+      try {
+        const [detail, summary] = await Promise.all([fetchUserDetail(activeUsername), fetchAiSummary(activeUsername)])
+        if (!alive) return
+        setUserDetail(detail)
+        setAiSummary(summary)
+        if (detail.writings.length > 0) {
+          setActiveWritingId(null)
+          const map: Record<string, string> = {}
+          detail.writings.forEach((item: WritingItem) => {
+            map[item.id] = item.content ?? ""
+          })
+          setDraftByWritingId(map)
+        } else {
+          setDraftByWritingId({})
+        }
+        setSelectedSentence("")
+        setRevisedSentence("")
+        setTeacherComment("")
+      } catch (error) {
+        console.error(error)
+        toast.error("Failed to load user data.")
+      } finally {
+        if (alive) setLoadingDetail(false)
+      }
+    })()
+    return () => {
+      alive = false
+    }
+  }, [activeUsername, fetchAiSummary, fetchUserDetail])
 
-  const activeClassUsers = useMemo(() => {
-    return dashboardData?.classGroups.find((group) => group.id === activeClassId)?.users ?? []
-  }, [dashboardData, activeClassId])
+  const activeWriting = useMemo(() => {
+    if (!userDetail || !activeWritingId) return null
+    return userDetail.writings.find((item: WritingItem) => item.id === activeWritingId) ?? null
+  }, [userDetail, activeWritingId])
 
-  async function submitAnnotation(writing: WritingItem) {
-    const draft = drafts[writing.id]
-    const quote = draft?.quote?.trim() ?? ""
-    const comment = draft?.comment?.trim() ?? ""
+  const activeDraft = activeWriting ? draftByWritingId[activeWriting.id] ?? activeWriting.content : ""
 
-    if (!quote || !comment || !userDetail) {
-      toast.error("Please provide both a quoted sentence and your comment.")
+  const sentenceParts = useMemo(() => splitSentences(activeDraft), [activeDraft])
+  const summarySections = useMemo(() => parseSummarySections(aiSummary), [aiSummary])
+
+  function applyRevision() {
+    if (!activeWriting || !selectedSentence || !revisedSentence.trim()) {
+      toast.error("Select one sentence and write revised text.")
       return
     }
+    const current = draftByWritingId[activeWriting.id] ?? activeWriting.content
+    const index = current.indexOf(selectedSentence)
+    if (index < 0) {
+      toast.error("Selected sentence no longer exists in current text.")
+      return
+    }
+    const next = `${current.slice(0, index)}${revisedSentence}${current.slice(index + selectedSentence.length)}`
+    setDraftByWritingId((prev: Record<string, string>) => ({ ...prev, [activeWriting.id]: next }))
+    toast.success("Sentence revised in-place.")
+  }
 
-    setDrafts((prev) => ({
-      ...prev,
-      [writing.id]: { quote, comment, saving: true },
-    }))
-
+  async function sendCorrectionToBoard() {
+    if (!activeWriting || !userDetail) return
+    if (!selectedSentence.trim() || !revisedSentence.trim() || !teacherComment.trim()) {
+      toast.error("Please complete selected sentence, revised sentence, and comment.")
+      return
+    }
+    setSubmitting(true)
     try {
-      const content = `Teacher Annotation\nQuoted sentence: "${quote}"\nComment: ${comment}`
+      const content = [
+        "Sentence-level Revision",
+        `Original: "${selectedSentence}"`,
+        `Revised: "${revisedSentence}"`,
+        `Teacher Comment: ${teacherComment}`,
+      ].join("\n")
+
       const res = await fetch("/api/reviews", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          work_type: writing.type,
-          work_interaction_id: writing.interactionId,
+          work_type: activeWriting.type,
+          work_interaction_id: activeWriting.interactionId,
           author_username: userDetail.user.username,
           reviewer_username: user?.username ?? "Nicole",
           reviewer_role: "teacher",
           content,
-          work_title: writing.title,
-          work_content: writing.content,
+          work_title: activeWriting.title,
+          work_content: draftByWritingId[activeWriting.id] ?? activeWriting.content,
         }),
       })
-
-      if (!res.ok) {
-        throw new Error("Submit annotation failed")
-      }
-
-      toast.success("Annotation saved and synced to the student's writing board.")
-      setDrafts((prev) => ({
-        ...prev,
-        [writing.id]: { quote: "", comment: "", saving: false },
-      }))
+      if (!res.ok) throw new Error("submit failed")
+      toast.success("Revision note sent to student's writing board.")
     } catch (error) {
       console.error(error)
-      toast.error("Failed to save annotation.")
-      setDrafts((prev) => ({
-        ...prev,
-        [writing.id]: { quote, comment, saving: false },
-      }))
+      toast.error("Failed to save revision.")
+    } finally {
+      setSubmitting(false)
     }
   }
 
-  const workDistributionData = dashboardData
-    ? [
-        { name: "Story", value: dashboardData.workDistribution.stories },
-        { name: "Review", value: dashboardData.workDistribution.reviews },
-        { name: "Letter", value: dashboardData.workDistribution.letters },
-        { name: "Drama", value: dashboardData.workDistribution.dramas },
-        { name: "Poetry", value: dashboardData.workDistribution.poetries },
-      ]
-    : []
-
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top,#dbeafe_0%,#eef2ff_35%,#f8fafc_75%)] pt-24 pb-10 px-4">
-      <div className="mx-auto max-w-[1600px] space-y-6">
-        <div className="rounded-3xl border border-white/50 bg-white/55 p-6 shadow-xl backdrop-blur-xl">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <p className="text-sm font-semibold tracking-[0.2em] text-slate-500 uppercase">
-                Nicole Teacher Console
-              </p>
-              <h1 className="mt-2 text-4xl font-semibold text-slate-900">Academic Teacher Dashboard</h1>
-              <p className="mt-2 text-sm text-slate-600">
-                Realtime database analytics, learner files, AI insights, and sentence-level feedback.
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button variant="outline" onClick={fetchDashboard} className="bg-white/60">
-                <RefreshCw className="mr-2 h-4 w-4" />
-                Refresh
-              </Button>
-              <Button variant="outline" onClick={onBack} className="bg-white/60">
-                <LogOut className="mr-2 h-4 w-4" />
-                Logout
-              </Button>
-            </div>
+    <div className="min-h-screen bg-[#13231f] pt-32 pb-6 px-4 font-mono text-[#d9e8d8] md:pt-36">
+      <div className="mx-auto w-full max-w-[1700px] rounded-lg border-2 border-[#5c7a6d] bg-[#1a2e28] shadow-[0_0_40px_rgba(94,173,156,0.2)] overflow-hidden relative">
+        <div className="pointer-events-none absolute inset-0 bg-[repeating-linear-gradient(180deg,rgba(112,184,168,0.045)_0,rgba(112,184,168,0.045)_1px,transparent_2px,transparent_4px)]" />
+
+        <div className="relative z-10 flex items-center justify-between border-b border-[#5c7a6d] bg-[#2f4a42] px-3 py-2">
+          <div className="flex items-center gap-2 text-sm">
+            <Monitor className="h-4 w-4 text-[#78cab8]" />
+            <span>CWRITE.EXE - Teacher Desktop</span>
           </div>
-          <p className="mt-4 text-xs text-slate-500">
-            Last synced: {dashboardData ? formatTime(dashboardData.updatedAt) : "Loading..."}
-          </p>
+          <div className="flex items-center gap-2">
+            <Button size="sm" variant="outline" className="h-7 border-[#5c7a6d] bg-[#233932]" onClick={() => window.location.reload()}>
+              <RefreshCw className="h-3.5 w-3.5" />
+            </Button>
+            <Button size="sm" variant="outline" className="h-7 border-[#5c7a6d] bg-[#233932]" onClick={onBack}>
+              <LogOut className="h-3.5 w-3.5" />
+            </Button>
+          </div>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          {[
-            {
-              label: "Registered Users",
-              value: dashboardData?.metrics.registeredUsers ?? 0,
-              icon: <Users className="h-5 w-5" />,
-            },
-            {
-              label: "Active Users (24h)",
-              value: dashboardData?.metrics.activeUsers ?? 0,
-              icon: <Activity className="h-5 w-5" />,
-            },
-            {
-              label: "Articles Collected",
-              value: dashboardData?.metrics.totalArticles ?? 0,
-              icon: <BookOpen className="h-5 w-5" />,
-            },
-            {
-              label: "API Interactions",
-              value: dashboardData?.metrics.totalApiCalls ?? 0,
-              icon: <MessageSquare className="h-5 w-5" />,
-            },
-          ].map((item) => (
-            <Card key={item.label} className="border-white/50 bg-white/65 backdrop-blur-xl">
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm text-slate-600">{item.label}</CardTitle>
-                <div className="text-indigo-600">{item.icon}</div>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-semibold text-slate-900">
-                  {loadingDashboard ? "..." : item.value.toLocaleString()}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        <div className="grid gap-4 xl:grid-cols-2">
-          <Card className="border-white/50 bg-white/65 backdrop-blur-xl">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base">
-                <BarChart3 className="h-4 w-4 text-indigo-600" />
-                Registrations Trend
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={dashboardData?.trends.dailyRegistrations ?? []}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="date" tick={{ fontSize: 11 }} />
-                  <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
-                  <Tooltip />
-                  <Line type="monotone" dataKey="count" stroke="#4f46e5" strokeWidth={2.2} />
-                </LineChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-
-          <Card className="border-white/50 bg-white/65 backdrop-blur-xl">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base">
-                <FileText className="h-4 w-4 text-indigo-600" />
-                Work Type Distribution
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={workDistributionData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-                  <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
-                  <Tooltip />
-                  <Bar dataKey="value" fill="#6366f1" radius={[6, 6, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-        </div>
-
-        <Card className="border-white/50 bg-white/65 backdrop-blur-xl">
-          <CardHeader>
-            <CardTitle>Class File Manager</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center gap-2">
-              {(dashboardData?.classGroups ?? []).map((group) => (
-                <Button
-                  key={group.id}
-                  variant={group.id === activeClassId ? "default" : "outline"}
-                  onClick={() => setActiveClassId(group.id)}
-                >
-                  {group.name}
-                </Button>
-              ))}
-              <Button variant="outline" disabled>
-                Class 2
-              </Button>
-              <Button variant="outline" disabled>
-                Class 3
-              </Button>
-            </div>
-
-            <div className="rounded-2xl border border-slate-200 bg-white/70 p-3">
-              <div className="mb-3 text-sm font-semibold text-slate-600">Students in {activeClassId.toUpperCase()}</div>
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-7 xl:grid-cols-9">
-                {activeClassUsers.map((student) => (
+        <div className="relative z-10 grid min-h-[78vh] grid-cols-12">
+          <aside className="col-span-3 border-r border-[#5c7a6d] bg-[#203730] p-3">
+            <div className="mb-3 text-xs text-[#8db6ab]">Directory Tree</div>
+            <div className="space-y-1 text-sm">
+              <div className="flex items-center gap-2 text-[#89c8b6]">
+                <FolderTree className="h-4 w-4" />
+                ROOT
+              </div>
+              {(dashboardData?.classGroups ?? [{ id: "class1", name: "Class 1", users: [] as ClassUser[] }]).map((cls: { id: string; name: string; users: ClassUser[] }) => (
+                <div key={cls.id} className="ml-4 space-y-1">
                   <button
                     type="button"
-                    key={student.username}
-                    onClick={() => setSelectedUsername(student.username)}
-                    className={`rounded-xl border p-2 text-left transition ${
-                      selectedUsername === student.username
-                        ? "border-indigo-400 bg-indigo-50"
-                        : "border-slate-200 bg-white hover:border-indigo-300"
+                    onClick={() => setActiveClassId(cls.id)}
+                    className={`block w-full rounded px-2 py-1 text-left ${
+                      activeClassId === cls.id ? "bg-[#2e6359] text-[#b8f5e7]" : "hover:bg-[#2a4a42]"
                     }`}
                   >
-                    <div className="mb-2 flex justify-center">
-                      <Avatar className="h-12 w-12">
-                        {student.avatarUrl ? <AvatarImage src={student.avatarUrl} alt={student.username} /> : null}
-                        <AvatarFallback>{student.avatarEmoji ?? getInitial(student.username)}</AvatarFallback>
-                      </Avatar>
-                    </div>
-                    <p className="truncate text-center text-xs font-medium text-slate-800">{student.username}</p>
+                    ┣ {cls.name}
                   </button>
-                ))}
+                  {activeClassId === cls.id &&
+                    cls.users.map((u: ClassUser) => (
+                      <button
+                        type="button"
+                        key={u.id}
+                        onClick={() => setActiveUsername(u.username)}
+                        className={`ml-4 block w-[calc(100%-1rem)] rounded px-2 py-1 text-left ${
+                          activeUsername === u.username ? "bg-[#3b8577] text-[#d2fff4]" : "hover:bg-[#2a4a42]"
+                        }`}
+                      >
+                        ┣ {u.username}
+                      </button>
+                    ))}
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-5 border border-[#5c7a6d] bg-[#1b2e28] p-2 text-xs space-y-1">
+              <div>Registered: {dashboardData?.metrics.registeredUsers ?? 0}</div>
+              <div>Active(24h): {dashboardData?.metrics.activeUsers ?? 0}</div>
+              <div>Articles: {dashboardData?.metrics.totalArticles ?? 0}</div>
+              <div>API Calls: {dashboardData?.metrics.totalApiCalls ?? 0}</div>
+              <div>Updated: {formatTime(dashboardData?.updatedAt ?? null)}</div>
+            </div>
+
+            <div className="mt-3 border border-[#5c7a6d] bg-[#1b2e28] p-2 text-xs space-y-2">
+              <div className="font-semibold text-[#b8e8d8]">Class Roster Upload (Demo)</div>
+              <label className="block rounded border border-dashed border-[#6a9182] px-2 py-3 text-center hover:bg-[#24423a] cursor-pointer">
+                Upload Excel / CSV
+                <input
+                  type="file"
+                  className="hidden"
+                  accept=".xlsx,.xls,.csv"
+                  onChange={(event: ChangeEvent<HTMLInputElement>) => {
+                    const file = event.target.files?.[0]
+                    if (!file) return
+                    setUploadedClassFile(file.name)
+                    toast.success(`Demo upload successful: ${file.name}`)
+                  }}
+                />
+              </label>
+              <div className="text-[#96b7ac]">Current file: {uploadedClassFile ?? "None"}</div>
+            </div>
+          </aside>
+
+          <main className="col-span-9 bg-[#1a2e28] p-3">
+            <div className="mb-3 grid grid-cols-12 gap-3">
+              <div className="col-span-5 border border-[#5c7a6d] bg-[#13221d] p-3">
+                <div className="mb-2 text-xs text-[#8eb7ab]">Article Type Distribution (Pie)</div>
+                <div className="h-44">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={dashboardData?.analytics.articleTypePie ?? []}
+                        dataKey="value"
+                        nameKey="name"
+                        outerRadius={70}
+                        innerRadius={30}
+                        paddingAngle={2}
+                      >
+                        {(dashboardData?.analytics.articleTypePie ?? []).map((_: { name: string; value: number }, index: number) => (
+                          <Cell
+                            key={`pie-${index}`}
+                            fill={["#6fd4bf", "#f2b874", "#9fbf8f", "#8ec1e8", "#d7a3e5"][index % 5]}
+                          />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+              <div className="col-span-7 border border-[#5c7a6d] bg-[#13221d] p-3">
+                <div className="mb-2 text-xs text-[#8eb7ab]">Token Usage Peak (Hourly Bar)</div>
+                <div className="h-44">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={dashboardData?.analytics.tokenPeakHourly ?? []}>
+                      <XAxis dataKey="time" tick={{ fontSize: 9, fill: "#b9ddd0" }} interval={3} />
+                      <YAxis tick={{ fontSize: 9, fill: "#b9ddd0" }} />
+                      <Tooltip />
+                      <Bar dataKey="tokens" fill="#6fd4bf" radius={[2, 2, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
               </div>
             </div>
 
-            <div className="rounded-2xl border border-slate-200 bg-white/70 p-4">
-              {!selectedUsername || loadingUserDetail ? (
-                <div className="py-10 text-center text-slate-500">Loading student dossier...</div>
-              ) : !userDetail ? (
-                <div className="py-10 text-center text-slate-500">No student selected.</div>
+            <div className="mb-3 flex items-center justify-between border border-[#5c7a6d] bg-[#273f37] px-3 py-2">
+              <div className="text-sm flex items-center gap-2">
+                <User className="h-4 w-4 text-[#85d8c2]" />
+                {activeUsername ?? "-"} / {activePanel === "writings" ? "Writings" : "AI API Interactions"}
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className={`h-7 border-[#5c7a6d] ${activePanel === "writings" ? "bg-[#2f7e6e]" : "bg-[#203730]"}`}
+                  onClick={() => setActivePanel("writings")}
+                >
+                  Writings
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className={`h-7 border-[#5c7a6d] ${activePanel === "api" ? "bg-[#2f7e6e]" : "bg-[#203730]"}`}
+                  onClick={() => setActivePanel("api")}
+                >
+                  API Logs
+                </Button>
+              </div>
+            </div>
+
+            <div className="mb-3 border border-[#5c7a6d] bg-[#13221d] p-3">
+              <div className="mb-2 text-xs text-[#8eb7ab] flex items-center gap-2">
+                <Cpu className="h-3.5 w-3.5" />
+                AI Insight Summary
+              </div>
+              {loadingDetail ? (
+                <div className="max-h-44 overflow-auto whitespace-pre-wrap text-sm leading-6 text-[#d5eadc]">
+                  Loading student profile...
+                </div>
+              ) : summarySections.length === 0 ? (
+                <div className="max-h-44 overflow-auto whitespace-pre-wrap text-sm leading-6 text-[#d5eadc]">
+                  {aiSummary || "No summary."}
+                </div>
               ) : (
-                <div className="space-y-4">
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div>
-                      <h3 className="text-xl font-semibold text-slate-900">{userDetail.user.username} - Student Profile</h3>
-                      <p className="text-xs text-slate-500">
-                        Grade: {userDetail.user.grade ?? "N/A"} | Works: {userDetail.user.totalWorks} | Last active:{" "}
-                        {formatTime(userDetail.user.latestActiveAt)}
-                      </p>
+                <div className="grid grid-cols-2 gap-2">
+                  {summarySections.map((section: { title: string; points: string[] }) => (
+                    <div key={section.title} className="rounded border border-[#4c6f64] bg-[#1b3029] p-2">
+                      <div className="mb-1 text-xs font-semibold text-[#90d7c3]">{section.title}</div>
+                      <ul className="space-y-1 text-xs text-[#d5eadc]">
+                        {section.points.map((point: string) => (
+                          <li key={point}>- {point}</li>
+                        ))}
+                      </ul>
                     </div>
-                    <Button
-                      variant="outline"
-                      onClick={() => fetchAiSummary(userDetail.user.username)}
-                      disabled={loadingAiSummary}
-                    >
-                      <Sparkles className="mr-2 h-4 w-4" />
-                      Regenerate AI Summary
-                    </Button>
-                  </div>
-
-                  <Card className="border-indigo-100 bg-indigo-50/70">
-                    <CardHeader className="pb-2">
-                      <CardTitle className="flex items-center gap-2 text-base">
-                        <Bot className="h-4 w-4 text-indigo-600" />
-                        AI Academic Summary (English)
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="whitespace-pre-wrap text-sm leading-6 text-slate-700">
-                        {loadingAiSummary ? "DeepSeek is generating insights..." : aiSummary || "No summary yet."}
-                      </p>
-                    </CardContent>
-                  </Card>
-
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant={activePanel === "writings" ? "default" : "outline"}
-                      onClick={() => setActivePanel("writings")}
-                    >
-                      Writings
-                    </Button>
-                    <Button
-                      variant={activePanel === "api" ? "default" : "outline"}
-                      onClick={() => setActivePanel("api")}
-                    >
-                      AI API Interactions
-                    </Button>
-                  </div>
-
-                  {activePanel === "writings" && (
-                    <div className="space-y-3">
-                      {userDetail.writings.length === 0 ? (
-                        <div className="rounded-xl border border-dashed border-slate-300 py-8 text-center text-sm text-slate-500">
-                          This student has no submissions yet.
-                        </div>
-                      ) : (
-                        userDetail.writings.map((writing) => {
-                          const draft = drafts[writing.id] ?? { quote: "", comment: "", saving: false }
-                          return (
-                            <Card key={writing.id}>
-                              <CardHeader className="pb-2">
-                                <CardTitle className="text-base">
-                                  [{writing.type.toUpperCase()}] {writing.title}
-                                </CardTitle>
-                                <p className="text-xs text-slate-500">Updated: {formatTime(writing.updatedAt)}</p>
-                              </CardHeader>
-                              <CardContent className="space-y-3">
-                                <div className="max-h-48 overflow-auto rounded-lg border bg-slate-50 p-3 text-sm leading-6 text-slate-700">
-                                  {shorten(writing.content || "(empty content)", 3000)}
-                                </div>
-                                <Input
-                                  placeholder="Quoted sentence from this writing (for precise annotation)..."
-                                  value={draft.quote}
-                                  onChange={(event) =>
-                                    setDrafts((prev) => ({
-                                      ...prev,
-                                      [writing.id]: { ...draft, quote: event.target.value, saving: false },
-                                    }))
-                                  }
-                                />
-                                <Textarea
-                                  placeholder="Teacher comment..."
-                                  value={draft.comment}
-                                  onChange={(event) =>
-                                    setDrafts((prev) => ({
-                                      ...prev,
-                                      [writing.id]: { ...draft, comment: event.target.value, saving: false },
-                                    }))
-                                  }
-                                  className="min-h-20"
-                                />
-                                <Button disabled={draft.saving} onClick={() => submitAnnotation(writing)}>
-                                  {draft.saving ? "Saving..." : "Save Annotation to Writing Board"}
-                                </Button>
-                              </CardContent>
-                            </Card>
-                          )
-                        })
-                      )}
-                    </div>
-                  )}
-
-                  {activePanel === "api" && (
-                    <div className="space-y-3">
-                      {userDetail.apiLogs.length === 0 ? (
-                        <div className="rounded-xl border border-dashed border-slate-300 py-8 text-center text-sm text-slate-500">
-                          No API interaction records.
-                        </div>
-                      ) : (
-                        userDetail.apiLogs.map((log) => (
-                          <Card key={log.id}>
-                            <CardHeader className="pb-2">
-                              <CardTitle className="text-base">{log.stage}</CardTitle>
-                              <p className="text-xs text-slate-500">
-                                {formatTime(log.timestamp)} | API calls: {log.apiCalls.length}
-                              </p>
-                            </CardHeader>
-                            <CardContent>
-                              <div className="max-h-56 overflow-auto rounded-lg bg-slate-900 p-3 text-xs text-slate-200">
-                                <pre className="whitespace-pre-wrap">
-                                  {JSON.stringify(log.apiCalls, null, 2)}
-                                </pre>
-                              </div>
-                            </CardContent>
-                          </Card>
-                        ))
-                      )}
-                    </div>
-                  )}
+                  ))}
                 </div>
               )}
             </div>
-          </CardContent>
-        </Card>
+
+            {loading || loadingDetail ? (
+              <div className="border border-[#5c7a6d] bg-[#13221d] p-6 text-sm text-[#a5c7bd]">Loading...</div>
+            ) : activePanel === "writings" ? (
+              <div className="space-y-3">
+                <div className="border border-[#5c7a6d] bg-[#13221d]">
+                  <div className="grid grid-cols-12 border-b border-[#5c7a6d] bg-[#2a463d] px-3 py-2 text-xs text-[#bfe4d8]">
+                    <div className="col-span-5">Name</div>
+                    <div className="col-span-2">Type</div>
+                    <div className="col-span-2">Size</div>
+                    <div className="col-span-3">Modified</div>
+                  </div>
+                  <div className="max-h-52 overflow-auto">
+                    {(userDetail?.writings ?? []).map((item: WritingItem) => {
+                      const isSelected = activeWritingId === item.id
+                      return (
+                        <button
+                          type="button"
+                          key={item.id}
+                          onClick={() => setActiveWritingId(item.id)}
+                          className={`grid w-full grid-cols-12 px-3 py-2 text-left text-xs border-b border-[#29453d] ${
+                            isSelected ? "bg-[#2f7e6e] text-[#defcf2]" : "hover:bg-[#1f3a33]"
+                          }`}
+                        >
+                          <div className="col-span-5 truncate">{item.title}</div>
+                          <div className="col-span-2 uppercase">{item.type}</div>
+                          <div className="col-span-2">{sizeOfText(item.content ?? "")}</div>
+                          <div className="col-span-3">{formatTime(item.updatedAt)}</div>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                {!activeWriting && (
+                  <div className="border border-dashed border-[#55796d] bg-[#13221d] p-4 text-xs text-[#a7cbc0]">
+                    Select one article title in the file list to open full content.
+                  </div>
+                )}
+
+                {activeWriting && (
+                  <div className="grid grid-cols-12 gap-3">
+                    <div className="col-span-7 border border-[#5c7a6d] bg-[#13221d] p-3">
+                      <div className="mb-2 text-xs text-[#8eb7ab]">{activeWriting.title}</div>
+                      <div className="max-h-72 overflow-auto border border-[#365a50] bg-[#1b2e27] p-3 text-sm leading-7">
+                        {sentenceParts.map((part: string, idx: number) => {
+                          const picked = part === selectedSentence
+                          const isLineBreak = /^\n+$/.test(part)
+                          if (isLineBreak) return <br key={`br-${idx}`} />
+                          return (
+                            <button
+                              type="button"
+                              key={`${part}-${idx}`}
+                              onClick={() => {
+                                setSelectedSentence(part)
+                                setRevisedSentence(part)
+                              }}
+                              className={`mr-1 mb-1 inline rounded px-1 text-left ${
+                                picked ? "bg-[#3cc7e3] text-[#0d2221]" : "hover:bg-[#2f5a52]"
+                              }`}
+                            >
+                              {part}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
+
+                    <div className="col-span-5 border border-[#5c7a6d] bg-[#13221d] p-3 space-y-2">
+                      <div className="text-xs text-[#8eb7ab] flex items-center gap-2">
+                        <Terminal className="h-3.5 w-3.5" />
+                        Sentence-level Edit
+                      </div>
+                      <Input value={selectedSentence} readOnly className="border-[#486b61] bg-[#1b2f28] text-[#e4f4ee]" />
+                      <Textarea
+                        value={revisedSentence}
+                        onChange={(e: ChangeEvent<HTMLTextAreaElement>) => setRevisedSentence(e.target.value)}
+                        placeholder="Revised sentence..."
+                        className="min-h-20 border-[#486b61] bg-[#1b2f28] text-[#e4f4ee]"
+                      />
+                      <Textarea
+                        value={teacherComment}
+                        onChange={(e: ChangeEvent<HTMLTextAreaElement>) => setTeacherComment(e.target.value)}
+                        placeholder="Teacher note..."
+                        className="min-h-16 border-[#486b61] bg-[#1b2f28] text-[#e4f4ee]"
+                      />
+                      <div className="flex gap-2">
+                        <Button size="sm" className="bg-[#2f7e6e] hover:bg-[#389282]" onClick={applyRevision}>
+                          Apply In-place
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="border-[#5c7a6d] bg-[#1c322c]"
+                          disabled={submitting}
+                          onClick={sendCorrectionToBoard}
+                        >
+                          {submitting ? "Saving..." : "Send to Board"}
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="border border-[#5c7a6d] bg-[#13221d]">
+                <div className="grid grid-cols-12 border-b border-[#5c7a6d] bg-[#2a463d] px-3 py-2 text-xs text-[#bfe4d8]">
+                  <div className="col-span-4">Interaction ID</div>
+                  <div className="col-span-3">Stage</div>
+                  <div className="col-span-2">API Count</div>
+                  <div className="col-span-3">Modified</div>
+                </div>
+                <div className="max-h-[28rem] overflow-auto">
+                  {(userDetail?.apiLogs ?? []).map((log: ApiLogItem) => (
+                    <details key={log.id} className="border-b border-[#29453d] text-xs">
+                      <summary className="grid cursor-pointer grid-cols-12 px-3 py-2 hover:bg-[#1f3a33]">
+                        <div className="col-span-4 truncate">{log.id}</div>
+                        <div className="col-span-3">{log.stage}</div>
+                        <div className="col-span-2">{log.apiCalls.length}</div>
+                        <div className="col-span-3">{formatTime(log.timestamp)}</div>
+                      </summary>
+                      <div className="bg-[#10201b] p-3">
+                        <pre className="max-h-52 overflow-auto whitespace-pre-wrap text-[11px] leading-5 text-[#d4e9de]">
+                          {JSON.stringify(log.apiCalls, null, 2)}
+                        </pre>
+                      </div>
+                    </details>
+                  ))}
+                </div>
+              </div>
+            )}
+          </main>
+        </div>
       </div>
     </div>
   )
