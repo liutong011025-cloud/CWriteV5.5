@@ -153,13 +153,14 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
                 </div>
                 <p className="text-white font-semibold text-lg">Choose your role to continue</p>
               </div>
+              <div className="grid grid-cols-2 gap-3">
               <button
                 type="button"
                 onClick={() => {
                   setSelectedRole("teacher")
                   setEntryStep("auth")
                 }}
-                className="w-full rounded-2xl border border-white/40 bg-white/15 px-4 py-6 text-left text-white backdrop-blur-md transition hover:bg-white/25"
+                className="w-full rounded-2xl border border-white/40 bg-white/15 px-4 py-7 text-center text-white backdrop-blur-md transition hover:bg-white/25"
               >
                 <div className="text-3xl mb-2">🧑‍🏫</div>
                 <div className="text-xl font-bold">I am a Teacher</div>
@@ -170,11 +171,12 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
                   setSelectedRole("student")
                   setEntryStep("auth")
                 }}
-                className="w-full rounded-2xl border border-white/40 bg-white/15 px-4 py-6 text-left text-white backdrop-blur-md transition hover:bg-white/25"
+                className="w-full rounded-2xl border border-white/40 bg-white/15 px-4 py-7 text-center text-white backdrop-blur-md transition hover:bg-white/25"
               >
                 <div className="text-3xl mb-2">🧑‍🎓</div>
                 <div className="text-xl font-bold">I am a Student</div>
               </button>
+              </div>
             </div>
           ) : (
             <>
