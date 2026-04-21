@@ -47,12 +47,15 @@ export async function GET() {
     const now = new Date()
     const periodStart = subDays(startOfDay(now), 13)
     const dayKeys = Array.from({ length: 14 }).map((_, index) => format(addDays(periodStart, index), "yyyy-MM-dd"))
+    const registrationsMap = new Map(dayKeys.map((key) => [key, 0]))
     const tokenDailyMap = new Map(dayKeys.map((key) => [key, 0]))
     const hourlyTokenMap = new Map(Array.from({ length: 24 }).map((_, hour) => [String(hour).padStart(2, "0"), 0]))
 
     users.forEach((item) => {
-      // keep warm for future class allocation logic
-      void item.createdAt
+      const key = format(item.createdAt, "yyyy-MM-dd")
+      if (registrationsMap.has(key)) {
+        registrationsMap.set(key, (registrationsMap.get(key) ?? 0) + 1)
+      }
     })
 
     const activeUserIds = new Set<string>()
@@ -100,6 +103,7 @@ export async function GET() {
         poetries: totalPoetries,
       },
       trends: {
+        dailyRegistrations: dayKeys.map((date) => ({ date, count: registrationsMap.get(date) ?? 0 })),
         dailyTokenUsage: dayKeys.map((date) => ({ date, tokens: tokenDailyMap.get(date) ?? 0 })),
         hourlyTokenPeaks: Array.from(hourlyTokenMap.entries()).map(([hour, tokens]) => ({
           hour: `${hour}:00`,
