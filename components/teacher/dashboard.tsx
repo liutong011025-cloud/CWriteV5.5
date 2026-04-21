@@ -24,11 +24,11 @@ import {
   XAxis,
   YAxis,
 } from "recharts"
-import { Button } from "@/components/ui/button"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
+import { Button } from "@/ui/button"
+import { Avatar, AvatarFallback, AvatarImage } from "@/ui/avatar"
+import { Card, CardContent, CardHeader, CardTitle } from "@/ui/card"
+import { Input } from "@/ui/input"
+import { Textarea } from "@/ui/textarea"
 import { toast } from "sonner"
 
 type TeacherUser = {
