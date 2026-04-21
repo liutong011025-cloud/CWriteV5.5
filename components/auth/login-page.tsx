@@ -55,6 +55,14 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
       const data = await response.json()
 
       if (data.success) {
+        if (selectedRole && data.user.role !== selectedRole) {
+          toast.error(
+            selectedRole === "teacher"
+              ? "This account is not a teacher account."
+              : "This account is not a student account.",
+          )
+          return
+        }
         toast.success(`Welcome, ${data.user.username}!`)
         // 传递 true 表示需要显示继续作品对话框
         onLogin(data.user, true)
@@ -95,6 +103,11 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
 
       if (!response.ok || !data.success) {
         toast.error(data.error || data.hint || `Register failed (${response.status})`)
+        return
+      }
+
+      if (selectedRole === "teacher" && data.user.role !== "teacher") {
+        toast.error("Teacher registration is not enabled in this flow.")
         return
       }
 
