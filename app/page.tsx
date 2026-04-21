@@ -1336,14 +1336,21 @@ export default function Home() {
     preloadGalleryData(user?.username)
   }, [user?.username])
 
-  const finalizeLatestStoryFlag = useCallback((title: string, content: string) => {
-    const targetIndex = [...mapFlags].map((_, index) => index).reverse().find((index) => mapFlags[index]?.workType === "story")
+  const finalizeLatestMapFlag = useCallback((workType: MapWorkType, title: string, content: string) => {
+    const targetIndex = [...mapFlags]
+      .map((_, index) => index)
+      .reverse()
+      .find((index) => mapFlags[index]?.workType === workType)
     if (targetIndex === undefined) return false
     setMapFlags((prev: MapFlagItem[]) => prev.map((flag: MapFlagItem, index: number) => (
-      index === targetIndex ? { ...flag, title, content, workType: "story" } : flag
+      index === targetIndex ? { ...flag, title, content, workType } : flag
     )))
     return true
   }, [mapFlags])
+
+  const finalizeLatestStoryFlag = useCallback((title: string, content: string) => {
+    return finalizeLatestMapFlag("story", title, content)
+  }, [finalizeLatestMapFlag])
 
   // Refetch and update header when profile/reviews change (e.g. after marking reviews read)
   useEffect(() => {
@@ -1863,6 +1870,13 @@ export default function Home() {
           language={language}
           onBookSelected={(title) => {
             setBookReviewState(prev => ({ ...prev, bookTitle: title }))
+            void queueJourneyMapUpdate({
+              title,
+              topic: title,
+              content: `Selected book for review: ${title}`,
+              workType: "review",
+              source: "bookSelection",
+            })
             // 選完書後，讓 AI 推薦適合的書評類型
             setStage("bookReviewTypeSelection")
           }}
@@ -1912,6 +1926,13 @@ export default function Home() {
             }
             const structure = getStructureForReviewType(bookReviewState.reviewType)
             setBookReviewState(prev => ({ ...prev, bookTitle: title, structure }))
+            void queueJourneyMapUpdate({
+              title,
+              topic: title,
+              content: `Selected book for review: ${title}`,
+              workType: "review",
+              source: "bookSelectionNoAi",
+            })
             if (user.noAi) {
               setStage("bookReviewWritingNoAi")
             } else {
@@ -1990,13 +2011,16 @@ export default function Home() {
           onReset={async (finalReview) => {
             const bookTitle = bookReviewState.bookTitle || "Book Review"
             void evaluateValuesGrowth(finalReview, "review", `Review: ${bookTitle}`)
-            void queueJourneyMapUpdate({
-              title: bookTitle,
-              topic: bookTitle,
-              content: finalReview,
-              workType: "review",
-              source: "bookReview",
-            })
+            const updatedExistingReviewFlag = finalizeLatestMapFlag("review", bookTitle, finalReview)
+            if (!updatedExistingReviewFlag) {
+              void queueJourneyMapUpdate({
+                title: bookTitle,
+                topic: bookTitle,
+                content: finalReview,
+                workType: "review",
+                source: "bookReview",
+              })
+            }
 
             setBookReviewState({
               reviewType: null,
@@ -2046,13 +2070,16 @@ export default function Home() {
           onReset={async (finalReview) => {
             const bookTitle = bookReviewState.bookTitle || "Book Review"
             void evaluateValuesGrowth(finalReview, "review", `Review: ${bookTitle}`)
-            void queueJourneyMapUpdate({
-              title: bookTitle,
-              topic: bookTitle,
-              content: finalReview,
-              workType: "review",
-              source: "bookReview",
-            })
+            const updatedExistingReviewFlag = finalizeLatestMapFlag("review", bookTitle, finalReview)
+            if (!updatedExistingReviewFlag) {
+              void queueJourneyMapUpdate({
+                title: bookTitle,
+                topic: bookTitle,
+                content: finalReview,
+                workType: "review",
+                source: "bookReview",
+              })
+            }
 
             setBookReviewState({
               reviewType: null,
@@ -2097,12 +2124,7 @@ export default function Home() {
           storyState={storyState}
           mode={user.noAi ? "manual" : "ai"}
           onPlotCreate={(plot) => {
-            setStoryState((prev) => ({
-              ...prev,
-              plot,
-              ...(prev.structure ? {} : { structure: null }),
-              story: prev.story,
-            }))
+            setStoryState((prev) => ({ ...prev, plot, structure: null, story: prev.story }))
           }}
           onStructureSelect={(structure) => {
             setStoryState((prev) => ({ ...prev, structure, story: prev.story }))
@@ -2128,12 +2150,7 @@ export default function Home() {
           writingLevel={writingAssessment?.level ?? planTestResult?.level ?? 1}
           mode={user.noAi ? "manual" : "ai"}
           onPlotCreate={(plot) => {
-            setStoryState((prev) => ({
-              ...prev,
-              plot,
-              ...(prev.structure ? {} : { structure: null }),
-              story: prev.story,
-            }))
+            setStoryState((prev) => ({ ...prev, plot, structure: null, story: prev.story }))
           }}
           onStructureSelect={(structure) => {
             setStoryState((prev) => ({ ...prev, structure, story: prev.story }))
