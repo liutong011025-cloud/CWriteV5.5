@@ -27,6 +27,15 @@ function isProfileSchemaError(e: unknown): boolean {
   return isMissingTableError(e) || isMissingColumnError(e)
 }
 
+function isDatabaseConnectionError(e: unknown): boolean {
+  const msg = e instanceof Error ? e.message : String(e)
+  const code = e && typeof e === "object" && "code" in e ? (e as { code: string }).code : ""
+  return (
+    code === "P1001" ||
+    /Can't reach database|database connection|connection refused|placeholder/i.test(msg)
+  )
+}
+
 function normalizeTreesPayload(raw: unknown): { id: number; stage: number }[] | null {
   if (!Array.isArray(raw)) return null
   return raw
@@ -118,6 +127,20 @@ export async function GET(request: NextRequest) {
     })
   } catch (e) {
     console.error("[user-profile] GET", e)
+    if (isDatabaseConnectionError(e)) {
+      // 降級返回，避免首頁/登入前請求被 500 擋住
+      return NextResponse.json({
+        avatarUrl: null,
+        avatarEmoji: null,
+        birthday: null,
+        email: null,
+        grade: null,
+        gender: null,
+        trees: null,
+        lastMetrics: null,
+        degraded: true,
+      })
+    }
     if (isProfileSchemaError(e)) {
       const userId = request.nextUrl.searchParams.get("user_id")
       let treesFromBackup: { id: number; stage: number }[] | null = null
