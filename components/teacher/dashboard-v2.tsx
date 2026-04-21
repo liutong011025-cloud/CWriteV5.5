@@ -47,6 +47,12 @@ function splitSentences(text: string): string[] {
     .filter(Boolean)
 }
 
+function toDateLabel(iso: string): string {
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) return iso
+  return `${date.getMonth() + 1}/${date.getDate()}`
+}
+
 function createAnnotation(quote: string): Annotation {
   return {
     id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
