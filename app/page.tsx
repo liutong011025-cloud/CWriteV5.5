@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useMemo, useCallback, useRef } from "react"
+import { useState, useEffect, useMemo, useCallback, useRef, Component } from "react"
 import HomePage from "@/components/stages/home-page"
 import WelcomePage from "@/components/stages/welcome-page"
 import BookReviewWelcome from "@/components/stages/book-review-welcome"
@@ -445,6 +445,40 @@ function getBestGrowthSentence(text: string, maxLen = 180): string {
   const sentenceMatch = richLine.match(/[^.!?。！？\n]+[.!?。！？]?/)
   const sentence = sentenceMatch ? sentenceMatch[0].trim() : richLine
   return sentence.length > maxLen ? `${sentence.slice(0, maxLen)}…` : sentence
+}
+
+class ErrorBoundary extends Component<
+  { children: React.ReactNode; fallback?: React.ReactNode },
+  { hasError: boolean }
+> {
+  constructor(props: any) {
+    super(props)
+    this.state = { hasError: false }
+  }
+  static getDerivedStateFromError() {
+    return { hasError: true }
+  }
+  componentDidCatch(error: Error, info: React.ErrorInfo) {
+    console.error("Render error:", error, info)
+  }
+  render() {
+    if (this.state.hasError) {
+      return this.props.fallback || (
+        <div className="min-h-screen flex items-center justify-center text-purple-800">
+          <div className="text-center">
+            <p className="text-lg font-semibold mb-2">Something went wrong.</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="rounded-full bg-purple-600 px-4 py-2 text-white text-sm font-bold hover:bg-purple-700"
+            >
+              Refresh Page
+            </button>
+          </div>
+        </div>
+      )
+    }
+    return this.props.children
+  }
 }
 
 type AppUser = {
@@ -1586,6 +1620,7 @@ export default function Home() {
           <LevelBadge level={Math.min(5, Math.max(1, writingAssessment.level))} className="text-lg" />
         </div>
       )}
+      <ErrorBoundary>
       {stage === "login" && (
         <LoginPage
           onLogin={(userData, showDialog = false) => {
@@ -2257,67 +2292,79 @@ export default function Home() {
             />
           )
         )}
-      {stage === "review" && user && storyState.story && (
-        <StoryReview
-          language={language}
-          storyState={storyState}
-          onReset={async (finalStory) => {
-            const storyTitle = storyState.character?.name?.trim() ? `${storyState.character.name}'s Story` : "My Story"
-            const topic = storyState.character?.name || storyState.plot?.setting || storyTitle
-            void evaluateValuesGrowth(finalStory, "story", storyTitle)
-            const updatedExistingStoryFlag = finalizeLatestStoryFlag(storyTitle, finalStory)
-            if (!updatedExistingStoryFlag) {
-              pendingStoryFlagFinalizationRef.current = { title: storyTitle, content: finalStory }
-              if (!mapUpdateInFlightRef.current) {
-                void queueJourneyMapUpdate({
-                  title: storyTitle,
-                  topic,
-                  content: finalStory,
-                  workType: "story",
-                  source: "storyReview",
-                  summaryKey: "storySummary",
-                  summaryValue: {
-                    characterName: storyState.character?.name || null,
-                    species: storyState.character?.species || null,
-                    setting: storyState.plot?.setting || null,
-                    conflict: storyState.plot?.conflict || null,
-                    goal: storyState.plot?.goal || null,
-                    plotSummary: buildStoryPlotSummary(storyState.character, storyState.plot) || null,
-                  },
-                })
-              }
-            }
-
-            setStoryState({ character: null, plot: null, structure: null, story: "" })
-            setStage(journeyActive ? "journeyMap" : "home")
-          }}
-          onEdit={async (editStage) => {
-            // 如果正在编辑已保存的作品，加载之前的内容
-            if (editingWorkId && user) {
-              try {
-                const response = await fetch(`/api/user-works?user_id=${user.username}&type=story`)
-                const data = await response.json()
-                if (data.success && data.stories) {
-                  const work = data.stories.find((s: any) => s.id === editingWorkId)
-                  if (work) {
-                    setStoryState({
-                      character: work.character as any,
-                      plot: work.plot as any,
-                      structure: work.structure as any,
-                      story: work.content || "",
-                    })
-                  }
+      {stage === "review" && user && (
+        storyState.story ? (
+          <StoryReview
+            language={language}
+            storyState={storyState}
+            onReset={async (finalStory) => {
+              const storyTitle = storyState.character?.name?.trim() ? `${storyState.character.name}'s Story` : "My Story"
+              const topic = storyState.character?.name || storyState.plot?.setting || storyTitle
+              void evaluateValuesGrowth(finalStory, "story", storyTitle)
+              const updatedExistingStoryFlag = finalizeLatestStoryFlag(storyTitle, finalStory)
+              if (!updatedExistingStoryFlag) {
+                pendingStoryFlagFinalizationRef.current = { title: storyTitle, content: finalStory }
+                if (!mapUpdateInFlightRef.current) {
+                  void queueJourneyMapUpdate({
+                    title: storyTitle,
+                    topic,
+                    content: finalStory,
+                    workType: "story",
+                    source: "storyReview",
+                    summaryKey: "storySummary",
+                    summaryValue: {
+                      characterName: storyState.character?.name || null,
+                      species: storyState.character?.species || null,
+                      setting: storyState.plot?.setting || null,
+                      conflict: storyState.plot?.conflict || null,
+                      goal: storyState.plot?.goal || null,
+                      plotSummary: buildStoryPlotSummary(storyState.character, storyState.plot) || null,
+                    },
+                  })
                 }
-              } catch (error) {
-                console.error('Error loading work:', error)
               }
-            }
-            setStage(editStage)
-          }}
-          onBack={() => setStage("storyChatbot")}
-          userId={user.username}
-          workId={editingWorkId}
-        />
+
+              setStoryState({ character: null, plot: null, structure: null, story: "" })
+              setStage(journeyActive ? "journeyMap" : "home")
+            }}
+            onEdit={async (editStage) => {
+              // 如果正在编辑已保存的作品，加载之前的内容
+              if (editingWorkId && user) {
+                try {
+                  const response = await fetch(`/api/user-works?user_id=${user.username}&type=story`)
+                  const data = await response.json()
+                  if (data.success && data.stories) {
+                    const work = data.stories.find((s: any) => s.id === editingWorkId)
+                    if (work) {
+                      setStoryState({
+                        character: work.character as any,
+                        plot: work.plot as any,
+                        structure: work.structure as any,
+                        story: work.content || "",
+                      })
+                    }
+                  }
+                } catch (error) {
+                  console.error('Error loading work:', error)
+                }
+              }
+              setStage(editStage)
+            }}
+            onBack={() => setStage("storyChatbot")}
+            userId={user.username}
+            workId={editingWorkId}
+          />
+        ) : (
+          <div className="min-h-screen flex flex-col items-center justify-center gap-4 text-purple-800 bg-purple-50">
+            <p className="text-lg font-semibold">Story data is not available.</p>
+            <button
+              onClick={() => setStage("home")}
+              className="rounded-full bg-purple-600 px-6 py-2 text-white font-bold hover:bg-purple-700"
+            >
+              Back to Home
+            </button>
+          </div>
+        )
       )}
       {stage === "dashboard" && user && user.role === "teacher" && (
         <Dashboard user={user} onBack={() => setStage("login")} />
@@ -2743,6 +2790,7 @@ export default function Home() {
           isOtherFarm
         />
       )}
+      </ErrorBoundary>
 
       {/* 文案帳號工具條：僅 copywriting 登錄且非 login 頁面時顯示 */}
       {isCopywriter && user && stage !== "login" && (
