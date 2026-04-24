@@ -346,42 +346,51 @@ export type TreeGrowthDetail = {
 
 const TREE_GROWTH_DETAILS_KEY = (username: string) => `cwriteTreeGrowthDetails:${username}`
 
+function normalizeTreeGrowthDetails(raw: unknown): Record<number, TreeGrowthDetail[]> {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {}
+  const out: Record<number, TreeGrowthDetail[]> = {}
+  Object.entries(raw as Record<string, unknown>).forEach(([k, arr]) => {
+    const id = Number(k)
+    if (Number.isFinite(id) && id >= 1 && id <= 12 && Array.isArray(arr)) {
+      out[id] = arr
+        .filter(
+          (x) => {
+            const workType = (x as { workType?: unknown }).workType
+            return (
+              !!x &&
+              typeof (x as { workTitle?: unknown }).workTitle === "string" &&
+              (workType === "story" || workType === "review" || workType === "letter") &&
+              typeof (x as { excerpt?: unknown }).excerpt === "string" &&
+              typeof (x as { timestamp?: unknown }).timestamp === "number"
+            )
+          }
+        )
+        .map((x) => ({
+          ...(x as TreeGrowthDetail),
+          triggerSentence:
+            typeof (x as { triggerSentence?: unknown }).triggerSentence === "string"
+              ? (x as { triggerSentence?: string }).triggerSentence
+              : undefined,
+          overallEvidence:
+            typeof (x as { overallEvidence?: unknown }).overallEvidence === "string"
+              ? (x as { overallEvidence?: string }).overallEvidence
+              : undefined,
+          reason:
+            typeof (x as { reason?: unknown }).reason === "string"
+              ? (x as { reason?: string }).reason
+              : undefined,
+        }))
+    }
+  })
+  return out
+}
+
 function readLocalTreeGrowthDetails(username: string): Record<number, TreeGrowthDetail[]> {
   if (typeof window === "undefined") return {}
   try {
     const raw = localStorage.getItem(TREE_GROWTH_DETAILS_KEY(username))
     if (!raw) return {}
-    const parsed = JSON.parse(raw) as Record<string, TreeGrowthDetail[]>
-    const out: Record<number, TreeGrowthDetail[]> = {}
-    Object.entries(parsed).forEach(([k, arr]) => {
-      const id = Number(k)
-      if (Number.isFinite(id) && id >= 1 && id <= 12 && Array.isArray(arr)) {
-        out[id] = arr
-          .filter(
-            (x) =>
-              x &&
-              typeof x.workTitle === "string" &&
-              typeof x.excerpt === "string" &&
-              typeof x.timestamp === "number"
-          )
-          .map((x) => ({
-            ...x,
-            triggerSentence:
-              typeof (x as { triggerSentence?: unknown }).triggerSentence === "string"
-                ? (x as { triggerSentence?: string }).triggerSentence
-                : undefined,
-            overallEvidence:
-              typeof (x as { overallEvidence?: unknown }).overallEvidence === "string"
-                ? (x as { overallEvidence?: string }).overallEvidence
-                : undefined,
-            reason:
-              typeof (x as { reason?: unknown }).reason === "string"
-                ? (x as { reason?: string }).reason
-                : undefined,
-          }))
-      }
-    })
-    return out
+    return normalizeTreeGrowthDetails(JSON.parse(raw))
   } catch {
     return {}
   }
@@ -424,6 +433,46 @@ function writeLocalTreeGrowthDetails(username: string, details: Record<number, T
   } catch {
     // ignore
   }
+}
+
+function hasTreeGrowthDetails(details: Record<number, TreeGrowthDetail[]> | null | undefined) {
+  return Object.values(details ?? {}).some((records) => Array.isArray(records) && records.length > 0)
+}
+
+function mergeTreeGrowthDetails(
+  current: Record<number, TreeGrowthDetail[]>,
+  matchedIds: number[],
+  payload: {
+    workTitle: string
+    workType: "story" | "review" | "letter"
+    excerpt: string
+    triggerSentence?: string
+    evidenceByDimension?: Record<number, { sentence?: string; overallEvidence?: string; reason?: string }>
+  }
+) {
+  const detail: TreeGrowthDetail = {
+    ...payload,
+    timestamp: Date.now(),
+  }
+  const next = { ...current }
+  matchedIds.forEach((id) => {
+    const list = next[id] ?? []
+    const evidence = payload.evidenceByDimension?.[id]
+    const evidenceSentence = (evidence?.sentence || "").trim()
+    const overallEvidence = (evidence?.overallEvidence || "").trim()
+    const evidenceReason = (evidence?.reason || "").trim()
+    if ((!evidenceSentence && !overallEvidence) || !evidenceReason) return
+    next[id] = [
+      ...list,
+      {
+        ...detail,
+        ...(evidenceSentence ? { triggerSentence: evidenceSentence } : {}),
+        ...(overallEvidence ? { overallEvidence } : {}),
+        reason: evidenceReason,
+      },
+    ]
+  })
+  return next
 }
 
 function getFirstSentenceOrExcerpt(text: string, maxLen = 180): string {
@@ -1296,9 +1345,15 @@ export default function Home() {
         const rawTrees = Array.isArray(profileRes.trees) ? profileRes.trees as { id: number; stage: number }[] : null
         const localTrees = readLocalTrees(user.username)
         const initialTrees = normalizeValuesTrees(rawTrees && rawTrees.length > 0 ? rawTrees : localTrees)
+        const remoteTreeGrowthDetails = normalizeTreeGrowthDetails(profileRes.treeGrowthDetails)
+        const localTreeGrowthDetails = readLocalTreeGrowthDetails(user.username)
+        const initialTreeGrowthDetails = hasTreeGrowthDetails(remoteTreeGrowthDetails)
+          ? remoteTreeGrowthDetails
+          : localTreeGrowthDetails
         setTrees(initialTrees)
         writeLocalTrees(user.username, initialTrees)
-        setTreeGrowthDetails(readLocalTreeGrowthDetails(user.username))
+        setTreeGrowthDetails(initialTreeGrowthDetails)
+        writeLocalTreeGrowthDetails(user.username, initialTreeGrowthDetails)
         const lm = profileRes.lastMetrics as WritingMetricsSnapshot | undefined
         if (lm && typeof lm.vocabRichness === "number") {
           setLastMetrics(lm)
@@ -1308,13 +1363,16 @@ export default function Home() {
           !rawTrees ||
           rawTrees.length !== VALUES_DIMENSION_COUNT ||
           rawTrees.some((tree, idx) => Number(tree?.id) !== idx + 1 || normalizeTreeStage(Number(tree?.stage) || 2) !== Number(tree?.stage))
-        if (shouldBackfillTrees && !profileRes.degraded) {
+        const shouldBackfillTreeGrowthDetails =
+          !hasTreeGrowthDetails(remoteTreeGrowthDetails) && hasTreeGrowthDetails(localTreeGrowthDetails)
+        if (shouldBackfillTrees || shouldBackfillTreeGrowthDetails) {
           fetch("/api/user-profile", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               user_id: user.username,
               trees: initialTrees,
+              treeGrowthDetails: initialTreeGrowthDetails,
             }),
           }).catch(() => {})
         }
@@ -1372,9 +1430,15 @@ export default function Home() {
           const rawTrees = Array.isArray(profileRes.trees) ? profileRes.trees as { id: number; stage: number }[] : null
           const localTrees = readLocalTrees(user.username)
           const nextTrees = normalizeValuesTrees(rawTrees && rawTrees.length > 0 ? rawTrees : localTrees)
+          const remoteTreeGrowthDetails = normalizeTreeGrowthDetails(profileRes.treeGrowthDetails)
+          const localTreeGrowthDetails = readLocalTreeGrowthDetails(user.username)
+          const nextTreeGrowthDetails = hasTreeGrowthDetails(remoteTreeGrowthDetails)
+            ? remoteTreeGrowthDetails
+            : localTreeGrowthDetails
           setTrees(nextTrees)
           writeLocalTrees(user.username, nextTrees)
-          setTreeGrowthDetails(readLocalTreeGrowthDetails(user.username))
+          setTreeGrowthDetails(nextTreeGrowthDetails)
+          writeLocalTreeGrowthDetails(user.username, nextTreeGrowthDetails)
           const lm = profileRes.lastMetrics as WritingMetricsSnapshot | undefined
           if (lm && typeof lm.vocabRichness === "number") {
             setLastMetrics(lm)
@@ -1445,34 +1509,13 @@ export default function Home() {
       setTrees(nextTrees)
       writeLocalTrees(user.username, nextTrees)
       setLastGrownTree({ treeId: grownTreeId, dimension: "vocab" })
+      const nextTreeGrowthDetails = payload
+        ? mergeTreeGrowthDetails(treeGrowthDetails, matchedIds, payload)
+        : treeGrowthDetails
 
       if (payload) {
-        const detail: TreeGrowthDetail = {
-          ...payload,
-          timestamp: Date.now(),
-        }
-        setTreeGrowthDetails((prev) => {
-          const next = { ...prev }
-          matchedIds.forEach((id) => {
-            const list = next[id] ?? []
-            const evidence = payload.evidenceByDimension?.[id]
-            const evidenceSentence = (evidence?.sentence || "").trim()
-            const overallEvidence = (evidence?.overallEvidence || "").trim()
-            const evidenceReason = (evidence?.reason || "").trim()
-            if ((!evidenceSentence && !overallEvidence) || !evidenceReason) return
-            next[id] = [
-              ...list,
-              {
-                ...detail,
-                ...(evidenceSentence ? { triggerSentence: evidenceSentence } : {}),
-                ...(overallEvidence ? { overallEvidence } : {}),
-                reason: evidenceReason,
-              },
-            ]
-          })
-          writeLocalTreeGrowthDetails(user.username, next)
-          return next
-        })
+        setTreeGrowthDetails(nextTreeGrowthDetails)
+        writeLocalTreeGrowthDetails(user.username, nextTreeGrowthDetails)
       }
 
       try {
@@ -1482,13 +1525,14 @@ export default function Home() {
           body: JSON.stringify({
             user_id: user.username,
             trees: nextTrees,
+            treeGrowthDetails: nextTreeGrowthDetails,
           }),
         })
       } catch {
         // 后端失败不阻塞前端体验
       }
     },
-    [trees, user]
+    [treeGrowthDetails, trees, user]
   )
 
   const evaluateValuesGrowth = useCallback(
