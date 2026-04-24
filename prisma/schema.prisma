@@ -40,6 +40,8 @@ model UserProfile {
   gender     String?
   /// JSON 数组：最多 12 棵树，每棵 { id: number; stage: 1-6 }
   trees      Json?
+  /// JSON 对象：每棵树的成长详情记录，key 为树 id，value 为成长详情数组
+  treeGrowthDetails Json?
   /// 上一次写作三指标，用于判断哪一项提升最大：{ vocabRichness, descriptiveAccuracy, logicalCoherence }
   lastMetrics Json?
   createdAt  DateTime @default(now())
