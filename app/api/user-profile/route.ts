@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 
 const TREES_BACKUP_STAGE = "forest_trees_sync"
+const TREE_GROWTH_DETAILS_BACKUP_STAGE = "tree_growth_details_sync"
 
 function isMissingTableError(e: unknown): boolean {
   const msg = e instanceof Error ? e.message : String(e)
@@ -48,6 +49,54 @@ function normalizeTreesPayload(raw: unknown): { id: number; stage: number }[] | 
     .filter((tree) => Number.isFinite(tree.id) && tree.id >= 1 && tree.id <= 12)
 }
 
+type TreeGrowthDetailRecord = {
+  workTitle: string
+  workType: "story" | "review" | "letter"
+  excerpt: string
+  triggerSentence?: string
+  overallEvidence?: string
+  reason?: string
+  timestamp: number
+}
+
+function normalizeTreeGrowthDetailsPayload(raw: unknown): Record<number, TreeGrowthDetailRecord[]> | null {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null
+  const out: Record<number, TreeGrowthDetailRecord[]> = {}
+  Object.entries(raw as Record<string, unknown>).forEach(([k, value]) => {
+    const id = Number(k)
+    if (!Number.isFinite(id) || id < 1 || id > 12 || !Array.isArray(value)) return
+    const records = value
+      .filter((item) => item && typeof item === "object")
+      .map((item) => {
+        const record = item as Record<string, unknown>
+        const workType =
+          record.workType === "story" || record.workType === "review" || record.workType === "letter"
+            ? record.workType
+            : null
+        if (
+          typeof record.workTitle !== "string" ||
+          !workType ||
+          typeof record.excerpt !== "string" ||
+          typeof record.timestamp !== "number"
+        ) {
+          return null
+        }
+        return {
+          workTitle: record.workTitle,
+          workType,
+          excerpt: record.excerpt,
+          triggerSentence: typeof record.triggerSentence === "string" ? record.triggerSentence : undefined,
+          overallEvidence: typeof record.overallEvidence === "string" ? record.overallEvidence : undefined,
+          reason: typeof record.reason === "string" ? record.reason : undefined,
+          timestamp: record.timestamp,
+        }
+      })
+      .filter((record): record is TreeGrowthDetailRecord => record !== null)
+    out[id] = records
+  })
+  return out
+}
+
 async function readTreesBackupByUserId(userId: string): Promise<{ id: number; stage: number }[] | null> {
   try {
     const latest = await prisma.interaction.findFirst({
@@ -72,6 +121,40 @@ async function writeTreesBackupByUserId(userId: string, trees: unknown): Promise
         stage: TREES_BACKUP_STAGE,
         output: {
           trees: normalizedTrees,
+          source: "user-profile-fallback",
+          at: new Date().toISOString(),
+        },
+      },
+    })
+  } catch {
+    // ignore backup failure
+  }
+}
+
+async function readTreeGrowthDetailsBackupByUserId(userId: string): Promise<Record<number, TreeGrowthDetailRecord[]> | null> {
+  try {
+    const latest = await prisma.interaction.findFirst({
+      where: { userId, stage: TREE_GROWTH_DETAILS_BACKUP_STAGE },
+      orderBy: { timestamp: "desc" },
+      select: { output: true },
+    })
+    const output = latest?.output as { treeGrowthDetails?: unknown } | null | undefined
+    return normalizeTreeGrowthDetailsPayload(output?.treeGrowthDetails)
+  } catch {
+    return null
+  }
+}
+
+async function writeTreeGrowthDetailsBackupByUserId(userId: string, treeGrowthDetails: unknown): Promise<void> {
+  const normalizedTreeGrowthDetails = normalizeTreeGrowthDetailsPayload(treeGrowthDetails)
+  if (!normalizedTreeGrowthDetails) return
+  try {
+    await prisma.interaction.create({
+      data: {
+        userId,
+        stage: TREE_GROWTH_DETAILS_BACKUP_STAGE,
+        output: {
+          treeGrowthDetails: normalizedTreeGrowthDetails,
           source: "user-profile-fallback",
           at: new Date().toISOString(),
         },
@@ -113,6 +196,10 @@ export async function GET(request: NextRequest) {
     const profile = profileRows[0] ?? null
     const treesFromProfile = normalizeTreesPayload(profile?.trees)
     const treesFromBackup = !treesFromProfile ? await readTreesBackupByUserId(user.id) : null
+    const treeGrowthDetailsFromProfile = normalizeTreeGrowthDetailsPayload(profile?.treeGrowthDetails)
+    const treeGrowthDetailsFromBackup = !treeGrowthDetailsFromProfile
+      ? await readTreeGrowthDetailsBackupByUserId(user.id)
+      : null
     return NextResponse.json({
       avatarUrl: profile?.avatarUrl ?? null,
       avatarEmoji: profile?.avatarEmoji ?? null,
@@ -122,6 +209,8 @@ export async function GET(request: NextRequest) {
       gender: profile?.gender ?? null,
       // 小树森林：最多 12 棵树，每棵 { id: number, stage: 1-6 }
       trees: treesFromProfile ?? treesFromBackup ?? null,
+      // 每棵树的成长详情：key 为树 id，value 为成长详情数组
+      treeGrowthDetails: treeGrowthDetailsFromProfile ?? treeGrowthDetailsFromBackup ?? {},
       // 上一次写作三指标：{ vocabRichness, descriptiveAccuracy, logicalCoherence }
       lastMetrics: profile?.lastMetrics ?? null,
     })
@@ -137,6 +226,7 @@ export async function GET(request: NextRequest) {
         grade: null,
         gender: null,
         trees: null,
+        treeGrowthDetails: {},
         lastMetrics: null,
         degraded: true,
       })
@@ -144,11 +234,13 @@ export async function GET(request: NextRequest) {
     if (isProfileSchemaError(e)) {
       const userId = request.nextUrl.searchParams.get("user_id")
       let treesFromBackup: { id: number; stage: number }[] | null = null
+      let treeGrowthDetailsFromBackup: Record<number, TreeGrowthDetailRecord[]> | null = null
       if (userId) {
         try {
           const user = await prisma.user.findUnique({ where: { username: userId } })
           if (user) {
             treesFromBackup = await readTreesBackupByUserId(user.id)
+            treeGrowthDetailsFromBackup = await readTreeGrowthDetailsBackupByUserId(user.id)
           }
         } catch {
           // ignore
@@ -162,6 +254,7 @@ export async function GET(request: NextRequest) {
         grade: null,
         gender: null,
         trees: treesFromBackup,
+        treeGrowthDetails: treeGrowthDetailsFromBackup ?? {},
         degraded: true,
       })
     }
@@ -183,6 +276,7 @@ export async function POST(request: NextRequest) {
     }
     const profileColumns = await getUserProfileColumns()
     const supportsTrees = !!profileColumns?.has("trees")
+    const supportsTreeGrowthDetails = !!profileColumns?.has("treeGrowthDetails")
     const supportsLastMetrics = !!profileColumns?.has("lastMetrics")
 
     const updates: Record<string, any> = {
@@ -194,6 +288,9 @@ export async function POST(request: NextRequest) {
       gender: body.gender !== undefined ? body.gender : undefined,
       // trees: Array<{ id: number; stage: number }>
       trees: supportsTrees && body.trees !== undefined ? body.trees : undefined,
+      // treeGrowthDetails: Record<number, TreeGrowthDetailRecord[]>
+      treeGrowthDetails:
+        supportsTreeGrowthDetails && body.treeGrowthDetails !== undefined ? body.treeGrowthDetails : undefined,
       // lastMetrics: { vocabRichness: number; descriptiveAccuracy: number; logicalCoherence: number }
       lastMetrics: supportsLastMetrics && body.lastMetrics !== undefined ? body.lastMetrics : undefined,
     }
@@ -230,7 +327,11 @@ export async function POST(request: NextRequest) {
     )
     const profile = profileRows[0] ?? {}
     const normalizedTrees = normalizeTreesPayload(profile.trees ?? body.trees)
+    const normalizedTreeGrowthDetails = normalizeTreeGrowthDetailsPayload(
+      profile.treeGrowthDetails ?? body.treeGrowthDetails
+    )
     await writeTreesBackupByUserId(user.id, normalizedTrees)
+    await writeTreeGrowthDetailsBackupByUserId(user.id, normalizedTreeGrowthDetails)
     return NextResponse.json({
       avatarUrl: profile.avatarUrl ?? null,
       avatarEmoji: profile.avatarEmoji ?? null,
@@ -239,19 +340,25 @@ export async function POST(request: NextRequest) {
       grade: profile.grade ?? null,
       gender: profile.gender ?? null,
       trees: supportsTrees ? (normalizedTrees ?? null) : normalizedTrees,
+      treeGrowthDetails: supportsTreeGrowthDetails ? (normalizedTreeGrowthDetails ?? {}) : normalizedTreeGrowthDetails ?? {},
       lastMetrics: supportsLastMetrics ? (profile.lastMetrics ?? null) : null,
-      degraded: !supportsTrees || !supportsLastMetrics,
+      degraded: !supportsTrees || !supportsTreeGrowthDetails || !supportsLastMetrics,
     })
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e)
     console.error("[user-profile] POST", e)
     if (isProfileSchemaError(e)) {
       const userId = body.user_id ?? body.userId
-      if (userId && body?.trees !== undefined) {
+      if (userId && (body?.trees !== undefined || body?.treeGrowthDetails !== undefined)) {
         try {
           const user = await prisma.user.findUnique({ where: { username: userId } })
           if (user) {
-            await writeTreesBackupByUserId(user.id, body.trees)
+            if (body?.trees !== undefined) {
+              await writeTreesBackupByUserId(user.id, body.trees)
+            }
+            if (body?.treeGrowthDetails !== undefined) {
+              await writeTreeGrowthDetailsBackupByUserId(user.id, body.treeGrowthDetails)
+            }
           }
         } catch {
           // ignore
@@ -266,6 +373,7 @@ export async function POST(request: NextRequest) {
         grade: body?.grade ?? null,
         gender: body?.gender ?? null,
         trees: normalizeTreesPayload(body?.trees),
+        treeGrowthDetails: normalizeTreeGrowthDetailsPayload(body?.treeGrowthDetails) ?? {},
         lastMetrics: null,
         degraded: true,
       })
