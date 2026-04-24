@@ -8,8 +8,9 @@ import PixelPage from "@/components/pixel/pixel-page"
 interface BookReviewLoadingProps {
   reviewType: "recommendation" | "critical" | "literary"
   bookTitle: string
-  onComplete: (structure: { type: "recommendation" | "critical" | "literary"; outline: string[]; shuffledToOriginal?: number[] }, bookCoverUrl: string, bookSummary: string) => void
+  onComplete: (structure: { type: "recommendation" | "critical" | "literary"; outline: string[]; shuffledToOriginal?: number[]; originalOutline?: string[] }, bookCoverUrl: string, bookSummary: string) => void
   onBack: () => void
+  userId?: string
 }
 
 const WRITING_TIPS = {
@@ -127,6 +128,7 @@ export default function BookReviewLoading({
   bookTitle,
   onComplete,
   onBack,
+  userId,
 }: BookReviewLoadingProps) {
   const tips = WRITING_TIPS[reviewType]
   const structure = getStructureForReviewType(reviewType)
@@ -148,12 +150,12 @@ export default function BookReviewLoading({
           fetch("/api/generate-book-cover", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ bookTitle, user_id: 'student' }),
+            body: JSON.stringify({ bookTitle, user_id: userId || "default-user" }),
           }),
           fetch("/api/dify-book-summary", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ bookTitle, user_id: 'student' }),
+            body: JSON.stringify({ bookTitle, user_id: userId || "default-user" }),
           })
         ])
 
@@ -210,7 +212,7 @@ export default function BookReviewLoading({
 
     generateCoverAndSummary()
     // 只依赖bookTitle，避免因为onComplete和structure的引用变化导致重复调用
-  }, [bookTitle])
+  }, [bookTitle, userId])
 
   return (
     <PixelPage style={{ paddingTop: "120px", paddingBottom: "120px" }}>
