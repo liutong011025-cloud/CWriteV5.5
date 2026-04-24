@@ -35,12 +35,21 @@ type DashboardUserListItem = DashboardData["classGroups"][number]["users"][numbe
 interface UserDetail {
   user: { username: string; grade: string | null; totalWorks: number; latestActiveAt: string | null }
   writings: Array<{ id: string; type: string; title: string; content: string; updatedAt: string; interactionId: string | null }>
-  apiLogs: Array<{ id: string; stage: string; timestamp: string; tokenEstimate: number; apiCalls: Array<{ endpoint?: string }>; messages: Array<{ role: string; content: string }> }>
+  apiLogs: Array<{ id: string; stage: string; stageLabel: string; articleType: string; title: string; timestamp: string; tokenEstimate: number; apiCalls: Array<{ endpoint?: string }>; messages: Array<{ role: string; content: string }> }>
+  diagnostics?: { storedWorks: number; recoveredWritings: number; interactionCount: number }
+  degraded?: boolean
 }
 
 type Annotation = { id: string; quote: string; replaceWith: string; comment: string; saving: boolean }
 type AnnotationMap = Record<string, Annotation[]>
 const PIE = ["#6366f1", "#06b6d4", "#22c55e", "#f59e0b", "#ec4899"]
+const TYPE_META: Record<string, { label: string; badge: string; card: string }> = {
+  story: { label: "故事", badge: "bg-violet-100 text-violet-700 border-violet-200", card: "border-violet-200 bg-violet-50/40" },
+  review: { label: "书评", badge: "bg-sky-100 text-sky-700 border-sky-200", card: "border-sky-200 bg-sky-50/40" },
+  letter: { label: "书信", badge: "bg-emerald-100 text-emerald-700 border-emerald-200", card: "border-emerald-200 bg-emerald-50/40" },
+  drama: { label: "戏剧", badge: "bg-amber-100 text-amber-700 border-amber-200", card: "border-amber-200 bg-amber-50/40" },
+  poetry: { label: "诗歌", badge: "bg-pink-100 text-pink-700 border-pink-200", card: "border-pink-200 bg-pink-50/40" },
+}
 
 function splitSentences(text: string): string[] {
   return text
@@ -53,6 +62,18 @@ function toDateLabel(iso: string): string {
   const date = new Date(iso)
   if (Number.isNaN(date.getTime())) return iso
   return `${date.getMonth() + 1}/${date.getDate()}`
+}
+
+function formatDateTime(iso: string): string {
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) return iso
+  return date.toLocaleString("zh-CN", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  })
 }
 
 function createAnnotation(quote: string): Annotation {
@@ -367,131 +388,185 @@ export default function DashboardV2({ user, onBack }: DashboardProps) {
                       </CardContent>
                     </Card>
                     <div className="flex gap-2">
-                      <Button type="button" variant={panel === "writings" ? "default" : "outline"} onClick={() => setPanel("writings")}>Writings</Button>
-                      <Button type="button" variant={panel === "api" ? "default" : "outline"} onClick={() => setPanel("api")}>AI Interactions</Button>
+                      <Button type="button" variant={panel === "writings" ? "default" : "outline"} onClick={() => setPanel("writings")}>文章</Button>
+                      <Button type="button" variant={panel === "api" ? "default" : "outline"} onClick={() => setPanel("api")}>AI 交互</Button>
                     </div>
 
-                {panel === "writings" && detail.writings.map((w) => {
-                  const open = openWriting === w.id
-                  const sentenceList = splitSentences(w.content || "")
-                  const writingAnnotations = annotations[w.id] ?? []
-                  return (
-                    <Card key={w.id}>
-                      <CardHeader className="py-3">
-                        <button type="button" className="flex w-full items-center justify-between text-left" onClick={() => setOpenWriting(open ? null : w.id)}>
-                          <p className="text-sm font-medium">[{w.type.toUpperCase()}] {w.title}</p>{open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                        </button>
-                      </CardHeader>
-                      {open && (
-                        <CardContent className="space-y-3">
-                          <div className="grid gap-3 lg:grid-cols-3">
-                            <div className="rounded border bg-slate-50 p-3 lg:col-span-2">
-                              <p className="mb-2 text-xs font-semibold text-slate-500">Original Text (click sentence to annotate)</p>
-                              <div className="max-h-72 space-y-1 overflow-auto" onMouseUp={() => captureSelection(w)}>
-                                {sentenceList.length === 0 ? (
-                                  <p className="text-sm text-slate-400">(empty content)</p>
-                                ) : (
-                                  sentenceList.map((sentence, idx) => {
-                                    const isActive = writingAnnotations.some(
-                                      (annotation) => annotation.id === activeAnnotationId && annotation.quote === sentence,
-                                    )
-                                    const isAnnotated = writingAnnotations.some((annotation) => annotation.quote === sentence)
-                                    return (
-                                      <button
-                                        key={`${w.id}-${idx}`}
-                                        type="button"
-                                        onClick={() => addSentenceAnnotation(w.id, sentence)}
-                                        className={`block w-full rounded px-2 py-1 text-left text-sm leading-6 transition ${
-                                          isActive
-                                            ? "bg-amber-200"
-                                            : isAnnotated
-                                              ? "bg-amber-100"
-                                              : "hover:bg-slate-200"
-                                        }`}
-                                      >
-                                        {sentence}
-                                      </button>
-                                    )
-                                  })
-                                )}
+                {panel === "writings" && (
+                  <>
+                    {detail.degraded && (
+                      <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                        当前教师看板处于数据库降级模式，所以文章和交互可能全部为空。
+                      </div>
+                    )}
+                    {!detail.degraded && detail.diagnostics && detail.diagnostics.recoveredWritings > 0 && (
+                      <div className="rounded-lg border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-800">
+                        已从历史 interaction 日志中恢复 {detail.diagnostics.recoveredWritings} 条文章记录。
+                      </div>
+                    )}
+                    {detail.writings.length === 0 ? (
+                      <div className="rounded-lg border border-dashed p-6 text-center text-sm text-slate-500">
+                        {detail.degraded
+                          ? "数据库未连接，当前无法读取文章数据。"
+                          : detail.diagnostics && detail.diagnostics.interactionCount > 0
+                            ? `发现 ${detail.diagnostics.interactionCount} 条历史 interaction，但还没有可恢复的正文记录。`
+                            : "当前学生还没有可展示的文章记录。"}
+                      </div>
+                    ) : detail.writings.map((w) => {
+                      const open = openWriting === w.id
+                      const sentenceList = splitSentences(w.content || "")
+                      const writingAnnotations = annotations[w.id] ?? []
+                      const typeMeta = TYPE_META[w.type] ?? { label: w.type, badge: "bg-slate-100 text-slate-700 border-slate-200", card: "border-slate-200 bg-white" }
+                      return (
+                        <Card key={w.id} className={typeMeta.card}>
+                          <CardHeader className="py-3">
+                            <button type="button" className="flex w-full items-center justify-between text-left" onClick={() => setOpenWriting(open ? null : w.id)}>
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <span className={`inline-flex rounded-full border px-2 py-0.5 text-xs font-medium ${typeMeta.badge}`}>{typeMeta.label}</span>
+                                  <p className="truncate text-sm font-medium">{w.title}</p>
+                                </div>
+                                <p className="mt-1 text-xs text-slate-500">{formatDateTime(w.updatedAt)}</p>
                               </div>
-                            </div>
+                              {open ? <ChevronDown className="h-4 w-4 shrink-0" /> : <ChevronRight className="h-4 w-4 shrink-0" />}
+                            </button>
+                          </CardHeader>
+                          {open && (
+                            <CardContent className="space-y-3">
+                              <div className="grid gap-3 lg:grid-cols-3">
+                                <div className="rounded border bg-slate-50 p-3 lg:col-span-2">
+                                  <p className="mb-2 text-xs font-semibold text-slate-500">Original Text (click sentence to annotate)</p>
+                                  <div className="max-h-72 space-y-1 overflow-auto" onMouseUp={() => captureSelection(w)}>
+                                    {sentenceList.length === 0 ? (
+                                      <p className="text-sm text-slate-400">(empty content)</p>
+                                    ) : (
+                                      sentenceList.map((sentence, idx) => {
+                                        const isActive = writingAnnotations.some(
+                                          (annotation) => annotation.id === activeAnnotationId && annotation.quote === sentence,
+                                        )
+                                        const isAnnotated = writingAnnotations.some((annotation) => annotation.quote === sentence)
+                                        return (
+                                          <button
+                                            key={`${w.id}-${idx}`}
+                                            type="button"
+                                            onClick={() => addSentenceAnnotation(w.id, sentence)}
+                                            className={`block w-full rounded px-2 py-1 text-left text-sm leading-6 transition ${
+                                              isActive
+                                                ? "bg-amber-200"
+                                                : isAnnotated
+                                                  ? "bg-amber-100"
+                                                  : "hover:bg-slate-200"
+                                            }`}
+                                          >
+                                            {sentence}
+                                          </button>
+                                        )
+                                      })
+                                    )}
+                                  </div>
+                                </div>
 
-                            <div className="rounded border bg-white p-3">
-                              <p className="mb-2 text-xs font-semibold text-slate-500">Comments Sidebar</p>
-                              <div className="max-h-72 space-y-2 overflow-auto">
-                                {writingAnnotations.length === 0 ? (
-                                  <p className="text-xs text-slate-400">Select a sentence from the text to create comments.</p>
-                                ) : (
-                                  writingAnnotations.map((annotation) => (
-                                    <div
-                                      key={annotation.id}
-                                      className={`rounded border p-2 ${activeAnnotationId === annotation.id ? "border-indigo-400 bg-indigo-50" : "bg-slate-50"}`}
-                                      onClick={() => setActiveAnnotationId(annotation.id)}
-                                    >
-                                      <p className="mb-2 line-clamp-2 text-xs text-slate-700">{annotation.quote}</p>
-                                      <Input
-                                        placeholder="Suggested revision"
-                                        value={annotation.replaceWith}
-                                        onChange={(event) =>
-                                          updateAnnotation(w.id, annotation.id, { replaceWith: event.target.value })
-                                        }
-                                        className="mb-2 h-8 text-xs"
-                                      />
-                                      <Textarea
-                                        placeholder="Teacher note"
-                                        value={annotation.comment}
-                                        onChange={(event) =>
-                                          updateAnnotation(w.id, annotation.id, { comment: event.target.value })
-                                        }
-                                        className="mb-2 min-h-16 text-xs"
-                                      />
-                                      <div className="flex gap-1">
-                                        <Button
-                                          size="sm"
-                                          className="h-7 px-2 text-xs"
-                                          disabled={annotation.saving}
-                                          onClick={() => void saveCorrection(w, annotation.id)}
+                                <div className="rounded border bg-white p-3">
+                                  <p className="mb-2 text-xs font-semibold text-slate-500">Comments Sidebar</p>
+                                  <div className="max-h-72 space-y-2 overflow-auto">
+                                    {writingAnnotations.length === 0 ? (
+                                      <p className="text-xs text-slate-400">Select a sentence from the text to create comments.</p>
+                                    ) : (
+                                      writingAnnotations.map((annotation) => (
+                                        <div
+                                          key={annotation.id}
+                                          className={`rounded border p-2 ${activeAnnotationId === annotation.id ? "border-indigo-400 bg-indigo-50" : "bg-slate-50"}`}
+                                          onClick={() => setActiveAnnotationId(annotation.id)}
                                         >
-                                          {annotation.saving ? "Saving" : "Save"}
-                                        </Button>
-                                        <Button
-                                          size="sm"
-                                          variant="outline"
-                                          className="h-7 px-2 text-xs"
-                                          onClick={() => removeAnnotation(w.id, annotation.id)}
-                                        >
-                                          Remove
-                                        </Button>
-                                      </div>
-                                    </div>
-                                  ))
-                                )}
+                                          <p className="mb-2 line-clamp-2 text-xs text-slate-700">{annotation.quote}</p>
+                                          <Input
+                                            placeholder="Suggested revision"
+                                            value={annotation.replaceWith}
+                                            onChange={(event) =>
+                                              updateAnnotation(w.id, annotation.id, { replaceWith: event.target.value })
+                                            }
+                                            className="mb-2 h-8 text-xs"
+                                          />
+                                          <Textarea
+                                            placeholder="Teacher note"
+                                            value={annotation.comment}
+                                            onChange={(event) =>
+                                              updateAnnotation(w.id, annotation.id, { comment: event.target.value })
+                                            }
+                                            className="mb-2 min-h-16 text-xs"
+                                          />
+                                          <div className="flex gap-1">
+                                            <Button
+                                              size="sm"
+                                              className="h-7 px-2 text-xs"
+                                              disabled={annotation.saving}
+                                              onClick={() => void saveCorrection(w, annotation.id)}
+                                            >
+                                              {annotation.saving ? "Saving" : "Save"}
+                                            </Button>
+                                            <Button
+                                              size="sm"
+                                              variant="outline"
+                                              className="h-7 px-2 text-xs"
+                                              onClick={() => removeAnnotation(w.id, annotation.id)}
+                                            >
+                                              Remove
+                                            </Button>
+                                          </div>
+                                        </div>
+                                      ))
+                                    )}
+                                  </div>
+                                </div>
                               </div>
-                            </div>
-                          </div>
-                        </CardContent>
-                      )}
-                    </Card>
-                  )
-                })}
+                            </CardContent>
+                          )}
+                        </Card>
+                      )
+                    })}
+                  </>
+                )}
 
                 {panel === "api" && (
                   detail.apiLogs.length === 0 ? (
                     <div className="rounded-lg border border-dashed p-6 text-center text-sm text-slate-500">
-                      No AI interaction records were found for this student.
+                      {detail.degraded
+                        ? "数据库未连接，当前无法读取 AI 交互数据。"
+                        : detail.diagnostics && detail.diagnostics.interactionCount > 0
+                          ? `当前学生有 ${detail.diagnostics.interactionCount} 条 interaction，但其中没有可解析的 AI 对话内容。`
+                          : "当前学生还没有可展示的 AI 交互记录。"}
                     </div>
                   ) : detail.apiLogs.map((log) => {
                   const open = openLog === log.id
+                  const typeMeta = TYPE_META[log.articleType] ?? { label: log.articleType, badge: "bg-slate-100 text-slate-700 border-slate-200", card: "border-slate-200 bg-white" }
                   return (
-                    <Card key={log.id}>
+                    <Card key={log.id} className={typeMeta.card}>
                       <CardHeader className="py-3">
                         <button type="button" className="flex w-full items-center justify-between text-left" onClick={() => setOpenLog(open ? null : log.id)}>
-                          <p className="text-sm font-medium">{log.stage} | token {log.tokenEstimate} | {new Date(log.timestamp).toLocaleString("en-US")}</p>{open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className={`inline-flex rounded-full border px-2 py-0.5 text-xs font-medium ${typeMeta.badge}`}>{typeMeta.label}</span>
+                              <p className="truncate text-sm font-medium">{log.title}</p>
+                            </div>
+                            <p className="mt-1 text-xs text-slate-500">{formatDateTime(log.timestamp)} | token {log.tokenEstimate}</p>
+                          </div>
+                          {open ? <ChevronDown className="h-4 w-4 shrink-0" /> : <ChevronRight className="h-4 w-4 shrink-0" />}
                         </button>
                       </CardHeader>
-                      {open && <CardContent><div className="max-h-56 overflow-auto rounded border bg-slate-50 p-3 space-y-2">
-                        {log.messages.length > 0 ? log.messages.map((m, i) => <div key={`${m.role}-${i}`} className="rounded border bg-white p-2"><p className="text-xs font-semibold uppercase text-slate-500">{m.role}</p><p className="whitespace-pre-wrap text-sm">{m.content}</p></div>) : <p className="text-sm text-slate-500">No parsed chat message.</p>}
+                      {open && <CardContent><div className="mb-3 text-xs text-slate-500">{log.stage}</div><div className="max-h-56 overflow-auto rounded border bg-slate-50 p-3 space-y-2">
+                        {log.apiCalls.length > 0 && (
+                          <div className="rounded border bg-white p-2">
+                            <p className="mb-2 text-xs font-semibold uppercase text-slate-500">Endpoints</p>
+                            <div className="flex flex-wrap gap-2">
+                              {log.apiCalls.map((apiCall, index) => (
+                                <span key={`${log.id}-endpoint-${index}`} className="rounded-full bg-slate-100 px-2 py-1 text-xs text-slate-700">
+                                  {apiCall.endpoint || "(unknown endpoint)"}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {log.messages.length > 0 ? log.messages.map((m, i) => <div key={`${m.role}-${i}`} className="rounded border bg-white p-2"><p className="text-xs font-semibold uppercase text-slate-500">{m.role}</p><p className="whitespace-pre-wrap text-sm">{m.content}</p></div>) : <p className="text-sm text-slate-500">这一条 API 记录已显示，但当前没有可解析的对话文本。</p>}
                       </div></CardContent>}
                     </Card>
                   )
