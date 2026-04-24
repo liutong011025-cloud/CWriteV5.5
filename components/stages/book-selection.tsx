@@ -12,6 +12,7 @@ interface BookSelectionProps {
   language?: Language
   onBookSelected?: (bookTitle: string) => void
   onBack?: () => void
+  userId?: string
 }
 
 const translations = {
@@ -29,7 +30,7 @@ const translations = {
   },
 }
 
-export default function BookSelection({ language = "en", onBookSelected, onBack }: BookSelectionProps) {
+export default function BookSelection({ language = "en", onBookSelected, onBack, userId }: BookSelectionProps) {
   const t = translations[language] || translations.en
   const [bookTitle, setBookTitle] = useState("")
   const [isLoading, setIsLoading] = useState(false)
@@ -81,7 +82,7 @@ export default function BookSelection({ language = "en", onBookSelected, onBack 
         fetch("/api/generate-book-cover", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ bookTitle: bookTitle, user_id: 'student' }),
+          body: JSON.stringify({ bookTitle: bookTitle, user_id: userId || "default-user" }),
         }).catch(err => console.error("Cover generation error:", err))
       } catch (error) {
         console.error("Error initiating cover generation:", error)
@@ -125,7 +126,7 @@ export default function BookSelection({ language = "en", onBookSelected, onBack 
         },
         body: JSON.stringify({
           bookTitle: userMessage,
-          user_id: 'student',
+          user_id: userId || "default-user",
           level: getCurrentLevel(),
         }),
       })
