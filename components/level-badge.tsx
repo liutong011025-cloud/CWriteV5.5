@@ -29,13 +29,13 @@ export default function LevelBadge({ level, className = "" }: LevelBadgeProps) {
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className={`flex items-center gap-2 rounded-xl border-2 border-amber-400/90 bg-gradient-to-r from-amber-100 to-yellow-100 px-5 py-3 font-bold text-amber-900 shadow-lg transition hover:from-amber-200 hover:to-yellow-200 focus:outline-none focus:ring-2 focus:ring-amber-500 ${className}`}
+        className={`flex items-center gap-2 rounded-xl border-2 border-amber-400/90 bg-gradient-to-r from-amber-100 to-yellow-100 px-3 py-2 md:px-3 md:py-1.5 xl:px-5 xl:py-3 font-bold text-amber-900 shadow-lg transition hover:from-amber-200 hover:to-yellow-200 focus:outline-none focus:ring-2 focus:ring-amber-500 ${className}`}
         aria-label={`Level ${level} - ${detail.subtitle}`}
       >
-        <span className="text-lg whitespace-nowrap">Level {level}</span>
+        <span className="whitespace-nowrap text-sm md:text-sm xl:text-lg">Level {level}</span>
       </button>
       {open && (
-        <div className="absolute right-0 top-full mt-2 w-[min(90vw,420px)] rounded-2xl border-2 border-amber-200 bg-white p-5 shadow-2xl">
+        <div className="absolute right-0 top-full mt-2 w-[min(88vw,360px)] xl:w-[min(90vw,420px)] rounded-2xl border-2 border-amber-200 bg-white p-4 xl:p-5 shadow-2xl">
           <LevelDetailContent detail={detail} />
         </div>
       )}
