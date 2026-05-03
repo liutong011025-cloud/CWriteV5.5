@@ -178,13 +178,13 @@ export default function JourneyTicket({
           </p>
         </div>
 
-        <div className="max-w-7xl mx-auto grid grid-cols-1 xl:grid-cols-[300px_1fr] gap-6 md:gap-8 xl:gap-10 mb-8 md:mb-10 xl:mb-12">
+        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-[260px_1fr] xl:grid-cols-[300px_1fr] gap-6 md:gap-8 xl:gap-10 mb-8 md:mb-10 xl:mb-12">
           {/* Left side - Journey type cards with pixel styling */}
           <div className="flex flex-col justify-center lg:justify-start">
             <p className="mb-4 md:mb-5 text-sm md:text-[15px] text-center xl:text-left max-w-[320px] pixel-text" style={{ color: "#5a4a2a" }}>
               Choose a type of article you want to write and drag it to the stamp area on the right ticket.
             </p>
-            <div className="grid grid-cols-2 gap-3 md:gap-4 xl:flex xl:flex-col xl:gap-5">
+            <div className="grid grid-cols-2 gap-3 md:flex md:flex-col md:gap-4 xl:gap-5">
               {journeyOptions.map((option, idx) => {
                 const isSelected = selectedType === option.id
                 return (
@@ -274,7 +274,7 @@ export default function JourneyTicket({
                 ✈️
               </div>
 
-              <div className="grid xl:grid-cols-[1.2fr_0.8fr] gap-5 md:gap-6">
+              <div className="grid lg:grid-cols-[1.15fr_0.85fr] xl:grid-cols-[1.2fr_0.8fr] gap-5 md:gap-6">
                 <div>
                   {/* Passenger info with pixel styling */}
                   <div className="grid md:grid-cols-3 gap-4 md:gap-5 xl:gap-6 items-center">
