@@ -205,10 +205,10 @@ export default function Header() {
     <header
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
         isAboutPage || isGalleryPage
-          ? 'h-14 md:h-12 xl:h-16 shadow-xl' // About 和 Gallery 页面使用中等高度的header
+          ? 'h-14 md:h-[52px] xl:h-16 shadow-xl' // About 和 Gallery 页面使用中等高度的header
           : isHomePage 
-          ? (isScrolled ? 'h-12 md:h-11 xl:h-14 shadow-xl' : 'h-24 md:h-20 xl:h-32')
-          : 'h-11 md:h-10 xl:h-12 shadow-lg' // 非首页始终保持窄的header
+          ? (isScrolled ? 'h-12 md:h-[54px] xl:h-14 shadow-xl' : 'h-24 md:h-[92px] xl:h-32')
+          : 'h-12 md:h-[50px] xl:h-12 shadow-lg' // 非首页始终保持窄的header
       }`}
       onMouseEnter={() => setIsHovering(true)}
       onMouseLeave={() => setIsHovering(false)}
@@ -224,7 +224,7 @@ export default function Header() {
           : 'none',
       }}
     >
-      <div className="max-w-7xl mx-auto h-full px-3 md:px-4 xl:px-6 flex items-center justify-between gap-3">
+      <div className="max-w-7xl mx-auto h-full px-3 md:px-4 xl:px-6 flex items-center justify-between gap-2 md:gap-3">
         {/* Logo or Title */}
         <div className="flex items-center h-full">
           <Link 
@@ -258,7 +258,7 @@ export default function Header() {
                    alt="CWrite"
                    width={120}
                    height={40}
-                   className="object-contain h-full w-auto max-w-[110px] md:max-w-[100px] xl:max-w-none"
+                   className="object-contain h-full w-auto max-w-[110px] md:max-w-[118px] xl:max-w-none"
                    unoptimized
                    style={{ maxHeight: '100%', height: '100%', objectFit: 'contain', width: 'auto' }}
                  />
@@ -268,7 +268,7 @@ export default function Header() {
                    alt="CWrite"
                    width={120}
                    height={40}
-                   className="object-contain h-full w-auto max-w-[110px] md:max-w-[100px] xl:max-w-none"
+                   className="object-contain h-full w-auto max-w-[110px] md:max-w-[118px] xl:max-w-none"
                    unoptimized
                    style={{ maxHeight: '100%', height: '100%', objectFit: 'contain', width: 'auto' }}
                  />
@@ -280,7 +280,7 @@ export default function Header() {
                  alt="CWrite"
                  width={120}
                  height={40}
-                 className="object-contain h-full w-auto max-w-[110px] md:max-w-[100px] xl:max-w-none"
+                 className="object-contain h-full w-auto max-w-[110px] md:max-w-[118px] xl:max-w-none"
                  unoptimized
                  style={{ maxHeight: '100%', height: '100%', objectFit: 'contain', width: 'auto' }}
                />
@@ -291,7 +291,7 @@ export default function Header() {
                  alt="CWrite"
                  width={120}
                  height={40}
-                 className="object-contain h-full w-auto max-w-[110px] md:max-w-[100px] xl:max-w-none"
+                 className="object-contain h-full w-auto max-w-[110px] md:max-w-[118px] xl:max-w-none"
                  unoptimized
                  style={{ maxHeight: '100%', height: '100%', objectFit: 'contain', width: 'auto' }}
                />
@@ -301,7 +301,7 @@ export default function Header() {
 
                {/* Navigation Links + 用户头像 + 语言 */}
                <nav className="flex items-center gap-1.5 md:gap-2 xl:gap-3 flex-shrink-0 min-w-0">
-                 <div className="flex items-center gap-1.5 md:gap-2 xl:gap-3 min-w-0 justify-end">
+                 <div className="flex items-center gap-1.5 md:gap-1.5 xl:gap-3 min-w-0 justify-end">
                  {navItems.map((item) => {
                    // 检查是否激活
                   const isHomePageActive = (currentStage === 'home' || pathname === '/') && item.href === "/"
@@ -314,7 +314,7 @@ export default function Header() {
                        key={item.href}
                        href={item.href}
                        onClick={(e) => handleNavClick(item, e)}
-                       className={`px-2.5 py-1.5 md:px-2.5 md:py-1.5 xl:px-6 xl:py-3 rounded-lg font-semibold text-xs md:text-[11px] xl:text-lg transition-all duration-200 whitespace-nowrap ${
+                       className={`px-2.5 py-1.5 md:px-2.5 md:py-1.5 xl:px-6 xl:py-3 rounded-lg font-semibold text-xs md:text-[12px] xl:text-lg transition-all duration-200 whitespace-nowrap ${
                          isGalleryPage
                            ? isActive
                              ? 'text-yellow-200 hover:text-yellow-100' // Gallery 页面激活时显示黄色
@@ -337,7 +337,7 @@ export default function Header() {
                    <button
                      type="button"
                      onClick={() => setAboutMenuOpen((open) => !open)}
-                    className={`px-2.5 py-1.5 md:px-2.5 md:py-1.5 xl:px-6 xl:py-3 rounded-xl font-semibold text-xs md:text-[11px] xl:text-lg transition-all duration-200 whitespace-nowrap ${
+                    className={`px-2.5 py-1.5 md:px-2.5 md:py-1.5 xl:px-6 xl:py-3 rounded-xl font-semibold text-xs md:text-[12px] xl:text-lg transition-all duration-200 whitespace-nowrap ${
                        isAboutPage
                          ? showBackground
                            ? "text-yellow-200"
@@ -393,7 +393,7 @@ export default function Header() {
                    <button
                      type="button"
                      onClick={() => window.dispatchEvent(new CustomEvent("navigateToUserProfile"))}
-                    className={`relative flex-shrink-0 ml-0.5 xl:ml-1 px-2.5 py-1.5 md:px-2.5 md:py-1.5 xl:px-6 xl:py-3 rounded-lg font-semibold text-xs md:text-[11px] xl:text-lg transition-all duration-200 whitespace-nowrap ${
+                    className={`relative flex-shrink-0 ml-0.5 xl:ml-1 px-2.5 py-1.5 md:px-2.5 md:py-1.5 xl:px-6 xl:py-3 rounded-lg font-semibold text-xs md:text-[12px] xl:text-lg transition-all duration-200 whitespace-nowrap ${
                       showBackground
                         ? "text-blue-100 hover:text-white"
                         : "text-black drop-shadow-sm hover:text-gray-700"
@@ -410,12 +410,12 @@ export default function Header() {
                  )}
 
                  {/* Language Selector - 所有页面都显示 */}
-                 <div className="ml-1 flex gap-1 md:gap-1.5 xl:ml-2 xl:gap-2 flex-shrink-0">
+                 <div className="ml-1 flex gap-1 md:gap-1 xl:ml-2 xl:gap-2 flex-shrink-0">
                    <Button
                      onClick={() => handleLanguageChange("en")}
                      variant={language === "en" ? "default" : "outline"}
                      size="sm"
-                     className={`px-2 py-1.5 md:px-2 md:py-1.5 xl:px-3 xl:py-2 rounded-lg font-semibold text-[11px] md:text-[11px] xl:text-sm transition-all ${
+                     className={`px-2 py-1.5 md:px-2 md:py-1.5 xl:px-3 xl:py-2 rounded-lg font-semibold text-[11px] md:text-[12px] xl:text-sm transition-all ${
                        language === "en"
                          ? "bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg border-0"
                          : showBackground
@@ -431,7 +431,7 @@ export default function Header() {
                      onClick={() => handleLanguageChange("zh")}
                      variant={language === "zh" ? "default" : "outline"}
                      size="sm"
-                     className={`px-2 py-1.5 md:px-2 md:py-1.5 xl:px-3 xl:py-2 rounded-lg font-semibold text-[11px] md:text-[11px] xl:text-sm transition-all ${
+                     className={`px-2 py-1.5 md:px-2 md:py-1.5 xl:px-3 xl:py-2 rounded-lg font-semibold text-[11px] md:text-[12px] xl:text-sm transition-all ${
                        language === "zh"
                          ? "bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg border-0"
                          : showBackground
