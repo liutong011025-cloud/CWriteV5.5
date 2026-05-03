@@ -108,7 +108,8 @@ Story details (for inspiration only, do not render text):
 - Story structure (if any): "${structureType || "unspecified"}"
 
 Task:
-- Focus your main new visual content on a **tiny local patch** centered very close to (${safeMapX}, ${safeMapY}), roughly a circle with radius about 2–3% of the map width. The strongest new shapes and colors should stay inside this tiny patch.
+- Focus your main new visual content on a **tiny local patch** centered exactly under the student's existing pin at (${safeMapX}, ${safeMapY}), roughly a circle with radius about 2-3% of the map width. The strongest new shapes and colors must stay inside this tiny patch.
+- Treat (${safeMapX}, ${safeMapY}) as the center of the writing marker area from the previous map. The new writing-related element should appear directly at that pin location, not in a nearby region and not shifted to another landmark.
 - Inside this small area, add or modify only compact terrain details, tiny paths, miniature buildings, small plants, icons, or props that clearly reflect this new topic, the plot, and the character species. Keep them noticeably smaller than before.
 - Avoid oversized landmarks, giant buildings, huge forests, or large terrain blocks. New elements must feel subtle and map-scale, not poster-scale.
 - You may also sprinkle a few very small, subtle details related to this topic elsewhere on the map (for example, tiny props, hints of color, or distant shapes), but they should feel naturally integrated and must not dominate the image.
@@ -117,6 +118,7 @@ Task:
 Very important:
 - This MUST look like a natural evolution of the previous map, not a brand‑new style.
 - Keep the same overall palette, camera angle, and rendering style as the base image.
+- The edited region must stay tightly anchored to the previous pin position; maximum visual offset should be about 1% of map width/height from (${safeMapX}, ${safeMapY}).
 - Do NOT add UI, text labels, or logos. Leave space so the interface can overlay flags or titles later.
 - Use the story's character species and plot beats as inspiration for tiny environmental storytelling details near the patch.
 - ${extraPrompt || "Do not invent a whole new region; just evolve the existing map carefully."}
