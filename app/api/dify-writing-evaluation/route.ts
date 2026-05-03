@@ -22,6 +22,61 @@ const stopwords = new Set([
 
 const hasVowel = (word: string) => /[aeiou]/i.test(word)
 
+const buildSeriousWritingReminder = (reason: "gibberish" | "low_effort") => {
+  if (reason === "gibberish") {
+    return [
+      "Practice makes perfect.",
+      "I cannot understand this text yet because it looks like random letters or乱码.",
+      "Please slow down and write 2-3 real English sentences for this section.",
+      "Finish this part carefully, then I can help you move on.",
+    ].join("\n")
+  }
+
+  return [
+    "Practice makes perfect.",
+    "This part looks rushed, so I cannot pass it yet.",
+    "Please write 2-3 real English sentences and complete this section carefully.",
+    "Add clear ideas instead of filler words, then I will check it again.",
+  ].join("\n")
+}
+
+const detectLowEffortText = (textRaw: string) => {
+  const text = String(textRaw || "").trim()
+  if (!text) return false
+
+  const words = tokenizeWords(text)
+  if (words.length === 0) {
+    const compact = text.replace(/[\s\W_]+/g, "")
+    return compact.length >= 5
+  }
+
+  const uniqueWords = new Set(words)
+  const compact = text.toLowerCase().replace(/[\s\W_]+/g, "")
+  const longestSameCharRun = compact.match(/(.)\1{4,}/)?.[0]?.length || 0
+  const repeatedWordOnly = words.length >= 3 && uniqueWords.size === 1
+  const repeatedShortTokens =
+    words.length >= 4 &&
+    uniqueWords.size <= 2 &&
+    words.every((word) => word.length <= 4)
+  const placeholderOnly =
+    /^(test|testing|asdf|qwer|zxcv|abc|ok|okay|hi|hello|yes|no|lol|haha|hehe)([\s!.,?]+\1)*[\s!.,?]*$/i.test(text)
+  const keyboardMash = /(qwerty|asdfg|zxcvb|12345|aaaaa|bbbbb|ccccc)/i.test(compact)
+  const consonantHeavyGibberish =
+    words.length >= 2 &&
+    words.filter((word) => word.length >= 4 && !hasVowel(word)).length / words.length >= 0.5
+  const tooShortAndThin = words.length <= 3 && text.length <= 18 && !/[.!?。！？]/.test(text)
+
+  return (
+    repeatedWordOnly ||
+    repeatedShortTokens ||
+    placeholderOnly ||
+    keyboardMash ||
+    consonantHeavyGibberish ||
+    longestSameCharRun >= 5 ||
+    tooShortAndThin
+  )
+}
+
 const buildFailGuidance = (
   quality: { semanticFluency: number; contentMatch: number; structureCompleteness: number },
   sectionName: string
@@ -130,10 +185,18 @@ const computeQualityScores = (
 const buildLocalEvaluation = (text: string, level: number, currentSectionName: string) => {
   const quality = computeQualityScores(text, null, null, currentSectionName)
   const gibberishDetected = quality.gibberishRatio >= GIBBERISH_THRESHOLD
+  const lowEffortDetected = detectLowEffortText(text)
   if (gibberishDetected) {
     return {
-      evaluation:
-        "I cannot understand this text yet. It looks like random letters. Please rewrite 2-3 clear English sentences for this section.",
+      evaluation: buildSeriousWritingReminder("gibberish"),
+      done: false,
+      quality,
+      gibberishDetected,
+    }
+  }
+  if (lowEffortDetected) {
+    return {
+      evaluation: buildSeriousWritingReminder("low_effort"),
       done: false,
       quality,
       gibberishDetected,
@@ -202,23 +265,22 @@ Current Section Being Written: ${currentSectionName}
 Student's Writing for Current Section:
 ${text || "(No text yet)"}
 
-Please evaluate the student's writing in 6 short sentences:
-1) Praise one concrete detail from the student's text.
-2) Give one specific next step for this section — use the character's name and traits to make it personal (e.g. "Since [name] is [trait], try writing how [name] ...").
-3) Give one more writing suggestion — connect it to the character's species, traits, or description to inspire the student.
-4) Give one grammar check with quote and correction.
-5) Mention one positive value shown.
-6) Connect feedback to level ${level}.
+Please evaluate the student's writing in 4-6 short sentences.
+If the writing is meaningful, you may praise one concrete detail first.
+If the writing is gibberish, placeholder text, repeated words, random letters, keyboard smashing, or obviously rushed / too short, DO NOT praise it at all. Start directly with a gentle correction.
+If the writing is gibberish or obviously rushed, include a short proverb like "Practice makes perfect." and tell the student to complete it carefully.
+For weak writing, focus on what is missing and what to add next.
 Use clear, child-friendly English. No long paragraph.
 
 VERY IMPORTANT:
 - Always refer to the character by their name (${character?.name || "the character"}), not "your character".
-- If text is nonsense or too short, do NOT write "done".
+- If text is nonsense, placeholder text, repeated filler, or too short, do NOT write "done".
 - Only write "done" when ALL are good: semantic fluency, content match to character/plot/section, and section completeness.
 - Do NOT use word count alone to decide done.
 - If quality is good enough, you MUST include the exact pass sentence: "You can move on to the next part of your writing!"
 - If and only if you wrote "done", add on next NEW LINE: "${GOOD_ENOUGH_CODE}".
 - If not done, you MUST explain why not passed and give 1-2 concrete improvement steps.
+- Never give strong praise to nonsense, placeholder text, or obvious low-effort writing.
 
 ${levelSuffix}`
 
@@ -233,6 +295,7 @@ ${levelSuffix}`
         source: "fallback_local_no_config",
         quality: local.quality,
         gibberishDetected: local.gibberishDetected,
+        lowEffortDetected: detectLowEffortText(String(text || "")),
       })
     }
 
@@ -268,6 +331,7 @@ ${levelSuffix}`
         source: "fallback_local_error",
         quality: local.quality,
         gibberishDetected: local.gibberishDetected,
+        lowEffortDetected: detectLowEffortText(String(text || "")),
       })
     }
 
@@ -281,6 +345,7 @@ ${levelSuffix}`
         source: "fallback_local_empty",
         quality: local.quality,
         gibberishDetected: local.gibberishDetected,
+        lowEffortDetected: detectLowEffortText(String(text || "")),
       })
     }
 
@@ -288,7 +353,8 @@ ${levelSuffix}`
     const modelHasSecretCode = evaluation.includes(GOOD_ENOUGH_CODE)
     const quality = computeQualityScores(String(text || ""), character, plot, currentSectionName)
     const gibberishDetected = quality.gibberishRatio >= GIBBERISH_THRESHOLD
-    const hasDone = modelHasSecretCode && !gibberishDetected
+    const lowEffortDetected = detectLowEffortText(String(text || ""))
+    const hasDone = modelHasSecretCode && !gibberishDetected && !lowEffortDetected
     const hasSecretCode = hasDone
 
     // 移除控制信號
@@ -300,7 +366,9 @@ ${levelSuffix}`
     const baseEvaluation = cleanEvaluation || "Please continue improving this section."
     const failGuidance = !hasDone ? buildFailGuidance(quality, currentSectionName) : ""
     const displayEvaluation = gibberishDetected
-      ? "I cannot understand this text yet. It looks like random letters. Please rewrite 2-3 clear English sentences for this section."
+      ? buildSeriousWritingReminder("gibberish")
+      : lowEffortDetected
+        ? buildSeriousWritingReminder("low_effort")
       : hasDone && !baseEvaluation.includes(doneHint)
         ? `${baseEvaluation}\n${doneHint}`
         : `${baseEvaluation}${failGuidance}`
@@ -317,6 +385,7 @@ ${levelSuffix}`
         secretCodeDetected: hasSecretCode,
         quality,
         gibberishDetected,
+        lowEffortDetected,
       }
     )
 
@@ -327,6 +396,7 @@ ${levelSuffix}`
       secretCode: hasDone ? GOOD_ENOUGH_CODE : null,
       quality,
       gibberishDetected,
+      lowEffortDetected,
     })
   } catch (error) {
     console.error("Error in writing evaluation:", error)
