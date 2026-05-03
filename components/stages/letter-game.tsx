@@ -32,8 +32,8 @@ const LETTER_SECTIONS = [
 
 const LETTER_BEAR_LAYOUT = {
   bearX: 83.5,
-  bearY: 14.5,
-  hangY: 29.5,
+  bearY: 17.5,
+  hangY: 32.5,
   bearScale: 1.8,
 } as const
 
