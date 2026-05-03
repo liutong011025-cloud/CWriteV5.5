@@ -1,7 +1,7 @@
 # Vercel 环境变量配置指南
 
 ## 问题
-Vercel 部署后显示 "FAL_KEY not configured" 或 "No cover available"，这是因为环境变量未在 Vercel 中配置。
+Vercel 部署后显示 "ARK_API_KEY is not configured"、"map_unavailable"、"character_unavailable" 或 "No cover available"，通常是因为火山引擎环境变量未在 Vercel 中配置。
 
 ## 解决方案
 
@@ -16,10 +16,10 @@ Vercel 部署后显示 "FAL_KEY not configured" 或 "No cover available"，这�
 #### 必需的环境变量
 
 ```
-FAL_KEY=bc35b5d9-8125-4aa4-99cd-cf8df4bcd3d0:2063617b179b1ed975af5ea42d217b35
+ARK_API_KEY=你的火山方舟_API_Key
 ```
 
-**注意：** 这是项目的 FAL API 密钥。在 Vercel 部署时也需要在环境变量中设置这个值。
+**注意：** 这是项目的火山方舟图片 API 密钥。图片生成和图生图接口现在统一使用这个变量。
 
 #### Dify API 相关（如果使用 AI 功能）
 
@@ -62,9 +62,13 @@ DIFY_BOOK_SUMMARY_APP_ID=app-FMli5GdNfA9M1ErElR0HWXj8
 
 项目中使用以下环境变量：
 
-1. **`FAL_KEY`** - 用于生成图片（字符和书籍封面）
+1. **`ARK_API_KEY`** - 用于图片生成与图生图编辑
    - 使用位置：`app/api/generate-image/route.ts`
    - 使用位置：`app/api/generate-book-cover/route.ts`
+   - 使用位置：`app/api/generate-letter-reader/route.ts`
+   - 使用位置：`app/api/character-image-edit/route.ts`
+   - 使用位置：`app/api/map-generate/route.ts`
+   - 使用位置：`app/api/map-update/route.ts`
 
 2. **`DIFY_API_KEY`** - Dify API 密钥
    - 使用位置：所有 `app/api/dify-*/route.ts` 文件
@@ -84,7 +88,7 @@ DIFY_BOOK_SUMMARY_APP_ID=app-FMli5GdNfA9M1ErElR0HWXj8
 在本地开发时，创建 `.env.local` 文件（不要提交到 Git）：
 
 ```env
-FAL_KEY=bc35b5d9-8125-4aa4-99cd-cf8df4bcd3d0:2063617b179b1ed975af5ea42d217b35
+ARK_API_KEY=你的火山方舟_API_Key
 DIFY_API_KEY=你的Dify_API密钥
 DIFY_PROGRESS_MENTOR_APP_ID=app-wLT4t7SzLiDXIkTyAu1jfwOK
 # ... 其他环境变量
@@ -97,7 +101,7 @@ DIFY_PROGRESS_MENTOR_APP_ID=app-wLT4t7SzLiDXIkTyAu1jfwOK
 2. 书籍封面是否可以生成
 3. AI 对话是否正常工作
 
-如果仍然显示 "No cover available" 或 "FAL_KEY not configured"：
+如果仍然显示 "No cover available"、"ARK_API_KEY is not configured" 或图片编辑失败：
 - 确认环境变量名称正确
 - 确认已重新部署
 - 检查 Vercel 部署日志中的错误信息
