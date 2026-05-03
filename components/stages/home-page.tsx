@@ -458,12 +458,12 @@ export default function HomePage({ language = "en", onStartPlan, onContinuePastJ
 
       <div
         ref={pixelRootRef}
-        className={`pixel-farm-transition relative z-10 flex min-h-screen flex-col pt-32 md:pt-36 pb-16 md:pb-24 transition-all duration-700 ${isLoaded ? "opacity-100" : "opacity-0"} ${pixelPhase >= 1 ? "pixel-transforming" : ""}`}
+        className={`pixel-farm-transition relative z-10 flex min-h-screen flex-col pt-24 md:pt-24 lg:pt-32 pb-12 md:pb-16 lg:pb-24 transition-all duration-700 ${isLoaded ? "opacity-100" : "opacity-0"} ${pixelPhase >= 1 ? "pixel-transforming" : ""}`}
         style={pixelPhase >= 1 ? { 
           filter: `contrast(${1 + pixelPhase * 0.1}) saturate(${1 + pixelPhase * 0.15})`,
           transition: "filter 0.5s ease"
         } : undefined}>
-        <section className="flex flex-1 flex-col items-center justify-center gap-8 px-6 py-12 md:px-12 lg:flex-row lg:gap-12 lg:px-16">
+        <section className="flex flex-1 flex-col items-center justify-center gap-6 px-4 py-8 md:px-8 md:py-10 lg:flex-row lg:gap-10 lg:px-14">
           <div className="flex flex-col items-center text-center lg:w-1/2 lg:items-start lg:text-left">
             <motion.div
               initial={{ opacity: 0, y: 30 }}
@@ -474,7 +474,7 @@ export default function HomePage({ language = "en", onStartPlan, onContinuePastJ
               <p 
                 data-pixel-item
                 data-pixel-kind="text"
-                className={`font-sans text-5xl font-light tracking-tight md:text-6xl lg:text-7xl transition-all duration-500 ${
+                className={`font-sans text-4xl font-light tracking-tight md:text-5xl lg:text-6xl transition-all duration-500 ${
                   pixelPhase >= 1 ? "text-[#8b6914]" : "text-foreground"
                 }`}
                 style={pixelPhase >= 1 ? { textShadow: "3px 3px 0 rgba(0,0,0,0.2)" } : undefined}
@@ -488,7 +488,7 @@ export default function HomePage({ language = "en", onStartPlan, onContinuePastJ
               <h1 
                 data-pixel-item
                 data-pixel-kind="text"
-                className={`font-baloo text-8xl font-bold leading-none tracking-tight md:text-9xl lg:text-[16rem] transition-all duration-500 ${
+                className={`font-baloo text-7xl font-bold leading-none tracking-tight md:text-8xl lg:text-[12rem] transition-all duration-500 ${
                   pixelPhase >= 1 
                     ? "text-[#7ec850]" 
                     : "bg-gradient-to-r from-pink-400 via-yellow-400 to-pink-400 bg-clip-text text-transparent"
@@ -515,16 +515,16 @@ export default function HomePage({ language = "en", onStartPlan, onContinuePastJ
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 1.4 }}
-              className="mb-8"
+              className="mb-6 md:mb-7"
             >
-              <p data-pixel-item data-pixel-kind="text" className="font-sans text-3xl font-medium text-foreground/90 md:text-4xl lg:text-5xl">
+              <p data-pixel-item data-pixel-kind="text" className="font-sans text-2xl font-medium text-foreground/90 md:text-3xl lg:text-4xl">
                 <PixelRevealText
                   text={t.subtitleTop}
                   baseClassName="font-sans"
                   pixelStyle={pixelPhase >= 1 ? { color: "rgba(17,24,39,0.9)" } : { color: "rgba(17,24,39,0.9)" }}
                 />
               </p>
-              <p data-pixel-item data-pixel-kind="text" className="mt-2 font-sans text-xl text-foreground/70 md:text-2xl lg:text-3xl">
+              <p data-pixel-item data-pixel-kind="text" className="mt-2 font-sans text-lg text-foreground/70 md:text-xl lg:text-2xl">
                 <PixelRevealText
                   text={t.subtitleBottom}
                   baseClassName="font-sans"
@@ -539,7 +539,7 @@ export default function HomePage({ language = "en", onStartPlan, onContinuePastJ
               transition={{ duration: 1, delay: 2.1 }}
               data-pixel-item
               data-pixel-kind="text"
-              className="font-caveat text-4xl font-bold md:text-5xl lg:text-6xl"
+              className="font-caveat text-3xl font-bold md:text-4xl lg:text-5xl"
               style={{ textShadow: "0 2px 20px rgba(0,0,0,0.5), 0 0 40px rgba(255,255,255,0.3)" }}
             >
               <span className="text-white">
@@ -553,7 +553,7 @@ export default function HomePage({ language = "en", onStartPlan, onContinuePastJ
           </div>
 
           <div className="flex flex-col items-center lg:w-1/2">
-            <div data-pixel-item data-pixel-kind="panel" className="mb-16 w-full transition-all duration-300">
+            <div data-pixel-item data-pixel-kind="panel" className="mb-10 md:mb-12 w-full transition-all duration-300 md:origin-top md:scale-[0.86] lg:scale-100">
               <MagneticCards
                 cards={genreCards}
                 activeCard={activeGenre}
@@ -586,13 +586,13 @@ export default function HomePage({ language = "en", onStartPlan, onContinuePastJ
                 scale: pixelPhase >= 1 ? [1, 1.05, 1] : 1,
               }}
               transition={{ duration: 0.8, delay: 2.5 }}
-              className="mt-10"
+              className="mt-6 md:mt-8"
             >
               <div className="flex flex-col items-center justify-center gap-6">
                 {/* Shared sizing so 3 buttons are equal */}
                 <style jsx>{`
                   .home-action-btn {
-                    width: min(520px, 92vw);
+                    width: min(440px, 90vw);
                   }
                   .home-action-inner {
                     width: 100%;
@@ -622,16 +622,16 @@ export default function HomePage({ language = "en", onStartPlan, onContinuePastJ
                       border: "4px solid #3d8a3d",
                       boxShadow:
                         "inset -4px -4px 0 rgba(0,0,0,0.25), inset 4px 4px 0 rgba(255,255,255,0.25), 6px 6px 0 rgba(0,0,0,0.3)",
-                      padding: "20px 44px",
+                      padding: "16px 34px",
                       imageRendering: "pixelated",
                     }}
                   >
                     <span
-                      className="flex items-center gap-3 text-xl font-bold whitespace-nowrap text-white md:text-2xl lg:text-3xl home-action-inner"
+                      className="flex items-center gap-3 text-base font-bold whitespace-nowrap text-white md:text-xl lg:text-3xl home-action-inner"
                       style={{ textShadow: "2px 2px 0 rgba(0,0,0,0.3)" }}
                     >
                       {t.startButton}
-                      <span className="text-2xl md:text-3xl lg:text-4xl">&#9992;</span>
+                      <span className="text-xl md:text-2xl lg:text-4xl">&#9992;</span>
                     </span>
                   </motion.button>
                 ) : (
@@ -655,9 +655,9 @@ export default function HomePage({ language = "en", onStartPlan, onContinuePastJ
                       blur={12}
                       displace={0.3}
                     >
-                      <span className="flex items-center gap-3 px-12 py-6 text-xl font-bold whitespace-nowrap text-white md:px-16 md:py-6 md:text-2xl lg:text-3xl transition-all duration-200 group-hover:brightness-110 home-action-inner">
+                      <span className="flex items-center gap-3 px-9 py-4 text-base font-bold whitespace-nowrap text-white md:px-11 md:py-5 md:text-xl lg:px-16 lg:py-6 lg:text-3xl transition-all duration-200 group-hover:brightness-110 home-action-inner">
                         {t.startButton}
-                        <span className="text-2xl md:text-3xl lg:text-4xl">&#9992;</span>
+                        <span className="text-xl md:text-2xl lg:text-4xl">&#9992;</span>
                       </span>
                     </GlassSurface>
                   </button>
@@ -679,16 +679,16 @@ export default function HomePage({ language = "en", onStartPlan, onContinuePastJ
                       border: "4px solid #1d4ed8",
                       boxShadow:
                         "inset -4px -4px 0 rgba(0,0,0,0.25), inset 4px 4px 0 rgba(255,255,255,0.25), 6px 6px 0 rgba(0,0,0,0.3)",
-                      padding: "20px 44px",
+                      padding: "16px 34px",
                       imageRendering: "pixelated",
                     }}
                   >
                     <span
-                      className="flex items-center gap-3 text-xl font-bold whitespace-nowrap text-white md:text-2xl lg:text-3xl home-action-inner"
+                      className="flex items-center gap-3 text-base font-bold whitespace-nowrap text-white md:text-xl lg:text-3xl home-action-inner"
                       style={{ textShadow: "2px 2px 0 rgba(0,0,0,0.3)" }}
                     >
                       {t.continueButton}
-                      <span className="text-2xl md:text-3xl lg:text-4xl">⏮️</span>
+                      <span className="text-xl md:text-2xl lg:text-4xl">⏮️</span>
                     </span>
                   </motion.button>
                 ) : (
@@ -712,9 +712,9 @@ export default function HomePage({ language = "en", onStartPlan, onContinuePastJ
                       blur={12}
                       displace={0.3}
                     >
-                      <span className="flex items-center gap-3 px-12 py-6 text-xl font-bold whitespace-nowrap text-white md:px-16 md:py-6 md:text-2xl lg:text-3xl transition-all duration-200 group-hover:brightness-110 home-action-inner">
+                      <span className="flex items-center gap-3 px-9 py-4 text-base font-bold whitespace-nowrap text-white md:px-11 md:py-5 md:text-xl lg:px-16 lg:py-6 lg:text-3xl transition-all duration-200 group-hover:brightness-110 home-action-inner">
                         {t.continueButton}
-                        <span className="text-2xl md:text-3xl lg:text-4xl">⏮️</span>
+                        <span className="text-xl md:text-2xl lg:text-4xl">⏮️</span>
                       </span>
                     </GlassSurface>
                   </button>
@@ -735,13 +735,13 @@ export default function HomePage({ language = "en", onStartPlan, onContinuePastJ
                       background: "linear-gradient(180deg, #d9c9a6 0%, #c4a574 100%)",
                       border: "4px solid #8b6914",
                       boxShadow: "inset -4px -4px 0 rgba(0,0,0,0.25), inset 4px 4px 0 rgba(255,255,255,0.25), 6px 6px 0 rgba(0,0,0,0.3)",
-                      padding: "20px 44px",
+                      padding: "16px 34px",
                       imageRendering: "pixelated",
                     }}
                   >
-                    <span className="flex items-center gap-3 text-xl font-bold whitespace-nowrap text-white md:text-2xl lg:text-3xl home-action-inner" style={{ textShadow: "2px 2px 0 rgba(0,0,0,0.3)" }}>
+                    <span className="flex items-center gap-3 text-base font-bold whitespace-nowrap text-white md:text-xl lg:text-3xl home-action-inner" style={{ textShadow: "2px 2px 0 rgba(0,0,0,0.3)" }}>
                       Visit my farm
-                      <span className="text-2xl md:text-3xl lg:text-4xl">🏠</span>
+                      <span className="text-xl md:text-2xl lg:text-4xl">🏠</span>
                     </span>
                   </motion.button>
                 ) : (
@@ -756,9 +756,9 @@ export default function HomePage({ language = "en", onStartPlan, onContinuePastJ
                     className="group rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70 disabled:cursor-not-allowed transition-transform duration-200 hover:scale-[1.04] active:scale-[1.0] home-action-btn"
                   >
                     <GlassSurface width="auto" height="auto" borderRadius={50} borderWidth={0.08} brightness={55} opacity={0.85} blur={12} displace={0.3}>
-                      <span className="flex items-center gap-3 px-12 py-6 text-xl font-bold whitespace-nowrap text-white md:px-16 md:py-6 md:text-2xl lg:text-3xl transition-all duration-200 group-hover:brightness-110 home-action-inner">
+                      <span className="flex items-center gap-3 px-9 py-4 text-base font-bold whitespace-nowrap text-white md:px-11 md:py-5 md:text-xl lg:px-16 lg:py-6 lg:text-3xl transition-all duration-200 group-hover:brightness-110 home-action-inner">
                         Visit my farm
-                        <span className="text-2xl md:text-3xl lg:text-4xl">🏠</span>
+                        <span className="text-xl md:text-2xl lg:text-4xl">🏠</span>
                       </span>
                     </GlassSurface>
                   </button>
