@@ -1626,8 +1626,8 @@ export default function Home() {
         />
       )}
       {showLevelBadge && writingAssessment && (
-        <div className="fixed top-6 right-6 z-[100]">
-          <LevelBadge level={Math.min(5, Math.max(1, writingAssessment.level))} className="text-lg" />
+        <div className="fixed right-3 top-16 md:right-4 md:top-14 xl:right-6 xl:top-6 z-[100]">
+          <LevelBadge level={Math.min(5, Math.max(1, writingAssessment.level))} className="text-sm xl:text-lg" />
         </div>
       )}
       {stage === "login" && (
@@ -2641,6 +2641,7 @@ export default function Home() {
           language={language}
           userId={user.username}
           initialView="builder"
+          onBackToMap={() => setStage("journeyMap")}
 
           onBack={() => {
             if (dramaBook) {
@@ -2662,6 +2663,7 @@ export default function Home() {
           language={language}
           userId={user.username}
           initialView="book"
+          onBackToMap={() => setStage("journeyMap")}
 
           onBack={() => {
             if (dramaBook) {
@@ -2686,6 +2688,7 @@ export default function Home() {
       {stage === "poetryWriting" && user && (
         <PoetryWriting
           userId={user.username}
+          onBackToMap={() => setStage("journeyMap")}
 
           onBack={() => setStage("writeTypeSelection")}
           onComplete={() => {
@@ -2701,6 +2704,7 @@ export default function Home() {
         <PoetryWriting
           userId={user.username}
           initialPhase="choose-form"
+          onBackToMap={() => setStage("journeyMap")}
 
           onBack={() => setStage("writeTypeSelection")}
           onComplete={() => {
@@ -2716,6 +2720,7 @@ export default function Home() {
         <PoetryWriting
           userId={user.username}
           initialPhase="setup-topic"
+          onBackToMap={() => setStage("journeyMap")}
 
           onBack={() => setStage("writeTypeSelection")}
           onComplete={() => {
@@ -2731,6 +2736,7 @@ export default function Home() {
         <PoetryWriting
           userId={user.username}
           initialPhase="editor"
+          onBackToMap={() => setStage("journeyMap")}
 
           onBack={() => setStage("writeTypeSelection")}
           onComplete={() => {
@@ -2746,6 +2752,7 @@ export default function Home() {
         <PoetryWriting
           userId={user.username}
           initialPhase="review"
+          onBackToMap={() => setStage("journeyMap")}
 
           onBack={() => setStage("writeTypeSelection")}
           onComplete={() => {
