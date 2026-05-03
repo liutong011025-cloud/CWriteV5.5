@@ -149,12 +149,12 @@
 
 @media (min-width: 768px) and (max-width: 1180px) {
   html {
-    font-size: 15px;
+    font-size: 12.8px;
   }
 
   :root {
-    --stage-top-padding: 96px;
-    --stage-bottom-padding: 88px;
+    --stage-top-padding: 88px;
+    --stage-bottom-padding: 76px;
   }
 }
 
