@@ -44,6 +44,8 @@
   /* 全站默認字體：Arial（Home 等特殊標題另用自定義類） */
   --font-sans: Arial, "Helvetica Neue", Helvetica, sans-serif;
   --font-mono: "Geist Mono", "Geist Mono Fallback";
+  --stage-top-padding: 128px;
+  --stage-bottom-padding: 120px;
 }
 
 .dark {
@@ -142,6 +144,17 @@
   main[data-stage]:not([data-stage="home"]),
   main[data-stage]:not([data-stage="home"]) * {
     font-family: Arial, "Helvetica Neue", Helvetica, sans-serif !important;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1180px) {
+  html {
+    font-size: 15px;
+  }
+
+  :root {
+    --stage-top-padding: 96px;
+    --stage-bottom-padding: 88px;
   }
 }
 
