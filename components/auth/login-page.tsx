@@ -173,10 +173,10 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
                   setSelectedRole("teacher")
                   setEntryStep("auth")
                 }}
-                className="w-full rounded-2xl border border-white/40 bg-white/15 px-4 py-7 text-center text-white backdrop-blur-md transition hover:bg-white/25"
+                className="w-full rounded-2xl border border-amber-200/80 bg-gradient-to-b from-amber-50/95 to-orange-100/95 px-4 py-7 text-center text-amber-950 shadow-xl backdrop-blur-md transition hover:from-amber-100 hover:to-orange-100"
               >
                 <div className="text-3xl mb-2">🧑‍🏫</div>
-                <div className="text-xl font-bold">I am a Teacher</div>
+                <div className="text-xl font-bold text-amber-950">I am a Teacher</div>
               </button>
               <button
                 type="button"
@@ -184,10 +184,10 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
                   setSelectedRole("student")
                   setEntryStep("auth")
                 }}
-                className="w-full rounded-2xl border border-white/40 bg-white/15 px-4 py-7 text-center text-white backdrop-blur-md transition hover:bg-white/25"
+                className="w-full rounded-2xl border border-sky-200/80 bg-gradient-to-b from-sky-50/95 to-blue-100/95 px-4 py-7 text-center text-sky-950 shadow-xl backdrop-blur-md transition hover:from-sky-100 hover:to-blue-100"
               >
                 <div className="text-3xl mb-2">🧑‍🎓</div>
-                <div className="text-xl font-bold">I am a Student</div>
+                <div className="text-xl font-bold text-sky-950">I am a Student</div>
               </button>
               </div>
             </div>
