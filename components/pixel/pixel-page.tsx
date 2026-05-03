@@ -11,8 +11,22 @@ export default function PixelPage({
   className?: string
   style?: React.CSSProperties
 }) {
+  const normalizedStyle: React.CSSProperties | undefined = style
+    ? {
+        ...style,
+        paddingTop:
+          style.paddingTop === "128px" || style.paddingTop === "120px"
+            ? "var(--stage-top-padding)"
+            : style.paddingTop,
+        paddingBottom:
+          style.paddingBottom === "120px" || style.paddingBottom === "128px"
+            ? "var(--stage-bottom-padding)"
+            : style.paddingBottom,
+      }
+    : undefined
+
   return (
-    <div className={`min-h-screen relative overflow-hidden pixel-theme ${className || ""}`.trim()} style={style}>
+    <div className={`min-h-screen relative overflow-hidden pixel-theme ${className || ""}`.trim()} style={normalizedStyle}>
       {/* Pixel art background */}
       <div
         className="fixed inset-0 z-0"
