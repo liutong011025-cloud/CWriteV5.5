@@ -45,8 +45,8 @@ export function BackButton({
 }: BackButtonProps) {
   const v = VARIANT_CLASSES[variant] ?? VARIANT_CLASSES.default
   const isPixelVariant = variant === "default" || variant === "pixel"
-  const baseClass = `${isPixelVariant ? "" : "rounded-full"} border-3 p-0 w-14 h-14 sm:w-16 sm:h-16 transition-transform duration-200 hover:scale-105 active:scale-95 inline-flex items-center justify-center ${v} ${className}`
-  const icon = <ArrowLeft className="w-8 h-8 sm:w-9 sm:h-9" strokeWidth={2.5} />
+  const baseClass = `${isPixelVariant ? "" : "rounded-full"} border-3 p-0 h-12 w-12 md:h-11 md:w-11 xl:h-16 xl:w-16 transition-transform duration-200 hover:scale-105 active:scale-95 inline-flex items-center justify-center ${v} ${className}`
+  const icon = <ArrowLeft className="h-6 w-6 md:h-5 md:w-5 xl:h-9 xl:w-9" strokeWidth={2.5} />
   const btn = href ? (
     <Link href={href} aria-label={ariaLabel} className={baseClass}>
       {icon}
@@ -65,7 +65,7 @@ export function BackButton({
   )
   if (noFixed) return btn
   return (
-    <div className="fixed left-3 sm:left-4 top-1/2 -translate-y-1/2 z-50" aria-hidden="false">
+    <div className="fixed left-2.5 md:left-3 xl:left-4 top-1/2 -translate-y-1/2 z-50" aria-hidden="false">
       {btn}
     </div>
   )
