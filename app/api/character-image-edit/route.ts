@@ -23,6 +23,8 @@ const extractErrorDetail = (error: any) => {
   }
 }
 
+const escapePromptValue = (value: string) => value.replace(/`/g, "'")
+
 export async function POST(request: NextRequest) {
   try {
     if (!process.env.ARK_API_KEY && !process.env.VOLCENGINE_ARK_API_KEY) {
@@ -53,20 +55,24 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const safeSpecies = (species || "unknown creature").trim()
-    const safeName = (name || "Unnamed").trim()
-    const safeAge = (age || "").trim()
-    const safeTraits = Array.isArray(traits) && traits.length > 0 ? traits.join(", ") : "friendly"
-    const safeBackground = (background || "").trim()
-    const safeEmotional = (emotional || "").trim()
-    const safeSymbolic = (symbolic || "").trim()
+    const safeSpecies = escapePromptValue((species || "unknown creature").trim())
+    const safeName = escapePromptValue((name || "Unnamed").trim())
+    const safeAge = escapePromptValue((age || "").trim())
+    const safeTraits = escapePromptValue(Array.isArray(traits) && traits.length > 0 ? traits.join(", ") : "friendly")
+    const safeBackground = escapePromptValue((background || "").trim())
+    const safeEmotional = escapePromptValue((emotional || "").trim())
+    const safeSymbolic = escapePromptValue((symbolic || "").trim())
 
     const prompt = `
 You are editing a student's hand-drawn character sketch into a polished character image.
 
+The student's sketch is the hard constraint. Follow it closely, but still polish it into a clean, appealing final illustration.
+
 Keep from the sketch:
 - Overall silhouette and pose
 - Main recognizable shape and costume idea
+- Face shape, hairstyle, clothing outline, and all visible props
+- Relative proportions and placement of major parts
 
 Character context:
 - Species: ${safeSpecies}
@@ -85,6 +91,13 @@ Style target:
 
 Output rules:
 - Use the uploaded sketch image as the base reference
+- Preserve the student's exact composition and pose; clean, refine, and gently polish the drawing without redesigning it
+- You may improve line quality, edge clarity, color harmony, lighting, texture, and material rendering
+- You may slightly clarify unclear hand-drawn parts only when needed to make the same design readable, but do not change the design itself
+- Do not invent new accessories, extra limbs, extra props, background objects, or dramatic style changes
+- Do not replace a simple student design with a more elaborate professional design
+- If the sketch is simple or minimal, keep it simple and minimal while making it cleaner and nicer
+- Respect the student's lines, shapes, colors, and intent more than aesthetic embellishment
 - Do not add text, logos, watermark, or UI
 - No transparent background, no scene/background elements, white backdrop only
 - Return one final character image only
