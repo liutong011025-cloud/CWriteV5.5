@@ -895,12 +895,10 @@ export default function HomePage({ language = "en", onStartPlan, onContinuePastJ
             <p
               className="text-3xl md:text-5xl lg:text-6xl font-bold font-sans"
               style={{
-                background: "linear-gradient(135deg, #FFE45E 0%, #C7F464 50%, #57C84D 100%)",
-                WebkitBackgroundClip: "text",
-                WebkitTextFillColor: "transparent",
-                backgroundClip: "text",
+                color: "#374151",
+                WebkitTextFillColor: "#374151",
                 WebkitTextStroke: "2px rgba(255, 255, 255, 0.95)",
-                textShadow: "0 6px 18px rgba(255, 255, 255, 0.24)",
+                textShadow: "0 6px 18px rgba(255, 255, 255, 0.22)",
               }}
             >
               {t.subtitleTop}
@@ -908,12 +906,10 @@ export default function HomePage({ language = "en", onStartPlan, onContinuePastJ
             <p
               className="text-2xl md:text-4xl lg:text-5xl font-bold mt-4 font-sans"
               style={{
-                background: "linear-gradient(135deg, #FFF176 0%, #C5E86C 45%, #43A047 100%)",
-                WebkitBackgroundClip: "text",
-                WebkitTextFillColor: "transparent",
-                backgroundClip: "text",
+                color: "#374151",
+                WebkitTextFillColor: "#374151",
                 WebkitTextStroke: "2px rgba(255, 255, 255, 0.98)",
-                textShadow: "0 6px 18px rgba(255, 255, 255, 0.28)",
+                textShadow: "0 6px 18px rgba(255, 255, 255, 0.24)",
               }}
             >
               {t.subtitleBottom}
@@ -1055,7 +1051,7 @@ export default function HomePage({ language = "en", onStartPlan, onContinuePastJ
       <button
         type="button"
         onClick={toggleMute}
-        className="fixed bottom-6 right-6 z-50 rounded-full bg-white/90 p-3 shadow-lg backdrop-blur-sm transition hover:scale-105 hover:bg-white"
+        className="fixed bottom-6 right-6 z-50 rounded-full bg-white/90 p-4 shadow-lg backdrop-blur-sm transition hover:scale-105 hover:bg-white"
         style={{
           border: "4px solid #4A9BE8",
           boxShadow: "0 6px 0 #2E7DD1, 0 10px 22px rgba(0,0,0,0.18)",
@@ -1067,8 +1063,8 @@ export default function HomePage({ language = "en", onStartPlan, onContinuePastJ
         <Image
           src={isMuted ? "/speakeroff.png" : "/speaker on.png"}
           alt={isMuted ? "Sound off" : "Sound on"}
-          width={34}
-          height={34}
+          width={44}
+          height={44}
           priority
           className="pointer-events-none select-none"
         />
