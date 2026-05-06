@@ -896,12 +896,12 @@ export default function HomePage({ language = "en", onStartPlan, onContinuePastJ
               <p
                 className="text-4xl md:text-5xl lg:text-7xl font-bold mb-6 font-sans"
                 style={{
-                  background: "linear-gradient(135deg, #FFE45E 0%, #B7F36B 55%, #4CAF50 100%)",
+                  background: "linear-gradient(135deg, #E8FF72 0%, #A8FF5A 52%, #5DDB4E 100%)",
                   WebkitBackgroundClip: "text",
                   WebkitTextFillColor: "transparent",
                   backgroundClip: "text",
                   fontFamily: '"Berlin Sans FB Demi", "Berlin Sans FB", var(--font-baloo), sans-serif',
-                  textShadow: "0 4px 14px rgba(255, 228, 94, 0.2)",
+                  textShadow: "0 4px 14px rgba(168, 255, 90, 0.24)",
                 }}
               >
                 {t.welcome}
@@ -989,7 +989,7 @@ export default function HomePage({ language = "en", onStartPlan, onContinuePastJ
             <p
               className="text-3xl md:text-5xl lg:text-6xl font-bold font-sans"
               style={{
-                background: "linear-gradient(135deg, #FFF7A3 0%, #D8F07A 48%, #FFF7A3 100%)",
+                background: "linear-gradient(135deg, #EEFF84 0%, #A8FF5A 48%, #EEFF84 100%)",
                 WebkitBackgroundClip: "text",
                 WebkitTextFillColor: "transparent",
                 backgroundClip: "text",
@@ -1003,7 +1003,7 @@ export default function HomePage({ language = "en", onStartPlan, onContinuePastJ
             <p
               className="text-2xl md:text-4xl lg:text-5xl font-bold mt-4 font-sans"
               style={{
-                background: "linear-gradient(135deg, #FFF7A3 0%, #D8F07A 48%, #FFF7A3 100%)",
+                background: "linear-gradient(135deg, #EEFF84 0%, #A8FF5A 48%, #EEFF84 100%)",
                 WebkitBackgroundClip: "text",
                 WebkitTextFillColor: "transparent",
                 backgroundClip: "text",
@@ -1017,7 +1017,7 @@ export default function HomePage({ language = "en", onStartPlan, onContinuePastJ
           </motion.div>
 
           <motion.p
-            className="mt-8 text-3xl md:text-5xl lg:text-6xl font-bold italic"
+            className="mt-8 text-3xl md:text-5xl lg:text-6xl font-extrabold italic"
             initial={{ opacity: 0 }}
             animate={{ opacity: 0.9 }}
             transition={{ duration: 1, delay: 1.2 }}
