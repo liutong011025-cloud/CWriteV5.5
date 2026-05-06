@@ -988,12 +988,13 @@ export default function HomePage({ language = "en", onStartPlan, onContinuePastJ
             <p
               className="text-3xl md:text-5xl lg:text-6xl font-bold font-sans"
               style={{
-                background: "linear-gradient(135deg, #FFF27A 0%, #B4D357 48%, #FFF27A 100%)",
+                background: "linear-gradient(135deg, #FFF7A3 0%, #D8F07A 48%, #FFF7A3 100%)",
                 WebkitBackgroundClip: "text",
                 WebkitTextFillColor: "transparent",
                 backgroundClip: "text",
                 fontFamily: '"Berlin Sans FB Demi", "Berlin Sans FB", var(--font-baloo), sans-serif',
-                textShadow: "0 10px 18px rgba(7, 42, 92, 0.24)",
+                textShadow: "0 8px 14px rgba(7, 42, 92, 0.14)",
+                filter: "brightness(1.08) saturate(1.08)",
               }}
             >
               {t.subtitleTop}
@@ -1001,12 +1002,13 @@ export default function HomePage({ language = "en", onStartPlan, onContinuePastJ
             <p
               className="text-2xl md:text-4xl lg:text-5xl font-bold mt-4 font-sans"
               style={{
-                background: "linear-gradient(135deg, #FFF27A 0%, #B4D357 48%, #FFF27A 100%)",
+                background: "linear-gradient(135deg, #FFF7A3 0%, #D8F07A 48%, #FFF7A3 100%)",
                 WebkitBackgroundClip: "text",
                 WebkitTextFillColor: "transparent",
                 backgroundClip: "text",
                 fontFamily: '"Berlin Sans FB Demi", "Berlin Sans FB", var(--font-baloo), sans-serif',
-                textShadow: "0 10px 18px rgba(7, 42, 92, 0.24)",
+                textShadow: "0 8px 14px rgba(7, 42, 92, 0.14)",
+                filter: "brightness(1.08) saturate(1.08)",
               }}
             >
               {t.subtitleBottom}
