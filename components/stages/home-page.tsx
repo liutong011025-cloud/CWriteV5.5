@@ -920,7 +920,7 @@ export default function HomePage({ language = "en", onStartPlan, onContinuePastJ
                   aria-hidden
                   className="absolute inset-0 select-none"
                   style={{
-                    color: "#CB4B8A",
+                    color: "#C84B59",
                     transform: "translateY(18px)",
                     filter: "blur(0.6px)",
                     opacity: 0.96,
@@ -932,7 +932,7 @@ export default function HomePage({ language = "en", onStartPlan, onContinuePastJ
                   aria-hidden
                   className="absolute inset-0 select-none"
                   style={{
-                    background: "linear-gradient(180deg, #FF9CCB 0%, #FF78B7 48%, #E95DA4 100%)",
+                    background: "linear-gradient(180deg, #FFE98A 0%, #FFD93D 38%, #FF8FB7 72%, #FF6B9D 100%)",
                     WebkitBackgroundClip: "text",
                     WebkitTextFillColor: "transparent",
                     backgroundClip: "text",
@@ -945,16 +945,16 @@ export default function HomePage({ language = "en", onStartPlan, onContinuePastJ
                 <span
                   className="relative block"
                   style={{
-                    background: "linear-gradient(180deg, #FFFDFE 0%, #FFE8F5 14%, #FFC7E3 32%, #FF9FD0 56%, #FF82BE 72%, #F05AA3 100%)",
+                    background: "linear-gradient(180deg, #FFFDF4 0%, #FFF2AE 14%, #FFD93D 34%, #FFB057 56%, #FF8EB7 78%, #FF6B9D 100%)",
                     WebkitBackgroundClip: "text",
                     WebkitTextFillColor: "transparent",
                     backgroundClip: "text",
                     WebkitTextStroke: "1px rgba(255,255,255,0.65)",
                     textShadow: `
                       0 2px 0 rgba(255,255,255,0.9),
-                      0 4px 0 rgba(255,216,236,0.88),
-                      0 8px 0 rgba(250,146,198,0.95),
-                      0 14px 18px rgba(110,34,87,0.24)
+                      0 4px 0 rgba(255,228,150,0.92),
+                      0 8px 0 rgba(255,129,170,0.95),
+                      0 14px 18px rgba(128,44,78,0.26)
                     `,
                   }}
                 >
@@ -987,12 +987,12 @@ export default function HomePage({ language = "en", onStartPlan, onContinuePastJ
             <p
               className="text-3xl md:text-5xl lg:text-6xl font-bold font-sans"
               style={{
-                background: "linear-gradient(135deg, #FFE45E 0%, #B7F36B 55%, #4CAF50 100%)",
+                background: "linear-gradient(135deg, #FFF176 0%, #D4FF5A 38%, #7ED957 72%, #3FA34D 100%)",
                 WebkitBackgroundClip: "text",
                 WebkitTextFillColor: "transparent",
                 backgroundClip: "text",
                 fontFamily: '"Berlin Sans FB Demi", "Berlin Sans FB", var(--font-baloo), sans-serif',
-                textShadow: "0 6px 18px rgba(255, 228, 94, 0.16)",
+                textShadow: "0 4px 0 rgba(12, 77, 161, 0.2), 0 8px 18px rgba(7, 42, 92, 0.3)",
               }}
             >
               {t.subtitleTop}
@@ -1000,12 +1000,12 @@ export default function HomePage({ language = "en", onStartPlan, onContinuePastJ
             <p
               className="text-2xl md:text-4xl lg:text-5xl font-bold mt-4 font-sans"
               style={{
-                background: "linear-gradient(135deg, #FFE45E 0%, #B7F36B 55%, #4CAF50 100%)",
+                background: "linear-gradient(135deg, #FFF176 0%, #D4FF5A 38%, #7ED957 72%, #3FA34D 100%)",
                 WebkitBackgroundClip: "text",
                 WebkitTextFillColor: "transparent",
                 backgroundClip: "text",
                 fontFamily: '"Berlin Sans FB Demi", "Berlin Sans FB", var(--font-baloo), sans-serif',
-                textShadow: "0 6px 18px rgba(255, 228, 94, 0.16)",
+                textShadow: "0 4px 0 rgba(12, 77, 161, 0.2), 0 8px 18px rgba(7, 42, 92, 0.3)",
               }}
             >
               {t.subtitleBottom}
