@@ -900,8 +900,8 @@ export default function HomePage({ language = "en", onStartPlan, onContinuePastJ
                   WebkitBackgroundClip: "text",
                   WebkitTextFillColor: "transparent",
                   backgroundClip: "text",
-                  WebkitTextStroke: "2px rgba(255, 255, 255, 0.95)",
-                  textShadow: "0 4px 14px rgba(255, 255, 255, 0.22)",
+                  fontFamily: '"Berlin Sans FB Demi", "Berlin Sans FB", var(--font-baloo), sans-serif',
+                  textShadow: "0 4px 14px rgba(255, 228, 94, 0.2)",
                 }}
               >
                 {t.welcome}
@@ -909,20 +909,71 @@ export default function HomePage({ language = "en", onStartPlan, onContinuePastJ
               
               {/* CWrite */}
               <motion.h1 
-                className="text-[7rem] md:text-[10rem] lg:text-[16rem] font-bold leading-none tracking-tight font-sans"
+                className="relative inline-block text-[7rem] md:text-[10rem] lg:text-[16rem] font-bold leading-none tracking-tight font-sans"
                 style={{
-                  background: "linear-gradient(135deg, #FF6B9D 0%, #FFD93D 25%, #FF6B9D 50%, #FFD93D 75%, #FF6B9D 100%)",
-                  backgroundSize: "200% 200%",
-                  WebkitBackgroundClip: "text",
-                  WebkitTextFillColor: "transparent",
-                  backgroundClip: "text",
+                  fontFamily: '"Berlin Sans FB Demi", "Berlin Sans FB", var(--font-baloo), sans-serif',
+                  letterSpacing: "-0.045em",
+                  filter: "drop-shadow(0 18px 20px rgba(109, 43, 92, 0.32))",
                 }}
-                animate={{
-                  backgroundPosition: ["0% 50%", "100% 50%", "0% 50%"],
-                }}
-                transition={{ duration: 5, repeat: Infinity, ease: "linear" }}
               >
-                CWrite
+                <span
+                  aria-hidden
+                  className="absolute inset-0 select-none"
+                  style={{
+                    color: "#CB4B8A",
+                    transform: "translateY(18px)",
+                    filter: "blur(0.6px)",
+                    opacity: 0.96,
+                  }}
+                >
+                  CWrite
+                </span>
+                <span
+                  aria-hidden
+                  className="absolute inset-0 select-none"
+                  style={{
+                    background: "linear-gradient(180deg, #FF9CCB 0%, #FF78B7 48%, #E95DA4 100%)",
+                    WebkitBackgroundClip: "text",
+                    WebkitTextFillColor: "transparent",
+                    backgroundClip: "text",
+                    transform: "translateY(8px)",
+                    opacity: 0.98,
+                  }}
+                >
+                  CWrite
+                </span>
+                <span
+                  className="relative block"
+                  style={{
+                    background: "linear-gradient(180deg, #FFFDFE 0%, #FFE8F5 14%, #FFC7E3 32%, #FF9FD0 56%, #FF82BE 72%, #F05AA3 100%)",
+                    WebkitBackgroundClip: "text",
+                    WebkitTextFillColor: "transparent",
+                    backgroundClip: "text",
+                    WebkitTextStroke: "1px rgba(255,255,255,0.65)",
+                    textShadow: `
+                      0 2px 0 rgba(255,255,255,0.9),
+                      0 4px 0 rgba(255,216,236,0.88),
+                      0 8px 0 rgba(250,146,198,0.95),
+                      0 14px 18px rgba(110,34,87,0.24)
+                    `,
+                  }}
+                >
+                  CWrite
+                </span>
+                <span
+                  aria-hidden
+                  className="absolute inset-x-0 top-[7%] select-none"
+                  style={{
+                    background: "linear-gradient(180deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.75) 24%, rgba(255,255,255,0.18) 58%, rgba(255,255,255,0) 100%)",
+                    WebkitBackgroundClip: "text",
+                    WebkitTextFillColor: "transparent",
+                    backgroundClip: "text",
+                    opacity: 0.95,
+                    transform: "scaleX(0.985)",
+                  }}
+                >
+                  CWrite
+                </span>
               </motion.h1>
             </motion.div>
           </motion.div>
@@ -936,10 +987,12 @@ export default function HomePage({ language = "en", onStartPlan, onContinuePastJ
             <p
               className="text-3xl md:text-5xl lg:text-6xl font-bold font-sans"
               style={{
-                color: "#FFFFFF",
-                WebkitTextFillColor: "#FFFFFF",
+                background: "linear-gradient(135deg, #FFE45E 0%, #B7F36B 55%, #4CAF50 100%)",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+                backgroundClip: "text",
                 fontFamily: '"Berlin Sans FB Demi", "Berlin Sans FB", var(--font-baloo), sans-serif',
-                textShadow: "0 6px 18px rgba(255, 255, 255, 0.18)",
+                textShadow: "0 6px 18px rgba(255, 228, 94, 0.16)",
               }}
             >
               {t.subtitleTop}
@@ -947,10 +1000,12 @@ export default function HomePage({ language = "en", onStartPlan, onContinuePastJ
             <p
               className="text-2xl md:text-4xl lg:text-5xl font-bold mt-4 font-sans"
               style={{
-                color: "#FFFFFF",
-                WebkitTextFillColor: "#FFFFFF",
+                background: "linear-gradient(135deg, #FFE45E 0%, #B7F36B 55%, #4CAF50 100%)",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+                backgroundClip: "text",
                 fontFamily: '"Berlin Sans FB Demi", "Berlin Sans FB", var(--font-baloo), sans-serif',
-                textShadow: "0 6px 18px rgba(255, 255, 255, 0.2)",
+                textShadow: "0 6px 18px rgba(255, 228, 94, 0.16)",
               }}
             >
               {t.subtitleBottom}
