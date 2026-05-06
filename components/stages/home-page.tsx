@@ -1,44 +1,10 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { motion, AnimatePresence } from "framer-motion"
-import { Shader, ChromaFlow, Swirl } from "shaders/react"
+import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion"
 import type { Language } from "@/app/page"
 import { CustomCursor } from "@/components/custom-cursor"
-import { GrainOverlay } from "@/components/grain-overlay"
-import { MagneticCards } from "@/components/magnetic-card"
-import { GenreDetails } from "@/components/genre-details"
 import GlassSurface from "@/components/glass-surface"
-
-function PixelRevealText({
-  text,
-  baseClassName,
-  pixelClassName,
-  pixelStyle,
-}: {
-  text: string
-  baseClassName: string
-  pixelClassName?: string
-  pixelStyle?: React.CSSProperties
-}) {
-  // Use letter stepping via steps(N,end) where N is the string length.
-  const steps = Math.max(4, text.length)
-  return (
-    <span className="pixel-reveal">
-      <span className={`pixel-reveal__base ${baseClassName}`}>{text}</span>
-      <span
-        className={`pixel-reveal__pixel ${baseClassName} ${pixelClassName || ""}`.trim()}
-        style={{
-          ...pixelStyle,
-          animationTimingFunction: `steps(${steps}, end)`,
-        }}
-        aria-hidden="true"
-      >
-        {text}
-      </span>
-    </span>
-  )
-}
 
 interface HomePageProps {
   language?: Language
@@ -53,12 +19,205 @@ interface HomePageProps {
   onViewAbout?: () => void
 }
 
-const genreCards = [
-  { id: "story", title: "Story", color: "#FFD54F" },
-  { id: "review", title: "Book Review", color: "#F8BBD9" },
-  { id: "letter", title: "Letter", color: "#FFECB3" },
-  { id: "drama", title: "Drama", color: "#F48FB1" },
-  { id: "poetry", title: "Poetry", color: "#FCE4EC" },
+// Pixel cloud SVG component
+function PixelCloud({ className, style }: { className?: string; style?: React.CSSProperties }) {
+  return (
+    <svg viewBox="0 0 64 32" className={className} style={{ imageRendering: "pixelated", ...style }}>
+      {/* Pixel cloud shape */}
+      <rect x="16" y="16" width="8" height="8" fill="white" />
+      <rect x="24" y="16" width="8" height="8" fill="white" />
+      <rect x="32" y="16" width="8" height="8" fill="white" />
+      <rect x="40" y="16" width="8" height="8" fill="white" />
+      <rect x="8" y="24" width="8" height="8" fill="white" />
+      <rect x="16" y="24" width="8" height="8" fill="white" />
+      <rect x="24" y="24" width="8" height="8" fill="white" />
+      <rect x="32" y="24" width="8" height="8" fill="white" />
+      <rect x="40" y="24" width="8" height="8" fill="white" />
+      <rect x="48" y="24" width="8" height="8" fill="white" />
+      <rect x="24" y="8" width="8" height="8" fill="white" />
+      <rect x="32" y="8" width="8" height="8" fill="white" />
+      {/* Shadow pixels */}
+      <rect x="8" y="24" width="8" height="8" fill="rgba(0,0,0,0.1)" />
+      <rect x="48" y="24" width="8" height="8" fill="rgba(0,0,0,0.1)" />
+    </svg>
+  )
+}
+
+// Genre card with scroll-linked icon morphing
+function GenreCard({
+  genre,
+  index,
+}: {
+  genre: {
+    id: string
+    title: string
+    color: string
+    summary: string
+    details: string[]
+    bookIcon: string
+    targetIcon: string
+  }
+  index: number
+}) {
+  const cardRef = useRef<HTMLDivElement>(null)
+  const [isHovered, setIsHovered] = useState(false)
+
+  const { scrollYProgress } = useScroll({
+    target: cardRef,
+    offset: ["start end", "center center"],
+  })
+
+  // Icon morph progress: 0 = book, 1 = target icon
+  const morphProgress = useTransform(scrollYProgress, [0, 0.7], [0, 1])
+  const bookOpacity = useTransform(morphProgress, [0, 0.5], [1, 0])
+  const targetOpacity = useTransform(morphProgress, [0.5, 1], [0, 1])
+  const iconScale = useTransform(morphProgress, [0, 0.5, 1], [1, 1.2, 1])
+  const iconRotate = useTransform(morphProgress, [0, 1], [0, 360])
+
+  return (
+    <motion.div
+      ref={cardRef}
+      className="relative w-full max-w-lg mx-auto"
+      initial={{ opacity: 0, x: index % 2 === 0 ? -50 : 50 }}
+      whileInView={{ opacity: 1, x: 0 }}
+      viewport={{ once: true, margin: "-100px" }}
+      transition={{ duration: 0.6, delay: index * 0.1 }}
+      style={{ marginLeft: index % 2 === 0 ? "5%" : "auto", marginRight: index % 2 === 0 ? "auto" : "5%" }}
+    >
+      <motion.div
+        className="relative rounded-3xl p-6 md:p-8 cursor-pointer overflow-hidden"
+        style={{ backgroundColor: genre.color }}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+        animate={{ height: isHovered ? "auto" : "auto" }}
+        whileHover={{ scale: 1.02, boxShadow: "0 20px 40px rgba(0,0,0,0.2)" }}
+        transition={{ duration: 0.3 }}
+      >
+        {/* Icon container */}
+        <div className="flex items-center gap-6 mb-4">
+          <motion.div
+            className="relative w-20 h-20 md:w-24 md:h-24 flex items-center justify-center"
+            style={{ scale: iconScale }}
+          >
+            {/* Book icon (fades out) */}
+            <motion.span
+              className="absolute text-5xl md:text-6xl"
+              style={{ opacity: bookOpacity, rotate: iconRotate }}
+            >
+              {genre.bookIcon}
+            </motion.span>
+            {/* Target icon (fades in) */}
+            <motion.span
+              className="absolute text-5xl md:text-6xl"
+              style={{ opacity: targetOpacity, rotate: iconRotate }}
+            >
+              {genre.targetIcon}
+            </motion.span>
+          </motion.div>
+
+          <div className="flex-1">
+            <h3 className="text-2xl md:text-3xl font-bold text-gray-900 font-sans">{genre.title}</h3>
+            <p className="text-gray-700 text-sm md:text-base mt-1 font-sans">{genre.summary}</p>
+          </div>
+        </div>
+
+        {/* Expandable details on hover */}
+        <AnimatePresence>
+          {isHovered && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.3 }}
+              className="overflow-hidden"
+            >
+              <div className="pt-4 border-t border-gray-900/10">
+                <p className="text-gray-800 text-sm md:text-base mb-3 font-sans leading-relaxed">
+                  In this genre you will practise:
+                </p>
+                <ul className="space-y-2">
+                  {genre.details.map((detail, i) => (
+                    <li key={i} className="flex items-start gap-2 text-gray-700 text-sm md:text-base font-sans">
+                      <span className="text-gray-900 mt-0.5">&#8226;</span>
+                      {detail}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </motion.div>
+    </motion.div>
+  )
+}
+
+const genreData = [
+  {
+    id: "story",
+    title: "Story",
+    color: "#FFD54F",
+    summary: "Build worlds, invent characters, and shape unforgettable plots.",
+    details: [
+      "Designing characters, settings, and conflicts",
+      "Organising events into a clear beginning, middle, and end",
+      "Using detail to show rather than tell",
+    ],
+    bookIcon: "\u{1F4DA}", // books
+    targetIcon: "\u{1F3F0}", // castle
+  },
+  {
+    id: "review",
+    title: "Book Review",
+    color: "#F8BBD9",
+    summary: "Think deeply, take a stance, and guide readers with your opinion.",
+    details: [
+      "Stating a clear opinion about a text",
+      "Supporting ideas with quotes",
+      "Balancing summary with analysis",
+    ],
+    bookIcon: "\u{1F4DA}",
+    targetIcon: "\u{1F50D}", // magnifying glass
+  },
+  {
+    id: "letter",
+    title: "Letter Writing",
+    color: "#FFECB3",
+    summary: "Write with a real voice to connect hearts across distance.",
+    details: [
+      "Matching tone to your relationship",
+      "Explaining events clearly",
+      "Organising real-life details",
+    ],
+    bookIcon: "\u{1F4DA}",
+    targetIcon: "\u{2709}\u{FE0F}", // envelope
+  },
+  {
+    id: "drama",
+    title: "Drama Script",
+    color: "#F48FB1",
+    summary: "Turn words into scenes, voices, and action on stage.",
+    details: [
+      "Writing believable dialogue",
+      "Using stage directions",
+      "Thinking in scenes and beats",
+    ],
+    bookIcon: "\u{1F4DA}",
+    targetIcon: "\u{1F3AD}", // theater masks
+  },
+  {
+    id: "poetry",
+    title: "Poetry",
+    color: "#FCE4EC",
+    summary: "Play with rhythm, images, and silence between the lines.",
+    details: [
+      "Choosing precise, image-rich words",
+      "Playing with rhythm and line breaks",
+      "Exploring different poetic forms",
+    ],
+    bookIcon: "\u{1F4DA}",
+    targetIcon: "\u{2728}", // sparkles
+  },
 ]
 
 const translations = {
@@ -71,39 +230,36 @@ const translations = {
     continueButton: "Continue past journey",
   },
   zh: {
-    welcome: "歡迎來到",
-    subtitleTop: "創意寫作的未來",
-    subtitleBottom: "在 AI 時代",
-    tagline: "釋放創意，賦能表達",
-    startButton: "开始新的旅程",
-    continueButton: "继续上次旅程",
+    welcome: "Welcome to",
+    subtitleTop: "Creative Writing",
+    subtitleBottom: "in the AI Era",
+    tagline: "Unleash Creativity, Empower Expression",
+    startButton: "Start a new journey",
+    continueButton: "Continue past journey",
   },
 }
 
 export default function HomePage({ language = "en", onStartPlan, onContinuePastJourney, onVisitFarm }: HomePageProps) {
-  const [isLoaded, setIsLoaded] = useState(false)
-  const [activeGenre, setActiveGenre] = useState<string | null>(null)
-  const [isPixelating, setIsPixelating] = useState(false)
-  const [pixelPhase, setPixelPhase] = useState(0) // 0=none, 1=transform elements then navigate
-  const [pixelOrigin, setPixelOrigin] = useState({ x: 0, y: 0 })
-  const [showPixelSky, setShowPixelSky] = useState(false)
-  const resetTimeoutRef = useRef<number | null>(null)
-  const shaderContainerRef = useRef<HTMLDivElement>(null)
-  const pixelRootRef = useRef<HTMLDivElement>(null)
-  const startButtonRef = useRef<HTMLButtonElement>(null)
-  const continueButtonRef = useRef<HTMLButtonElement>(null)
-  const farmButtonRef = useRef<HTMLButtonElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
   const startJourneyAudioRef = useRef<HTMLAudioElement | null>(null)
   const lastStartSoundAtRef = useRef(0)
   const t = translations[language] || translations.en
 
-  // Preload the dedicated Start Journey SFX so it plays immediately on press.
+  const { scrollYProgress } = useScroll({ target: containerRef })
+
+  // Parallax transforms for clouds at different layers
+  const cloud1Y = useTransform(scrollYProgress, [0, 1], ["0%", "150%"])
+  const cloud2Y = useTransform(scrollYProgress, [0, 1], ["0%", "100%"])
+  const cloud3Y = useTransform(scrollYProgress, [0, 1], ["0%", "200%"])
+  const cloud4Y = useTransform(scrollYProgress, [0, 1], ["0%", "80%"])
+  const cloud5Y = useTransform(scrollYProgress, [0, 1], ["0%", "180%"])
+
+  // Preload the dedicated Start Journey SFX
   useEffect(() => {
     try {
       if (!startJourneyAudioRef.current) {
         startJourneyAudioRef.current = new Audio("/bit.mp3")
         startJourneyAudioRef.current.preload = "auto"
-        // 10% quieter than 0.28
         startJourneyAudioRef.current.volume = 0.252
         startJourneyAudioRef.current.load?.()
       }
@@ -114,7 +270,6 @@ export default function HomePage({ language = "en", onStartPlan, onContinuePastJ
 
   const playStartJourneySound = () => {
     const now = Date.now()
-    // Avoid double-trigger if pointerdown + click both fire.
     if (now - lastStartSoundAtRef.current < 250) return
     lastStartSoundAtRef.current = now
     try {
@@ -126,648 +281,297 @@ export default function HomePage({ language = "en", onStartPlan, onContinuePastJ
     }
   }
 
-  useEffect(() => {
-    const checkShaderReady = () => {
-      if (!shaderContainerRef.current) return false
-      const canvas = shaderContainerRef.current.querySelector("canvas")
-      if (canvas && canvas.width > 0 && canvas.height > 0) {
-        setIsLoaded(true)
-        return true
-      }
-      return false
-    }
-
-    if (checkShaderReady()) return
-
-    const intervalId = setInterval(() => {
-      if (checkShaderReady()) {
-        clearInterval(intervalId)
-      }
-    }, 100)
-
-    const fallbackTimer = setTimeout(() => {
-      setIsLoaded(true)
-    }, 1500)
-
-    return () => {
-      clearInterval(intervalId)
-      clearTimeout(fallbackTimer)
-    }
-  }, [])
-
-  const handleCardClick = (id: string) => {
-    setActiveGenre(activeGenre === id ? null : id)
-  }
-
-  const handleBack = () => {
-    setActiveGenre(null)
-  }
-
-  const resetPixelTransitionIfStillHome = () => {
-    try {
-      const main = document.querySelector("main[data-stage]")
-      const stage = main?.getAttribute("data-stage")
-      if (stage && stage !== "home") return
-    } catch {
-      // ignore
-    }
-    setIsPixelating(false)
-    setPixelPhase(0)
-    setShowPixelSky(false)
-    try {
-      pixelRootRef.current?.classList.remove("pixel-farm-transition-active")
-    } catch {
-      // ignore
-    }
-  }
-
-  const handlePixelJourney = (originEl: HTMLElement | null, navigate?: () => void) => {
-    if (originEl) {
-      const rect = originEl.getBoundingClientRect()
-      setPixelOrigin({
-        x: rect.left + rect.width / 2,
-        y: rect.top + rect.height / 2,
-      })
-    }
-    setIsPixelating(true)
-    
-    // Phase 1: Transform elements to pixel style, sequenced by distance to Start button
-    setPixelPhase(1)
-    setShowPixelSky(true)
-
-    // Distance-based sequencing: nearest items pixelize first
-    window.setTimeout(() => {
-      const root = pixelRootRef.current
-      const btn = originEl
-      if (!root || !btn) return
-
-      const btnRect = btn.getBoundingClientRect()
-      const origin = { x: btnRect.left + btnRect.width / 2, y: btnRect.top + btnRect.height / 2 }
-
-      const items = Array.from(root.querySelectorAll<HTMLElement>("[data-pixel-item]"))
-      const withDist = items
-        .map((el) => {
-          const r = el.getBoundingClientRect()
-          const cx = r.left + r.width / 2
-          const cy = r.top + r.height / 2
-          const dx = cx - origin.x
-          const dy = cy - origin.y
-          const dist = Math.sqrt(dx * dx + dy * dy)
-          return { el, dist }
-        })
-        .sort((a, b) => a.dist - b.dist)
-
-      const maxDist = Math.max(1, ...withDist.map((x) => x.dist))
-      // Keep a near->far sequence, but don't delay navigation too long.
-      const baseDelayMs = 60
-      const maxDelayMs = 900
-      for (const { el, dist } of withDist) {
-        const delay = baseDelayMs + Math.round((dist / maxDist) * maxDelayMs)
-        el.style.setProperty("--pixel-delay", `${delay}ms`)
-      }
-      root.classList.add("pixel-farm-transition-active")
-    }, 0)
-    
-    // Navigate directly after pixelation effect completes
-    setTimeout(() => {
-      navigate?.()
-    }, 900)
-
-    // 如果导航没有发生（例如“Continue past journey”没有可恢复内容），避免页面卡在禁用态
-    if (resetTimeoutRef.current) window.clearTimeout(resetTimeoutRef.current)
-    resetTimeoutRef.current = window.setTimeout(() => {
-      resetPixelTransitionIfStillHome()
-      resetTimeoutRef.current = null
-    }, 1400)
-  }
-
   const handleStartJourneyClick = () => {
     playStartJourneySound()
-    handlePixelJourney(startButtonRef.current, onStartPlan)
+    onStartPlan?.()
   }
 
   const handleContinuePastJourneyClick = () => {
     playStartJourneySound()
-    handlePixelJourney(continueButtonRef.current, onContinuePastJourney)
+    onContinuePastJourney?.()
   }
 
   const handleVisitFarmClick = () => {
     playStartJourneySound()
-    handlePixelJourney(farmButtonRef.current, onVisitFarm)
+    onVisitFarm?.()
   }
 
   return (
-    <main className="relative min-h-screen w-full overflow-x-hidden bg-background cursor-none">
+    <main ref={containerRef} className="relative w-full overflow-x-hidden cursor-none">
       <CustomCursor />
-      <GrainOverlay />
-      
-      {/* Phase 1: Pixelation effect overlay - transforms existing elements */}
-      <AnimatePresence>
-        {pixelPhase >= 1 && (
-          <motion.div
-            className="fixed inset-0 z-[99] pointer-events-none"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.3 }}
-          >
-            {/* Radial pixelation wave from button center */}
-            <motion.div
-              className="absolute inset-0"
-              style={{
-                background: `radial-gradient(circle at ${pixelOrigin.x}px ${pixelOrigin.y}px, 
-                  transparent 0%, 
-                  transparent var(--wave-radius), 
-                  rgba(245,230,200,0.2) calc(var(--wave-radius) + 50px),
-                  rgba(126,200,80,0.3) calc(var(--wave-radius) + 150px),
-                  rgba(90,154,50,0.5) calc(var(--wave-radius) + 300px))`,
-                // @ts-ignore
-                "--wave-radius": "0px",
-              }}
-              animate={{
-                // @ts-ignore
-                "--wave-radius": ["0px", "3000px"],
-              }}
-              transition={{ duration: 0.8, ease: "easeOut" }}
-            />
-            
-            {/* Progressive pixel grid - starts large, gets finer */}
-            <motion.div
-              className="absolute inset-0"
-              style={{
-                backgroundImage: `
-                  linear-gradient(rgba(139, 105, 20, 0.4) 4px, transparent 4px),
-                  linear-gradient(90deg, rgba(139, 105, 20, 0.4) 4px, transparent 4px)
-                `,
-                backgroundSize: "32px 32px",
-                imageRendering: "pixelated",
-              }}
-              initial={{ opacity: 0 }}
-              animate={{ 
-                opacity: [0, 0.3, 0.5, 0.7, 0.9],
-                backgroundSize: ["64px 64px", "48px 48px", "32px 32px", "16px 16px", "8px 8px"],
-              }}
-              transition={{ 
-                duration: 0.7, 
-                times: [0, 0.2, 0.4, 0.7, 1],
-                ease: "linear"
-              }}
-            />
-            
-            {/* Color shift towards Stardew palette */}
-            <motion.div
-              className="absolute inset-0"
-              initial={{ backgroundColor: "rgba(0,0,0,0)" }}
-              animate={{ 
-                backgroundColor: [
-                  "rgba(0,0,0,0)",
-                  "rgba(245,230,200,0.1)",
-                  "rgba(232,197,71,0.2)",
-                  "rgba(126,200,80,0.3)",
-                  "rgba(90,154,50,0.5)",
-                ]
-              }}
-              transition={{ duration: 0.8, ease: "easeIn" }}
-            />
-            
-            {/* Scanline effect */}
-            <motion.div
-              className="absolute inset-0"
-              style={{
-                backgroundImage: `repeating-linear-gradient(
-                  0deg,
-                  transparent 0px,
-                  transparent 3px,
-                  rgba(0, 0, 0, 0.1) 3px,
-                  rgba(0, 0, 0, 0.1) 6px
-                )`,
-              }}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: [0, 0.2, 0.4, 0.5] }}
-              transition={{ duration: 0.6, ease: "linear" }}
-            />
-          </motion.div>
-        )}
-      </AnimatePresence>
 
-      {/* Pixel sky/grass overlay (dramatic background switch from button outward) */}
-      <AnimatePresence>
-        {showPixelSky && (
-          <motion.div
-            className="fixed inset-0 z-[60] pointer-events-none"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 0.35 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.18 }}
-          >
-            <motion.div
-              className="absolute inset-0"
-              style={{
-                background: `linear-gradient(180deg, 
-                  #b8e4f9 0%, 
-                  #87ceeb 28%, 
-                  #7ec850 68%, 
-                  #5a9a32 100%)`,
-                imageRendering: "pixelated",
-                // radial reveal from the Start button
-                WebkitMaskImage: `radial-gradient(circle at ${pixelOrigin.x}px ${pixelOrigin.y}px, #000 0%, #000 var(--reveal), transparent calc(var(--reveal) + 140px))`,
-                maskImage: `radial-gradient(circle at ${pixelOrigin.x}px ${pixelOrigin.y}px, #000 0%, #000 var(--reveal), transparent calc(var(--reveal) + 140px))`,
-                // @ts-ignore
-                "--reveal": "0px",
-              }}
-              animate={{
-                // @ts-ignore
-                "--reveal": ["0px", "2600px"],
-              }}
-              transition={{ duration: 0.85, ease: "linear" }}
-            >
-              {/* pixel clouds */}
-              <div className="absolute top-20 left-[10%] w-24 h-12 bg-white/80" style={{
-                clipPath: "polygon(0% 60%, 15% 40%, 30% 50%, 45% 20%, 60% 40%, 75% 30%, 90% 50%, 100% 60%, 100% 100%, 0% 100%)",
-                imageRendering: "pixelated",
-              }} />
-              <div className="absolute top-28 right-[15%] w-32 h-14 bg-white/70" style={{
-                clipPath: "polygon(0% 60%, 15% 40%, 30% 50%, 45% 20%, 60% 40%, 75% 30%, 90% 50%, 100% 60%, 100% 100%, 0% 100%)",
-                imageRendering: "pixelated",
-              }} />
+      {/* Pixel Sky Background - Fixed */}
+      <div className="fixed inset-0 z-0">
+        {/* Gradient sky */}
+        <div
+          className="absolute inset-0"
+          style={{
+            background: "linear-gradient(180deg, #87CEEB 0%, #B0E0E6 30%, #E0F7FA 60%, #FFF8E1 100%)",
+          }}
+        />
 
-              {/* pixel grass blades */}
-              <div className="absolute bottom-0 left-0 right-0 h-32 pointer-events-none">
-                {[...Array(26)].map((_, i) => (
-                  <div
-                    key={`pixel-grass-${i}`}
-                    className="absolute bottom-0"
-                    style={{
-                      left: `${i * 4 + Math.random() * 2}%`,
-                      width: "8px",
-                      height: `${18 + Math.random() * 18}px`,
-                      background: i % 3 === 0 ? "#5a9a32" : "#7ec850",
-                      imageRendering: "pixelated",
-                    }}
-                  />
-                ))}
-                {[...Array(10)].map((_, i) => (
-                  <div
-                    key={`pixel-flower-${i}`}
-                    className="absolute bottom-5"
-                    style={{ left: `${8 + i * 9}%` }}
-                  >
-                    <div className="w-3 h-3 rounded-full" style={{
-                      background: ["#ff9999", "#ffcc66", "#ff66b2", "#66ccff"][i % 4],
-                      boxShadow: `3px 0 0 ${["#ff9999", "#ffcc66", "#ff66b2", "#66ccff"][i % 4]}, -3px 0 0 ${["#ff9999", "#ffcc66", "#ff66b2", "#66ccff"][i % 4]}, 0 3px 0 ${["#ff9999", "#ffcc66", "#ff66b2", "#66ccff"][i % 4]}, 0 -3px 0 ${["#ff9999", "#ffcc66", "#ff66b2", "#66ccff"][i % 4]}`,
-                      imageRendering: "pixelated",
-                    }} />
-                  </div>
-                ))}
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-      
-
-
-      <div
-        ref={shaderContainerRef}
-        className={`fixed inset-0 z-0 transition-opacity duration-700 ${isLoaded ? "opacity-100" : "opacity-0"}`}
-        style={{ contain: "strict" }}
-      >
-        <Shader className="h-full w-full">
-          <Swirl
-            colorA="#F48FB1"
-            colorB="#64B5F6"
-            speed={0.9}
-            detail={0.7}
-            blend={60}
-          />
-          <ChromaFlow
-            baseColor="#F8BBD9"
-            upColor="#64B5F6"
-            downColor="#FFAB91"
-            leftColor="#F48FB1"
-            rightColor="#90CAF9"
-            intensity={0.9}
-            radius={2.0}
-            momentum={30}
-            maskType="alpha"
-            opacity={0.95}
-          />
-        </Shader>
-        <div className="absolute inset-0 bg-black/30" />
+        {/* Pixel grid overlay for game feel */}
+        <div
+          className="absolute inset-0 opacity-[0.03]"
+          style={{
+            backgroundImage: `
+              linear-gradient(rgba(0,0,0,0.5) 1px, transparent 1px),
+              linear-gradient(90deg, rgba(0,0,0,0.5) 1px, transparent 1px)
+            `,
+            backgroundSize: "8px 8px",
+          }}
+        />
       </div>
 
-      <div
-        ref={pixelRootRef}
-        className={`pixel-farm-transition relative z-10 flex min-h-screen flex-col pt-24 md:pt-24 lg:pt-32 pb-12 md:pb-16 lg:pb-24 transition-all duration-700 ${isLoaded ? "opacity-100" : "opacity-0"} ${pixelPhase >= 1 ? "pixel-transforming" : ""}`}
-        style={pixelPhase >= 1 ? { 
-          filter: `contrast(${1 + pixelPhase * 0.1}) saturate(${1 + pixelPhase * 0.15})`,
-          transition: "filter 0.5s ease"
-        } : undefined}>
-        <section className="flex flex-1 flex-col items-center justify-center gap-6 px-4 py-8 md:px-8 md:py-10 lg:flex-row lg:gap-10 lg:px-14">
-          <div className="flex flex-col items-center text-center lg:w-1/2 lg:items-start lg:text-left">
+      {/* Parallax Pixel Clouds - Background Layer (z-5) */}
+      <div className="fixed inset-0 z-[5] pointer-events-none overflow-hidden">
+        {/* Cloud 1 - Large, slow horizontal + parallax vertical */}
+        <motion.div
+          className="absolute"
+          style={{ top: "5%", y: cloud1Y }}
+          animate={{ x: ["-20%", "120vw"] }}
+          transition={{ duration: 120, repeat: Infinity, ease: "linear" }}
+        >
+          <PixelCloud className="w-48 md:w-64 h-auto opacity-90" />
+        </motion.div>
+
+        {/* Cloud 2 */}
+        <motion.div
+          className="absolute"
+          style={{ top: "15%", y: cloud2Y }}
+          animate={{ x: ["120vw", "-20%"] }}
+          transition={{ duration: 100, repeat: Infinity, ease: "linear", delay: 10 }}
+        >
+          <PixelCloud className="w-40 md:w-56 h-auto opacity-80" />
+        </motion.div>
+
+        {/* Cloud 3 */}
+        <motion.div
+          className="absolute"
+          style={{ top: "25%", y: cloud3Y }}
+          animate={{ x: ["-15%", "115vw"] }}
+          transition={{ duration: 80, repeat: Infinity, ease: "linear", delay: 25 }}
+        >
+          <PixelCloud className="w-32 md:w-48 h-auto opacity-85" />
+        </motion.div>
+
+        {/* Cloud 4 */}
+        <motion.div
+          className="absolute"
+          style={{ top: "40%", y: cloud4Y }}
+          animate={{ x: ["115vw", "-15%"] }}
+          transition={{ duration: 140, repeat: Infinity, ease: "linear", delay: 40 }}
+        >
+          <PixelCloud className="w-56 md:w-72 h-auto opacity-70" />
+        </motion.div>
+      </div>
+
+      {/* Foreground Clouds - OVER content (z-30) for occlusion effect */}
+      <div className="fixed inset-0 z-30 pointer-events-none overflow-hidden">
+        {/* Foreground cloud 1 - passes OVER content edges */}
+        <motion.div
+          className="absolute"
+          style={{ top: "35%", y: cloud5Y }}
+          animate={{ x: ["-25%", "125vw"] }}
+          transition={{ duration: 60, repeat: Infinity, ease: "linear", delay: 5 }}
+        >
+          <PixelCloud className="w-36 md:w-52 h-auto opacity-95" />
+        </motion.div>
+
+        {/* Foreground cloud 2 */}
+        <motion.div
+          className="absolute"
+          style={{ top: "55%", y: cloud2Y }}
+          animate={{ x: ["125vw", "-25%"] }}
+          transition={{ duration: 75, repeat: Infinity, ease: "linear", delay: 20 }}
+        >
+          <PixelCloud className="w-44 md:w-60 h-auto opacity-90" />
+        </motion.div>
+
+        {/* Foreground cloud 3 */}
+        <motion.div
+          className="absolute"
+          style={{ top: "70%", y: cloud1Y }}
+          animate={{ x: ["-20%", "120vw"] }}
+          transition={{ duration: 90, repeat: Infinity, ease: "linear", delay: 35 }}
+        >
+          <PixelCloud className="w-40 md:w-56 h-auto opacity-85" />
+        </motion.div>
+      </div>
+
+      {/* Main Content */}
+      <div className="relative z-10">
+        {/* Section 1: Hero (100vh) */}
+        <section className="min-h-screen flex flex-col items-center justify-center px-6 pt-24">
+          <motion.div
+            className="text-center"
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 1, delay: 0.3 }}
+          >
+            {/* Floating animation wrapper */}
             <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 1.2 }}
-              className="mb-6"
+              animate={{ y: [0, -10, 0] }}
+              transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
             >
-              <p 
-                data-pixel-item
-                data-pixel-kind="text"
-                className={`font-sans text-4xl font-light tracking-tight md:text-5xl lg:text-6xl transition-all duration-500 ${
-                  pixelPhase >= 1 ? "text-[#8b6914]" : "text-foreground"
-                }`}
-                style={pixelPhase >= 1 ? { textShadow: "3px 3px 0 rgba(0,0,0,0.2)" } : undefined}
-              >
-                <PixelRevealText
-                  text={t.welcome}
-                  baseClassName="font-sans"
-                  pixelStyle={pixelPhase >= 1 ? { color: "#8b6914" } : undefined}
-                />
+              <p className="text-xl md:text-2xl lg:text-3xl font-light text-gray-700 mb-2 font-sans">
+                {t.welcome}
               </p>
-              <h1 
-                data-pixel-item
-                data-pixel-kind="text"
-                className={`font-baloo text-7xl font-bold leading-none tracking-tight md:text-8xl lg:text-[12rem] transition-all duration-500 ${
-                  pixelPhase >= 1 
-                    ? "text-[#7ec850]" 
-                    : "bg-gradient-to-r from-pink-400 via-yellow-400 to-pink-400 bg-clip-text text-transparent"
-                }`}
-                style={pixelPhase >= 1 ? { 
-                  textShadow: "6px 6px 0 #5a9a32, 12px 12px 0 rgba(0,0,0,0.2)",
-                  WebkitTextStroke: "3px #5a9a32",
-                } : undefined}
-              >
-                {pixelPhase >= 1 ? (
-                  <PixelRevealText
-                    text="CWrite"
-                    // Keep size from the h1; only pixel overlay should apply font.
-                    baseClassName=""
-                    pixelStyle={{ color: "#7ec850", WebkitTextStroke: "0px transparent" }}
-                  />
-                ) : (
-                  "CWrite"
-                )}
+              <h1 className="text-7xl md:text-8xl lg:text-[10rem] font-bold leading-none tracking-tight font-sans bg-gradient-to-r from-pink-400 via-yellow-400 to-pink-400 bg-clip-text text-transparent">
+                CWrite
               </h1>
             </motion.div>
+          </motion.div>
 
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 1.4 }}
-              className="mb-6 md:mb-7"
-            >
-              <p data-pixel-item data-pixel-kind="text" className="font-sans text-2xl font-medium text-foreground/90 md:text-3xl lg:text-4xl">
-                <PixelRevealText
-                  text={t.subtitleTop}
-                  baseClassName="font-sans"
-                  pixelStyle={pixelPhase >= 1 ? { color: "rgba(17,24,39,0.9)" } : { color: "rgba(17,24,39,0.9)" }}
-                />
-              </p>
-              <p data-pixel-item data-pixel-kind="text" className="mt-2 font-sans text-lg text-foreground/70 md:text-xl lg:text-2xl">
-                <PixelRevealText
-                  text={t.subtitleBottom}
-                  baseClassName="font-sans"
-                  pixelStyle={pixelPhase >= 1 ? { color: "rgba(17,24,39,0.7)" } : { color: "rgba(17,24,39,0.7)" }}
-                />
-              </p>
-            </motion.div>
+          <motion.div
+            className="mt-8 text-center"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.8 }}
+          >
+            <p className="text-2xl md:text-3xl lg:text-4xl font-medium text-gray-800 font-sans">
+              {t.subtitleTop}
+            </p>
+            <p className="text-lg md:text-xl lg:text-2xl text-gray-600 mt-2 font-sans">
+              {t.subtitleBottom}
+            </p>
+          </motion.div>
 
-            <motion.p
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 1, delay: 2.1 }}
-              data-pixel-item
-              data-pixel-kind="text"
-              className="font-caveat text-3xl font-bold md:text-4xl lg:text-5xl"
-              style={{ textShadow: "0 2px 20px rgba(0,0,0,0.5), 0 0 40px rgba(255,255,255,0.3)" }}
-            >
-              <span className="text-white">
-                <PixelRevealText
-                  text={t.tagline}
-                  baseClassName="font-caveat"
-                  pixelStyle={{ color: "#ffffff" }}
-                />
-              </span>
-            </motion.p>
-          </div>
+          <motion.p
+            className="mt-6 text-xl md:text-2xl lg:text-3xl text-gray-500 font-sans italic"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 0.7 }}
+            transition={{ duration: 1, delay: 1.2 }}
+          >
+            {t.tagline}
+          </motion.p>
 
-          <div className="flex flex-col items-center lg:w-1/2">
-            <div data-pixel-item data-pixel-kind="panel" className="mb-10 md:mb-12 w-full transition-all duration-300 md:origin-top md:scale-[0.86] lg:scale-100">
-              <MagneticCards
-                cards={genreCards}
-                activeCard={activeGenre}
-                onCardClick={handleCardClick}
-                animationDuration={0.8}
-                staggerDelay={0.15}
-                delayStart={1}
-              />
+          {/* Scroll indicator */}
+          <motion.div
+            className="absolute bottom-12 left-1/2 -translate-x-1/2"
+            animate={{ y: [0, 10, 0] }}
+            transition={{ duration: 1.5, repeat: Infinity }}
+          >
+            <div className="flex flex-col items-center gap-2 text-gray-500">
+              <span className="text-sm font-sans">Scroll to explore</span>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M12 5v14M5 12l7 7 7-7" />
+              </svg>
             </div>
+          </motion.div>
+        </section>
 
-            <AnimatePresence>
-              {activeGenre && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  exit={{ opacity: 0, height: 0 }}
-                  transition={{ duration: 0.4 }}
-                  className="mb-8 w-full overflow-hidden"
-                >
-                  <GenreDetails activeGenre={activeGenre} onBack={handleBack} />
-                </motion.div>
-              )}
-            </AnimatePresence>
+        {/* Section 2: The 5 Writing Genres */}
+        <section className="py-20 md:py-32 px-6">
+          <motion.h2
+            className="text-3xl md:text-4xl lg:text-5xl font-bold text-center text-gray-800 mb-16 md:mb-24 font-sans"
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+          >
+            Choose Your Writing Journey
+          </motion.h2>
 
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ 
-                opacity: 1, 
-                y: 0,
-                scale: pixelPhase >= 1 ? [1, 1.05, 1] : 1,
-              }}
-              transition={{ duration: 0.8, delay: 2.5 }}
-              className="mt-6 md:mt-8"
-            >
-              <div className="flex flex-col items-center justify-center gap-6">
-                {/* Shared sizing so 3 buttons are equal */}
-                <style jsx>{`
-                  .home-action-btn {
-                    width: min(440px, 90vw);
-                  }
-                  .home-action-inner {
-                    width: 100%;
-                    justify-content: center;
-                  }
-                `}</style>
-                {/* Start a new journey */}
-                {pixelPhase >= 1 ? (
-                  <motion.button
-                    ref={startButtonRef}
-                    data-pixel-item
-                    data-pixel-kind="button"
-                    disabled
-                    className="focus:outline-none disabled:cursor-not-allowed home-action-btn"
-                    initial={{ scale: 1 }}
-                    animate={{
-                      scale: [1, 1.1, 1.05],
-                      boxShadow: [
-                        "4px 4px 0 rgba(0,0,0,0.3)",
-                        "6px 6px 0 rgba(0,0,0,0.4)",
-                        "8px 8px 0 rgba(0,0,0,0.3)",
-                      ],
-                    }}
-                    transition={{ duration: 0.5 }}
-                    style={{
-                      background: "linear-gradient(180deg, #6fcf6f 0%, #4ca84c 100%)",
-                      border: "4px solid #3d8a3d",
-                      boxShadow:
-                        "inset -4px -4px 0 rgba(0,0,0,0.25), inset 4px 4px 0 rgba(255,255,255,0.25), 6px 6px 0 rgba(0,0,0,0.3)",
-                      padding: "16px 34px",
-                      imageRendering: "pixelated",
-                    }}
-                  >
-                    <span
-                      className="flex items-center gap-3 text-base font-bold whitespace-nowrap text-white md:text-xl lg:text-3xl home-action-inner"
-                      style={{ textShadow: "2px 2px 0 rgba(0,0,0,0.3)" }}
-                    >
-                      {t.startButton}
-                      <span className="text-xl md:text-2xl lg:text-4xl">&#9992;</span>
-                    </span>
-                  </motion.button>
-                ) : (
-                  <button
-                    ref={startButtonRef}
-                    onPointerDown={playStartJourneySound}
-                    onClick={handleStartJourneyClick}
-                    disabled={isPixelating}
-                    data-pixel-item
-                    data-pixel-kind="button"
-                    data-click-sound="start-journey"
-                    className="group rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70 disabled:cursor-not-allowed transition-transform duration-200 hover:scale-[1.04] active:scale-[1.0] home-action-btn"
-                  >
-                    <GlassSurface
-                      width="auto"
-                      height="auto"
-                      borderRadius={50}
-                      borderWidth={0.08}
-                      brightness={55}
-                      opacity={0.85}
-                      blur={12}
-                      displace={0.3}
-                    >
-                      <span className="flex items-center gap-3 px-9 py-4 text-base font-bold whitespace-nowrap text-white md:px-11 md:py-5 md:text-xl lg:px-16 lg:py-6 lg:text-3xl transition-all duration-200 group-hover:brightness-110 home-action-inner">
-                        {t.startButton}
-                        <span className="text-xl md:text-2xl lg:text-4xl">&#9992;</span>
-                      </span>
-                    </GlassSurface>
-                  </button>
-                )}
-
-                {/* Continue past journey */}
-                {pixelPhase >= 1 ? (
-                  <motion.button
-                    ref={continueButtonRef}
-                    data-pixel-item
-                    data-pixel-kind="button"
-                    disabled
-                    className="focus:outline-none disabled:cursor-not-allowed home-action-btn"
-                    initial={{ scale: 1 }}
-                    animate={{ scale: [1, 1.06, 1.03] }}
-                    transition={{ duration: 0.5 }}
-                    style={{
-                      background: "linear-gradient(180deg, #6aa8ff 0%, #3b82f6 100%)",
-                      border: "4px solid #1d4ed8",
-                      boxShadow:
-                        "inset -4px -4px 0 rgba(0,0,0,0.25), inset 4px 4px 0 rgba(255,255,255,0.25), 6px 6px 0 rgba(0,0,0,0.3)",
-                      padding: "16px 34px",
-                      imageRendering: "pixelated",
-                    }}
-                  >
-                    <span
-                      className="flex items-center gap-3 text-base font-bold whitespace-nowrap text-white md:text-xl lg:text-3xl home-action-inner"
-                      style={{ textShadow: "2px 2px 0 rgba(0,0,0,0.3)" }}
-                    >
-                      {t.continueButton}
-                      <span className="text-xl md:text-2xl lg:text-4xl">⏮️</span>
-                    </span>
-                  </motion.button>
-                ) : (
-                  <button
-                    ref={continueButtonRef}
-                    onPointerDown={playStartJourneySound}
-                    onClick={handleContinuePastJourneyClick}
-                    disabled={isPixelating}
-                    data-pixel-item
-                    data-pixel-kind="button"
-                    data-click-sound="continue-journey"
-                    className="group rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70 disabled:cursor-not-allowed transition-transform duration-200 hover:scale-[1.04] active:scale-[1.0] home-action-btn"
-                  >
-                    <GlassSurface
-                      width="auto"
-                      height="auto"
-                      borderRadius={50}
-                      borderWidth={0.08}
-                      brightness={55}
-                      opacity={0.85}
-                      blur={12}
-                      displace={0.3}
-                    >
-                      <span className="flex items-center gap-3 px-9 py-4 text-base font-bold whitespace-nowrap text-white md:px-11 md:py-5 md:text-xl lg:px-16 lg:py-6 lg:text-3xl transition-all duration-200 group-hover:brightness-110 home-action-inner">
-                        {t.continueButton}
-                        <span className="text-xl md:text-2xl lg:text-4xl">⏮️</span>
-                      </span>
-                    </GlassSurface>
-                  </button>
-                )}
-
-                {/* Visit my farm */}
-                {pixelPhase >= 1 ? (
-                  <motion.button
-                    ref={farmButtonRef}
-                    data-pixel-item
-                    data-pixel-kind="button"
-                    disabled
-                    className="focus:outline-none disabled:cursor-not-allowed home-action-btn"
-                    initial={{ scale: 1 }}
-                    animate={{ scale: [1, 1.06, 1.03] }}
-                    transition={{ duration: 0.5 }}
-                    style={{
-                      background: "linear-gradient(180deg, #d9c9a6 0%, #c4a574 100%)",
-                      border: "4px solid #8b6914",
-                      boxShadow: "inset -4px -4px 0 rgba(0,0,0,0.25), inset 4px 4px 0 rgba(255,255,255,0.25), 6px 6px 0 rgba(0,0,0,0.3)",
-                      padding: "16px 34px",
-                      imageRendering: "pixelated",
-                    }}
-                  >
-                    <span className="flex items-center gap-3 text-base font-bold whitespace-nowrap text-white md:text-xl lg:text-3xl home-action-inner" style={{ textShadow: "2px 2px 0 rgba(0,0,0,0.3)" }}>
-                      Visit my farm
-                      <span className="text-xl md:text-2xl lg:text-4xl">🏠</span>
-                    </span>
-                  </motion.button>
-                ) : (
-                  <button
-                    ref={farmButtonRef}
-                    onPointerDown={playStartJourneySound}
-                    onClick={handleVisitFarmClick}
-                    disabled={isPixelating}
-                    data-pixel-item
-                    data-pixel-kind="button"
-                    data-click-sound="visit-farm"
-                    className="group rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70 disabled:cursor-not-allowed transition-transform duration-200 hover:scale-[1.04] active:scale-[1.0] home-action-btn"
-                  >
-                    <GlassSurface width="auto" height="auto" borderRadius={50} borderWidth={0.08} brightness={55} opacity={0.85} blur={12} displace={0.3}>
-                      <span className="flex items-center gap-3 px-9 py-4 text-base font-bold whitespace-nowrap text-white md:px-11 md:py-5 md:text-xl lg:px-16 lg:py-6 lg:text-3xl transition-all duration-200 group-hover:brightness-110 home-action-inner">
-                        Visit my farm
-                        <span className="text-xl md:text-2xl lg:text-4xl">🏠</span>
-                      </span>
-                    </GlassSurface>
-                  </button>
-                )}
-              </div>
-            </motion.div>
+          <div className="flex flex-col gap-16 md:gap-24 max-w-4xl mx-auto">
+            {genreData.map((genre, index) => (
+              <GenreCard key={genre.id} genre={genre} index={index} />
+            ))}
           </div>
         </section>
 
+        {/* Section 3: Bottom Action Area */}
+        <section className="py-20 md:py-32 px-6">
+          <motion.div
+            className="flex flex-col items-center gap-6"
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+          >
+            <style jsx>{`
+              .home-action-btn {
+                width: min(440px, 90vw);
+              }
+              .home-action-inner {
+                width: 100%;
+                justify-content: center;
+              }
+            `}</style>
+
+            {/* Start a new journey */}
+            <button
+              onPointerDown={playStartJourneySound}
+              onClick={handleStartJourneyClick}
+              className="group rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70 transition-transform duration-200 hover:scale-[1.04] active:scale-95 home-action-btn"
+            >
+              <GlassSurface
+                width="auto"
+                height="auto"
+                borderRadius={50}
+                borderWidth={0.08}
+                brightness={55}
+                opacity={0.85}
+                blur={12}
+                displace={0.3}
+              >
+                <span className="flex items-center gap-3 px-9 py-4 text-base font-bold whitespace-nowrap text-white md:px-11 md:py-5 md:text-xl lg:px-16 lg:py-6 lg:text-3xl transition-all duration-200 group-hover:brightness-110 home-action-inner font-sans">
+                  {t.startButton}
+                  <span className="text-xl md:text-2xl lg:text-4xl">&#9992;</span>
+                </span>
+              </GlassSurface>
+            </button>
+
+            {/* Continue past journey */}
+            <button
+              onPointerDown={playStartJourneySound}
+              onClick={handleContinuePastJourneyClick}
+              className="group rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70 transition-transform duration-200 hover:scale-[1.04] active:scale-95 home-action-btn"
+            >
+              <GlassSurface
+                width="auto"
+                height="auto"
+                borderRadius={50}
+                borderWidth={0.08}
+                brightness={55}
+                opacity={0.85}
+                blur={12}
+                displace={0.3}
+              >
+                <span className="flex items-center gap-3 px-9 py-4 text-base font-bold whitespace-nowrap text-white md:px-11 md:py-5 md:text-xl lg:px-16 lg:py-6 lg:text-3xl transition-all duration-200 group-hover:brightness-110 home-action-inner font-sans">
+                  {t.continueButton}
+                  <span className="text-xl md:text-2xl lg:text-4xl">&#9198;</span>
+                </span>
+              </GlassSurface>
+            </button>
+
+            {/* Visit my farm */}
+            <button
+              onPointerDown={playStartJourneySound}
+              onClick={handleVisitFarmClick}
+              className="group rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70 transition-transform duration-200 hover:scale-[1.04] active:scale-95 home-action-btn"
+            >
+              <GlassSurface
+                width="auto"
+                height="auto"
+                borderRadius={50}
+                borderWidth={0.08}
+                brightness={55}
+                opacity={0.85}
+                blur={12}
+                displace={0.3}
+              >
+                <span className="flex items-center gap-3 px-9 py-4 text-base font-bold whitespace-nowrap text-white md:px-11 md:py-5 md:text-xl lg:px-16 lg:py-6 lg:text-3xl transition-all duration-200 group-hover:brightness-110 home-action-inner font-sans">
+                  Visit my farm
+                  <span className="text-xl md:text-2xl lg:text-4xl">&#127968;</span>
+                </span>
+              </GlassSurface>
+            </button>
+          </motion.div>
+
+          {/* Bottom spacing */}
+          <div className="h-32" />
+        </section>
       </div>
     </main>
   )
