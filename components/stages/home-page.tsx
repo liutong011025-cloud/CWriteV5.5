@@ -807,10 +807,12 @@ export default function HomePage({ language = "en", onStartPlan, onContinuePastJ
               <p
                 className="text-4xl md:text-5xl lg:text-7xl font-bold mb-6 font-sans"
                 style={{
-                  background: "linear-gradient(135deg, #FF6B9D 0%, #FFB347 45%, #FFE066 100%)",
+                  background: "linear-gradient(135deg, #FFE45E 0%, #B7F36B 55%, #4CAF50 100%)",
                   WebkitBackgroundClip: "text",
                   WebkitTextFillColor: "transparent",
                   backgroundClip: "text",
+                  WebkitTextStroke: "2px rgba(255, 255, 255, 0.95)",
+                  textShadow: "0 4px 14px rgba(255, 255, 255, 0.22)",
                 }}
               >
                 {t.welcome}
@@ -845,11 +847,12 @@ export default function HomePage({ language = "en", onStartPlan, onContinuePastJ
             <p
               className="text-3xl md:text-5xl lg:text-6xl font-bold font-sans"
               style={{
-                background: "linear-gradient(135deg, #FF5CA8 0%, #FF9E43 35%, #FFD93D 70%, #4DD0E1 100%)",
+                background: "linear-gradient(135deg, #FFE45E 0%, #C7F464 50%, #57C84D 100%)",
                 WebkitBackgroundClip: "text",
                 WebkitTextFillColor: "transparent",
                 backgroundClip: "text",
-                textShadow: "0 6px 18px rgba(255, 105, 180, 0.18)",
+                WebkitTextStroke: "2px rgba(255, 255, 255, 0.95)",
+                textShadow: "0 6px 18px rgba(255, 255, 255, 0.24)",
               }}
             >
               {t.subtitleTop}
@@ -857,11 +860,12 @@ export default function HomePage({ language = "en", onStartPlan, onContinuePastJ
             <p
               className="text-2xl md:text-4xl lg:text-5xl font-bold mt-4 font-sans"
               style={{
-                background: "linear-gradient(135deg, #7C4DFF 0%, #40C4FF 45%, #69F0AE 100%)",
+                background: "linear-gradient(135deg, #FFF176 0%, #C5E86C 45%, #43A047 100%)",
                 WebkitBackgroundClip: "text",
                 WebkitTextFillColor: "transparent",
                 backgroundClip: "text",
-                textShadow: "0 6px 18px rgba(64, 196, 255, 0.15)",
+                WebkitTextStroke: "2px rgba(255, 255, 255, 0.98)",
+                textShadow: "0 6px 18px rgba(255, 255, 255, 0.28)",
               }}
             >
               {t.subtitleBottom}
