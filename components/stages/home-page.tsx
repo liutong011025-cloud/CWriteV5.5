@@ -835,8 +835,8 @@ export default function HomePage({ language = "en", onStartPlan, onContinuePastJ
         </motion.div>
       </div>
 
-      {/* Foreground Clouds - OVER content (genre boxes & buttons), z-30 */}
-      <div className="fixed inset-0 z-30 pointer-events-none overflow-hidden">
+      {/* Foreground Clouds - behind content so they don't cover text */}
+      <div className="fixed inset-0 z-[6] pointer-events-none overflow-hidden">
         <motion.div
           className="absolute"
           style={{ top: "55%", y: cloud3Y }}
@@ -1017,15 +1017,16 @@ export default function HomePage({ language = "en", onStartPlan, onContinuePastJ
           </motion.div>
 
           <motion.p
-            className="mt-8 text-3xl md:text-5xl lg:text-6xl font-extrabold italic"
+            className="mt-8 text-3xl md:text-5xl lg:text-6xl font-black italic"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 1, delay: 1.2 }}
             style={{
               color: "#FFFFFF",
               fontFamily: "var(--font-caveat), var(--font-patrick-hand), cursive",
-              textShadow: "0 5px 14px rgba(7, 42, 92, 0.22), 0 0 18px rgba(255, 255, 255, 0.2)",
+              textShadow: "0 8px 18px rgba(7, 42, 92, 0.3), 0 2px 6px rgba(255, 255, 255, 0.18)",
               letterSpacing: "0.03em",
+              fontWeight: 900,
             }}
           >
             {t.tagline}
