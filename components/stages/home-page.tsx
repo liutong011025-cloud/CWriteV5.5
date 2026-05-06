@@ -1019,7 +1019,7 @@ export default function HomePage({ language = "en", onStartPlan, onContinuePastJ
           <motion.p
             className="mt-8 text-3xl md:text-5xl lg:text-6xl font-extrabold italic"
             initial={{ opacity: 0 }}
-            animate={{ opacity: 0.9 }}
+            animate={{ opacity: 1 }}
             transition={{ duration: 1, delay: 1.2 }}
             style={{
               color: "#FFFFFF",
