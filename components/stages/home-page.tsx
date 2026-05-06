@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useRef, useState, useCallback } from "react"
 import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion"
 import type { Language } from "@/app/page"
 import { CustomCursor } from "@/components/custom-cursor"
@@ -143,7 +143,7 @@ function PixelCloud({ className, style }: { className?: string; style?: React.CS
   )
 }
 
-// Pixel button component with glow effect
+// Pixel button component with ANIMATED glow effect
 function PixelButton({ 
   children, 
   onClick, 
@@ -165,31 +165,40 @@ function PixelButton({
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       className="relative focus:outline-none"
-      whileHover={{ scale: 1.08, y: -4 }}
+      whileHover={{ scale: 1.05, y: -3 }}
       whileTap={{ scale: 0.98, y: 0 }}
-      animate={{
-        boxShadow: isAtBottom 
-          ? isHovered
-            ? `0 0 50px 15px ${color}, 0 0 80px 25px ${color}80`
-            : `0 0 30px 8px ${color}90, 0 0 50px 15px ${color}50`
-          : `0 12px 0 ${borderColor}, 0 14px 24px rgba(0,0,0,0.25)`,
-      }}
+      animate={isAtBottom ? {
+        boxShadow: isHovered
+          ? [
+              `0 0 30px 10px ${color}, 0 0 60px 20px ${color}80`,
+              `0 0 50px 18px ${color}, 0 0 80px 30px ${color}90`,
+              `0 0 30px 10px ${color}, 0 0 60px 20px ${color}80`,
+            ]
+          : [
+              `0 0 15px 5px ${color}70, 0 0 30px 10px ${color}40`,
+              `0 0 25px 8px ${color}80, 0 0 45px 15px ${color}50`,
+              `0 0 15px 5px ${color}70, 0 0 30px 10px ${color}40`,
+            ],
+      } : undefined}
+      transition={isAtBottom ? { duration: 1.5, repeat: Infinity, ease: "easeInOut" } : undefined}
       style={{
         background: `linear-gradient(180deg, ${color} 0%, ${borderColor} 100%)`,
-        border: `6px solid ${borderColor}`,
-        boxShadow: `
-          inset -6px -6px 0 rgba(0,0,0,0.25), 
-          inset 6px 6px 0 rgba(255,255,255,0.35), 
-          0 12px 0 ${borderColor},
-          0 14px 24px rgba(0,0,0,0.25)
-        `,
-        padding: "24px 56px",
+        border: `4px solid ${borderColor}`,
+        boxShadow: isAtBottom 
+          ? undefined
+          : `
+            inset -4px -4px 0 rgba(0,0,0,0.25), 
+            inset 4px 4px 0 rgba(255,255,255,0.35), 
+            0 8px 0 ${borderColor},
+            0 10px 16px rgba(0,0,0,0.2)
+          `,
+        padding: "14px 28px",
         imageRendering: "pixelated",
       }}
     >
       <span 
-        className="flex items-center gap-5 text-2xl md:text-3xl lg:text-4xl font-bold text-white whitespace-nowrap font-sans"
-        style={{ textShadow: "3px 3px 0 rgba(0,0,0,0.4)" }}
+        className="flex items-center gap-3 text-base md:text-lg lg:text-xl font-bold text-white whitespace-nowrap font-sans"
+        style={{ textShadow: "2px 2px 0 rgba(0,0,0,0.4)" }}
       >
         {children}
       </span>
@@ -231,23 +240,23 @@ function ScrollMorphIcon({
     offset: ["start end", "center center"],
   })
 
-  // Morph progress: 0 = just emoji, 1 = full box - DELAYED even more
-  const morphProgress = useTransform(scrollYProgress, [0.35, 0.95], [0, 1])
+  // Morph progress: 0 = just emoji, 1 = full box - VERY DELAYED
+  const morphProgress = useTransform(scrollYProgress, [0.5, 1], [0, 1])
   
-  // Icon crossfade - happens LATER
-  const bookOpacity = useTransform(morphProgress, [0, 0.5, 0.7], [1, 1, 0])
-  const bookScale = useTransform(morphProgress, [0.5, 0.7], [1, 0.5])
-  const bookRotate = useTransform(morphProgress, [0.5, 0.7], [0, -20])
+  // Icon crossfade - happens MUCH LATER
+  const bookOpacity = useTransform(morphProgress, [0, 0.4, 0.6], [1, 1, 0])
+  const bookScale = useTransform(morphProgress, [0.4, 0.6], [1, 0.5])
+  const bookRotate = useTransform(morphProgress, [0.4, 0.6], [0, -20])
   
-  const targetOpacity = useTransform(morphProgress, [0.6, 0.85], [0, 1])
-  const targetScale = useTransform(morphProgress, [0.6, 0.75, 0.9], [0.4, 1.2, 1])
+  const targetOpacity = useTransform(morphProgress, [0.5, 0.8], [0, 1])
+  const targetScale = useTransform(morphProgress, [0.5, 0.7, 0.85], [0.4, 1.2, 1])
   
-  // Box expansion - starts MUCH later in scroll
-  const boxOpacity = useTransform(morphProgress, [0.7, 0.9], [0, 1])
-  const boxScale = useTransform(morphProgress, [0.7, 1], [0.2, 1])
+  // Box expansion - starts VERY late in scroll
+  const boxOpacity = useTransform(morphProgress, [0.6, 0.85], [0, 1])
+  const boxScale = useTransform(morphProgress, [0.6, 1], [0.1, 1])
   
   // Title appears last
-  const titleOpacity = useTransform(morphProgress, [0.85, 1], [0, 1])
+  const titleOpacity = useTransform(morphProgress, [0.8, 1], [0, 1])
 
   return (
     <motion.div
@@ -259,7 +268,7 @@ function ScrollMorphIcon({
       transition={{ duration: 0.4, delay: index * 0.06 }}
       animate={{
         scale: shouldMoveAway ? 0.85 : 1,
-        x: shouldMoveAway ? (index < 2 ? -40 : index > 2 ? 40 : 0) : 0,
+        x: shouldMoveAway ? (index < 2 ? -30 : index > 2 ? 30 : 0) : 0,
         opacity: shouldMoveAway ? 0.6 : 1,
       }}
     >
@@ -269,31 +278,31 @@ function ScrollMorphIcon({
         onMouseEnter={() => setHoveredId(genre.id)}
         onMouseLeave={() => setHoveredId(null)}
       >
-        {/* The pixel box - expands from nothing, BIGGER when complete */}
+        {/* The pixel box - expands from nothing, WIDER */}
         <motion.div
-          className="absolute flex items-center justify-center"
+          className="absolute flex items-center justify-center rounded-lg"
           style={{ 
             opacity: boxOpacity,
             scale: boxScale,
-            width: 380,
-            height: 240,
+            width: 280,
+            height: 180,
             backgroundColor: genre.boxBg,
-            border: `6px solid ${genre.boxBorder}`,
+            border: `5px solid ${genre.boxBorder}`,
             boxShadow: `
-              inset -6px -6px 0 rgba(0,0,0,0.2), 
-              inset 6px 6px 0 rgba(255,255,255,0.35),
-              0 14px 0 ${genre.boxBorder},
-              0 18px 35px rgba(0,0,0,0.2)
+              inset -5px -5px 0 rgba(0,0,0,0.2), 
+              inset 5px 5px 0 rgba(255,255,255,0.35),
+              0 10px 0 ${genre.boxBorder},
+              0 14px 28px rgba(0,0,0,0.18)
             `,
             imageRendering: "pixelated",
           }}
         />
 
-        {/* Icon container - BIGGER */}
-        <div className="relative w-[380px] h-[240px] flex items-center justify-center z-10">
+        {/* Icon container - WIDER, emoji and text side by side */}
+        <div className="relative w-[280px] h-[180px] flex items-center justify-center z-10">
           {/* Book icon (fades out) - Different book for each genre */}
           <motion.span
-            className="absolute text-8xl md:text-9xl lg:text-[10rem]"
+            className="absolute text-7xl md:text-8xl lg:text-9xl"
             style={{ 
               opacity: bookOpacity, 
               scale: bookScale,
@@ -303,35 +312,35 @@ function ScrollMorphIcon({
             {genre.bookIcon}
           </motion.span>
           
-          {/* Target icon (fades in) */}
-          <motion.span
-            className="absolute text-8xl md:text-9xl lg:text-[10rem]"
+          {/* Target icon (fades in) - positioned left */}
+          <motion.div
+            className="absolute flex items-center gap-4 px-6"
             style={{ 
               opacity: targetOpacity, 
-              scale: targetScale,
             }}
           >
-            {genre.targetIcon}
-          </motion.span>
-
-          {/* Title below icon - cute font style, more spacing */}
-          <motion.div 
-            className="absolute bottom-4 left-0 right-0 text-center"
-            style={{ opacity: titleOpacity }}
-          >
-            <span 
-              className="text-2xl md:text-3xl lg:text-4xl font-bold text-gray-800 font-sans tracking-wide"
+            <motion.span
+              className="text-6xl md:text-7xl lg:text-8xl"
+              style={{ scale: targetScale }}
+            >
+              {genre.targetIcon}
+            </motion.span>
+            
+            {/* Title next to icon - cute font style */}
+            <motion.span 
+              className="text-xl md:text-2xl lg:text-3xl font-bold text-gray-800 font-sans tracking-wide"
               style={{ 
+                opacity: titleOpacity,
                 textShadow: "2px 2px 0 rgba(255,255,255,0.8)",
-                letterSpacing: "0.05em",
+                letterSpacing: "0.03em",
               }}
             >
               {genre.title}
-            </span>
+            </motion.span>
           </motion.div>
         </div>
 
-        {/* Hover details - INSIDE the box, LIGHTER background, larger text */}
+        {/* Hover details - INSIDE the box, LIGHTER background, text fits */}
         <AnimatePresence>
           {isHovered && (
             <motion.div
@@ -339,41 +348,42 @@ function ScrollMorphIcon({
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
               transition={{ duration: 0.25 }}
-              className="absolute z-20 flex flex-col items-center justify-center p-8"
+              className="absolute z-20 flex flex-col items-center justify-start p-5 rounded-lg overflow-hidden"
               style={{
-                width: 440,
-                height: 320,
+                width: 320,
+                minHeight: 220,
                 backgroundColor: genre.hoverBoxBg,
-                border: `6px solid ${genre.boxBorder}`,
+                border: `5px solid ${genre.boxBorder}`,
                 boxShadow: `
-                  inset -6px -6px 0 rgba(0,0,0,0.15), 
-                  inset 6px 6px 0 rgba(255,255,255,0.5),
-                  0 14px 0 ${genre.boxBorder},
-                  0 20px 40px rgba(0,0,0,0.25)
+                  inset -5px -5px 0 rgba(0,0,0,0.12), 
+                  inset 5px 5px 0 rgba(255,255,255,0.5),
+                  0 10px 0 ${genre.boxBorder},
+                  0 16px 32px rgba(0,0,0,0.22)
                 `,
                 imageRendering: "pixelated",
               }}
             >
-              {/* Icon at top */}
-              <span className="text-6xl mb-4">{genre.targetIcon}</span>
+              {/* Icon + Title row */}
+              <div className="flex items-center gap-3 mb-3">
+                <span className="text-4xl md:text-5xl">{genre.targetIcon}</span>
+                <h3 className="text-2xl md:text-3xl font-bold text-gray-800 font-sans tracking-wide"
+                  style={{ textShadow: "1px 1px 0 rgba(255,255,255,0.8)" }}
+                >
+                  {genre.title}
+                </h3>
+              </div>
               
-              {/* Title - cute style */}
-              <h3 className="text-3xl md:text-4xl font-bold text-gray-800 font-sans mb-4 tracking-wide"
-                style={{ textShadow: "2px 2px 0 rgba(255,255,255,0.8)" }}
-              >
-                {genre.title}
-              </h3>
-              
-              {/* Summary - larger */}
-              <p className="text-xl md:text-2xl text-gray-700 font-sans text-center mb-4 font-medium leading-relaxed">
+              {/* Summary - fits in box */}
+              <p className="text-base md:text-lg text-gray-700 font-sans text-center mb-3 font-medium leading-snug px-2">
                 {genre.summary}
               </p>
               
-              {/* Details */}
-              <ul className="space-y-2 text-base md:text-lg text-gray-600 font-sans">
+              {/* Details - smaller */}
+              <ul className="space-y-1 text-sm md:text-base text-gray-600 font-sans px-2">
                 {genre.details.slice(0, 2).map((detail, i) => (
                   <li key={i} className="flex items-start gap-2">
-                    <span className="text-gray-400">-</span> {detail}
+                    <span className="text-gray-400">-</span> 
+                    <span className="line-clamp-1">{detail}</span>
                   </li>
                 ))}
               </ul>
@@ -382,13 +392,13 @@ function ScrollMorphIcon({
               {genre.themeElements.map((el, i) => (
                 <motion.span
                   key={i}
-                  className="absolute text-3xl"
+                  className="absolute text-2xl"
                   initial={{ opacity: 0, scale: 0 }}
                   animate={{ 
-                    opacity: 0.8, 
+                    opacity: 0.7, 
                     scale: 1,
-                    x: Math.cos((i * 2 * Math.PI) / genre.themeElements.length) * 180,
-                    y: Math.sin((i * 2 * Math.PI) / genre.themeElements.length) * 130,
+                    x: Math.cos((i * 2 * Math.PI) / genre.themeElements.length) * 130,
+                    y: Math.sin((i * 2 * Math.PI) / genre.themeElements.length) * 90,
                   }}
                   transition={{ duration: 0.3, delay: i * 0.08 }}
                 >
@@ -418,7 +428,7 @@ const genreData = [
     targetIcon: "\u{1F3F0}",
     boxBg: "#FFE082",
     boxBorder: "#FFA000",
-    hoverBoxBg: "#FFF3CC",
+    hoverBoxBg: "#FFF8E1",
     themeElements: ["\u{1F451}", "\u{2694}\u{FE0F}", "\u{1F409}", "\u{1F31F}"],
   },
   {
@@ -435,7 +445,7 @@ const genreData = [
     targetIcon: "\u{1F50D}",
     boxBg: "#F8BBD0",
     boxBorder: "#EC407A",
-    hoverBoxBg: "#FDDFEB",
+    hoverBoxBg: "#FCE4EC",
     themeElements: ["\u{1F4DD}", "\u{2B50}", "\u{1F4A1}", "\u{1F914}"],
   },
   {
@@ -469,7 +479,7 @@ const genreData = [
     targetIcon: "\u{1F3AD}",
     boxBg: "#CE93D8",
     boxBorder: "#8E24AA",
-    hoverBoxBg: "#E1BEE7",
+    hoverBoxBg: "#F3E5F5",
     themeElements: ["\u{1F3AC}", "\u{1F4A5}", "\u{1F399}\u{FE0F}", "\u{2728}"],
   },
   {
@@ -518,20 +528,40 @@ export default function HomePage({ language = "en", onStartPlan, onContinuePastJ
   const lastStartSoundAtRef = useRef(0)
   const t = translations[language] || translations.en
   const [hoveredGenreId, setHoveredGenreId] = useState<string | null>(null)
+  
+  // Scroll hint visibility - hide if scrolled, show after 5s idle
+  const [hasScrolled, setHasScrolled] = useState(false)
+  const [showScrollHint, setShowScrollHint] = useState(true)
+  const scrollIdleTimerRef = useRef<NodeJS.Timeout | null>(null)
 
   const { scrollYProgress } = useScroll({ target: containerRef })
-  
-  // Hide scroll hint when near bottom (0.95+)
-  const scrollHintOpacity = useTransform(scrollYProgress, [0, 0.9, 0.95], [1, 1, 0])
   
   // Button glow when at bottom
   const [isAtBottom, setIsAtBottom] = useState(false)
   
+  const handleScroll = useCallback(() => {
+    setHasScrolled(true)
+    setShowScrollHint(false)
+    
+    // Clear existing timer
+    if (scrollIdleTimerRef.current) {
+      clearTimeout(scrollIdleTimerRef.current)
+    }
+    
+    // Set new timer to show hint after 5s idle
+    scrollIdleTimerRef.current = setTimeout(() => {
+      setShowScrollHint(true)
+    }, 5000)
+  }, [])
+  
   useEffect(() => {
     return scrollYProgress.on("change", (v) => {
       setIsAtBottom(v > 0.92)
+      if (v > 0.01) {
+        handleScroll()
+      }
     })
-  }, [scrollYProgress])
+  }, [scrollYProgress, handleScroll])
 
   // Parallax transforms for clouds
   const cloud1Y = useTransform(scrollYProgress, [0, 1], ["0%", "250%"])
@@ -590,12 +620,12 @@ export default function HomePage({ language = "en", onStartPlan, onContinuePastJ
         <div
           className="absolute inset-0"
           style={{
-            background: "linear-gradient(180deg, #1565C0 0%, #1E88E5 15%, #42A5F5 35%, #64B5F6 55%, #90CAF9 75%, #BBDEFB 100%)",
+            background: "linear-gradient(180deg, #0D47A1 0%, #1565C0 15%, #1E88E5 35%, #42A5F5 55%, #64B5F6 75%, #90CAF9 100%)",
           }}
         />
         {/* Pixel grid overlay */}
         <div
-          className="absolute inset-0 opacity-[0.025]"
+          className="absolute inset-0 opacity-[0.02]"
           style={{
             backgroundImage: `
               linear-gradient(rgba(0,0,0,0.5) 1px, transparent 1px),
@@ -606,83 +636,71 @@ export default function HomePage({ language = "en", onStartPlan, onContinuePastJ
         />
       </div>
 
-      {/* Parallax Pixel Clouds - Animated from the START, avoid hero text area */}
+      {/* Background Clouds - Behind hero text, z-[5] */}
       <div className="fixed inset-0 z-[5] pointer-events-none overflow-hidden">
-        {/* Cloud 1 - top left corner, MOVING immediately */}
+        {/* Cloud 1 - top left corner */}
         <motion.div
           className="absolute"
-          style={{ top: "2%", y: cloud1Y }}
-          initial={{ x: "10vw" }}
-          animate={{ x: ["10vw", "85vw", "10vw"] }}
-          transition={{ duration: 60, repeat: Infinity, ease: "linear" }}
+          style={{ top: "3%", y: cloud1Y }}
+          initial={{ x: "15vw" }}
+          animate={{ x: ["15vw", "80vw", "15vw"] }}
+          transition={{ duration: 35, repeat: Infinity, ease: "linear" }}
         >
-          <PixelCloud className="w-44 md:w-56 h-auto opacity-90" />
+          <PixelCloud className="w-40 md:w-52 h-auto opacity-85" />
         </motion.div>
 
-        {/* Cloud 2 - top right, MOVING immediately */}
+        {/* Cloud 2 - top right */}
         <motion.div
           className="absolute"
-          style={{ top: "4%", y: cloud2Y }}
-          initial={{ x: "70vw" }}
-          animate={{ x: ["70vw", "5vw", "70vw"] }}
-          transition={{ duration: 55, repeat: Infinity, ease: "linear" }}
+          style={{ top: "6%", y: cloud2Y }}
+          initial={{ x: "65vw" }}
+          animate={{ x: ["65vw", "10vw", "65vw"] }}
+          transition={{ duration: 32, repeat: Infinity, ease: "linear" }}
         >
-          <PixelCloud className="w-40 md:w-48 h-auto opacity-85" />
-        </motion.div>
-
-        {/* Cloud 3 - below tagline (75%+), MOVING immediately */}
-        <motion.div
-          className="absolute"
-          style={{ top: "78%", y: cloud3Y }}
-          initial={{ x: "20vw" }}
-          animate={{ x: ["20vw", "75vw", "20vw"] }}
-          transition={{ duration: 50, repeat: Infinity, ease: "linear" }}
-        >
-          <PixelCloud className="w-56 md:w-72 h-auto opacity-95" />
-        </motion.div>
-
-        {/* Cloud 4 - below tagline, MOVING immediately */}
-        <motion.div
-          className="absolute"
-          style={{ top: "82%", y: cloud4Y }}
-          initial={{ x: "60vw" }}
-          animate={{ x: ["60vw", "10vw", "60vw"] }}
-          transition={{ duration: 45, repeat: Infinity, ease: "linear" }}
-        >
-          <PixelCloud className="w-48 md:w-60 h-auto opacity-90" />
+          <PixelCloud className="w-36 md:w-44 h-auto opacity-80" />
         </motion.div>
       </div>
 
-      {/* Foreground Clouds - OVER content, can cover genre boxes and buttons */}
+      {/* Foreground Clouds - OVER content (genre boxes & buttons), z-30 */}
       <div className="fixed inset-0 z-30 pointer-events-none overflow-hidden">
         <motion.div
           className="absolute"
-          style={{ top: "55%", y: cloud1Y }}
-          initial={{ x: "35vw" }}
-          animate={{ x: ["35vw", "90vw", "35vw"] }}
-          transition={{ duration: 40, repeat: Infinity, ease: "linear" }}
+          style={{ top: "55%", y: cloud3Y }}
+          initial={{ x: "25vw" }}
+          animate={{ x: ["25vw", "85vw", "25vw"] }}
+          transition={{ duration: 28, repeat: Infinity, ease: "linear" }}
         >
-          <PixelCloud className="w-42 md:w-52 h-auto opacity-85" />
+          <PixelCloud className="w-44 md:w-56 h-auto opacity-88" />
         </motion.div>
 
         <motion.div
           className="absolute"
-          style={{ top: "65%", y: cloud2Y }}
-          initial={{ x: "80vw" }}
-          animate={{ x: ["80vw", "5vw", "80vw"] }}
-          transition={{ duration: 48, repeat: Infinity, ease: "linear" }}
+          style={{ top: "68%", y: cloud4Y }}
+          initial={{ x: "70vw" }}
+          animate={{ x: ["70vw", "5vw", "70vw"] }}
+          transition={{ duration: 30, repeat: Infinity, ease: "linear" }}
         >
-          <PixelCloud className="w-46 md:w-58 h-auto opacity-88" />
+          <PixelCloud className="w-40 md:w-50 h-auto opacity-85" />
         </motion.div>
 
         <motion.div
           className="absolute"
-          style={{ top: "90%", y: cloud3Y }}
-          initial={{ x: "15vw" }}
-          animate={{ x: ["15vw", "70vw", "15vw"] }}
-          transition={{ duration: 42, repeat: Infinity, ease: "linear" }}
+          style={{ top: "82%", y: cloud1Y }}
+          initial={{ x: "40vw" }}
+          animate={{ x: ["40vw", "90vw", "40vw"] }}
+          transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
         >
-          <PixelCloud className="w-50 md:w-64 h-auto opacity-90" />
+          <PixelCloud className="w-48 md:w-60 h-auto opacity-90" />
+        </motion.div>
+
+        <motion.div
+          className="absolute"
+          style={{ top: "92%", y: cloud2Y }}
+          initial={{ x: "8vw" }}
+          animate={{ x: ["8vw", "60vw", "8vw"] }}
+          transition={{ duration: 33, repeat: Infinity, ease: "linear" }}
+        >
+          <PixelCloud className="w-42 md:w-54 h-auto opacity-82" />
         </motion.div>
       </div>
 
@@ -705,7 +723,7 @@ export default function HomePage({ language = "en", onStartPlan, onContinuePastJ
                 {t.welcome}
               </p>
               
-              {/* CWrite - NO mouse glow effect */}
+              {/* CWrite */}
               <motion.h1 
                 className="text-[7rem] md:text-[10rem] lg:text-[16rem] font-bold leading-none tracking-tight font-sans"
                 style={{
@@ -749,25 +767,40 @@ export default function HomePage({ language = "en", onStartPlan, onContinuePastJ
           </motion.p>
         </section>
 
-        {/* Section 2: The 5 Writing Genres - Scroll morph icons, closer to tagline */}
-        <section className="py-20 md:py-28 px-6">
-          <div className="flex flex-wrap justify-center gap-12 md:gap-16 lg:gap-20 max-w-7xl mx-auto">
-            {genreData.map((genre, index) => (
-              <ScrollMorphIcon 
-                key={genre.id} 
-                genre={genre} 
-                index={index}
-                hoveredId={hoveredGenreId}
-                setHoveredId={setHoveredGenreId}
-              />
-            ))}
+        {/* Section 2: The 5 Writing Genres - closer to tagline, 3 on first row, 2 on second */}
+        <section className="py-12 md:py-16 px-6">
+          <div className="max-w-6xl mx-auto">
+            {/* First row - 3 items */}
+            <div className="flex flex-wrap justify-center gap-8 md:gap-10 lg:gap-12 mb-8 md:mb-10">
+              {genreData.slice(0, 3).map((genre, index) => (
+                <ScrollMorphIcon 
+                  key={genre.id} 
+                  genre={genre} 
+                  index={index}
+                  hoveredId={hoveredGenreId}
+                  setHoveredId={setHoveredGenreId}
+                />
+              ))}
+            </div>
+            {/* Second row - 2 items */}
+            <div className="flex flex-wrap justify-center gap-8 md:gap-10 lg:gap-12">
+              {genreData.slice(3, 5).map((genre, index) => (
+                <ScrollMorphIcon 
+                  key={genre.id} 
+                  genre={genre} 
+                  index={index + 3}
+                  hoveredId={hoveredGenreId}
+                  setHoveredId={setHoveredGenreId}
+                />
+              ))}
+            </div>
           </div>
         </section>
 
-        {/* Section 3: Bottom Action Buttons - Horizontal, more bottom margin */}
-        <section className="py-24 md:py-32 px-6 pb-40">
+        {/* Section 3: Bottom Action Buttons - Horizontal, smaller, more distance to footer */}
+        <section className="py-20 md:py-28 px-6 pb-48 md:pb-56">
           <motion.div
-            className="flex flex-wrap items-center justify-center gap-10 md:gap-14"
+            className="flex flex-wrap items-center justify-center gap-6 md:gap-8"
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
@@ -781,7 +814,7 @@ export default function HomePage({ language = "en", onStartPlan, onContinuePastJ
               isAtBottom={isAtBottom}
             >
               Start a new journey
-              <span className="text-4xl md:text-5xl">&#9992;</span>
+              <span className="text-2xl md:text-3xl">&#9992;</span>
             </PixelButton>
 
             {/* Continue past journey */}
@@ -792,7 +825,7 @@ export default function HomePage({ language = "en", onStartPlan, onContinuePastJ
               isAtBottom={isAtBottom}
             >
               Continue past journey
-              <span className="text-4xl md:text-5xl">&#9198;</span>
+              <span className="text-2xl md:text-3xl">&#9198;</span>
             </PixelButton>
 
             {/* Visit my farm */}
@@ -803,43 +836,50 @@ export default function HomePage({ language = "en", onStartPlan, onContinuePastJ
               isAtBottom={isAtBottom}
             >
               Visit my farm
-              <span className="text-4xl md:text-5xl">&#127968;</span>
+              <span className="text-2xl md:text-3xl">&#127968;</span>
             </PixelButton>
           </motion.div>
         </section>
       </div>
 
-      {/* Fixed scroll hint at bottom - hidden when at bottom, BIGGER text */}
-      <motion.div
-        className="fixed bottom-12 left-1/2 -translate-x-1/2 z-40"
-        style={{ opacity: scrollHintOpacity }}
-      >
-        <motion.div
-          animate={{ y: [0, 10, 0] }}
-          transition={{ duration: 1.5, repeat: Infinity }}
-          className="flex flex-col items-center gap-3 px-10 py-5 rounded-full bg-white/90 backdrop-blur-sm"
-          style={{
-            border: "5px solid #4A9BE8",
-            boxShadow: "0 8px 0 #2E7DD1, 0 10px 20px rgba(0,0,0,0.18)",
-            imageRendering: "pixelated",
-          }}
-        >
-          <span className="text-2xl md:text-3xl font-sans font-bold text-gray-700">{t.scrollHint}</span>
-          {/* Bouncing arrow */}
-          <motion.svg 
-            width="32" 
-            height="32" 
-            viewBox="0 0 24 24" 
-            fill="none" 
-            stroke="#4A90D9" 
-            strokeWidth="3"
-            animate={{ y: [0, 6, 0] }}
-            transition={{ duration: 1, repeat: Infinity }}
+      {/* Fixed scroll hint at bottom - hide when at bottom or after scroll, show after 5s idle */}
+      <AnimatePresence>
+        {showScrollHint && !isAtBottom && (
+          <motion.div
+            className="fixed bottom-8 left-1/2 -translate-x-1/2 z-40"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            transition={{ duration: 0.4 }}
           >
-            <path d="M12 5v14M5 12l7 7 7-7" />
-          </motion.svg>
-        </motion.div>
-      </motion.div>
+            <motion.div
+              animate={{ y: [0, 8, 0] }}
+              transition={{ duration: 1.5, repeat: Infinity }}
+              className="flex flex-col items-center gap-2 px-6 py-3 rounded-full bg-white/90 backdrop-blur-sm"
+              style={{
+                border: "4px solid #4A9BE8",
+                boxShadow: "0 6px 0 #2E7DD1, 0 8px 16px rgba(0,0,0,0.15)",
+                imageRendering: "pixelated",
+              }}
+            >
+              <span className="text-base md:text-lg font-sans font-bold text-gray-700">{t.scrollHint}</span>
+              {/* Bouncing arrow - hidden at bottom */}
+              <motion.svg 
+                width="24" 
+                height="24" 
+                viewBox="0 0 24 24" 
+                fill="none" 
+                stroke="#4A90D9" 
+                strokeWidth="3"
+                animate={{ y: [0, 4, 0] }}
+                transition={{ duration: 1, repeat: Infinity }}
+              >
+                <path d="M12 5v14M5 12l7 7 7-7" />
+              </motion.svg>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </main>
   )
 }
