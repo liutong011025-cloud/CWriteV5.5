@@ -170,17 +170,17 @@ function PixelButton({
       animate={isAtBottom ? {
         boxShadow: isHovered
           ? [
-              `0 0 30px 10px ${color}, 0 0 60px 20px ${color}80`,
-              `0 0 50px 18px ${color}, 0 0 80px 30px ${color}90`,
-              `0 0 30px 10px ${color}, 0 0 60px 20px ${color}80`,
+              `0 0 40px 15px ${color}, 0 0 80px 30px ${color}90`,
+              `0 0 70px 25px ${color}, 0 0 120px 45px ${color}99`,
+              `0 0 40px 15px ${color}, 0 0 80px 30px ${color}90`,
             ]
           : [
-              `0 0 15px 5px ${color}70, 0 0 30px 10px ${color}40`,
-              `0 0 25px 8px ${color}80, 0 0 45px 15px ${color}50`,
-              `0 0 15px 5px ${color}70, 0 0 30px 10px ${color}40`,
+              `0 0 25px 8px ${color}80, 0 0 50px 18px ${color}60`,
+              `0 0 40px 14px ${color}90, 0 0 70px 28px ${color}70`,
+              `0 0 25px 8px ${color}80, 0 0 50px 18px ${color}60`,
             ],
       } : undefined}
-      transition={isAtBottom ? { duration: 1.5, repeat: Infinity, ease: "easeInOut" } : undefined}
+      transition={isAtBottom ? { duration: 1.2, repeat: Infinity, ease: "easeInOut" } : undefined}
       style={{
         background: `linear-gradient(180deg, ${color} 0%, ${borderColor} 100%)`,
         border: `4px solid ${borderColor}`,
@@ -192,12 +192,12 @@ function PixelButton({
             0 8px 0 ${borderColor},
             0 10px 16px rgba(0,0,0,0.2)
           `,
-        padding: "14px 28px",
+        padding: "16px 32px",
         imageRendering: "pixelated",
       }}
     >
       <span 
-        className="flex items-center gap-3 text-base md:text-lg lg:text-xl font-bold text-white whitespace-nowrap font-sans"
+        className="flex items-center gap-3 text-lg md:text-xl lg:text-2xl font-bold text-white whitespace-nowrap font-sans"
         style={{ textShadow: "2px 2px 0 rgba(0,0,0,0.4)" }}
       >
         {children}
@@ -240,23 +240,23 @@ function ScrollMorphIcon({
     offset: ["start end", "center center"],
   })
 
-  // Morph progress: 0 = just emoji, 1 = full box - VERY DELAYED
-  const morphProgress = useTransform(scrollYProgress, [0.5, 1], [0, 1])
+  // Morph progress: 0 = just emoji, 1 = full box - earlier transformation
+  const morphProgress = useTransform(scrollYProgress, [0.15, 0.65], [0, 1])
   
-  // Icon crossfade - happens MUCH LATER
-  const bookOpacity = useTransform(morphProgress, [0, 0.4, 0.6], [1, 1, 0])
-  const bookScale = useTransform(morphProgress, [0.4, 0.6], [1, 0.5])
-  const bookRotate = useTransform(morphProgress, [0.4, 0.6], [0, -20])
+  // Icon crossfade - earlier timing
+  const bookOpacity = useTransform(morphProgress, [0, 0.3, 0.5], [1, 1, 0])
+  const bookScale = useTransform(morphProgress, [0.3, 0.5], [1, 0.5])
+  const bookRotate = useTransform(morphProgress, [0.3, 0.5], [0, -20])
   
-  const targetOpacity = useTransform(morphProgress, [0.5, 0.8], [0, 1])
-  const targetScale = useTransform(morphProgress, [0.5, 0.7, 0.85], [0.4, 1.2, 1])
+  const targetOpacity = useTransform(morphProgress, [0.4, 0.7], [0, 1])
+  const targetScale = useTransform(morphProgress, [0.4, 0.6, 0.75], [0.4, 1.2, 1])
   
-  // Box expansion - starts VERY late in scroll
-  const boxOpacity = useTransform(morphProgress, [0.6, 0.85], [0, 1])
-  const boxScale = useTransform(morphProgress, [0.6, 1], [0.1, 1])
+  // Box expansion - earlier timing
+  const boxOpacity = useTransform(morphProgress, [0.5, 0.75], [0, 1])
+  const boxScale = useTransform(morphProgress, [0.5, 0.9], [0.1, 1])
   
-  // Title appears last
-  const titleOpacity = useTransform(morphProgress, [0.8, 1], [0, 1])
+  // Title appears earlier
+  const titleOpacity = useTransform(morphProgress, [0.65, 0.9], [0, 1])
 
   return (
     <motion.div
@@ -284,8 +284,8 @@ function ScrollMorphIcon({
           style={{ 
             opacity: boxOpacity,
             scale: boxScale,
-            width: 280,
-            height: 180,
+            width: 340,
+            height: 200,
             backgroundColor: genre.boxBg,
             border: `5px solid ${genre.boxBorder}`,
             boxShadow: `
@@ -299,7 +299,7 @@ function ScrollMorphIcon({
         />
 
         {/* Icon container - WIDER, emoji and text side by side */}
-        <div className="relative w-[280px] h-[180px] flex items-center justify-center z-10">
+        <div className="relative w-[340px] h-[200px] flex items-center justify-center z-10">
           {/* Book icon (fades out) - Different book for each genre */}
           <motion.span
             className="absolute text-7xl md:text-8xl lg:text-9xl"
@@ -350,8 +350,8 @@ function ScrollMorphIcon({
               transition={{ duration: 0.25 }}
               className="absolute z-20 flex flex-col items-center justify-start p-5 rounded-lg overflow-hidden"
               style={{
-                width: 320,
-                minHeight: 220,
+                width: 380,
+                minHeight: 240,
                 backgroundColor: genre.hoverBoxBg,
                 border: `5px solid ${genre.boxBorder}`,
                 boxShadow: `
@@ -814,7 +814,7 @@ export default function HomePage({ language = "en", onStartPlan, onContinuePastJ
               isAtBottom={isAtBottom}
             >
               Start a new journey
-              <span className="text-2xl md:text-3xl">&#9992;</span>
+              <span className="text-2xl md:text-3xl lg:text-4xl">&#9992;</span>
             </PixelButton>
 
             {/* Continue past journey */}
@@ -825,7 +825,7 @@ export default function HomePage({ language = "en", onStartPlan, onContinuePastJ
               isAtBottom={isAtBottom}
             >
               Continue past journey
-              <span className="text-2xl md:text-3xl">&#9198;</span>
+              <span className="text-2xl md:text-3xl lg:text-4xl">&#9198;</span>
             </PixelButton>
 
             {/* Visit my farm */}
@@ -836,7 +836,7 @@ export default function HomePage({ language = "en", onStartPlan, onContinuePastJ
               isAtBottom={isAtBottom}
             >
               Visit my farm
-              <span className="text-2xl md:text-3xl">&#127968;</span>
+              <span className="text-2xl md:text-3xl lg:text-4xl">&#127968;</span>
             </PixelButton>
           </motion.div>
         </section>
