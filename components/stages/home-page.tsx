@@ -936,10 +936,10 @@ export default function HomePage({ language = "en", onStartPlan, onContinuePastJ
             <p
               className="text-3xl md:text-5xl lg:text-6xl font-bold font-sans"
               style={{
-                color: "#374151",
-                WebkitTextFillColor: "#374151",
-                WebkitTextStroke: "2px rgba(255, 255, 255, 0.95)",
-                textShadow: "0 6px 18px rgba(255, 255, 255, 0.22)",
+                color: "#FFFFFF",
+                WebkitTextFillColor: "#FFFFFF",
+                fontFamily: '"Berlin Sans FB Demi", "Berlin Sans FB", var(--font-baloo), sans-serif',
+                textShadow: "0 6px 18px rgba(255, 255, 255, 0.18)",
               }}
             >
               {t.subtitleTop}
@@ -947,10 +947,10 @@ export default function HomePage({ language = "en", onStartPlan, onContinuePastJ
             <p
               className="text-2xl md:text-4xl lg:text-5xl font-bold mt-4 font-sans"
               style={{
-                color: "#374151",
-                WebkitTextFillColor: "#374151",
-                WebkitTextStroke: "2px rgba(255, 255, 255, 0.98)",
-                textShadow: "0 6px 18px rgba(255, 255, 255, 0.24)",
+                color: "#FFFFFF",
+                WebkitTextFillColor: "#FFFFFF",
+                fontFamily: '"Berlin Sans FB Demi", "Berlin Sans FB", var(--font-baloo), sans-serif',
+                textShadow: "0 6px 18px rgba(255, 255, 255, 0.2)",
               }}
             >
               {t.subtitleBottom}
