@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState } from "react"
+import React, { useEffect, useState } from "react"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -28,6 +28,35 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
   const [registerEmail, setRegisterEmail] = useState("")
   const [password, setPassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)
+
+  useEffect(() => {
+    const warmAudioCache = () => {
+      const audioSources = [
+        "/yoshiyuki_tatsuya-pixel-hearts-foreverwav-427383.mp3",
+        "/soundreality-finger-snap-179180.mp3",
+      ]
+
+      audioSources.forEach((src) => {
+        try {
+          const audio = new Audio(src)
+          audio.preload = "auto"
+          audio.load?.()
+        } catch {
+          // ignore preload failures on unsupported browsers
+        }
+      })
+    }
+
+    if (typeof window === "undefined") return
+
+    if ("requestIdleCallback" in window) {
+      const idleId = window.requestIdleCallback(warmAudioCache, { timeout: 1500 })
+      return () => window.cancelIdleCallback(idleId)
+    }
+
+    const timeoutId = window.setTimeout(warmAudioCache, 300)
+    return () => window.clearTimeout(timeoutId)
+  }, [])
 
   const handleLogin = async () => {
     if (!username.trim() || !password.trim()) {
