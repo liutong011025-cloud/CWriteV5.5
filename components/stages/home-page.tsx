@@ -212,6 +212,7 @@ function ScrollMorphIcon({
   index,
   hoveredId,
   setHoveredId,
+  onHoverStart,
 }: {
   genre: {
     id: string
@@ -229,6 +230,7 @@ function ScrollMorphIcon({
   index: number
   hoveredId: string | null
   setHoveredId: (id: string | null) => void
+  onHoverStart?: (id: string) => void
 }) {
   const cardRef = useRef<HTMLDivElement>(null)
   const isHovered = hoveredId === genre.id
@@ -275,7 +277,10 @@ function ScrollMorphIcon({
       {/* Container for icon + box */}
       <div 
         className="relative flex flex-col items-center justify-center cursor-pointer"
-        onMouseEnter={() => setHoveredId(genre.id)}
+        onMouseEnter={() => {
+          onHoverStart?.(genre.id)
+          setHoveredId(genre.id)
+        }}
         onMouseLeave={() => setHoveredId(null)}
       >
         {/* The pixel box - expands from nothing, WIDER */}
@@ -525,7 +530,10 @@ const translations = {
 export default function HomePage({ language = "en", onStartPlan, onContinuePastJourney, onVisitFarm }: HomePageProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const startJourneyAudioRef = useRef<HTMLAudioElement | null>(null)
+  const backgroundMusicRef = useRef<HTMLAudioElement | null>(null)
+  const genreHoverAudioRef = useRef<HTMLAudioElement | null>(null)
   const lastStartSoundAtRef = useRef(0)
+  const lastGenreHoverSoundAtRef = useRef(0)
   const t = translations[language] || translations.en
   const [hoveredGenreId, setHoveredGenreId] = useState<string | null>(null)
   
@@ -583,6 +591,67 @@ export default function HomePage({ language = "en", onStartPlan, onContinuePastJ
     }
   }, [])
 
+  useEffect(() => {
+    try {
+      const hoverAudio = new Audio("/soundreality-finger-snap-179180.mp3")
+      hoverAudio.preload = "auto"
+      hoverAudio.volume = 0.45
+      hoverAudio.load?.()
+      genreHoverAudioRef.current = hoverAudio
+    } catch {
+      // ignore
+    }
+
+    return () => {
+      if (genreHoverAudioRef.current) {
+        genreHoverAudioRef.current.pause()
+        genreHoverAudioRef.current = null
+      }
+    }
+  }, [])
+
+  useEffect(() => {
+    let isUnmounted = false
+
+    const backgroundAudio = new Audio("/yoshiyuki_tatsuya-pixel-hearts-foreverwav-427383.mp3")
+    backgroundAudio.preload = "auto"
+    backgroundAudio.loop = true
+    backgroundAudio.volume = 0.3
+    backgroundAudio.load?.()
+    backgroundMusicRef.current = backgroundAudio
+
+    const tryPlayBackgroundMusic = async () => {
+      if (isUnmounted) return
+      try {
+        await backgroundAudio.play()
+      } catch {
+        // Some browsers require a user gesture before audio playback.
+      }
+    }
+
+    const resumeAfterInteraction = () => {
+      void tryPlayBackgroundMusic()
+    }
+
+    void tryPlayBackgroundMusic()
+
+    window.addEventListener("pointerdown", resumeAfterInteraction, { once: true })
+    window.addEventListener("keydown", resumeAfterInteraction, { once: true })
+    window.addEventListener("touchstart", resumeAfterInteraction, { once: true })
+
+    return () => {
+      isUnmounted = true
+      window.removeEventListener("pointerdown", resumeAfterInteraction)
+      window.removeEventListener("keydown", resumeAfterInteraction)
+      window.removeEventListener("touchstart", resumeAfterInteraction)
+      backgroundAudio.pause()
+      backgroundAudio.currentTime = 0
+      if (backgroundMusicRef.current === backgroundAudio) {
+        backgroundMusicRef.current = null
+      }
+    }
+  }, [])
+
   const playStartJourneySound = () => {
     const now = Date.now()
     if (now - lastStartSoundAtRef.current < 250) return
@@ -591,6 +660,22 @@ export default function HomePage({ language = "en", onStartPlan, onContinuePastJ
       if (!startJourneyAudioRef.current) return
       startJourneyAudioRef.current.currentTime = 0
       void startJourneyAudioRef.current.play()
+    } catch {
+      // ignore
+    }
+  }
+
+  const playGenreHoverSound = (genreId: string) => {
+    if (hoveredGenreId === genreId) return
+
+    const now = Date.now()
+    if (now - lastGenreHoverSoundAtRef.current < 120) return
+    lastGenreHoverSoundAtRef.current = now
+
+    try {
+      if (!genreHoverAudioRef.current) return
+      genreHoverAudioRef.current.currentTime = 0
+      void genreHoverAudioRef.current.play()
     } catch {
       // ignore
     }
@@ -719,7 +804,15 @@ export default function HomePage({ language = "en", onStartPlan, onContinuePastJ
               animate={{ y: [0, -12, 0] }}
               transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
             >
-              <p className="text-4xl md:text-5xl lg:text-7xl font-bold text-gray-800 mb-6 font-sans">
+              <p
+                className="text-4xl md:text-5xl lg:text-7xl font-bold mb-6 font-sans"
+                style={{
+                  background: "linear-gradient(135deg, #FF6B9D 0%, #FFB347 45%, #FFE066 100%)",
+                  WebkitBackgroundClip: "text",
+                  WebkitTextFillColor: "transparent",
+                  backgroundClip: "text",
+                }}
+              >
                 {t.welcome}
               </p>
               
@@ -749,19 +842,43 @@ export default function HomePage({ language = "en", onStartPlan, onContinuePastJ
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.8 }}
           >
-            <p className="text-3xl md:text-5xl lg:text-6xl font-bold text-gray-800 font-sans">
+            <p
+              className="text-3xl md:text-5xl lg:text-6xl font-bold font-sans"
+              style={{
+                background: "linear-gradient(135deg, #FF5CA8 0%, #FF9E43 35%, #FFD93D 70%, #4DD0E1 100%)",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+                backgroundClip: "text",
+                textShadow: "0 6px 18px rgba(255, 105, 180, 0.18)",
+              }}
+            >
               {t.subtitleTop}
             </p>
-            <p className="text-2xl md:text-4xl lg:text-5xl font-bold text-gray-700 mt-4 font-sans">
+            <p
+              className="text-2xl md:text-4xl lg:text-5xl font-bold mt-4 font-sans"
+              style={{
+                background: "linear-gradient(135deg, #7C4DFF 0%, #40C4FF 45%, #69F0AE 100%)",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+                backgroundClip: "text",
+                textShadow: "0 6px 18px rgba(64, 196, 255, 0.15)",
+              }}
+            >
               {t.subtitleBottom}
             </p>
           </motion.div>
 
           <motion.p
-            className="mt-8 text-2xl md:text-4xl lg:text-5xl font-bold text-gray-600 font-sans italic"
+            className="mt-8 text-2xl md:text-4xl lg:text-5xl font-bold italic"
             initial={{ opacity: 0 }}
             animate={{ opacity: 0.9 }}
             transition={{ duration: 1, delay: 1.2 }}
+            style={{
+              color: "#FFE45E",
+              fontFamily: "var(--font-caveat), var(--font-patrick-hand), cursive",
+              textShadow: "0 3px 0 rgba(145, 98, 0, 0.55), 0 0 18px rgba(255, 228, 94, 0.45)",
+              letterSpacing: "0.03em",
+            }}
           >
             {t.tagline}
           </motion.p>
@@ -779,6 +896,7 @@ export default function HomePage({ language = "en", onStartPlan, onContinuePastJ
                   index={index}
                   hoveredId={hoveredGenreId}
                   setHoveredId={setHoveredGenreId}
+                  onHoverStart={playGenreHoverSound}
                 />
               ))}
             </div>
@@ -791,6 +909,7 @@ export default function HomePage({ language = "en", onStartPlan, onContinuePastJ
                   index={index + 3}
                   hoveredId={hoveredGenreId}
                   setHoveredId={setHoveredGenreId}
+                  onHoverStart={playGenreHoverSound}
                 />
               ))}
             </div>
