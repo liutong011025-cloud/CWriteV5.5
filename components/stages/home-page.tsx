@@ -1,5 +1,6 @@
 "use client"
 
+import Image from "next/image"
 import { useEffect, useRef, useState, useCallback } from "react"
 import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion"
 import type { Language } from "@/app/page"
@@ -536,6 +537,7 @@ export default function HomePage({ language = "en", onStartPlan, onContinuePastJ
   const lastGenreHoverSoundAtRef = useRef(0)
   const t = translations[language] || translations.en
   const [hoveredGenreId, setHoveredGenreId] = useState<string | null>(null)
+  const [isMuted, setIsMuted] = useState(false)
   
   // Scroll hint visibility - hide if scrolled, show after 5s idle
   const [hasScrolled, setHasScrolled] = useState(false)
@@ -593,6 +595,17 @@ export default function HomePage({ language = "en", onStartPlan, onContinuePastJ
 
   useEffect(() => {
     try {
+      const savedMutePreference = window.localStorage.getItem("cwrite-home-muted")
+      if (savedMutePreference === "true") {
+        setIsMuted(true)
+      }
+    } catch {
+      // ignore
+    }
+  }, [])
+
+  useEffect(() => {
+    try {
       const hoverAudio = new Audio("/soundreality-finger-snap-179180.mp3")
       hoverAudio.preload = "auto"
       hoverAudio.volume = 0.45
@@ -617,11 +630,12 @@ export default function HomePage({ language = "en", onStartPlan, onContinuePastJ
     backgroundAudio.preload = "auto"
     backgroundAudio.loop = true
     backgroundAudio.volume = 0.3
+    backgroundAudio.muted = isMuted
     backgroundAudio.load?.()
     backgroundMusicRef.current = backgroundAudio
 
     const tryPlayBackgroundMusic = async () => {
-      if (isUnmounted) return
+      if (isUnmounted || isMuted) return
       try {
         await backgroundAudio.play()
       } catch {
@@ -650,9 +664,38 @@ export default function HomePage({ language = "en", onStartPlan, onContinuePastJ
         backgroundMusicRef.current = null
       }
     }
-  }, [])
+  }, [isMuted])
+
+  useEffect(() => {
+    const allAudio = [
+      startJourneyAudioRef.current,
+      backgroundMusicRef.current,
+      genreHoverAudioRef.current,
+    ]
+
+    allAudio.forEach((audio) => {
+      if (!audio) return
+      audio.muted = isMuted
+    })
+
+    try {
+      window.localStorage.setItem("cwrite-home-muted", String(isMuted))
+    } catch {
+      // ignore
+    }
+
+    if (isMuted) {
+      backgroundMusicRef.current?.pause()
+      return
+    }
+
+    void backgroundMusicRef.current?.play().catch(() => {
+      // ignore autoplay restrictions until the next user gesture
+    })
+  }, [isMuted])
 
   const playStartJourneySound = () => {
+    if (isMuted) return
     const now = Date.now()
     if (now - lastStartSoundAtRef.current < 250) return
     lastStartSoundAtRef.current = now
@@ -666,6 +709,7 @@ export default function HomePage({ language = "en", onStartPlan, onContinuePastJ
   }
 
   const playGenreHoverSound = (genreId: string) => {
+    if (isMuted) return
     if (hoveredGenreId === genreId) return
 
     const now = Date.now()
@@ -694,6 +738,10 @@ export default function HomePage({ language = "en", onStartPlan, onContinuePastJ
   const handleVisitFarmClick = () => {
     playStartJourneySound()
     onVisitFarm?.()
+  }
+
+  const toggleMute = () => {
+    setIsMuted((prev) => !prev)
   }
 
   return (
@@ -1003,6 +1051,28 @@ export default function HomePage({ language = "en", onStartPlan, onContinuePastJ
           </motion.div>
         )}
       </AnimatePresence>
+
+      <button
+        type="button"
+        onClick={toggleMute}
+        className="fixed bottom-6 right-6 z-50 rounded-full bg-white/90 p-3 shadow-lg backdrop-blur-sm transition hover:scale-105 hover:bg-white"
+        style={{
+          border: "4px solid #4A9BE8",
+          boxShadow: "0 6px 0 #2E7DD1, 0 10px 22px rgba(0,0,0,0.18)",
+          imageRendering: "pixelated",
+        }}
+        aria-label={isMuted ? "Turn sound on" : "Turn sound off"}
+        title={isMuted ? "Turn sound on" : "Turn sound off"}
+      >
+        <Image
+          src={isMuted ? "/speakeroff.png" : "/speaker on.png"}
+          alt={isMuted ? "Sound off" : "Sound on"}
+          width={34}
+          height={34}
+          priority
+          className="pointer-events-none select-none"
+        />
+      </button>
     </main>
   )
 }
