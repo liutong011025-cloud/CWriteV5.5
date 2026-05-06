@@ -920,10 +920,10 @@ export default function HomePage({ language = "en", onStartPlan, onContinuePastJ
                   aria-hidden
                   className="absolute inset-0 select-none"
                   style={{
-                    color: "#D34E83",
+                    color: "#E45A97",
                     transform: "translateY(14px)",
                     filter: "blur(0.35px)",
-                    opacity: 0.94,
+                    opacity: 0.98,
                   }}
                 >
                   CWrite
@@ -932,7 +932,7 @@ export default function HomePage({ language = "en", onStartPlan, onContinuePastJ
                   aria-hidden
                   className="absolute inset-0 select-none"
                   style={{
-                    background: "linear-gradient(180deg, #FFE85C 0%, #FFD93D 30%, #FFB25F 58%, #FF79AD 82%, #FF5F98 100%)",
+                    background: "linear-gradient(180deg, #FFE85C 0%, #FFD93D 28%, #FFB25F 52%, #FF89B8 76%, #FF5FA0 100%)",
                     WebkitBackgroundClip: "text",
                     WebkitTextFillColor: "transparent",
                     backgroundClip: "text",
@@ -949,11 +949,12 @@ export default function HomePage({ language = "en", onStartPlan, onContinuePastJ
                     WebkitBackgroundClip: "text",
                     WebkitTextFillColor: "transparent",
                     backgroundClip: "text",
-                    WebkitTextStroke: "0.5px rgba(255,255,255,0.32)",
+                    WebkitTextStroke: "0.5px rgba(255,255,255,0.25)",
                     textShadow: `
                       0 1px 0 rgba(255,244,190,0.78),
-                      0 3px 0 rgba(255,221,92,0.9),
-                      0 6px 0 rgba(255,123,175,0.92),
+                      0 3px 0 rgba(255,221,92,0.88),
+                      0 6px 0 rgba(255,104,170,0.96),
+                      0 9px 0 rgba(232,84,149,0.98),
                       0 12px 18px rgba(128,44,78,0.24)
                     `,
                   }}
@@ -987,12 +988,12 @@ export default function HomePage({ language = "en", onStartPlan, onContinuePastJ
             <p
               className="text-3xl md:text-5xl lg:text-6xl font-bold font-sans"
               style={{
-                background: "linear-gradient(135deg, #FFF59D 0%, #E6FF78 34%, #9BEA69 70%, #5BCB63 100%)",
+                background: "linear-gradient(135deg, #FFF9B8 0%, #F0FF8A 32%, #B9F27B 68%, #79D86C 100%)",
                 WebkitBackgroundClip: "text",
                 WebkitTextFillColor: "transparent",
                 backgroundClip: "text",
                 fontFamily: '"Berlin Sans FB Demi", "Berlin Sans FB", var(--font-baloo), sans-serif',
-                textShadow: "0 3px 0 rgba(19, 88, 153, 0.18), 0 8px 16px rgba(7, 42, 92, 0.24)",
+                textShadow: "0 2px 0 rgba(26, 104, 177, 0.14), 0 8px 14px rgba(7, 42, 92, 0.18)",
               }}
             >
               {t.subtitleTop}
@@ -1000,12 +1001,12 @@ export default function HomePage({ language = "en", onStartPlan, onContinuePastJ
             <p
               className="text-2xl md:text-4xl lg:text-5xl font-bold mt-4 font-sans"
               style={{
-                background: "linear-gradient(135deg, #FFF59D 0%, #E6FF78 34%, #9BEA69 70%, #5BCB63 100%)",
+                background: "linear-gradient(135deg, #FFF9B8 0%, #F0FF8A 32%, #B9F27B 68%, #79D86C 100%)",
                 WebkitBackgroundClip: "text",
                 WebkitTextFillColor: "transparent",
                 backgroundClip: "text",
                 fontFamily: '"Berlin Sans FB Demi", "Berlin Sans FB", var(--font-baloo), sans-serif',
-                textShadow: "0 3px 0 rgba(19, 88, 153, 0.18), 0 8px 16px rgba(7, 42, 92, 0.24)",
+                textShadow: "0 2px 0 rgba(26, 104, 177, 0.14), 0 8px 14px rgba(7, 42, 92, 0.18)",
               }}
             >
               {t.subtitleBottom}
