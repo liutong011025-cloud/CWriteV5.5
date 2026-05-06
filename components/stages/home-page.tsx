@@ -533,6 +533,8 @@ export default function HomePage({ language = "en", onStartPlan, onContinuePastJ
   const startJourneyAudioRef = useRef<HTMLAudioElement | null>(null)
   const backgroundMusicRef = useRef<HTMLAudioElement | null>(null)
   const genreHoverAudioRef = useRef<HTMLAudioElement | null>(null)
+  const easterEggAudioRef = useRef<HTMLAudioElement | null>(null)
+  const speakerTapHistoryRef = useRef<number[]>([])
   const lastStartSoundAtRef = useRef(0)
   const lastGenreHoverSoundAtRef = useRef(0)
   const t = translations[language] || translations.en
@@ -606,6 +608,25 @@ export default function HomePage({ language = "en", onStartPlan, onContinuePastJ
 
   useEffect(() => {
     try {
+      const easterEggAudio = new Audio("/grand_theft_auto.mp3")
+      easterEggAudio.preload = "auto"
+      easterEggAudio.volume = 0.4
+      easterEggAudio.load?.()
+      easterEggAudioRef.current = easterEggAudio
+    } catch {
+      // ignore
+    }
+
+    return () => {
+      if (easterEggAudioRef.current) {
+        easterEggAudioRef.current.pause()
+        easterEggAudioRef.current = null
+      }
+    }
+  }, [])
+
+  useEffect(() => {
+    try {
       const hoverAudio = new Audio("/soundreality-finger-snap-179180.mp3")
       hoverAudio.preload = "auto"
       hoverAudio.volume = 0.45
@@ -671,6 +692,7 @@ export default function HomePage({ language = "en", onStartPlan, onContinuePastJ
       startJourneyAudioRef.current,
       backgroundMusicRef.current,
       genreHoverAudioRef.current,
+      easterEggAudioRef.current,
     ]
 
     allAudio.forEach((audio) => {
@@ -741,7 +763,26 @@ export default function HomePage({ language = "en", onStartPlan, onContinuePastJ
   }
 
   const toggleMute = () => {
-    setIsMuted((prev) => !prev)
+    setIsMuted((prev) => {
+      const nextMuted = !prev
+      const now = Date.now()
+      const recentTaps = [...speakerTapHistoryRef.current, now].filter((timestamp) => now - timestamp < 2200)
+      speakerTapHistoryRef.current = recentTaps
+
+      if (recentTaps.length >= 5 && !nextMuted) {
+        speakerTapHistoryRef.current = []
+        try {
+          if (easterEggAudioRef.current) {
+            easterEggAudioRef.current.currentTime = 0
+            void easterEggAudioRef.current.play()
+          }
+        } catch {
+          // ignore
+        }
+      }
+
+      return nextMuted
+    })
   }
 
   return (
