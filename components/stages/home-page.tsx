@@ -1,44 +1,9 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
-import { motion, AnimatePresence } from "framer-motion"
-import { Shader, ChromaFlow, Swirl } from "shaders/react"
+import { useEffect, useRef, useState, useCallback } from "react"
+import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion"
 import type { Language } from "@/app/page"
 import { CustomCursor } from "@/components/custom-cursor"
-import { GrainOverlay } from "@/components/grain-overlay"
-import { MagneticCards } from "@/components/magnetic-card"
-import { GenreDetails } from "@/components/genre-details"
-import GlassSurface from "@/components/glass-surface"
-
-function PixelRevealText({
-  text,
-  baseClassName,
-  pixelClassName,
-  pixelStyle,
-}: {
-  text: string
-  baseClassName: string
-  pixelClassName?: string
-  pixelStyle?: React.CSSProperties
-}) {
-  // Use letter stepping via steps(N,end) where N is the string length.
-  const steps = Math.max(4, text.length)
-  return (
-    <span className="pixel-reveal">
-      <span className={`pixel-reveal__base ${baseClassName}`}>{text}</span>
-      <span
-        className={`pixel-reveal__pixel ${baseClassName} ${pixelClassName || ""}`.trim()}
-        style={{
-          ...pixelStyle,
-          animationTimingFunction: `steps(${steps}, end)`,
-        }}
-        aria-hidden="true"
-      >
-        {text}
-      </span>
-    </span>
-  )
-}
 
 interface HomePageProps {
   language?: Language
@@ -53,12 +18,487 @@ interface HomePageProps {
   onViewAbout?: () => void
 }
 
-const genreCards = [
-  { id: "story", title: "Story", color: "#FFD54F" },
-  { id: "review", title: "Book Review", color: "#F8BBD9" },
-  { id: "letter", title: "Letter", color: "#FFECB3" },
-  { id: "drama", title: "Drama", color: "#F48FB1" },
-  { id: "poetry", title: "Poetry", color: "#FCE4EC" },
+// Pixel cloud SVG component - very small pixels (2x2)
+function PixelCloud({ className, style }: { className?: string; style?: React.CSSProperties }) {
+  return (
+    <svg viewBox="0 0 64 32" className={className} style={{ imageRendering: "pixelated", ...style }}>
+      {/* Row 1 - top */}
+      <rect x="20" y="4" width="2" height="2" fill="white" />
+      <rect x="22" y="4" width="2" height="2" fill="white" />
+      <rect x="24" y="4" width="2" height="2" fill="white" />
+      <rect x="26" y="4" width="2" height="2" fill="white" />
+      <rect x="28" y="4" width="2" height="2" fill="white" />
+      <rect x="30" y="4" width="2" height="2" fill="white" />
+      <rect x="32" y="4" width="2" height="2" fill="white" />
+      <rect x="34" y="4" width="2" height="2" fill="white" />
+      {/* Row 2 */}
+      <rect x="16" y="6" width="2" height="2" fill="white" />
+      <rect x="18" y="6" width="2" height="2" fill="white" />
+      <rect x="20" y="6" width="2" height="2" fill="white" />
+      <rect x="22" y="6" width="2" height="2" fill="white" />
+      <rect x="24" y="6" width="2" height="2" fill="white" />
+      <rect x="26" y="6" width="2" height="2" fill="white" />
+      <rect x="28" y="6" width="2" height="2" fill="white" />
+      <rect x="30" y="6" width="2" height="2" fill="white" />
+      <rect x="32" y="6" width="2" height="2" fill="white" />
+      <rect x="34" y="6" width="2" height="2" fill="white" />
+      <rect x="36" y="6" width="2" height="2" fill="white" />
+      <rect x="38" y="6" width="2" height="2" fill="white" />
+      <rect x="40" y="6" width="2" height="2" fill="white" />
+      {/* Row 3 */}
+      <rect x="12" y="8" width="2" height="2" fill="white" />
+      <rect x="14" y="8" width="2" height="2" fill="white" />
+      <rect x="16" y="8" width="2" height="2" fill="white" />
+      <rect x="18" y="8" width="2" height="2" fill="white" />
+      <rect x="20" y="8" width="2" height="2" fill="white" />
+      <rect x="22" y="8" width="2" height="2" fill="white" />
+      <rect x="24" y="8" width="2" height="2" fill="white" />
+      <rect x="26" y="8" width="2" height="2" fill="white" />
+      <rect x="28" y="8" width="2" height="2" fill="white" />
+      <rect x="30" y="8" width="2" height="2" fill="white" />
+      <rect x="32" y="8" width="2" height="2" fill="white" />
+      <rect x="34" y="8" width="2" height="2" fill="white" />
+      <rect x="36" y="8" width="2" height="2" fill="white" />
+      <rect x="38" y="8" width="2" height="2" fill="white" />
+      <rect x="40" y="8" width="2" height="2" fill="white" />
+      <rect x="42" y="8" width="2" height="2" fill="white" />
+      <rect x="44" y="8" width="2" height="2" fill="white" />
+      {/* Row 4 */}
+      <rect x="8" y="10" width="2" height="2" fill="white" />
+      <rect x="10" y="10" width="2" height="2" fill="white" />
+      <rect x="12" y="10" width="2" height="2" fill="white" />
+      <rect x="14" y="10" width="2" height="2" fill="white" />
+      <rect x="16" y="10" width="2" height="2" fill="white" />
+      <rect x="18" y="10" width="2" height="2" fill="white" />
+      <rect x="20" y="10" width="2" height="2" fill="white" />
+      <rect x="22" y="10" width="2" height="2" fill="white" />
+      <rect x="24" y="10" width="2" height="2" fill="white" />
+      <rect x="26" y="10" width="2" height="2" fill="white" />
+      <rect x="28" y="10" width="2" height="2" fill="white" />
+      <rect x="30" y="10" width="2" height="2" fill="white" />
+      <rect x="32" y="10" width="2" height="2" fill="white" />
+      <rect x="34" y="10" width="2" height="2" fill="white" />
+      <rect x="36" y="10" width="2" height="2" fill="white" />
+      <rect x="38" y="10" width="2" height="2" fill="white" />
+      <rect x="40" y="10" width="2" height="2" fill="white" />
+      <rect x="42" y="10" width="2" height="2" fill="white" />
+      <rect x="44" y="10" width="2" height="2" fill="white" />
+      <rect x="46" y="10" width="2" height="2" fill="white" />
+      <rect x="48" y="10" width="2" height="2" fill="white" />
+      {/* Row 5 */}
+      <rect x="6" y="12" width="2" height="2" fill="white" />
+      <rect x="8" y="12" width="2" height="2" fill="white" />
+      <rect x="10" y="12" width="2" height="2" fill="white" />
+      <rect x="12" y="12" width="2" height="2" fill="white" />
+      <rect x="14" y="12" width="2" height="2" fill="white" />
+      <rect x="16" y="12" width="2" height="2" fill="white" />
+      <rect x="18" y="12" width="2" height="2" fill="white" />
+      <rect x="20" y="12" width="2" height="2" fill="white" />
+      <rect x="22" y="12" width="2" height="2" fill="white" />
+      <rect x="24" y="12" width="2" height="2" fill="white" />
+      <rect x="26" y="12" width="2" height="2" fill="white" />
+      <rect x="28" y="12" width="2" height="2" fill="white" />
+      <rect x="30" y="12" width="2" height="2" fill="white" />
+      <rect x="32" y="12" width="2" height="2" fill="white" />
+      <rect x="34" y="12" width="2" height="2" fill="white" />
+      <rect x="36" y="12" width="2" height="2" fill="white" />
+      <rect x="38" y="12" width="2" height="2" fill="white" />
+      <rect x="40" y="12" width="2" height="2" fill="white" />
+      <rect x="42" y="12" width="2" height="2" fill="white" />
+      <rect x="44" y="12" width="2" height="2" fill="white" />
+      <rect x="46" y="12" width="2" height="2" fill="white" />
+      <rect x="48" y="12" width="2" height="2" fill="white" />
+      <rect x="50" y="12" width="2" height="2" fill="white" />
+      <rect x="52" y="12" width="2" height="2" fill="white" />
+      {/* Row 6 - bottom */}
+      <rect x="6" y="14" width="2" height="2" fill="white" />
+      <rect x="8" y="14" width="2" height="2" fill="white" />
+      <rect x="10" y="14" width="2" height="2" fill="white" />
+      <rect x="12" y="14" width="2" height="2" fill="white" />
+      <rect x="14" y="14" width="2" height="2" fill="white" />
+      <rect x="16" y="14" width="2" height="2" fill="white" />
+      <rect x="18" y="14" width="2" height="2" fill="white" />
+      <rect x="20" y="14" width="2" height="2" fill="white" />
+      <rect x="22" y="14" width="2" height="2" fill="white" />
+      <rect x="24" y="14" width="2" height="2" fill="white" />
+      <rect x="26" y="14" width="2" height="2" fill="white" />
+      <rect x="28" y="14" width="2" height="2" fill="white" />
+      <rect x="30" y="14" width="2" height="2" fill="white" />
+      <rect x="32" y="14" width="2" height="2" fill="white" />
+      <rect x="34" y="14" width="2" height="2" fill="white" />
+      <rect x="36" y="14" width="2" height="2" fill="white" />
+      <rect x="38" y="14" width="2" height="2" fill="white" />
+      <rect x="40" y="14" width="2" height="2" fill="white" />
+      <rect x="42" y="14" width="2" height="2" fill="white" />
+      <rect x="44" y="14" width="2" height="2" fill="white" />
+      <rect x="46" y="14" width="2" height="2" fill="white" />
+      <rect x="48" y="14" width="2" height="2" fill="white" />
+      <rect x="50" y="14" width="2" height="2" fill="white" />
+      <rect x="52" y="14" width="2" height="2" fill="white" />
+      <rect x="54" y="14" width="2" height="2" fill="white" />
+      {/* Shadow */}
+      <rect x="6" y="16" width="2" height="2" fill="rgba(0,0,0,0.06)" />
+      <rect x="54" y="16" width="2" height="2" fill="rgba(0,0,0,0.06)" />
+    </svg>
+  )
+}
+
+// Pixel button component with ANIMATED glow effect
+function PixelButton({ 
+  children, 
+  onClick, 
+  color = "#7ec850",
+  borderColor = "#5a9a32",
+  isAtBottom = false,
+}: { 
+  children: React.ReactNode
+  onClick?: () => void
+  color?: string
+  borderColor?: string
+  isAtBottom?: boolean
+}) {
+  const [isHovered, setIsHovered] = useState(false)
+  
+  return (
+    <motion.button
+      onClick={onClick}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      className="relative focus:outline-none"
+      whileHover={{ scale: 1.05, y: -3 }}
+      whileTap={{ scale: 0.98, y: 0 }}
+      animate={isAtBottom ? {
+        boxShadow: isHovered
+          ? [
+              `0 0 40px 15px ${color}, 0 0 80px 30px ${color}90`,
+              `0 0 70px 25px ${color}, 0 0 120px 45px ${color}99`,
+              `0 0 40px 15px ${color}, 0 0 80px 30px ${color}90`,
+            ]
+          : [
+              `0 0 25px 8px ${color}80, 0 0 50px 18px ${color}60`,
+              `0 0 40px 14px ${color}90, 0 0 70px 28px ${color}70`,
+              `0 0 25px 8px ${color}80, 0 0 50px 18px ${color}60`,
+            ],
+      } : undefined}
+      transition={isAtBottom ? { duration: 1.2, repeat: Infinity, ease: "easeInOut" } : undefined}
+      style={{
+        background: `linear-gradient(180deg, ${color} 0%, ${borderColor} 100%)`,
+        border: `4px solid ${borderColor}`,
+        boxShadow: isAtBottom 
+          ? undefined
+          : `
+            inset -4px -4px 0 rgba(0,0,0,0.25), 
+            inset 4px 4px 0 rgba(255,255,255,0.35), 
+            0 8px 0 ${borderColor},
+            0 10px 16px rgba(0,0,0,0.2)
+          `,
+        padding: "16px 32px",
+        imageRendering: "pixelated",
+      }}
+    >
+      <span 
+        className="flex items-center gap-3 text-lg md:text-xl lg:text-2xl font-bold text-white whitespace-nowrap font-sans"
+        style={{ textShadow: "2px 2px 0 rgba(0,0,0,0.4)" }}
+      >
+        {children}
+      </span>
+    </motion.button>
+  )
+}
+
+// Genre icon that morphs from different styled books to target icon on scroll
+function ScrollMorphIcon({
+  genre,
+  index,
+  hoveredId,
+  setHoveredId,
+}: {
+  genre: {
+    id: string
+    title: string
+    color: string
+    summary: string
+    details: string[]
+    bookIcon: string
+    targetIcon: string
+    boxBg: string
+    boxBorder: string
+    hoverBoxBg: string
+    themeElements: string[]
+  }
+  index: number
+  hoveredId: string | null
+  setHoveredId: (id: string | null) => void
+}) {
+  const cardRef = useRef<HTMLDivElement>(null)
+  const isHovered = hoveredId === genre.id
+  const isAnyHovered = hoveredId !== null
+  const shouldMoveAway = isAnyHovered && !isHovered
+
+  const { scrollYProgress } = useScroll({
+    target: cardRef,
+    offset: ["start end", "center center"],
+  })
+
+  // Morph progress: 0 = just emoji, 1 = full box - earlier transformation
+  const morphProgress = useTransform(scrollYProgress, [0.15, 0.65], [0, 1])
+  
+  // Icon crossfade - earlier timing
+  const bookOpacity = useTransform(morphProgress, [0, 0.3, 0.5], [1, 1, 0])
+  const bookScale = useTransform(morphProgress, [0.3, 0.5], [1, 0.5])
+  const bookRotate = useTransform(morphProgress, [0.3, 0.5], [0, -20])
+  
+  const targetOpacity = useTransform(morphProgress, [0.4, 0.7], [0, 1])
+  const targetScale = useTransform(morphProgress, [0.4, 0.6, 0.75], [0.4, 1.2, 1])
+  
+  // Box expansion - earlier timing
+  const boxOpacity = useTransform(morphProgress, [0.5, 0.75], [0, 1])
+  const boxScale = useTransform(morphProgress, [0.5, 0.9], [0.1, 1])
+  
+  // Title appears earlier
+  const titleOpacity = useTransform(morphProgress, [0.65, 0.9], [0, 1])
+
+  return (
+    <motion.div
+      ref={cardRef}
+      className="flex flex-col items-center"
+      initial={{ opacity: 0 }}
+      whileInView={{ opacity: 1 }}
+      viewport={{ once: true, margin: "-50px" }}
+      transition={{ duration: 0.4, delay: index * 0.06 }}
+      animate={{
+        scale: shouldMoveAway ? 0.85 : 1,
+        x: shouldMoveAway ? (index < 2 ? -30 : index > 2 ? 30 : 0) : 0,
+        opacity: shouldMoveAway ? 0.6 : 1,
+      }}
+    >
+      {/* Container for icon + box */}
+      <div 
+        className="relative flex flex-col items-center justify-center cursor-pointer"
+        onMouseEnter={() => setHoveredId(genre.id)}
+        onMouseLeave={() => setHoveredId(null)}
+      >
+        {/* The pixel box - expands from nothing, WIDER */}
+        <motion.div
+          className="absolute flex items-center justify-center rounded-lg"
+          style={{ 
+            opacity: boxOpacity,
+            scale: boxScale,
+            width: 340,
+            height: 200,
+            backgroundColor: genre.boxBg,
+            border: `5px solid ${genre.boxBorder}`,
+            boxShadow: `
+              inset -5px -5px 0 rgba(0,0,0,0.2), 
+              inset 5px 5px 0 rgba(255,255,255,0.35),
+              0 10px 0 ${genre.boxBorder},
+              0 14px 28px rgba(0,0,0,0.18)
+            `,
+            imageRendering: "pixelated",
+          }}
+        />
+
+        {/* Icon container - WIDER, emoji and text side by side */}
+        <div className="relative w-[340px] h-[200px] flex items-center justify-center z-10">
+          {/* Book icon (fades out) - Different book for each genre */}
+          <motion.span
+            className="absolute text-7xl md:text-8xl lg:text-9xl"
+            style={{ 
+              opacity: bookOpacity, 
+              scale: bookScale,
+              rotate: bookRotate,
+            }}
+          >
+            {genre.bookIcon}
+          </motion.span>
+          
+          {/* Target icon (fades in) - positioned left */}
+          <motion.div
+            className="absolute flex items-center gap-4 px-6"
+            style={{ 
+              opacity: targetOpacity, 
+            }}
+          >
+            <motion.span
+              className="text-6xl md:text-7xl lg:text-8xl"
+              style={{ scale: targetScale }}
+            >
+              {genre.targetIcon}
+            </motion.span>
+            
+            {/* Title next to icon - cute font style */}
+            <motion.span 
+              className="text-xl md:text-2xl lg:text-3xl font-bold text-gray-800 font-sans tracking-wide"
+              style={{ 
+                opacity: titleOpacity,
+                textShadow: "2px 2px 0 rgba(255,255,255,0.8)",
+                letterSpacing: "0.03em",
+              }}
+            >
+              {genre.title}
+            </motion.span>
+          </motion.div>
+        </div>
+
+        {/* Hover details - INSIDE the box, LIGHTER background, text fits */}
+        <AnimatePresence>
+          {isHovered && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.25 }}
+              className="absolute z-20 flex flex-col items-center justify-start p-5 rounded-lg overflow-hidden"
+              style={{
+                width: 380,
+                minHeight: 240,
+                backgroundColor: genre.hoverBoxBg,
+                border: `5px solid ${genre.boxBorder}`,
+                boxShadow: `
+                  inset -5px -5px 0 rgba(0,0,0,0.12), 
+                  inset 5px 5px 0 rgba(255,255,255,0.5),
+                  0 10px 0 ${genre.boxBorder},
+                  0 16px 32px rgba(0,0,0,0.22)
+                `,
+                imageRendering: "pixelated",
+              }}
+            >
+              {/* Icon + Title row */}
+              <div className="flex items-center gap-3 mb-3">
+                <span className="text-4xl md:text-5xl">{genre.targetIcon}</span>
+                <h3 className="text-2xl md:text-3xl font-bold text-gray-800 font-sans tracking-wide"
+                  style={{ textShadow: "1px 1px 0 rgba(255,255,255,0.8)" }}
+                >
+                  {genre.title}
+                </h3>
+              </div>
+              
+              {/* Summary - fits in box */}
+              <p className="text-base md:text-lg text-gray-700 font-sans text-center mb-3 font-medium leading-snug px-2">
+                {genre.summary}
+              </p>
+              
+              {/* Details - smaller */}
+              <ul className="space-y-1 text-sm md:text-base text-gray-600 font-sans px-2">
+                {genre.details.slice(0, 2).map((detail, i) => (
+                  <li key={i} className="flex items-start gap-2">
+                    <span className="text-gray-400">-</span> 
+                    <span className="line-clamp-1">{detail}</span>
+                  </li>
+                ))}
+              </ul>
+
+              {/* Theme elements floating around */}
+              {genre.themeElements.map((el, i) => (
+                <motion.span
+                  key={i}
+                  className="absolute text-2xl"
+                  initial={{ opacity: 0, scale: 0 }}
+                  animate={{ 
+                    opacity: 0.7, 
+                    scale: 1,
+                    x: Math.cos((i * 2 * Math.PI) / genre.themeElements.length) * 130,
+                    y: Math.sin((i * 2 * Math.PI) / genre.themeElements.length) * 90,
+                  }}
+                  transition={{ duration: 0.3, delay: i * 0.08 }}
+                >
+                  {el}
+                </motion.span>
+              ))}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    </motion.div>
+  )
+}
+
+const genreData = [
+  {
+    id: "story",
+    title: "Story",
+    color: "#FFD54F",
+    summary: "Build worlds, invent characters, and shape unforgettable plots.",
+    details: [
+      "Designing characters, settings, and conflicts",
+      "Organising events into a clear beginning, middle, and end",
+      "Using detail to show rather than tell",
+    ],
+    bookIcon: "\u{1F4D5}", // Red book
+    targetIcon: "\u{1F3F0}",
+    boxBg: "#FFE082",
+    boxBorder: "#FFA000",
+    hoverBoxBg: "#FFF8E1",
+    themeElements: ["\u{1F451}", "\u{2694}\u{FE0F}", "\u{1F409}", "\u{1F31F}"],
+  },
+  {
+    id: "review",
+    title: "Book Review",
+    color: "#F8BBD9",
+    summary: "Think deeply, take a stance, and guide readers with your opinion.",
+    details: [
+      "Stating a clear opinion about a text",
+      "Supporting ideas with quotes",
+      "Balancing summary with analysis",
+    ],
+    bookIcon: "\u{1F4D7}", // Green book
+    targetIcon: "\u{1F50D}",
+    boxBg: "#F8BBD0",
+    boxBorder: "#EC407A",
+    hoverBoxBg: "#FCE4EC",
+    themeElements: ["\u{1F4DD}", "\u{2B50}", "\u{1F4A1}", "\u{1F914}"],
+  },
+  {
+    id: "letter",
+    title: "Letter Writing",
+    color: "#FFECB3",
+    summary: "Write with a real voice to connect hearts across distance.",
+    details: [
+      "Matching tone to your relationship",
+      "Explaining events clearly",
+      "Organising real-life details",
+    ],
+    bookIcon: "\u{1F4D8}", // Blue book
+    targetIcon: "\u{2709}\u{FE0F}",
+    boxBg: "#FFF9C4",
+    boxBorder: "#FBC02D",
+    hoverBoxBg: "#FFFDE7",
+    themeElements: ["\u{1F48C}", "\u{1F4EE}", "\u{2764}\u{FE0F}", "\u{270D}\u{FE0F}"],
+  },
+  {
+    id: "drama",
+    title: "Drama Script",
+    color: "#F48FB1",
+    summary: "Turn words into scenes, voices, and action on stage.",
+    details: [
+      "Writing believable dialogue",
+      "Using stage directions",
+      "Thinking in scenes and beats",
+    ],
+    bookIcon: "\u{1F4D9}", // Orange book
+    targetIcon: "\u{1F3AD}",
+    boxBg: "#CE93D8",
+    boxBorder: "#8E24AA",
+    hoverBoxBg: "#F3E5F5",
+    themeElements: ["\u{1F3AC}", "\u{1F4A5}", "\u{1F399}\u{FE0F}", "\u{2728}"],
+  },
+  {
+    id: "poetry",
+    title: "Poetry",
+    color: "#FCE4EC",
+    summary: "Play with rhythm, images, and silence between the lines.",
+    details: [
+      "Choosing precise, image-rich words",
+      "Playing with rhythm and line breaks",
+      "Exploring different poetic forms",
+    ],
+    bookIcon: "\u{1F4D3}", // Notebook
+    targetIcon: "\u{2728}",
+    boxBg: "#B3E5FC",
+    boxBorder: "#0288D1",
+    hoverBoxBg: "#E1F5FE",
+    themeElements: ["\u{1F319}", "\u{1F338}", "\u{1F4AB}", "\u{2665}\u{FE0F}"],
+  },
 ]
 
 const translations = {
@@ -69,41 +509,72 @@ const translations = {
     tagline: "Unleash Creativity, Empower Expression",
     startButton: "Start a new journey",
     continueButton: "Continue past journey",
+    scrollHint: "Scroll down to explore",
   },
   zh: {
-    welcome: "歡迎來到",
-    subtitleTop: "創意寫作的未來",
-    subtitleBottom: "在 AI 時代",
-    tagline: "釋放創意，賦能表達",
-    startButton: "开始新的旅程",
-    continueButton: "继续上次旅程",
+    welcome: "Welcome to",
+    subtitleTop: "Creative Writing",
+    subtitleBottom: "in the AI Era",
+    tagline: "Unleash Creativity, Empower Expression",
+    startButton: "Start a new journey",
+    continueButton: "Continue past journey",
+    scrollHint: "Scroll down to explore",
   },
 }
 
 export default function HomePage({ language = "en", onStartPlan, onContinuePastJourney, onVisitFarm }: HomePageProps) {
-  const [isLoaded, setIsLoaded] = useState(false)
-  const [activeGenre, setActiveGenre] = useState<string | null>(null)
-  const [isPixelating, setIsPixelating] = useState(false)
-  const [pixelPhase, setPixelPhase] = useState(0) // 0=none, 1=transform elements then navigate
-  const [pixelOrigin, setPixelOrigin] = useState({ x: 0, y: 0 })
-  const [showPixelSky, setShowPixelSky] = useState(false)
-  const resetTimeoutRef = useRef<number | null>(null)
-  const shaderContainerRef = useRef<HTMLDivElement>(null)
-  const pixelRootRef = useRef<HTMLDivElement>(null)
-  const startButtonRef = useRef<HTMLButtonElement>(null)
-  const continueButtonRef = useRef<HTMLButtonElement>(null)
-  const farmButtonRef = useRef<HTMLButtonElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
   const startJourneyAudioRef = useRef<HTMLAudioElement | null>(null)
   const lastStartSoundAtRef = useRef(0)
   const t = translations[language] || translations.en
+  const [hoveredGenreId, setHoveredGenreId] = useState<string | null>(null)
+  
+  // Scroll hint visibility - hide if scrolled, show after 5s idle
+  const [hasScrolled, setHasScrolled] = useState(false)
+  const [showScrollHint, setShowScrollHint] = useState(true)
+  const scrollIdleTimerRef = useRef<NodeJS.Timeout | null>(null)
 
-  // Preload the dedicated Start Journey SFX so it plays immediately on press.
+  const { scrollYProgress } = useScroll({ target: containerRef })
+  
+  // Button glow when at bottom
+  const [isAtBottom, setIsAtBottom] = useState(false)
+  
+  const handleScroll = useCallback(() => {
+    setHasScrolled(true)
+    setShowScrollHint(false)
+    
+    // Clear existing timer
+    if (scrollIdleTimerRef.current) {
+      clearTimeout(scrollIdleTimerRef.current)
+    }
+    
+    // Set new timer to show hint after 5s idle
+    scrollIdleTimerRef.current = setTimeout(() => {
+      setShowScrollHint(true)
+    }, 5000)
+  }, [])
+  
+  useEffect(() => {
+    return scrollYProgress.on("change", (v) => {
+      setIsAtBottom(v > 0.92)
+      if (v > 0.01) {
+        handleScroll()
+      }
+    })
+  }, [scrollYProgress, handleScroll])
+
+  // Parallax transforms for clouds
+  const cloud1Y = useTransform(scrollYProgress, [0, 1], ["0%", "250%"])
+  const cloud2Y = useTransform(scrollYProgress, [0, 1], ["0%", "180%"])
+  const cloud3Y = useTransform(scrollYProgress, [0, 1], ["0%", "300%"])
+  const cloud4Y = useTransform(scrollYProgress, [0, 1], ["0%", "150%"])
+
+  // Preload audio
   useEffect(() => {
     try {
       if (!startJourneyAudioRef.current) {
         startJourneyAudioRef.current = new Audio("/bit.mp3")
         startJourneyAudioRef.current.preload = "auto"
-        // 10% quieter than 0.28
         startJourneyAudioRef.current.volume = 0.252
         startJourneyAudioRef.current.load?.()
       }
@@ -114,7 +585,6 @@ export default function HomePage({ language = "en", onStartPlan, onContinuePastJ
 
   const playStartJourneySound = () => {
     const now = Date.now()
-    // Avoid double-trigger if pointerdown + click both fire.
     if (now - lastStartSoundAtRef.current < 250) return
     lastStartSoundAtRef.current = now
     try {
@@ -126,649 +596,290 @@ export default function HomePage({ language = "en", onStartPlan, onContinuePastJ
     }
   }
 
-  useEffect(() => {
-    const checkShaderReady = () => {
-      if (!shaderContainerRef.current) return false
-      const canvas = shaderContainerRef.current.querySelector("canvas")
-      if (canvas && canvas.width > 0 && canvas.height > 0) {
-        setIsLoaded(true)
-        return true
-      }
-      return false
-    }
-
-    if (checkShaderReady()) return
-
-    const intervalId = setInterval(() => {
-      if (checkShaderReady()) {
-        clearInterval(intervalId)
-      }
-    }, 100)
-
-    const fallbackTimer = setTimeout(() => {
-      setIsLoaded(true)
-    }, 1500)
-
-    return () => {
-      clearInterval(intervalId)
-      clearTimeout(fallbackTimer)
-    }
-  }, [])
-
-  const handleCardClick = (id: string) => {
-    setActiveGenre(activeGenre === id ? null : id)
-  }
-
-  const handleBack = () => {
-    setActiveGenre(null)
-  }
-
-  const resetPixelTransitionIfStillHome = () => {
-    try {
-      const main = document.querySelector("main[data-stage]")
-      const stage = main?.getAttribute("data-stage")
-      if (stage && stage !== "home") return
-    } catch {
-      // ignore
-    }
-    setIsPixelating(false)
-    setPixelPhase(0)
-    setShowPixelSky(false)
-    try {
-      pixelRootRef.current?.classList.remove("pixel-farm-transition-active")
-    } catch {
-      // ignore
-    }
-  }
-
-  const handlePixelJourney = (originEl: HTMLElement | null, navigate?: () => void) => {
-    if (originEl) {
-      const rect = originEl.getBoundingClientRect()
-      setPixelOrigin({
-        x: rect.left + rect.width / 2,
-        y: rect.top + rect.height / 2,
-      })
-    }
-    setIsPixelating(true)
-    
-    // Phase 1: Transform elements to pixel style, sequenced by distance to Start button
-    setPixelPhase(1)
-    setShowPixelSky(true)
-
-    // Distance-based sequencing: nearest items pixelize first
-    window.setTimeout(() => {
-      const root = pixelRootRef.current
-      const btn = originEl
-      if (!root || !btn) return
-
-      const btnRect = btn.getBoundingClientRect()
-      const origin = { x: btnRect.left + btnRect.width / 2, y: btnRect.top + btnRect.height / 2 }
-
-      const items = Array.from(root.querySelectorAll<HTMLElement>("[data-pixel-item]"))
-      const withDist = items
-        .map((el) => {
-          const r = el.getBoundingClientRect()
-          const cx = r.left + r.width / 2
-          const cy = r.top + r.height / 2
-          const dx = cx - origin.x
-          const dy = cy - origin.y
-          const dist = Math.sqrt(dx * dx + dy * dy)
-          return { el, dist }
-        })
-        .sort((a, b) => a.dist - b.dist)
-
-      const maxDist = Math.max(1, ...withDist.map((x) => x.dist))
-      // Keep a near->far sequence, but don't delay navigation too long.
-      const baseDelayMs = 60
-      const maxDelayMs = 900
-      for (const { el, dist } of withDist) {
-        const delay = baseDelayMs + Math.round((dist / maxDist) * maxDelayMs)
-        el.style.setProperty("--pixel-delay", `${delay}ms`)
-      }
-      root.classList.add("pixel-farm-transition-active")
-    }, 0)
-    
-    // Navigate directly after pixelation effect completes
-    setTimeout(() => {
-      navigate?.()
-    }, 900)
-
-    // 如果导航没有发生（例如“Continue past journey”没有可恢复内容），避免页面卡在禁用态
-    if (resetTimeoutRef.current) window.clearTimeout(resetTimeoutRef.current)
-    resetTimeoutRef.current = window.setTimeout(() => {
-      resetPixelTransitionIfStillHome()
-      resetTimeoutRef.current = null
-    }, 1400)
-  }
-
   const handleStartJourneyClick = () => {
     playStartJourneySound()
-    handlePixelJourney(startButtonRef.current, onStartPlan)
+    onStartPlan?.()
   }
 
   const handleContinuePastJourneyClick = () => {
     playStartJourneySound()
-    handlePixelJourney(continueButtonRef.current, onContinuePastJourney)
+    onContinuePastJourney?.()
   }
 
   const handleVisitFarmClick = () => {
     playStartJourneySound()
-    handlePixelJourney(farmButtonRef.current, onVisitFarm)
+    onVisitFarm?.()
   }
 
   return (
-    <main className="relative min-h-screen w-full overflow-x-hidden bg-background cursor-none">
+    <main ref={containerRef} className="relative w-full overflow-x-hidden cursor-none">
       <CustomCursor />
-      <GrainOverlay />
-      
-      {/* Phase 1: Pixelation effect overlay - transforms existing elements */}
-      <AnimatePresence>
-        {pixelPhase >= 1 && (
-          <motion.div
-            className="fixed inset-0 z-[99] pointer-events-none"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.3 }}
-          >
-            {/* Radial pixelation wave from button center */}
-            <motion.div
-              className="absolute inset-0"
-              style={{
-                background: `radial-gradient(circle at ${pixelOrigin.x}px ${pixelOrigin.y}px, 
-                  transparent 0%, 
-                  transparent var(--wave-radius), 
-                  rgba(245,230,200,0.2) calc(var(--wave-radius) + 50px),
-                  rgba(126,200,80,0.3) calc(var(--wave-radius) + 150px),
-                  rgba(90,154,50,0.5) calc(var(--wave-radius) + 300px))`,
-                // @ts-ignore
-                "--wave-radius": "0px",
-              }}
-              animate={{
-                // @ts-ignore
-                "--wave-radius": ["0px", "3000px"],
-              }}
-              transition={{ duration: 0.8, ease: "easeOut" }}
-            />
-            
-            {/* Progressive pixel grid - starts large, gets finer */}
-            <motion.div
-              className="absolute inset-0"
-              style={{
-                backgroundImage: `
-                  linear-gradient(rgba(139, 105, 20, 0.4) 4px, transparent 4px),
-                  linear-gradient(90deg, rgba(139, 105, 20, 0.4) 4px, transparent 4px)
-                `,
-                backgroundSize: "32px 32px",
-                imageRendering: "pixelated",
-              }}
-              initial={{ opacity: 0 }}
-              animate={{ 
-                opacity: [0, 0.3, 0.5, 0.7, 0.9],
-                backgroundSize: ["64px 64px", "48px 48px", "32px 32px", "16px 16px", "8px 8px"],
-              }}
-              transition={{ 
-                duration: 0.7, 
-                times: [0, 0.2, 0.4, 0.7, 1],
-                ease: "linear"
-              }}
-            />
-            
-            {/* Color shift towards Stardew palette */}
-            <motion.div
-              className="absolute inset-0"
-              initial={{ backgroundColor: "rgba(0,0,0,0)" }}
-              animate={{ 
-                backgroundColor: [
-                  "rgba(0,0,0,0)",
-                  "rgba(245,230,200,0.1)",
-                  "rgba(232,197,71,0.2)",
-                  "rgba(126,200,80,0.3)",
-                  "rgba(90,154,50,0.5)",
-                ]
-              }}
-              transition={{ duration: 0.8, ease: "easeIn" }}
-            />
-            
-            {/* Scanline effect */}
-            <motion.div
-              className="absolute inset-0"
-              style={{
-                backgroundImage: `repeating-linear-gradient(
-                  0deg,
-                  transparent 0px,
-                  transparent 3px,
-                  rgba(0, 0, 0, 0.1) 3px,
-                  rgba(0, 0, 0, 0.1) 6px
-                )`,
-              }}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: [0, 0.2, 0.4, 0.5] }}
-              transition={{ duration: 0.6, ease: "linear" }}
-            />
-          </motion.div>
-        )}
-      </AnimatePresence>
 
-      {/* Pixel sky/grass overlay (dramatic background switch from button outward) */}
-      <AnimatePresence>
-        {showPixelSky && (
-          <motion.div
-            className="fixed inset-0 z-[60] pointer-events-none"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 0.35 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.18 }}
-          >
-            <motion.div
-              className="absolute inset-0"
-              style={{
-                background: `linear-gradient(180deg, 
-                  #b8e4f9 0%, 
-                  #87ceeb 28%, 
-                  #7ec850 68%, 
-                  #5a9a32 100%)`,
-                imageRendering: "pixelated",
-                // radial reveal from the Start button
-                WebkitMaskImage: `radial-gradient(circle at ${pixelOrigin.x}px ${pixelOrigin.y}px, #000 0%, #000 var(--reveal), transparent calc(var(--reveal) + 140px))`,
-                maskImage: `radial-gradient(circle at ${pixelOrigin.x}px ${pixelOrigin.y}px, #000 0%, #000 var(--reveal), transparent calc(var(--reveal) + 140px))`,
-                // @ts-ignore
-                "--reveal": "0px",
-              }}
-              animate={{
-                // @ts-ignore
-                "--reveal": ["0px", "2600px"],
-              }}
-              transition={{ duration: 0.85, ease: "linear" }}
-            >
-              {/* pixel clouds */}
-              <div className="absolute top-20 left-[10%] w-24 h-12 bg-white/80" style={{
-                clipPath: "polygon(0% 60%, 15% 40%, 30% 50%, 45% 20%, 60% 40%, 75% 30%, 90% 50%, 100% 60%, 100% 100%, 0% 100%)",
-                imageRendering: "pixelated",
-              }} />
-              <div className="absolute top-28 right-[15%] w-32 h-14 bg-white/70" style={{
-                clipPath: "polygon(0% 60%, 15% 40%, 30% 50%, 45% 20%, 60% 40%, 75% 30%, 90% 50%, 100% 60%, 100% 100%, 0% 100%)",
-                imageRendering: "pixelated",
-              }} />
-
-              {/* pixel grass blades */}
-              <div className="absolute bottom-0 left-0 right-0 h-32 pointer-events-none">
-                {[...Array(26)].map((_, i) => (
-                  <div
-                    key={`pixel-grass-${i}`}
-                    className="absolute bottom-0"
-                    style={{
-                      left: `${i * 4 + Math.random() * 2}%`,
-                      width: "8px",
-                      height: `${18 + Math.random() * 18}px`,
-                      background: i % 3 === 0 ? "#5a9a32" : "#7ec850",
-                      imageRendering: "pixelated",
-                    }}
-                  />
-                ))}
-                {[...Array(10)].map((_, i) => (
-                  <div
-                    key={`pixel-flower-${i}`}
-                    className="absolute bottom-5"
-                    style={{ left: `${8 + i * 9}%` }}
-                  >
-                    <div className="w-3 h-3 rounded-full" style={{
-                      background: ["#ff9999", "#ffcc66", "#ff66b2", "#66ccff"][i % 4],
-                      boxShadow: `3px 0 0 ${["#ff9999", "#ffcc66", "#ff66b2", "#66ccff"][i % 4]}, -3px 0 0 ${["#ff9999", "#ffcc66", "#ff66b2", "#66ccff"][i % 4]}, 0 3px 0 ${["#ff9999", "#ffcc66", "#ff66b2", "#66ccff"][i % 4]}, 0 -3px 0 ${["#ff9999", "#ffcc66", "#ff66b2", "#66ccff"][i % 4]}`,
-                      imageRendering: "pixelated",
-                    }} />
-                  </div>
-                ))}
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-      
-
-
-      <div
-        ref={shaderContainerRef}
-        className={`fixed inset-0 z-0 transition-opacity duration-700 ${isLoaded ? "opacity-100" : "opacity-0"}`}
-        style={{ contain: "strict" }}
-      >
-        <Shader className="h-full w-full">
-          <Swirl
-            colorA="#F48FB1"
-            colorB="#64B5F6"
-            speed={0.9}
-            detail={0.7}
-            blend={60}
-          />
-          <ChromaFlow
-            baseColor="#F8BBD9"
-            upColor="#64B5F6"
-            downColor="#FFAB91"
-            leftColor="#F48FB1"
-            rightColor="#90CAF9"
-            intensity={0.9}
-            radius={2.0}
-            momentum={30}
-            maskType="alpha"
-            opacity={0.95}
-          />
-        </Shader>
-        <div className="absolute inset-0 bg-black/30" />
+      {/* Pixel Sky Background - Fixed, deeper blue */}
+      <div className="fixed inset-0 z-0">
+        <div
+          className="absolute inset-0"
+          style={{
+            background: "linear-gradient(180deg, #0D47A1 0%, #1565C0 15%, #1E88E5 35%, #42A5F5 55%, #64B5F6 75%, #90CAF9 100%)",
+          }}
+        />
+        {/* Pixel grid overlay */}
+        <div
+          className="absolute inset-0 opacity-[0.02]"
+          style={{
+            backgroundImage: `
+              linear-gradient(rgba(0,0,0,0.5) 1px, transparent 1px),
+              linear-gradient(90deg, rgba(0,0,0,0.5) 1px, transparent 1px)
+            `,
+            backgroundSize: "4px 4px",
+          }}
+        />
       </div>
 
-      <div
-        ref={pixelRootRef}
-        className={`pixel-farm-transition relative z-10 flex min-h-screen flex-col pt-24 md:pt-24 lg:pt-32 pb-12 md:pb-16 lg:pb-24 transition-all duration-700 ${isLoaded ? "opacity-100" : "opacity-0"} ${pixelPhase >= 1 ? "pixel-transforming" : ""}`}
-        style={pixelPhase >= 1 ? { 
-          filter: `contrast(${1 + pixelPhase * 0.1}) saturate(${1 + pixelPhase * 0.15})`,
-          transition: "filter 0.5s ease"
-        } : undefined}>
-        <section className="flex flex-1 flex-col items-center justify-center gap-6 px-4 py-8 md:px-8 md:py-10 lg:flex-row lg:gap-10 lg:px-14">
-          <div className="flex flex-col items-center text-center lg:w-1/2 lg:items-start lg:text-left">
+      {/* Background Clouds - Behind hero text, z-[5] */}
+      <div className="fixed inset-0 z-[5] pointer-events-none overflow-hidden">
+        {/* Cloud 1 - top left corner */}
+        <motion.div
+          className="absolute"
+          style={{ top: "3%", y: cloud1Y }}
+          initial={{ x: "15vw" }}
+          animate={{ x: ["15vw", "80vw", "15vw"] }}
+          transition={{ duration: 35, repeat: Infinity, ease: "linear" }}
+        >
+          <PixelCloud className="w-40 md:w-52 h-auto opacity-85" />
+        </motion.div>
+
+        {/* Cloud 2 - top right */}
+        <motion.div
+          className="absolute"
+          style={{ top: "6%", y: cloud2Y }}
+          initial={{ x: "65vw" }}
+          animate={{ x: ["65vw", "10vw", "65vw"] }}
+          transition={{ duration: 32, repeat: Infinity, ease: "linear" }}
+        >
+          <PixelCloud className="w-36 md:w-44 h-auto opacity-80" />
+        </motion.div>
+      </div>
+
+      {/* Foreground Clouds - OVER content (genre boxes & buttons), z-30 */}
+      <div className="fixed inset-0 z-30 pointer-events-none overflow-hidden">
+        <motion.div
+          className="absolute"
+          style={{ top: "55%", y: cloud3Y }}
+          initial={{ x: "25vw" }}
+          animate={{ x: ["25vw", "85vw", "25vw"] }}
+          transition={{ duration: 28, repeat: Infinity, ease: "linear" }}
+        >
+          <PixelCloud className="w-44 md:w-56 h-auto opacity-88" />
+        </motion.div>
+
+        <motion.div
+          className="absolute"
+          style={{ top: "68%", y: cloud4Y }}
+          initial={{ x: "70vw" }}
+          animate={{ x: ["70vw", "5vw", "70vw"] }}
+          transition={{ duration: 30, repeat: Infinity, ease: "linear" }}
+        >
+          <PixelCloud className="w-40 md:w-50 h-auto opacity-85" />
+        </motion.div>
+
+        <motion.div
+          className="absolute"
+          style={{ top: "82%", y: cloud1Y }}
+          initial={{ x: "40vw" }}
+          animate={{ x: ["40vw", "90vw", "40vw"] }}
+          transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
+        >
+          <PixelCloud className="w-48 md:w-60 h-auto opacity-90" />
+        </motion.div>
+
+        <motion.div
+          className="absolute"
+          style={{ top: "92%", y: cloud2Y }}
+          initial={{ x: "8vw" }}
+          animate={{ x: ["8vw", "60vw", "8vw"] }}
+          transition={{ duration: 33, repeat: Infinity, ease: "linear" }}
+        >
+          <PixelCloud className="w-42 md:w-54 h-auto opacity-82" />
+        </motion.div>
+      </div>
+
+      {/* Main Content */}
+      <div className="relative z-10">
+        {/* Section 1: Hero (100vh) */}
+        <section className="min-h-screen flex flex-col items-center justify-center px-6 pt-20">
+          <motion.div
+            className="text-center"
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 1, delay: 0.3 }}
+          >
+            {/* Floating animation wrapper */}
             <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 1.2 }}
-              className="mb-6"
+              animate={{ y: [0, -12, 0] }}
+              transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
             >
-              <p 
-                data-pixel-item
-                data-pixel-kind="text"
-                className={`font-sans text-4xl font-light tracking-tight md:text-5xl lg:text-6xl transition-all duration-500 ${
-                  pixelPhase >= 1 ? "text-[#8b6914]" : "text-foreground"
-                }`}
-                style={pixelPhase >= 1 ? { textShadow: "3px 3px 0 rgba(0,0,0,0.2)" } : undefined}
+              <p className="text-4xl md:text-5xl lg:text-7xl font-bold text-gray-800 mb-6 font-sans">
+                {t.welcome}
+              </p>
+              
+              {/* CWrite */}
+              <motion.h1 
+                className="text-[7rem] md:text-[10rem] lg:text-[16rem] font-bold leading-none tracking-tight font-sans"
+                style={{
+                  background: "linear-gradient(135deg, #FF6B9D 0%, #FFD93D 25%, #FF6B9D 50%, #FFD93D 75%, #FF6B9D 100%)",
+                  backgroundSize: "200% 200%",
+                  WebkitBackgroundClip: "text",
+                  WebkitTextFillColor: "transparent",
+                  backgroundClip: "text",
+                }}
+                animate={{
+                  backgroundPosition: ["0% 50%", "100% 50%", "0% 50%"],
+                }}
+                transition={{ duration: 5, repeat: Infinity, ease: "linear" }}
               >
-                <PixelRevealText
-                  text={t.welcome}
-                  baseClassName="font-sans"
-                  pixelStyle={pixelPhase >= 1 ? { color: "#8b6914" } : undefined}
-                />
-              </p>
-              <h1 
-                data-pixel-item
-                data-pixel-kind="text"
-                className={`font-baloo text-7xl font-bold leading-none tracking-tight md:text-8xl lg:text-[12rem] transition-all duration-500 ${
-                  pixelPhase >= 1 
-                    ? "text-[#7ec850]" 
-                    : "bg-gradient-to-r from-pink-400 via-yellow-400 to-pink-400 bg-clip-text text-transparent"
-                }`}
-                style={pixelPhase >= 1 ? { 
-                  textShadow: "6px 6px 0 #5a9a32, 12px 12px 0 rgba(0,0,0,0.2)",
-                  WebkitTextStroke: "3px #5a9a32",
-                } : undefined}
-              >
-                {pixelPhase >= 1 ? (
-                  <PixelRevealText
-                    text="CWrite"
-                    // Keep size from the h1; only pixel overlay should apply font.
-                    baseClassName=""
-                    pixelStyle={{ color: "#7ec850", WebkitTextStroke: "0px transparent" }}
-                  />
-                ) : (
-                  "CWrite"
-                )}
-              </h1>
+                CWrite
+              </motion.h1>
             </motion.div>
+          </motion.div>
 
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 1.4 }}
-              className="mb-6 md:mb-7"
-            >
-              <p data-pixel-item data-pixel-kind="text" className="font-sans text-2xl font-medium text-foreground/90 md:text-3xl lg:text-4xl">
-                <PixelRevealText
-                  text={t.subtitleTop}
-                  baseClassName="font-sans"
-                  pixelStyle={pixelPhase >= 1 ? { color: "rgba(17,24,39,0.9)" } : { color: "rgba(17,24,39,0.9)" }}
-                />
-              </p>
-              <p data-pixel-item data-pixel-kind="text" className="mt-2 font-sans text-lg text-foreground/70 md:text-xl lg:text-2xl">
-                <PixelRevealText
-                  text={t.subtitleBottom}
-                  baseClassName="font-sans"
-                  pixelStyle={pixelPhase >= 1 ? { color: "rgba(17,24,39,0.7)" } : { color: "rgba(17,24,39,0.7)" }}
-                />
-              </p>
-            </motion.div>
+          <motion.div
+            className="mt-10 text-center"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.8 }}
+          >
+            <p className="text-3xl md:text-5xl lg:text-6xl font-bold text-gray-800 font-sans">
+              {t.subtitleTop}
+            </p>
+            <p className="text-2xl md:text-4xl lg:text-5xl font-bold text-gray-700 mt-4 font-sans">
+              {t.subtitleBottom}
+            </p>
+          </motion.div>
 
-            <motion.p
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 1, delay: 2.1 }}
-              data-pixel-item
-              data-pixel-kind="text"
-              className="font-caveat text-3xl font-bold md:text-4xl lg:text-5xl"
-              style={{ textShadow: "0 2px 20px rgba(0,0,0,0.5), 0 0 40px rgba(255,255,255,0.3)" }}
-            >
-              <span className="text-white">
-                <PixelRevealText
-                  text={t.tagline}
-                  baseClassName="font-caveat"
-                  pixelStyle={{ color: "#ffffff" }}
-                />
-              </span>
-            </motion.p>
-          </div>
+          <motion.p
+            className="mt-8 text-2xl md:text-4xl lg:text-5xl font-bold text-gray-600 font-sans italic"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 0.9 }}
+            transition={{ duration: 1, delay: 1.2 }}
+          >
+            {t.tagline}
+          </motion.p>
+        </section>
 
-          <div className="flex flex-col items-center lg:w-1/2">
-            <div data-pixel-item data-pixel-kind="panel" className="mb-10 md:mb-12 w-full transition-all duration-300 md:origin-top md:scale-[0.86] lg:scale-100">
-              <MagneticCards
-                cards={genreCards}
-                activeCard={activeGenre}
-                onCardClick={handleCardClick}
-                animationDuration={0.8}
-                staggerDelay={0.15}
-                delayStart={1}
-              />
+        {/* Section 2: The 5 Writing Genres - closer to tagline, 3 on first row, 2 on second */}
+        <section className="py-12 md:py-16 px-6">
+          <div className="max-w-6xl mx-auto">
+            {/* First row - 3 items */}
+            <div className="flex flex-wrap justify-center gap-8 md:gap-10 lg:gap-12 mb-8 md:mb-10">
+              {genreData.slice(0, 3).map((genre, index) => (
+                <ScrollMorphIcon 
+                  key={genre.id} 
+                  genre={genre} 
+                  index={index}
+                  hoveredId={hoveredGenreId}
+                  setHoveredId={setHoveredGenreId}
+                />
+              ))}
             </div>
-
-            <AnimatePresence>
-              {activeGenre && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  exit={{ opacity: 0, height: 0 }}
-                  transition={{ duration: 0.4 }}
-                  className="mb-8 w-full overflow-hidden"
-                >
-                  <GenreDetails activeGenre={activeGenre} onBack={handleBack} />
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ 
-                opacity: 1, 
-                y: 0,
-                scale: pixelPhase >= 1 ? [1, 1.05, 1] : 1,
-              }}
-              transition={{ duration: 0.8, delay: 2.5 }}
-              className="mt-6 md:mt-8"
-            >
-              <div className="flex flex-col items-center justify-center gap-6">
-                {/* Shared sizing so 3 buttons are equal */}
-                <style jsx>{`
-                  .home-action-btn {
-                    width: min(440px, 90vw);
-                  }
-                  .home-action-inner {
-                    width: 100%;
-                    justify-content: center;
-                  }
-                `}</style>
-                {/* Start a new journey */}
-                {pixelPhase >= 1 ? (
-                  <motion.button
-                    ref={startButtonRef}
-                    data-pixel-item
-                    data-pixel-kind="button"
-                    disabled
-                    className="focus:outline-none disabled:cursor-not-allowed home-action-btn"
-                    initial={{ scale: 1 }}
-                    animate={{
-                      scale: [1, 1.1, 1.05],
-                      boxShadow: [
-                        "4px 4px 0 rgba(0,0,0,0.3)",
-                        "6px 6px 0 rgba(0,0,0,0.4)",
-                        "8px 8px 0 rgba(0,0,0,0.3)",
-                      ],
-                    }}
-                    transition={{ duration: 0.5 }}
-                    style={{
-                      background: "linear-gradient(180deg, #6fcf6f 0%, #4ca84c 100%)",
-                      border: "4px solid #3d8a3d",
-                      boxShadow:
-                        "inset -4px -4px 0 rgba(0,0,0,0.25), inset 4px 4px 0 rgba(255,255,255,0.25), 6px 6px 0 rgba(0,0,0,0.3)",
-                      padding: "16px 34px",
-                      imageRendering: "pixelated",
-                    }}
-                  >
-                    <span
-                      className="flex items-center gap-3 text-base font-bold whitespace-nowrap text-white md:text-xl lg:text-3xl home-action-inner"
-                      style={{ textShadow: "2px 2px 0 rgba(0,0,0,0.3)" }}
-                    >
-                      {t.startButton}
-                      <span className="text-xl md:text-2xl lg:text-4xl">&#9992;</span>
-                    </span>
-                  </motion.button>
-                ) : (
-                  <button
-                    ref={startButtonRef}
-                    onPointerDown={playStartJourneySound}
-                    onClick={handleStartJourneyClick}
-                    disabled={isPixelating}
-                    data-pixel-item
-                    data-pixel-kind="button"
-                    data-click-sound="start-journey"
-                    className="group rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70 disabled:cursor-not-allowed transition-transform duration-200 hover:scale-[1.04] active:scale-[1.0] home-action-btn"
-                  >
-                    <GlassSurface
-                      width="auto"
-                      height="auto"
-                      borderRadius={50}
-                      borderWidth={0.08}
-                      brightness={55}
-                      opacity={0.85}
-                      blur={12}
-                      displace={0.3}
-                    >
-                      <span className="flex items-center gap-3 px-9 py-4 text-base font-bold whitespace-nowrap text-white md:px-11 md:py-5 md:text-xl lg:px-16 lg:py-6 lg:text-3xl transition-all duration-200 group-hover:brightness-110 home-action-inner">
-                        {t.startButton}
-                        <span className="text-xl md:text-2xl lg:text-4xl">&#9992;</span>
-                      </span>
-                    </GlassSurface>
-                  </button>
-                )}
-
-                {/* Continue past journey */}
-                {pixelPhase >= 1 ? (
-                  <motion.button
-                    ref={continueButtonRef}
-                    data-pixel-item
-                    data-pixel-kind="button"
-                    disabled
-                    className="focus:outline-none disabled:cursor-not-allowed home-action-btn"
-                    initial={{ scale: 1 }}
-                    animate={{ scale: [1, 1.06, 1.03] }}
-                    transition={{ duration: 0.5 }}
-                    style={{
-                      background: "linear-gradient(180deg, #6aa8ff 0%, #3b82f6 100%)",
-                      border: "4px solid #1d4ed8",
-                      boxShadow:
-                        "inset -4px -4px 0 rgba(0,0,0,0.25), inset 4px 4px 0 rgba(255,255,255,0.25), 6px 6px 0 rgba(0,0,0,0.3)",
-                      padding: "16px 34px",
-                      imageRendering: "pixelated",
-                    }}
-                  >
-                    <span
-                      className="flex items-center gap-3 text-base font-bold whitespace-nowrap text-white md:text-xl lg:text-3xl home-action-inner"
-                      style={{ textShadow: "2px 2px 0 rgba(0,0,0,0.3)" }}
-                    >
-                      {t.continueButton}
-                      <span className="text-xl md:text-2xl lg:text-4xl">⏮️</span>
-                    </span>
-                  </motion.button>
-                ) : (
-                  <button
-                    ref={continueButtonRef}
-                    onPointerDown={playStartJourneySound}
-                    onClick={handleContinuePastJourneyClick}
-                    disabled={isPixelating}
-                    data-pixel-item
-                    data-pixel-kind="button"
-                    data-click-sound="continue-journey"
-                    className="group rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70 disabled:cursor-not-allowed transition-transform duration-200 hover:scale-[1.04] active:scale-[1.0] home-action-btn"
-                  >
-                    <GlassSurface
-                      width="auto"
-                      height="auto"
-                      borderRadius={50}
-                      borderWidth={0.08}
-                      brightness={55}
-                      opacity={0.85}
-                      blur={12}
-                      displace={0.3}
-                    >
-                      <span className="flex items-center gap-3 px-9 py-4 text-base font-bold whitespace-nowrap text-white md:px-11 md:py-5 md:text-xl lg:px-16 lg:py-6 lg:text-3xl transition-all duration-200 group-hover:brightness-110 home-action-inner">
-                        {t.continueButton}
-                        <span className="text-xl md:text-2xl lg:text-4xl">⏮️</span>
-                      </span>
-                    </GlassSurface>
-                  </button>
-                )}
-
-                {/* Visit my farm */}
-                {pixelPhase >= 1 ? (
-                  <motion.button
-                    ref={farmButtonRef}
-                    data-pixel-item
-                    data-pixel-kind="button"
-                    disabled
-                    className="focus:outline-none disabled:cursor-not-allowed home-action-btn"
-                    initial={{ scale: 1 }}
-                    animate={{ scale: [1, 1.06, 1.03] }}
-                    transition={{ duration: 0.5 }}
-                    style={{
-                      background: "linear-gradient(180deg, #d9c9a6 0%, #c4a574 100%)",
-                      border: "4px solid #8b6914",
-                      boxShadow: "inset -4px -4px 0 rgba(0,0,0,0.25), inset 4px 4px 0 rgba(255,255,255,0.25), 6px 6px 0 rgba(0,0,0,0.3)",
-                      padding: "16px 34px",
-                      imageRendering: "pixelated",
-                    }}
-                  >
-                    <span className="flex items-center gap-3 text-base font-bold whitespace-nowrap text-white md:text-xl lg:text-3xl home-action-inner" style={{ textShadow: "2px 2px 0 rgba(0,0,0,0.3)" }}>
-                      Visit my farm
-                      <span className="text-xl md:text-2xl lg:text-4xl">🏠</span>
-                    </span>
-                  </motion.button>
-                ) : (
-                  <button
-                    ref={farmButtonRef}
-                    onPointerDown={playStartJourneySound}
-                    onClick={handleVisitFarmClick}
-                    disabled={isPixelating}
-                    data-pixel-item
-                    data-pixel-kind="button"
-                    data-click-sound="visit-farm"
-                    className="group rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70 disabled:cursor-not-allowed transition-transform duration-200 hover:scale-[1.04] active:scale-[1.0] home-action-btn"
-                  >
-                    <GlassSurface width="auto" height="auto" borderRadius={50} borderWidth={0.08} brightness={55} opacity={0.85} blur={12} displace={0.3}>
-                      <span className="flex items-center gap-3 px-9 py-4 text-base font-bold whitespace-nowrap text-white md:px-11 md:py-5 md:text-xl lg:px-16 lg:py-6 lg:text-3xl transition-all duration-200 group-hover:brightness-110 home-action-inner">
-                        Visit my farm
-                        <span className="text-xl md:text-2xl lg:text-4xl">🏠</span>
-                      </span>
-                    </GlassSurface>
-                  </button>
-                )}
-              </div>
-            </motion.div>
+            {/* Second row - 2 items */}
+            <div className="flex flex-wrap justify-center gap-8 md:gap-10 lg:gap-12">
+              {genreData.slice(3, 5).map((genre, index) => (
+                <ScrollMorphIcon 
+                  key={genre.id} 
+                  genre={genre} 
+                  index={index + 3}
+                  hoveredId={hoveredGenreId}
+                  setHoveredId={setHoveredGenreId}
+                />
+              ))}
+            </div>
           </div>
         </section>
 
+        {/* Section 3: Bottom Action Buttons - Horizontal, smaller, more distance to footer */}
+        <section className="py-20 md:py-28 px-6 pb-48 md:pb-56">
+          <motion.div
+            className="flex flex-wrap items-center justify-center gap-6 md:gap-8"
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+          >
+            {/* Start a new journey */}
+            <PixelButton 
+              onClick={handleStartJourneyClick}
+              color="#7ec850"
+              borderColor="#5a9a32"
+              isAtBottom={isAtBottom}
+            >
+              Start a new journey
+              <span className="text-2xl md:text-3xl lg:text-4xl">&#9992;</span>
+            </PixelButton>
+
+            {/* Continue past journey */}
+            <PixelButton 
+              onClick={handleContinuePastJourneyClick}
+              color="#64B5F6"
+              borderColor="#1976D2"
+              isAtBottom={isAtBottom}
+            >
+              Continue past journey
+              <span className="text-2xl md:text-3xl lg:text-4xl">&#9198;</span>
+            </PixelButton>
+
+            {/* Visit my farm */}
+            <PixelButton 
+              onClick={handleVisitFarmClick}
+              color="#FFB74D"
+              borderColor="#F57C00"
+              isAtBottom={isAtBottom}
+            >
+              Visit my farm
+              <span className="text-2xl md:text-3xl lg:text-4xl">&#127968;</span>
+            </PixelButton>
+          </motion.div>
+        </section>
       </div>
+
+      {/* Fixed scroll hint at bottom - hide when at bottom or after scroll, show after 5s idle */}
+      <AnimatePresence>
+        {showScrollHint && !isAtBottom && (
+          <motion.div
+            className="fixed bottom-8 left-1/2 -translate-x-1/2 z-40"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            transition={{ duration: 0.4 }}
+          >
+            <motion.div
+              animate={{ y: [0, 8, 0] }}
+              transition={{ duration: 1.5, repeat: Infinity }}
+              className="flex flex-col items-center gap-2 px-6 py-3 rounded-full bg-white/90 backdrop-blur-sm"
+              style={{
+                border: "4px solid #4A9BE8",
+                boxShadow: "0 6px 0 #2E7DD1, 0 8px 16px rgba(0,0,0,0.15)",
+                imageRendering: "pixelated",
+              }}
+            >
+              <span className="text-base md:text-lg font-sans font-bold text-gray-700">{t.scrollHint}</span>
+              {/* Bouncing arrow - hidden at bottom */}
+              <motion.svg 
+                width="24" 
+                height="24" 
+                viewBox="0 0 24 24" 
+                fill="none" 
+                stroke="#4A90D9" 
+                strokeWidth="3"
+                animate={{ y: [0, 4, 0] }}
+                transition={{ duration: 1, repeat: Infinity }}
+              >
+                <path d="M12 5v14M5 12l7 7 7-7" />
+              </motion.svg>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </main>
   )
 }
