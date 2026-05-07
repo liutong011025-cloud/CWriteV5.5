@@ -78,8 +78,8 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
     bubbleScale: 1.20,
     sketchX: 0,
     sketchY: -12,
-    sketchWidth: 1720,
-    sketchHeight: 580,
+    sketchWidth: 1960,
+    sketchHeight: 620,
   })
 
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -540,23 +540,23 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
           </div>
         )}
 
-        <div className={`mt-8 ${showDetailsPanel ? "grid grid-cols-1 md:grid-cols-12 gap-5 md:gap-6 xl:gap-7" : "flex justify-center items-center min-h-[72vh] w-full gap-8"}`}>
+        <div className={`mt-8 ${showDetailsPanel ? "grid grid-cols-1 md:grid-cols-12 gap-5 md:gap-6 xl:gap-7" : "relative flex justify-center items-center min-h-[78vh] w-full"}`}>
           <section
             className={`self-start w-full mx-auto pixel-panel p-5 md:p-6 transition-all duration-700 ${
               showDetailsPanel
-                ? "md:col-span-7 xl:col-span-8"
+                ? "md:col-span-7 xl:col-span-7"
                 : "scale-100"
             }`}
             style={
               showDetailsPanel
                 ? {
                     maxWidth: "100%",
-                    transform: `translate(${layoutConfig.sketchX - 4}px, ${layoutConfig.sketchY}px) scale(0.94)`,
+                    transform: `translate(${layoutConfig.sketchX - 10}px, ${layoutConfig.sketchY + 4}px) scale(0.84)`,
                     transformOrigin: "top center",
                   }
                 : {
-                    maxWidth: `min(${layoutConfig.sketchWidth}px, calc(96vw - 40px))`,
-                    transform: `translate(${layoutConfig.sketchX}px, ${layoutConfig.sketchY}px)`,
+                    maxWidth: `min(${layoutConfig.sketchWidth}px, calc(100vw - 28px))`,
+                    transform: `translate(${layoutConfig.sketchX}px, ${layoutConfig.sketchY - 4}px)`,
                   }
             }
           >
@@ -665,7 +665,7 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
                 ref={containerRef}
                 className="relative overflow-hidden transition-all duration-500"
                 style={{ 
-                  height: `${showDetailsPanel ? Math.max(320, layoutConfig.sketchHeight - 110) : layoutConfig.sketchHeight}px`,
+                  height: `${showDetailsPanel ? Math.max(330, layoutConfig.sketchHeight - 210) : Math.max(640, layoutConfig.sketchHeight)}px`,
                   border: "4px solid #8b6914",
                   boxShadow: "inset 3px 3px 0 rgba(0,0,0,0.1), 4px 4px 0 rgba(0,0,0,0.2)"
                 }}
@@ -711,7 +711,7 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
 
           {!showDetailsPanel && (
             <aside
-              className={`hidden xl:flex relative flex-col items-center justify-end w-[420px] min-h-[620px] transition-all duration-700 ${
+              className={`hidden xl:flex absolute right-4 bottom-0 z-20 flex-col items-center justify-end w-[420px] min-h-[620px] transition-all duration-700 pointer-events-none ${
                 introMascotFading ? "opacity-0" : "opacity-100"
               }`}
               style={{
@@ -739,7 +739,7 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
           )}
 
           <section
-            className={`md:col-span-5 xl:col-span-4 pixel-panel p-5 md:p-6 transition-all duration-500 ${
+            className={`md:col-span-5 xl:col-span-5 pixel-panel p-5 md:p-6 transition-all duration-500 ${
               showDetailsPanel ? "opacity-100 translate-x-0" : "opacity-0 translate-x-8 pointer-events-none hidden md:block"
             }`}
           >
