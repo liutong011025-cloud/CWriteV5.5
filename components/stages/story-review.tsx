@@ -47,7 +47,7 @@ function softBreakLongLine(line: string, keyBase: string, maxWords = STORY_LINE_
     return line ? (
       <span
         className="whitespace-pre-wrap"
-        style={{ overflowWrap: "anywhere", wordBreak: "break-word" }}
+          style={{ overflowWrap: "break-word", wordBreak: "normal" }}
       >
         {chunkLongRuns(line, `${keyBase}-empty`)}
       </span>
@@ -292,10 +292,10 @@ export default function StoryReview({ storyState, onReset, onEdit, onBack, userI
     if (grammarErrors.length === 0) {
       return (
         <div
-          className="w-full min-w-0 max-w-full overflow-x-hidden leading-relaxed text-base"
+          className="w-full min-w-0 max-w-full overflow-visible leading-relaxed text-base"
           style={{
-            overflowWrap: "anywhere",
-            wordBreak: "break-word",
+            overflowWrap: "break-word",
+            wordBreak: "normal",
             color: "#5a4a2a",
           }}
         >
@@ -351,7 +351,7 @@ export default function StoryReview({ storyState, onReset, onEdit, onBack, userI
           result.push(
             <span
               key={`error-${partIndex}-${lineIdx}`}
-              className="relative inline max-w-full min-w-0 break-words align-baseline"
+              className="relative inline max-w-full min-w-0 align-baseline"
               onMouseEnter={() => setHoveredErrorIndex(part.errorIndex!)}
               onMouseLeave={() => setHoveredErrorIndex(null)}
               onClick={() => setClickedErrorIndex(clickedErrorIndex === part.errorIndex ? null : part.errorIndex!)}
@@ -363,14 +363,14 @@ export default function StoryReview({ storyState, onReset, onEdit, onBack, userI
                   color: '#fff',
                   textDecoration: 'underline',
                   textDecorationColor: '#fff',
-                  overflowWrap: "anywhere",
-                  wordBreak: "break-word",
+                  overflowWrap: "break-word",
+                  wordBreak: "normal",
                 }}
               >
                 {softBreakLongLine(line, `err-${partIndex}-${lineIdx}`)}
               </span>
               {isHovered && !isClicked && (
-                <div className="absolute z-50 bottom-full left-0 mb-2 px-3 py-2 text-sm whitespace-nowrap" style={{
+                <div className="absolute z-50 bottom-full left-1/2 mb-2 -translate-x-1/2 px-3 py-2 text-sm whitespace-nowrap" style={{
                   background: "#5a4a2a",
                   color: "#f5e6c8",
                   border: "3px solid #8b6914"
@@ -379,10 +379,13 @@ export default function StoryReview({ storyState, onReset, onEdit, onBack, userI
                 </div>
               )}
               {isClicked && (
-                <div className="absolute z-50 bottom-full left-0 mb-2 px-4 py-3 text-sm max-w-xs" style={{
+                <div className="absolute z-50 bottom-full left-1/2 mb-3 w-[min(24rem,calc(100vw-2rem))] max-w-[calc(100vw-2rem)] -translate-x-1/2 px-4 py-3 text-sm whitespace-normal" style={{
                   background: "#5a4a2a",
                   color: "#f5e6c8",
-                  border: "3px solid #8b6914"
+                  border: "3px solid #8b6914",
+                  boxShadow: "4px 4px 0 rgba(0,0,0,0.25)",
+                  overflowWrap: "break-word",
+                  wordBreak: "normal",
                 }}>
                   {error.issue.includes(':') ? (
                     <>
@@ -392,15 +395,17 @@ export default function StoryReview({ storyState, onReset, onEdit, onBack, userI
                   ) : (
                     <div className="font-bold mb-2" style={{ color: "#e74c3c" }}>Issue: {error.issue}</div>
                   )}
-                  <div className="mb-2">
+                  <div className="mb-2 min-w-0">
                     <span style={{ color: "#8b6914" }}>Original: </span>
-                    <span style={{ color: "#d9c9a6" }}>{error.original}</span>
+                    <span style={{ color: "#d9c9a6", overflowWrap: "break-word", wordBreak: "normal" }}>{error.original}</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span style={{ color: "#8b6914" }}>Suggestion: </span>
-                    <span className="font-bold" style={{ color: "#7ec850" }}>{error.corrected}</span>
+                  <div className="space-y-2">
+                    <div className="min-w-0">
+                      <span style={{ color: "#8b6914" }}>Suggestion: </span>
+                      <span className="font-bold" style={{ color: "#7ec850", overflowWrap: "break-word", wordBreak: "normal" }}>{error.corrected}</span>
+                    </div>
                     <span
-                      className="relative inline-flex items-center cursor-pointer ml-2"
+                      className="relative inline-flex items-center cursor-pointer"
                       onMouseEnter={() => setHoveredCorrectionIndex(part.errorIndex!)}
                       onMouseLeave={() => setHoveredCorrectionIndex(null)}
                       onClick={(e) => {
@@ -418,7 +423,7 @@ export default function StoryReview({ storyState, onReset, onEdit, onBack, userI
                         </span>
                       )}
                       {hoveredCorrectionIndex === part.errorIndex && (
-                        <div className="absolute z-50 bottom-full left-0 mb-2 px-3 py-2 text-sm whitespace-nowrap" style={{
+                        <div className="absolute z-50 bottom-full left-1/2 mb-2 -translate-x-1/2 px-3 py-2 text-sm whitespace-nowrap" style={{
                           background: "#5a9a32",
                           color: "#fff",
                           border: "2px solid #3d8a3d"
@@ -436,10 +441,10 @@ export default function StoryReview({ storyState, onReset, onEdit, onBack, userI
           result.push(
             <span
               key={`normal-${partIndex}-${lineIdx}`}
-              className="inline max-w-full min-w-0 break-words align-baseline"
+              className="inline max-w-full min-w-0 align-baseline"
               style={{
-                overflowWrap: "anywhere",
-                wordBreak: "break-word",
+                overflowWrap: "break-word",
+                wordBreak: "normal",
               }}
             >
               {softBreakLongLine(line, `ok-${partIndex}-${lineIdx}`)}
@@ -451,11 +456,11 @@ export default function StoryReview({ storyState, onReset, onEdit, onBack, userI
 
     return (
       <div
-        className="w-full min-w-0 max-w-full overflow-x-hidden leading-relaxed text-base"
+        className="w-full min-w-0 max-w-full overflow-visible leading-relaxed text-base"
         style={{
           color: "#5a4a2a",
-          overflowWrap: "anywhere",
-          wordBreak: "break-word",
+          overflowWrap: "break-word",
+          wordBreak: "normal",
         }}
       >
         {result}
@@ -622,7 +627,7 @@ Created with Story Writer
                 ) : null}
               </p>
               <div
-                className="box-border p-6 min-w-0 w-full max-w-full overflow-x-hidden overflow-y-visible"
+                className="box-border p-6 min-w-0 w-full max-w-full overflow-visible"
                 style={{
                   background: "#fff",
                   border: "4px solid #8b6914",
