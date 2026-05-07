@@ -66,8 +66,6 @@ export async function POST(request: NextRequest) {
     const prompt = `
 You are editing a student's hand-drawn character sketch into a polished character image.
 
-The student's sketch is the hard constraint. Follow it closely, but still polish it into a clean, appealing final illustration.
-
 Keep from the sketch:
 - Overall silhouette and pose
 - Main recognizable shape and costume idea
@@ -91,15 +89,13 @@ Style target:
 
 Output rules:
 - Use the uploaded sketch image as the base reference
-- Preserve the student's core composition, pose, silhouette, and design intent; do not redesign the character
-- Do not over-preserve rough childlike brush texture, shaky hand-drawn edges, uneven coloring, or accidental messiness if they reduce image quality
-- You should refine the linework into cleaner, more readable, more polished illustration lines while keeping the same character design
-- You may improve line quality, edge clarity, shape cleanup, color harmony, lighting, texture, and material rendering
-- You may clarify vague hand-drawn parts and simplify awkward sketch marks when needed to make the same design read better, but do not change the design itself
-- Do not invent new accessories, extra limbs, extra props, background objects, or dramatic style changes
-- Do not replace a simple student design with a more elaborate professional design
-- If the sketch is simple or minimal, keep it simple and minimal while making it cleaner and nicer
-- Respect the student's recognizable shapes, colors, and intent more than aesthetic embellishment, but allow tasteful professional cleanup
+- Keep the same character design, pose, composition, and recognizable silhouette from the sketch
+- This should look visibly edited and polished, not like the original sketch pasted back with only tiny cleanup
+- Clean up rough hand-drawn lines, uneven coloring, messy sketch marks, and accidental wobble
+- Refine the drawing into a neat, appealing final illustration with better edges, cleaner shapes, improved color harmony, and nicer lighting
+- You may simplify unclear sketch marks and clarify ambiguous parts so the same design reads better
+- Keep the character simple if the student's design is simple, but still make it feel like a finished illustration
+- Do not redesign the character or invent new accessories, extra limbs, extra props, background objects, or dramatic style changes
 - Do not add text, logos, watermark, or UI
 - No transparent background, no scene/background elements, white backdrop only
 - Return one final character image only
