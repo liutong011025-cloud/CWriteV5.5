@@ -545,11 +545,13 @@ export default function HomePage({ language = "en", onStartPlan, onContinuePastJ
   const [hasScrolled, setHasScrolled] = useState(false)
   const [showScrollHint, setShowScrollHint] = useState(true)
   const scrollIdleTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const groundTransitionTimerRef = useRef<NodeJS.Timeout | null>(null)
 
   const { scrollYProgress } = useScroll({ target: containerRef })
   
   // Button glow when at bottom
   const [isAtBottom, setIsAtBottom] = useState(false)
+  const [groundTransitionTarget, setGroundTransitionTarget] = useState<"journey" | "farm" | null>(null)
   
   const handleScroll = useCallback(() => {
     setHasScrolled(true)
@@ -574,6 +576,17 @@ export default function HomePage({ language = "en", onStartPlan, onContinuePastJ
       }
     })
   }, [scrollYProgress, handleScroll])
+
+  useEffect(() => {
+    return () => {
+      if (scrollIdleTimerRef.current) {
+        clearTimeout(scrollIdleTimerRef.current)
+      }
+      if (groundTransitionTimerRef.current) {
+        clearTimeout(groundTransitionTimerRef.current)
+      }
+    }
+  }, [])
 
   // Parallax transforms for clouds
   const cloud1Y = useTransform(scrollYProgress, [0, 1], ["0%", "250%"])
@@ -748,8 +761,12 @@ export default function HomePage({ language = "en", onStartPlan, onContinuePastJ
   }
 
   const handleStartJourneyClick = () => {
+    if (groundTransitionTarget) return
     playStartJourneySound()
-    onStartPlan?.()
+    setGroundTransitionTarget("journey")
+    groundTransitionTimerRef.current = setTimeout(() => {
+      onStartPlan?.()
+    }, 850)
   }
 
   const handleContinuePastJourneyClick = () => {
@@ -758,8 +775,12 @@ export default function HomePage({ language = "en", onStartPlan, onContinuePastJ
   }
 
   const handleVisitFarmClick = () => {
+    if (groundTransitionTarget) return
     playStartJourneySound()
-    onVisitFarm?.()
+    setGroundTransitionTarget("farm")
+    groundTransitionTimerRef.current = setTimeout(() => {
+      onVisitFarm?.()
+    }, 850)
   }
 
   const toggleMute = () => {
@@ -879,7 +900,15 @@ export default function HomePage({ language = "en", onStartPlan, onContinuePastJ
       </div>
 
       {/* Main Content */}
-      <div className="relative">
+      <motion.div
+        className="relative"
+        animate={
+          groundTransitionTarget
+            ? { y: -140, scale: 1.02, opacity: 0.96 }
+            : { y: 0, scale: 1, opacity: 1 }
+        }
+        transition={{ duration: 0.85, ease: [0.22, 0.7, 0.2, 1] }}
+      >
         {/* Section 1: Hero (100vh) */}
         <section className="relative z-20 min-h-screen flex flex-col items-center justify-center px-6 pt-20">
           <motion.div
@@ -1074,15 +1103,15 @@ export default function HomePage({ language = "en", onStartPlan, onContinuePastJ
             viewport={{ once: true }}
             transition={{ duration: 0.6 }}
           >
-            {/* Start a new journey */}
+            {/* Visit my farm */}
             <PixelButton 
-              onClick={handleStartJourneyClick}
-              color="#7ec850"
-              borderColor="#5a9a32"
+              onClick={handleVisitFarmClick}
+              color="#FFB74D"
+              borderColor="#F57C00"
               isAtBottom={isAtBottom}
             >
-              Start a new journey
-              <span className="text-2xl md:text-3xl lg:text-4xl">&#9992;</span>
+              Visit my farm
+              <span className="text-2xl md:text-3xl lg:text-4xl">&#127968;</span>
             </PixelButton>
 
             {/* Continue past journey */}
@@ -1096,19 +1125,65 @@ export default function HomePage({ language = "en", onStartPlan, onContinuePastJ
               <span className="text-2xl md:text-3xl lg:text-4xl">&#9198;</span>
             </PixelButton>
 
-            {/* Visit my farm */}
+            {/* Start a new journey */}
             <PixelButton 
-              onClick={handleVisitFarmClick}
-              color="#FFB74D"
-              borderColor="#F57C00"
+              onClick={handleStartJourneyClick}
+              color="#7ec850"
+              borderColor="#5a9a32"
               isAtBottom={isAtBottom}
             >
-              Visit my farm
-              <span className="text-2xl md:text-3xl lg:text-4xl">&#127968;</span>
+              Start a new journey
+              <span className="text-2xl md:text-3xl lg:text-4xl">&#9992;</span>
             </PixelButton>
           </motion.div>
         </section>
-      </div>
+      </motion.div>
+
+      <AnimatePresence>
+        {groundTransitionTarget && (
+          <motion.div
+            className="fixed inset-0 z-[45] pointer-events-none overflow-hidden"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.35 }}
+          >
+            <motion.div
+              className="absolute inset-0"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.5 }}
+              style={{
+                background:
+                  "linear-gradient(180deg, rgba(13,71,161,0) 0%, rgba(13,71,161,0.06) 36%, rgba(55,98,56,0.18) 62%, rgba(80,121,58,0.34) 100%)",
+              }}
+            />
+            <motion.div
+              className="absolute left-1/2 bottom-[-55vh] h-[95vh] w-[165vw] -translate-x-1/2 rounded-[50%]"
+              initial={{ y: "100%" }}
+              animate={{ y: "10%" }}
+              exit={{ y: "100%" }}
+              transition={{ duration: 0.85, ease: [0.22, 0.7, 0.2, 1] }}
+              style={{
+                background:
+                  "radial-gradient(ellipse at center, rgba(170,214,110,0.98) 0%, rgba(127,181,84,0.98) 42%, rgba(93,137,63,0.99) 72%, rgba(67,103,49,1) 100%)",
+                boxShadow: "0 -30px 90px rgba(197, 240, 144, 0.28)",
+              }}
+            />
+            <motion.div
+              className="absolute inset-x-0 bottom-0 h-[45vh]"
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{ duration: 0.85, ease: [0.22, 0.7, 0.2, 1] }}
+              style={{
+                background:
+                  "linear-gradient(180deg, rgba(161,213,108,0) 0%, rgba(150,200,91,0.2) 20%, rgba(121,166,77,0.58) 55%, rgba(88,129,58,0.92) 100%)",
+              }}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Fixed scroll hint at bottom - hide when at bottom or after scroll, show after 5s idle */}
       <AnimatePresence>
