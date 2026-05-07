@@ -6,12 +6,12 @@ import { useState, useCallback, useEffect, useRef } from "react"
 export type CagentMood = "normal" | "like" | "angry"
 
 const IMAGE_MAP: Record<CagentMood, string> = {
-  normal: "/Cagentsit.png",
-  like: "/Cagentlike.png",
-  angry: "/Cagentangry.png",
+  normal: "/Cagentsit.webp",
+  like: "/Cagentlike.webp",
+  angry: "/Cagentangry.webp",
 }
 
-const SLEEP_IMAGE = "/Cagentsleep.png"
+const SLEEP_IMAGE = "/Cagentsleep.webp"
 // 延長入睡時間，讓小熊陪伴更久一點
 const SLEEP_TIMEOUT_MS = 60000
 

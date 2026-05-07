@@ -42,18 +42,6 @@ e2e-test-*.png
 # Research/reference files
 research/
 
-# Large images (keep only essential ones)
-public/farm.png
-public/farm2.png
-public/navigation.png
-public/Background.png
-public/logo.gif
-public/logo.mov
-public/logo.mp4
-
-# Rafael painting
-Rafael_-_El_Parnaso_*.jpg
-
 # Prisma
 prisma/migrations/
 
@@ -61,27 +49,3 @@ prisma/migrations/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-
-# Temporarily exclude large image assets (push separately)
-public/dramacharacter/
-public/magictable.png
-public/library.png
-public/farmbacktomap.png
-public/farmsetting.png
-public/farmwritingboard.png
-public/theirmap.png
-public/visitothersfarm.png
-public/Cagent*.png
-tree*.png
-public/tree*.png
-*.png
-*.jpg
-*.jpeg
-*.gif
-*.mov
-*.mp4
-*.MP3
-*.svg
-*.epub
-*.pdf
-Cagentsit.png

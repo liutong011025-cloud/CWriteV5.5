@@ -75,7 +75,7 @@ export default function JourneyMap({
   const flags = mapFlags ?? []
 
   const pinPosition = pin ?? internalPin
-  const effectiveMapImageUrl = mapImageUrl || (chapterIndex > 0 ? "/secondmap.png" : "/firstmap.png")
+  const effectiveMapImageUrl = mapImageUrl || (chapterIndex > 0 ? "/secondmap.webp" : "/firstmap.webp")
 
   // 设置data-no-header属性，隐藏header
   useEffect(() => {
@@ -156,7 +156,7 @@ export default function JourneyMap({
       className="min-h-screen relative overflow-hidden pt-[96px]"
       style={{
         cursor: isHoldingPin
-          ? 'url("/pin.png") 16 32, pointer'
+          ? 'url("/pin.webp") 16 32, pointer'
           : "default",
       }}
     >
@@ -235,7 +235,7 @@ export default function JourneyMap({
               aria-label="Go to My Farm"
             >
               <img
-                src="/myfarm.png"
+                src="/myfarm.webp"
                 alt="My Farm"
                 className="w-32 h-auto object-contain drop-shadow-lg transition-transform duration-200 hover:scale-105"
                 draggable={false}
@@ -275,7 +275,7 @@ export default function JourneyMap({
                 aria-label="Pick up pin"
               >
                 <img
-                  src="/box.png"
+                  src="/box.webp"
                   alt="Pin box"
                   className="w-28 h-auto object-contain drop-shadow-lg transition-transform duration-200 hover:scale-105"
                   draggable={false}
@@ -303,12 +303,11 @@ export default function JourneyMap({
               >
                 <div className="flex flex-col items-center gap-1">
                   <Image
-                    src="/pin.png"
+                    src="/pin.webp"
                     alt="Writing start pin"
                     width={52}
                     height={52}
                     className="drop-shadow-lg group-hover:scale-110 transition-transform"
-                    unoptimized
                   />
                   <span className="inline-flex items-center gap-1 rounded-full bg-white/95 px-3 py-1 text-xs font-semibold text-purple-700 shadow">
                     <Flag className="w-3 h-3 text-purple-500" />

@@ -241,58 +241,53 @@ export default function Header() {
             {isHomePage && showLogo ? (
               // 首页顶部显示 logosmall
               <Image
-                src="/logosmall.png"
+                src="/logosmall.webp"
                 alt="CWrite"
                 width={96}
                 height={96}
                 className="object-contain w-auto"
                 priority
-                unoptimized
                 style={{ maxHeight: '100%', height: '100%', objectFit: 'contain', width: 'auto' }}
               />
              ) : isHomePage ? (
                // 首页：在顶部悬停时显示 logobig，滚动压缩后显示白色 logo
                isAtTop ? (
                  <Image
-                   src="/logobig.png"
+                   src="/logobig.webp"
                    alt="CWrite"
                    width={120}
                    height={40}
                    className="object-contain h-full w-auto max-w-[110px] md:max-w-[118px] xl:max-w-none"
-                   unoptimized
                    style={{ maxHeight: '100%', height: '100%', objectFit: 'contain', width: 'auto' }}
                  />
                ) : (
                  <Image
-                   src="/logo 白.png"
+                   src="/logo 白.webp"
                    alt="CWrite"
                    width={120}
                    height={40}
                    className="object-contain h-full w-auto max-w-[110px] md:max-w-[118px] xl:max-w-none"
-                   unoptimized
                    style={{ maxHeight: '100%', height: '100%', objectFit: 'contain', width: 'auto' }}
                  />
                )
              ) : isGalleryPage ? (
                // Gallery 页面使用白色 logo
                <Image
-                 src="/logo 白.png"
+                 src="/logo 白.webp"
                  alt="CWrite"
                  width={120}
                  height={40}
                  className="object-contain h-full w-auto max-w-[110px] md:max-w-[118px] xl:max-w-none"
-                 unoptimized
                  style={{ maxHeight: '100%', height: '100%', objectFit: 'contain', width: 'auto' }}
                />
              ) : (
                // 其他非首页压缩状态使用白色 logo
                <Image
-                 src="/logo 白.png"
+                 src="/logo 白.webp"
                  alt="CWrite"
                  width={120}
                  height={40}
                  className="object-contain h-full w-auto max-w-[110px] md:max-w-[118px] xl:max-w-none"
-                 unoptimized
                  style={{ maxHeight: '100%', height: '100%', objectFit: 'contain', width: 'auto' }}
                />
              )}

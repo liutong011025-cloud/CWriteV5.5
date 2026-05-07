@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Ark 图生图同样需要公网可访问 URL；相对路径先补成绝对地址。
-    // 如果傳進來的是類似 "/firstmap.png" 這種相對路徑，這裡補成完整的絕對 URL
+    // 如果傳進來的是類似 "/firstmap.webp" 這種相對路徑，這裡補成完整的絕對 URL
     const resolvedImageUrl = normalizeAbsoluteImageUrl(request, previousMapImageUrl)
     if (!resolvedImageUrl) {
       return NextResponse.json(

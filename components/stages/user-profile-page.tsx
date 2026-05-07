@@ -199,22 +199,22 @@ export default function UserProfilePage({
 
   const farmElements: FarmElementConfig[] = isOtherFarm
     ? [
-        { id: "farmbacktomap", label: "Back", imageSrc: "/farmbacktomap.png" },
-        { id: "farmwrittingboard", label: "Writing Board", imageSrc: "/farmwritingboard.png" },
-        { id: "vistothersfarm", label: "Visit Others' Farms", imageSrc: "/visitothersfarm.png" },
+        { id: "farmbacktomap", label: "Back", imageSrc: "/farmbacktomap.webp" },
+        { id: "farmwrittingboard", label: "Writing Board", imageSrc: "/farmwritingboard.webp" },
+        { id: "vistothersfarm", label: "Visit Others' Farms", imageSrc: "/visitothersfarm.webp" },
       ]
     : [
-    { id: "farmbacktomap", label: "Back to Map", imageSrc: "/farmbacktomap.png" },
-    { id: "farmsetting", label: "Settings", imageSrc: "/farmsetting.png" },
-    { id: "farmwrittingboard", label: "Writing Board", imageSrc: "/farmwritingboard.png" },
-    { id: "vistothersfarm", label: "Visit Others' Farms", imageSrc: "/visitothersfarm.png" },
+    { id: "farmbacktomap", label: "Back to Map", imageSrc: "/farmbacktomap.webp" },
+    { id: "farmsetting", label: "Settings", imageSrc: "/farmsetting.webp" },
+    { id: "farmwrittingboard", label: "Writing Board", imageSrc: "/farmwritingboard.webp" },
+    { id: "vistothersfarm", label: "Visit Others' Farms", imageSrc: "/visitothersfarm.webp" },
   ]
 
   const farmElementStates = getDefaultFarmButtonStates(isOtherFarm)
   const farmTreeStates = DEFAULT_TREE_LAYOUT
   const forestById = new Map(forest.map((tree) => [tree.id, tree] as const))
 
-  const farmBackgroundSrc = "/farm.png"
+  const farmBackgroundSrc = "/farm.webp"
   const farmBackgroundAlt = isOtherFarm ? "Other Student Farm Background" : "My Farm Background"
   const treeCount = 12
 
@@ -928,7 +928,7 @@ export default function UserProfilePage({
                 const isHighlightedTree = treeData && highlightTreeId === treeData.id
                 const isHoveredTree = treeData && hoveredTreeId === treeData.id
                 const treeStage = Math.max(2, Math.min(4, Number(treeData?.stage ?? 2)))
-                const treeImageSrc = treeStage >= 4 ? "/tree4.png" : treeStage >= 3 ? "/tree3.png" : "/tree2.png"
+                const treeImageSrc = treeStage >= 4 ? "/tree4.webp" : treeStage >= 3 ? "/tree3.webp" : "/tree2.webp"
                 const treeBaseSizePercent = treeStage >= 4 ? 11.2 : 8
                 const treeTop = treeStage >= 4 ? treeState.y + 3.6 : treeState.y
                 const treeLeft = treeStage >= 4 ? treeState.x + 1.2 : treeState.x
@@ -1194,7 +1194,7 @@ export default function UserProfilePage({
               }}
             >
               <img
-                src="/whitelogo.png"
+                src="/whitelogo.webp"
                 alt="Sweater logo"
                 className="w-10 h-10 object-contain select-none"
                 draggable={false}

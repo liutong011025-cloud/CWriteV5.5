@@ -731,7 +731,7 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
                 Let&apos;s see who can draw it more Realistic !
               </div>
               <img
-                src="/Cagentdraw.png"
+                src="/Cagentdraw.webp"
                 alt="Drawing Cagent"
                 className="w-[380px] h-auto object-contain drop-shadow-2xl"
               />

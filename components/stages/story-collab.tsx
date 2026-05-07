@@ -328,10 +328,10 @@ export default function StoryCollab({
 
   const bearSrc =
     writingMood === "angry"
-      ? "/Cagentangry.png"
+      ? "/Cagentangry.webp"
       : writingMood === "like"
-        ? "/Cagentlike.png"
-        : "/Cagentsit.png"
+        ? "/Cagentlike.webp"
+        : "/Cagentsit.webp"
 
   const updateWritingMoodFromText = useCallback((text: string) => {
     const lower = text.toLowerCase()

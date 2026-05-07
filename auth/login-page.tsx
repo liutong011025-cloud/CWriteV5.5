@@ -63,7 +63,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
         <div 
           className="absolute top-0 left-0 w-full h-full bg-cover bg-no-repeat"
           style={{
-            backgroundImage: 'url(/Background.png)',
+            backgroundImage: 'url(/Background.webp)',
             backgroundPosition: 'left top',
             backgroundSize: 'cover',
             filter: 'blur(8px) brightness(0.7)',
@@ -87,13 +87,12 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
           <div className="text-center mb-6">
             <div className="mb-3 mt-6 flex justify-center">
               <Image
-                src="/logo.png"
+                src="/logo.webp"
                 alt="CWrite Logo"
                 width={350}
                 height={350}
                 className="object-contain animate-pulse"
                 priority
-                unoptimized
               />
             </div>
             <p className="text-gray-700 font-semibold">Login to start your creative journey</p>

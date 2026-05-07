@@ -210,12 +210,11 @@ export default function BookSelection({ language = "en", onBookSelected, onBack,
       {/* 图书馆背景图片 - 使用 absolute 定位，避免相对位移 */}
       <div className="absolute inset-0 z-0">
         <Image
-          src="/library.png"
+          src="/library.webp"
           alt="Library"
           fill
           className="object-cover"
           priority
-          unoptimized
         />
         {/* 顶部渐变虚化 */}
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-amber-50/30 pointer-events-none"></div>

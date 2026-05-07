@@ -26,13 +26,13 @@ interface TeamMember {
 }
 
 const topRow: TeamMember[] = [
-  { id: 1, name: "Dr. YANG, Yin Nicole (PhD)", role: "Principal Investigator", subtitle: "Research Assistant Professor", image: "/Nicole.png", bio: "Dr. Yang earned her Ph.D. in education from the Education University of Hong Kong, focusing on self-regulated learning in computer-assisted learning environments (e.g., language education). She also holds an MSc in Information Technology in Education from the University of Hong Kong, as well as a bachelor's degree in English education and linguistics. She is a visiting scholar of Paris-Saclay University in 2025, and the University of Munich in 2024." },
-  { id: 2, name: "Prof. LEE, Chi Kin John, JP (PhD)", role: "Co-Principal Investigator & Advisor", subtitle: "Chair Professor of Curriculum and Instruction", image: "/john.png", bio: "Professor Lee graduated from The University of Hong Kong and subsequently received an MSc degree from the University of Oxford, and an MA (Education), PhD and Diploma in Education (with distinction) from CUHK. His research interests focus on curriculum and instruction, geographical and environmental education, life and values education, and teacher development and school improvement. Professor Lee was named among the top 1% most-cited scientists in the world (Stanford University)." },
+  { id: 1, name: "Dr. YANG, Yin Nicole (PhD)", role: "Principal Investigator", subtitle: "Research Assistant Professor", image: "/Nicole.webp", bio: "Dr. Yang earned her Ph.D. in education from the Education University of Hong Kong, focusing on self-regulated learning in computer-assisted learning environments (e.g., language education). She also holds an MSc in Information Technology in Education from the University of Hong Kong, as well as a bachelor's degree in English education and linguistics. She is a visiting scholar of Paris-Saclay University in 2025, and the University of Munich in 2024." },
+  { id: 2, name: "Prof. LEE, Chi Kin John, JP (PhD)", role: "Co-Principal Investigator & Advisor", subtitle: "Chair Professor of Curriculum and Instruction", image: "/john.webp", bio: "Professor Lee graduated from The University of Hong Kong and subsequently received an MSc degree from the University of Oxford, and an MA (Education), PhD and Diploma in Education (with distinction) from CUHK. His research interests focus on curriculum and instruction, geographical and environmental education, life and values education, and teacher development and school improvement. Professor Lee was named among the top 1% most-cited scientists in the world (Stanford University)." },
 ]
 const bottomRow: TeamMember[] = [
-  { id: 3, name: "Prof. GU, Ming Yue Michelle (PhD)", role: "Co-Investigator", subtitle: "Professor, Assistant Vice President (Research)", image: "/apple.png", bio: "Michelle Gu Mingyue was Assistant Professor at The Chinese University of Hong Kong (CUHK) from 2012 to 2017. As a researcher in sociolinguistics, Professor Gu adopts multi-disciplinary approaches to explore the individual-context interplay mediated by languages and semiotics. She has theorised the concept of Digital Trans-literacies and has developed theoretical frameworks to advance the areas of language and identity, multilingualism and mobility, and family language policy." },
-  { id: 4, name: "Dr. WONG, Ming Har Ruth (PhD)", role: "Co-Investigator", subtitle: "Associate Head of Department, Assistant Professor", image: "/ruth.png", bio: "Dr. Ruth Wong is an assistant professor at the Department of English Language Education. She joined the university in 2004 and has published research articles in international journals as well as several textbooks and teaching resources for schools in Hong Kong." },
-  { id: 5, name: "Mr. LIU, Tong Tony", role: "Research Assistant", subtitle: "Graduate of AI & Educational Technology, EdUHK", image: "/Tony.png", bio: "Graduate of AI & Educational Technology, EdUHK. Research interests in AI and design, robotics automation, and STEM." },
+  { id: 3, name: "Prof. GU, Ming Yue Michelle (PhD)", role: "Co-Investigator", subtitle: "Professor, Assistant Vice President (Research)", image: "/apple.webp", bio: "Michelle Gu Mingyue was Assistant Professor at The Chinese University of Hong Kong (CUHK) from 2012 to 2017. As a researcher in sociolinguistics, Professor Gu adopts multi-disciplinary approaches to explore the individual-context interplay mediated by languages and semiotics. She has theorised the concept of Digital Trans-literacies and has developed theoretical frameworks to advance the areas of language and identity, multilingualism and mobility, and family language policy." },
+  { id: 4, name: "Dr. WONG, Ming Har Ruth (PhD)", role: "Co-Investigator", subtitle: "Associate Head of Department, Assistant Professor", image: "/ruth.webp", bio: "Dr. Ruth Wong is an assistant professor at the Department of English Language Education. She joined the university in 2004 and has published research articles in international journals as well as several textbooks and teaching resources for schools in Hong Kong." },
+  { id: 5, name: "Mr. LIU, Tong Tony", role: "Research Assistant", subtitle: "Graduate of AI & Educational Technology, EdUHK", image: "/Tony.webp", bio: "Graduate of AI & Educational Technology, EdUHK. Research interests in AI and design, robotics automation, and STEM." },
 ]
 
 const methods = [
@@ -151,7 +151,7 @@ export default function AboutPage({
             width: "120vw",
             height: "100%",
             minHeight: "calc(100vh + 88px)",
-            backgroundImage: "url(/flower.png)",
+            backgroundImage: "url(/flower.webp)",
             backgroundRepeat: "repeat",
             backgroundSize: "420px",
             backgroundPosition: "center",
@@ -232,7 +232,7 @@ export default function AboutPage({
         </div>
         <div className="max-w-7xl mx-auto relative z-10">
           <div className="flex justify-center mb-12">
-            <Image src="/logobig.png" alt="CWrite" width={400} height={200} className="object-contain group-hover:scale-105 transition-transform duration-500" unoptimized />
+            <Image src="/logobig.webp" alt="CWrite" width={400} height={200} className="object-contain group-hover:scale-105 transition-transform duration-500" />
           </div>
           <div className="text-center mb-10">
             <div className="inline-flex items-center px-8 py-4 bg-card border-4 border-foreground rounded-[2rem] text-card-foreground font-black mb-8 shadow-brutal hover:scale-105 transition-transform duration-300">
@@ -311,7 +311,7 @@ export default function AboutPage({
       {/* ========== Philosophy：背景用 background.png（與 Research 的 Background.png 區分）========== */}
       <section className={`${showVisionPage ? "" : "hidden"} py-0 relative overflow-hidden`}>
         <div className="relative min-h-[600px] md:min-h-[700px] flex items-center justify-center">
-          <Image src="/background.png" alt="" fill className="object-cover object-center" unoptimized />
+          <Image src="/background.webp" alt="" fill className="object-cover object-center" />
           <div className="absolute inset-0 bg-black/55" />
           <div className="absolute top-6 left-6 z-20 px-4 py-2 bg-white/10 backdrop-blur-md rounded-[1rem] border border-white/20">
             <p className="text-white/90 text-xs font-semibold leading-tight">Primavera (Botticelli)</p>
@@ -401,7 +401,7 @@ export default function AboutPage({
         className={`${showResearchPage ? "" : "hidden"} pb-16 md:pb-24 px-4 relative overflow-hidden`}
       >
         <div className={`absolute inset-0 transition-opacity duration-1000 ${teamVisible ? "opacity-100" : "opacity-0"}`}>
-          <Image src="/Background.png" alt="" fill className="object-cover" unoptimized />
+          <Image src="/Background.webp" alt="" fill className="object-cover" />
           <div className="absolute inset-0 bg-background/40" />
         </div>
         <div className="max-w-6xl mx-auto relative z-10">
@@ -428,7 +428,7 @@ export default function AboutPage({
                 onMouseLeave={() => setHoveredTeamId(null)}
               >
                 <div className="relative h-64 flex items-center justify-center overflow-hidden bg-card">
-                  <Image src={member.image} alt={member.name} fill className="object-contain object-top group-hover:scale-105 transition-transform duration-500" unoptimized />
+                  <Image src={member.image} alt={member.name} fill className="object-contain object-top group-hover:scale-105 transition-transform duration-500" />
                   <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                   <div className={`absolute inset-0 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 transition-all duration-500 ${hoveredTeamId === member.id ? "opacity-100" : "opacity-0"}`}>
                     <p className="text-white text-xs leading-relaxed text-center">{member.bio}</p>
@@ -454,7 +454,7 @@ export default function AboutPage({
                 onMouseLeave={() => setHoveredTeamId(null)}
               >
                 <div className="relative h-72 flex items-center justify-center overflow-hidden bg-card">
-                  <Image src={member.image} alt={member.name} fill className="object-contain object-top group-hover:scale-105 transition-transform duration-500" unoptimized />
+                  <Image src={member.image} alt={member.name} fill className="object-contain object-top group-hover:scale-105 transition-transform duration-500" />
                   <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                   <div className={`absolute inset-0 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 transition-all duration-500 ${hoveredTeamId === member.id ? "opacity-100" : "opacity-0"}`}>
                     <p className="text-white text-xs leading-relaxed text-center">{member.bio}</p>

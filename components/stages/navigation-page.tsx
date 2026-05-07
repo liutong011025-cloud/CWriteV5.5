@@ -121,7 +121,7 @@ export default function NavigationPage({ onBack, onSelectFarm, currentUsername }
       <div ref={containerRef} className="fixed inset-0 w-full h-full overflow-hidden bg-[#9fc9da]">
         <img
           ref={imgRef}
-          src="/navigation.png"
+          src="/navigation.webp"
           alt="Navigation"
           className="absolute inset-0 w-full h-full object-center"
           style={{ objectFit: preferFullImage ? "contain" : "cover" }}

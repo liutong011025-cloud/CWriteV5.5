@@ -158,7 +158,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
         <div 
           className="absolute top-0 left-0 w-full h-full bg-cover bg-no-repeat"
           style={{
-            backgroundImage: 'url(/Background.png)',
+            backgroundImage: 'url(/Background.webp)',
             backgroundPosition: 'left top',
             backgroundSize: 'cover',
             filter: 'blur(4px) brightness(0.8)',
@@ -190,7 +190,6 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
                     height={200}
                     className="object-contain"
                     priority
-                    unoptimized
                   />
                 </div>
                 <p className="text-white font-semibold text-lg">Choose your role to continue</p>
@@ -231,7 +230,6 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
                     height={220}
                     className="object-contain"
                     priority
-                    unoptimized
                   />
                 </div>
                 <p className="text-white font-semibold text-base md:text-lg">

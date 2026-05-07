@@ -372,7 +372,6 @@ export default function GalleryPage({ currentUser = null, currentUserRole = null
                   alt={expandedArticle.bookTitle || "Book cover"}
                   fill
                   className="object-cover"
-                  unoptimized
                 />
               </div>
             )}
@@ -500,11 +499,10 @@ export default function GalleryPage({ currentUser = null, currentUserRole = null
               style={{ border: "4px solid #8b6914", background: "#d9c9a6" }}
             >
               <Image
-                src="/libraryMan.png"
+                src="/libraryMan.webp"
                 alt="Luminai Librarian"
                 fill
                 className="object-cover scale-110"
-                unoptimized
               />
             </div>
 

@@ -1237,7 +1237,7 @@ export default function HomePage({ language = "en", onStartPlan, onContinuePastJ
         title={isMuted ? "Turn sound on" : "Turn sound off"}
       >
         <Image
-          src={isMuted ? "/speakeroff.png" : "/speaker on.png"}
+          src={isMuted ? "/speakeroff.webp" : "/speaker on.webp"}
           alt={isMuted ? "Sound off" : "Sound on"}
           width={44}
           height={44}

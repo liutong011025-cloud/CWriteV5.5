@@ -228,12 +228,11 @@ export default function LetterEdit({
                     {/* Luna Avatar - 无边框无阴影 */}
                     <div className="flex-shrink-0">
                       <Image
-                        src="/muse-avatar.png"
+                        src="/muse-avatar.webp"
                         alt="Luna"
                         width={60}
                         height={60}
                         className="rounded-full"
-                        unoptimized
                       />
                     </div>
                     <div className="flex-1 min-w-0">

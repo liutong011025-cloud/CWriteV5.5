@@ -150,7 +150,7 @@ const getMapStateKey = (username: string) => `cwriteMapState:${username}`
 const getPlanTestResultKey = (username: string) => `cwritePlanTestResult:${username}`
 
 const getChapterBaseMapImageUrl = (chapterIndex: number) => {
-  return chapterIndex <= 0 ? "/firstmap.png" : "/secondmap.png"
+  return chapterIndex <= 0 ? "/firstmap.webp" : "/secondmap.webp"
 }
 
 interface PersistedMapChaptersState {

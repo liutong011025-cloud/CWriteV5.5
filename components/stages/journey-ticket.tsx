@@ -234,7 +234,7 @@ export default function JourneyTicket({
                 >
                   <div className="relative">
                     <Image
-                      src="/logo.png"
+                      src="/logo.webp"
                       alt="Stamp"
                       width={120}
                       height={120}

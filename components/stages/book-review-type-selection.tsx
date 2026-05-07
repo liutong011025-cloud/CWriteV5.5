@@ -95,7 +95,7 @@ const getReviewTypes = (language: Language = "en") => {
       id: "recommendation" as const,
       name: t.recommendation.name,
       emoji: "⭐",
-      image: "/d1.png",
+      image: "/d1.webp",
       description: t.recommendation.description,
       features: t.recommendation.features
     },
@@ -103,7 +103,7 @@ const getReviewTypes = (language: Language = "en") => {
       id: "critical" as const,
       name: t.critical.name,
       emoji: "🔍",
-      image: "/d2.png",
+      image: "/d2.webp",
       description: t.critical.description,
       features: t.critical.features
     },
@@ -111,7 +111,7 @@ const getReviewTypes = (language: Language = "en") => {
       id: "literary" as const,
       name: t.literary.name,
       emoji: "📚",
-      image: "/d3.png",
+      image: "/d3.webp",
       description: t.literary.description,
       features: t.literary.features
     }
@@ -291,7 +291,7 @@ export default function BookReviewTypeSelection({ language = "en", bookTitle, on
                       className="w-full relative cursor-pointer transition-all duration-300 hover:scale-105"
                       style={{ height: "550px" }}
                     >
-                      <Image src={type.image} alt={type.name} fill className="object-cover" unoptimized />
+                      <Image src={type.image} alt={type.name} fill className="object-cover" />
                     </button>
                   </div>
                 )

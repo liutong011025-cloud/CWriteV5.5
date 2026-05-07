@@ -540,12 +540,12 @@ export default function BookReviewWriting({
                       <img
                         src={
                           writingMood === "angry"
-                            ? "/Cagentangry.png"
+                            ? "/Cagentangry.webp"
                             : writingMood === "like"
-                            ? "/Cagentlike.png"
+                            ? "/Cagentlike.webp"
                             : writingMood === "hang"
-                            ? "/Cagenthang.png"
-                            : "/Cagentsit.png"
+                            ? "/Cagenthang.webp"
+                            : "/Cagentsit.webp"
                         }
                         alt="Cagent"
                         className="h-28 w-28 md:h-32 md:w-32 object-contain drop-shadow-lg"
@@ -676,7 +676,6 @@ export default function BookReviewWriting({
                       alt={`Cover of ${bookTitle}`}
                       fill
                       className="object-cover"
-                      unoptimized
                     />
                   </div>
                 ) : (

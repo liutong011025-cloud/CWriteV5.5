@@ -394,7 +394,6 @@ export default function BookReviewComplete({
                       alt={`Cover of ${bookTitle}`}
                       fill
                       className="object-cover"
-                      unoptimized
                     />
                   </div>
                 ) : (

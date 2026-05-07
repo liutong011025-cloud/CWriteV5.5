@@ -71,7 +71,7 @@ function GuidedWriting({ language, storyState, onStoryWrite, onBack, userId, onD
   // Preload bear images
   useEffect(() => {
     if (typeof window === "undefined") return
-    const sources = ["/Cagentsit.png", "/Cagenthang.png", "/Cagentlike.png", "/Cagentangry.png"]
+    const sources = ["/Cagentsit.webp", "/Cagenthang.webp", "/Cagentlike.webp", "/Cagentangry.webp"]
     sources.forEach((src) => {
       const img = new window.Image()
       img.src = src
@@ -290,10 +290,10 @@ function GuidedWriting({ language, storyState, onStoryWrite, onBack, userId, onD
   }
 
   const bearSrc =
-    writingMood === "angry" ? "/Cagentangry.png"
-    : writingMood === "like" ? "/Cagentlike.png"
-    : writingMood === "hang" ? "/Cagenthang.png"
-    : "/Cagentsit.png"
+    writingMood === "angry" ? "/Cagentangry.webp"
+    : writingMood === "like" ? "/Cagentlike.webp"
+    : writingMood === "hang" ? "/Cagenthang.webp"
+    : "/Cagentsit.webp"
 
   const allDone = sections.every((_, i) => sectionDone[i])
 
@@ -392,7 +392,7 @@ function GuidedWriting({ language, storyState, onStoryWrite, onBack, userId, onD
                 {chatMessages.map(msg => (
                   <div key={msg.id} className={`flex items-end gap-2 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                     {msg.role === 'ai' && (
-                      <img src="/Cagentsit.png" alt="" className="h-7 w-7 object-contain shrink-0" />
+                      <img src="/Cagentsit.webp" alt="" className="h-7 w-7 object-contain shrink-0" />
                     )}
                     <div
                       className={`max-w-[82%] px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap ${

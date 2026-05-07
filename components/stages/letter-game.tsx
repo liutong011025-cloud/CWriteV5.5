@@ -70,7 +70,7 @@ export default function LetterGame({
 
   useEffect(() => {
     if (typeof window === "undefined") return
-    const sources = ["/Cagentsit.png", "/Cagenthang.png", "/Cagentlike.png", "/Cagentangry.png"]
+    const sources = ["/Cagentsit.webp", "/Cagenthang.webp", "/Cagentlike.webp", "/Cagentangry.webp"]
     sources.forEach((src) => {
       const img = new window.Image()
       img.src = src
@@ -376,12 +376,12 @@ export default function LetterGame({
                       <img
                         src={
                           writingMood === "angry"
-                            ? "/Cagentangry.png"
+                            ? "/Cagentangry.webp"
                             : writingMood === "like"
-                              ? "/Cagentlike.png"
+                              ? "/Cagentlike.webp"
                               : writingMood === "hang"
-                                ? "/Cagenthang.png"
-                                : "/Cagentsit.png"
+                                ? "/Cagenthang.webp"
+                                : "/Cagentsit.webp"
                         }
                         alt="Cagent Bear"
                         className="h-28 w-28 object-contain drop-shadow-lg"

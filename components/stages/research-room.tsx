@@ -74,11 +74,10 @@ export default function ResearchRoom({ onBack }: ResearchRoomProps) {
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(248,250,252,0.12),_transparent_60%)]" />
         <div className="absolute bottom-0 inset-x-0 h-1/2 bg-gradient-to-t from-slate-950/90 via-slate-900/40 to-transparent" />
         <Image
-          src="/library.png"
+          src="/library.webp"
           alt="Reading room background"
           fill
           priority
-          unoptimized
           className="object-cover mix-blend-multiply opacity-40"
         />
       </div>

@@ -39,8 +39,8 @@ export const metadata: Metadata = {
   description: 'Create magical stories with AI assistance',
   generator: 'MuseAI',
   icons: {
-    icon: '/logosmall.png',
-    apple: '/logosmall.png',
+    icon: '/logosmall.webp',
+    apple: '/logosmall.webp',
   },
 }
 
@@ -54,7 +54,7 @@ export default function RootLayout({
       <body
         className={`${comicNeue.variable} ${patrickHand.variable} ${geist.variable} ${geistMono.variable} ${caveat.variable} ${baloo2.variable} ${pressStart2p.variable} font-sans antialiased flex flex-col min-h-screen bg-cover bg-center bg-no-repeat`}
         style={{
-          backgroundImage: "url('/firstmap.png')",
+          backgroundImage: "url('/firstmap.webp')",
           backgroundSize: "cover",
           backgroundPosition: "center center",
           backgroundRepeat: "no-repeat",

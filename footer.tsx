@@ -19,24 +19,22 @@ export default function Footer() {
             {/* EdUHK Logo - 大一些 */}
             <div className="flex-shrink-0">
               <Image
-                src="/EdUHK_Signature_RGBWhite@4x-1-1024x336.png"
+                src="/EdUHK_Signature_RGBWhite@4x-1-1024x336.webp"
                 alt="EdUHK Logo"
                 width={300}
                 height={98}
-                className="object-contain"
-                unoptimized
+                className="object-contain"
               />
             </div>
             
             {/* MIT Logo - 小一些 */}
             <div className="flex-shrink-0">
               <Image
-                src="/MIT_Logo2-1024x290.png"
+                src="/MIT_Logo2-1024x290.webp"
                 alt="MIT Logo"
                 width={180}
                 height={51}
-                className="object-contain opacity-90"
-                unoptimized
+                className="object-contain opacity-90"
               />
             </div>
           </div>
