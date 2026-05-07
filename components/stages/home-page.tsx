@@ -835,8 +835,8 @@ export default function HomePage({ language = "en", onStartPlan, onContinuePastJ
         </motion.div>
       </div>
 
-      {/* Foreground Clouds - behind content so they don't cover text */}
-      <div className="fixed inset-0 z-[6] pointer-events-none overflow-hidden">
+      {/* Foreground Clouds - above lower content, below hero title text */}
+      <div className="fixed inset-0 z-[15] pointer-events-none overflow-hidden">
         <motion.div
           className="absolute"
           style={{ top: "55%", y: cloud3Y }}
@@ -879,9 +879,9 @@ export default function HomePage({ language = "en", onStartPlan, onContinuePastJ
       </div>
 
       {/* Main Content */}
-      <div className="relative z-10">
+      <div className="relative">
         {/* Section 1: Hero (100vh) */}
-        <section className="min-h-screen flex flex-col items-center justify-center px-6 pt-20">
+        <section className="relative z-20 min-h-screen flex flex-col items-center justify-center px-6 pt-20">
           <motion.div
             className="text-center"
             initial={{ opacity: 0, y: 30 }}
@@ -1034,7 +1034,7 @@ export default function HomePage({ language = "en", onStartPlan, onContinuePastJ
         </section>
 
         {/* Section 2: The 5 Writing Genres - closer to tagline, 3 on first row, 2 on second */}
-        <section className="py-12 md:py-16 px-6">
+        <section className="relative z-10 py-12 md:py-16 px-6">
           <div className="max-w-6xl mx-auto">
             {/* First row - 3 items */}
             <div className="flex flex-wrap justify-center gap-8 md:gap-10 lg:gap-12 mb-8 md:mb-10">
@@ -1066,7 +1066,7 @@ export default function HomePage({ language = "en", onStartPlan, onContinuePastJ
         </section>
 
         {/* Section 3: Bottom Action Buttons - Horizontal, smaller, more distance to footer */}
-        <section className="py-20 md:py-28 px-6 pb-48 md:pb-56">
+        <section className="relative z-10 py-20 md:py-28 px-6 pb-48 md:pb-56">
           <motion.div
             className="flex flex-wrap items-center justify-center gap-6 md:gap-8"
             initial={{ opacity: 0, y: 30 }}
