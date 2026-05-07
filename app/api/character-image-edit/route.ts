@@ -91,13 +91,15 @@ Style target:
 
 Output rules:
 - Use the uploaded sketch image as the base reference
-- Preserve the student's exact composition and pose; clean, refine, and gently polish the drawing without redesigning it
-- You may improve line quality, edge clarity, color harmony, lighting, texture, and material rendering
-- You may slightly clarify unclear hand-drawn parts only when needed to make the same design readable, but do not change the design itself
+- Preserve the student's core composition, pose, silhouette, and design intent; do not redesign the character
+- Do not over-preserve rough childlike brush texture, shaky hand-drawn edges, uneven coloring, or accidental messiness if they reduce image quality
+- You should refine the linework into cleaner, more readable, more polished illustration lines while keeping the same character design
+- You may improve line quality, edge clarity, shape cleanup, color harmony, lighting, texture, and material rendering
+- You may clarify vague hand-drawn parts and simplify awkward sketch marks when needed to make the same design read better, but do not change the design itself
 - Do not invent new accessories, extra limbs, extra props, background objects, or dramatic style changes
 - Do not replace a simple student design with a more elaborate professional design
 - If the sketch is simple or minimal, keep it simple and minimal while making it cleaner and nicer
-- Respect the student's lines, shapes, colors, and intent more than aesthetic embellishment
+- Respect the student's recognizable shapes, colors, and intent more than aesthetic embellishment, but allow tasteful professional cleanup
 - Do not add text, logos, watermark, or UI
 - No transparent background, no scene/background elements, white backdrop only
 - Return one final character image only
