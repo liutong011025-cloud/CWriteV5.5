@@ -80,6 +80,12 @@ export default function JourneyMap({
   // 设置data-no-header属性，隐藏header
   useEffect(() => {
     const container = document.querySelector('main')
+    window.scrollTo({ top: 0, behavior: "auto" })
+    document.documentElement.scrollTop = 0
+    document.body.scrollTop = 0
+    if (container instanceof HTMLElement) {
+      container.scrollTop = 0
+    }
     if (container) {
       container.setAttribute('data-no-header', 'true')
       container.setAttribute('data-stage', 'journeyMap')
