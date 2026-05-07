@@ -575,6 +575,25 @@ export default function Home() {
     }
   }, [stage, user?.username])
 
+  useEffect(() => {
+    if (typeof window === "undefined") return
+
+    const resetScroll = () => {
+      window.scrollTo({ top: 0, behavior: "auto" })
+      document.documentElement.scrollTop = 0
+      document.body.scrollTop = 0
+
+      const main = document.querySelector("main")
+      if (main instanceof HTMLElement) {
+        main.scrollTop = 0
+      }
+    }
+
+    resetScroll()
+    const rafId = window.requestAnimationFrame(resetScroll)
+    return () => window.cancelAnimationFrame(rafId)
+  }, [stage])
+
   // 自动记录“上次旅程进度”，用于首页 Continue past journey 一键恢复
   useEffect(() => {
     if (!user?.username || typeof window === "undefined") return
