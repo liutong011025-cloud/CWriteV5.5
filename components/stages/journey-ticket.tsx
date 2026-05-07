@@ -407,7 +407,7 @@ export default function JourneyTicket({
         </div>
 
         {/* Start button with pixel styling */}
-        <div className="text-center mt-5 md:mt-6 xl:mt-8 space-y-3">
+        <div className="text-center mt-2 md:mt-3 xl:mt-4 space-y-3">
           <Button
             onClick={handleStart}
             size="lg"
