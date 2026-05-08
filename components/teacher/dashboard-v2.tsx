@@ -86,6 +86,20 @@ function createAnnotation(quote: string): Annotation {
   }
 }
 
+function getSafeUsername(username: string | null | undefined): string {
+  return typeof username === "string" ? username.trim() : ""
+}
+
+function getUserDisplayName(username: string | null | undefined): string {
+  return getSafeUsername(username) || "Unnamed Student"
+}
+
+function getUserAvatarFallback(username: string | null | undefined, avatarEmoji?: string | null): string {
+  if (avatarEmoji && avatarEmoji.trim()) return avatarEmoji
+  const safeUsername = getSafeUsername(username)
+  return safeUsername ? safeUsername.slice(0, 1).toUpperCase() : "?"
+}
+
 export default function DashboardV2({ user, onBack }: DashboardProps) {
   const [data, setData] = useState<DashboardData | null>(null)
   const [selected, setSelected] = useState<string | null>(null)
@@ -132,7 +146,9 @@ export default function DashboardV2({ user, onBack }: DashboardProps) {
       }
       const json = (await res.json()) as DashboardData
       setData(json)
-      const availableUsers: DashboardUserListItem[] = json.classGroups[0]?.users ?? []
+      const availableUsers: DashboardUserListItem[] = (json.classGroups[0]?.users ?? []).filter(
+        (item) => getSafeUsername(item.username).length > 0,
+      )
       setSelected((current: string | null) => {
         if (current && availableUsers.some((item: DashboardUserListItem) => item.username === current)) return current
         return availableUsers[0]?.username ?? null
@@ -358,12 +374,20 @@ export default function DashboardV2({ user, onBack }: DashboardProps) {
                   key={u.id}
                   className={`rounded-lg border p-2 transition ${selected === u.username ? "border-indigo-500 ring-2 ring-indigo-200" : "border-slate-200"} ${
                     getUserHeatClass(u.totalWorks, maxWorks)
-                  }`}
-                  onClick={() => setSelected(u.username)}
+                  } ${getSafeUsername(u.username) ? "" : "cursor-not-allowed opacity-60"}`}
+                  onClick={() => {
+                    const safeUsername = getSafeUsername(u.username)
+                    if (!safeUsername) return
+                    setSelected(safeUsername)
+                  }}
                   type="button"
+                  disabled={!getSafeUsername(u.username)}
                 >
-                  <Avatar className="mx-auto mb-2 h-11 w-11">{u.avatarUrl ? <AvatarImage src={u.avatarUrl} alt={u.username} /> : null}<AvatarFallback>{u.avatarEmoji ?? u.username[0].toUpperCase()}</AvatarFallback></Avatar>
-                  <p className="truncate text-xs">{u.username}</p>
+                  <Avatar className="mx-auto mb-2 h-11 w-11">
+                    {u.avatarUrl ? <AvatarImage src={u.avatarUrl} alt={getUserDisplayName(u.username)} /> : null}
+                    <AvatarFallback>{getUserAvatarFallback(u.username, u.avatarEmoji)}</AvatarFallback>
+                  </Avatar>
+                  <p className="truncate text-xs">{getUserDisplayName(u.username)}</p>
                   <p className="mt-1 text-[10px] text-slate-500">{u.totalWorks} works</p>
                 </button>
               ))}
