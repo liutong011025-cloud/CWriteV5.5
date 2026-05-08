@@ -226,6 +226,13 @@ export default function UserProfilePage({
     }
   }, [viewMode, isOtherFarm])
 
+  useEffect(() => {
+    setViewMode("farm")
+    setSelectedTreeId(null)
+    setHoveredTreeId(null)
+    setHoveredFarmElement(null)
+  }, [userId, isOtherFarm])
+
   // Writing Board 界面：Cagent 僅氣泡，無小熊圖片
   const [cagentBubbleOpen, setCagentBubbleOpen] = useState(false)
   const [cagentGuideText, setCagentGuideText] = useState<string | null>(null)
