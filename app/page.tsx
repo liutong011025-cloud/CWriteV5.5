@@ -296,6 +296,42 @@ const buildStoryPlotSummary = (
     .join("\n")
 }
 
+const buildDramaMapSummary = (
+  scenes: Array<{ backgroundPrompt?: string; notes?: string }>,
+  dramaTitle: string,
+  fallbackText?: string,
+) => {
+  const backgrounds = scenes
+    .map((scene) => scene.backgroundPrompt?.trim())
+    .filter((prompt): prompt is string => Boolean(prompt))
+  const notes = scenes
+    .map((scene, index) => {
+      const note = scene.notes?.trim()
+      return note ? `Scene ${index + 1} notes: ${note}` : null
+    })
+    .filter((note): note is string => Boolean(note))
+
+  return {
+    topic: backgrounds[0] || dramaTitle || "Drama",
+    content: [
+      backgrounds.length > 0 ? `Drama backgrounds: ${backgrounds.join(" | ")}` : null,
+      ...notes,
+      fallbackText?.trim() ? fallbackText.trim() : null,
+    ]
+      .filter((item): item is string => Boolean(item))
+      .join("\n"),
+    mapPrompt: [
+      backgrounds.length > 0
+        ? `The new map update must primarily reflect these selected drama backgrounds: ${backgrounds.join("; ")}.`
+        : null,
+      notes.length > 0 ? `Subtly reflect these scene notes as environmental details: ${notes.join(" ; ")}.` : null,
+      "Do not focus mainly on the script text. Use the selected drama background information as the key source for the map evolution.",
+    ]
+      .filter((item): item is string => Boolean(item))
+      .join(" "),
+  }
+}
+
 const createDefaultValuesTrees = () =>
   Array.from({ length: VALUES_DIMENSION_COUNT }, (_, i) => ({ id: i + 1, stage: 2 }))
 
@@ -806,6 +842,7 @@ export default function Home() {
   )
   const dramaBook = useDramaStore((s) => s.dramaBook)
   const dramaTitle = useDramaStore((s) => s.title)
+  const dramaScenes = useDramaStore((s) => s.scenes)
   const dramaScenesCount = useDramaStore((s) => s.scenes.length)
   const poetryLines = usePoetryStore((s) => s.lines)
   const poetryLinesText = useMemo(() => poetryLines.map((l) => l.text).join("\n"), [poetryLines])
@@ -2664,11 +2701,17 @@ export default function Home() {
 
           onBack={() => {
             if (dramaBook) {
+              const dramaMapSummary = buildDramaMapSummary(
+                dramaScenes,
+                dramaTitle || "Drama",
+                dramaBook.script || dramaBook.summary || "",
+              )
               void evaluateValuesGrowth(dramaBook.script || "", "story", "My Drama")
               void queueJourneyMapUpdate({
                 title: "My Drama",
-                topic: dramaTitle || "Drama",
-                content: dramaBook.script || dramaBook.summary || "",
+                topic: dramaMapSummary.topic,
+                content: dramaMapSummary.content,
+                mapPrompt: dramaMapSummary.mapPrompt,
                 workType: "drama",
                 source: "drama",
               })
@@ -2688,11 +2731,17 @@ export default function Home() {
             if (dramaBook) {
               const script = dramaBook.script || ""
               if (script.trim()) {
+                const dramaMapSummary = buildDramaMapSummary(
+                  dramaScenes,
+                  dramaTitle || "Drama",
+                  script,
+                )
                 void evaluateValuesGrowth(script, "story", "My Drama")
                 void queueJourneyMapUpdate({
                   title: "My Drama",
-                  topic: dramaTitle || "Drama",
-                  content: script,
+                  topic: dramaMapSummary.topic,
+                  content: dramaMapSummary.content,
+                  mapPrompt: dramaMapSummary.mapPrompt,
                   workType: "drama",
                   source: "drama",
                 })
