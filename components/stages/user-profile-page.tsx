@@ -200,7 +200,7 @@ const getDefaultFarmButtonStates = (otherFarm: boolean): Record<FarmElementId, F
   farmsetting: otherFarm ? { x: 34.1, y: 49.6, scale: 0.8 } : { x: 34.3, y: 49.5, scale: 0.8 },
   farmwrittingboard: otherFarm ? { x: 62.8, y: 50.5, scale: 1.1 } : { x: 62.9, y: 51.0, scale: 1.15 },
   vistothersfarm: { x: 73.2, y: 37.0, scale: 0.81 },
-  theirmap: otherFarm ? { x: 49.5, y: 49.6, scale: 1 } : { x: 49.5, y: 49.6, scale: 1 },
+  theirmap: otherFarm ? { x: 34.5, y: 48.7, scale: 0.42 } : { x: 34.5, y: 48.7, scale: 0.42 },
 })
 
 const DEFAULT_TREE_LAYOUT: FarmElementState[] = [
@@ -517,7 +517,6 @@ export default function UserProfilePage({
     otherMapState?.chapters[
       Math.min(otherMapChapterIndex, Math.max(0, (otherMapState?.chapters.length ?? 1) - 1))
     ] ?? null
-  const theirMapState = farmElementStates.theirmap
 
   const fetchCagentGuide = useCallback(
     async (userMessage?: string) => {
@@ -1164,61 +1163,6 @@ export default function UserProfilePage({
                 </button>
               )
             })}
-
-            {isOtherFarm && theirMapState && (
-              <div className="fixed right-3 top-3 z-[120] w-[min(92vw,320px)] rounded-2xl border border-amber-200/80 bg-white/95 p-4 shadow-2xl backdrop-blur-sm">
-                <div className="mb-3 flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-bold text-amber-900">theirmap 调整工具</p>
-                    <p className="text-xs leading-relaxed text-amber-700">
-                      调好后把 `x / y / scale` 数值发我，我再把这个工具删掉。
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    className="rounded-lg border border-amber-200 px-2 py-1 text-xs font-semibold text-amber-700 hover:bg-amber-50"
-                    onClick={() => setFarmElementStates(getDefaultFarmButtonStates(true))}
-                  >
-                    Reset
-                  </button>
-                </div>
-
-                {([
-                  { key: "x", label: "X", min: 0, max: 100, step: 0.1 },
-                  { key: "y", label: "Y", min: 0, max: 100, step: 0.1 },
-                  { key: "scale", label: "Scale", min: 0.3, max: 2.5, step: 0.01 },
-                ] as const).map((control) => (
-                  <label key={control.key} className="mb-3 block last:mb-0">
-                    <div className="mb-1 flex items-center justify-between text-xs font-semibold text-slate-700">
-                      <span>{control.label}</span>
-                      <span>{theirMapState[control.key].toFixed(control.key === "scale" ? 2 : 1)}</span>
-                    </div>
-                    <input
-                      type="range"
-                      min={control.min}
-                      max={control.max}
-                      step={control.step}
-                      value={theirMapState[control.key]}
-                      onChange={(e) => {
-                        const nextValue = Number(e.target.value)
-                        setFarmElementStates((prev) => ({
-                          ...prev,
-                          theirmap: {
-                            ...prev.theirmap,
-                            [control.key]: nextValue,
-                          },
-                        }))
-                      }}
-                      className="w-full accent-amber-500"
-                    />
-                  </label>
-                ))}
-
-                <div className="mt-3 rounded-xl bg-slate-900 px-3 py-2 font-mono text-xs text-slate-100">
-                  {`x: ${theirMapState.x.toFixed(1)}, y: ${theirMapState.y.toFixed(1)}, scale: ${theirMapState.scale.toFixed(2)}`}
-                </div>
-              </div>
-            )}
 
             {/* Tree growth record modal: only on own farm when a tree is clicked */}
             {selectedTreeId != null && !isOtherFarm && (
