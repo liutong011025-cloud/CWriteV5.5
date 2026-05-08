@@ -271,7 +271,6 @@ export default function UserProfilePage({
   const farmContainerRef = useRef<HTMLDivElement | null>(null)
   const [hoveredFarmElement, setHoveredFarmElement] = useState<FarmElementId | null>(null)
   const [farmElementStates, setFarmElementStates] = useState<Record<FarmElementId, FarmElementState>>(() => getDefaultFarmButtonStates(isOtherFarm))
-  const [selectedAdjustElement, setSelectedAdjustElement] = useState<FarmElementId>("farmbacktomap")
   const [viewMode, setViewMode] = useState<"farm" | "writings">("farm")
   // 进入 farm 视图的次数：用于确保每次切回 farm 时都能重新触发闪光动画
   const [farmViewNonce, setFarmViewNonce] = useState(0)
@@ -519,19 +518,6 @@ export default function UserProfilePage({
     otherMapState?.chapters[
       Math.min(otherMapChapterIndex, Math.max(0, (otherMapState?.chapters.length ?? 1) - 1))
     ] ?? null
-  const adjustableElementIds: FarmElementId[] = isOtherFarm
-    ? ["farmbacktomap", "farmwrittingboard", "vistothersfarm"]
-    : ["farmbacktomap", "farmsetting", "farmwrittingboard", "vistothersfarm"]
-  const activeAdjustElement = adjustableElementIds.includes(selectedAdjustElement)
-    ? selectedAdjustElement
-    : adjustableElementIds[0]
-  const activeAdjustState = farmElementStates[activeAdjustElement]
-
-  useEffect(() => {
-    if (!adjustableElementIds.includes(selectedAdjustElement)) {
-      setSelectedAdjustElement(adjustableElementIds[0])
-    }
-  }, [adjustableElementIds, selectedAdjustElement])
 
   const fetchCagentGuide = useCallback(
     async (userMessage?: string) => {
@@ -1181,84 +1167,6 @@ export default function UserProfilePage({
                 </button>
               )
             })}
-
-            {viewMode === "farm" && activeAdjustState && (
-              <div className="fixed right-3 top-3 z-[120] w-[min(92vw,340px)] rounded-2xl border border-amber-200/80 bg-white/95 p-4 shadow-2xl backdrop-blur-sm">
-                <div className="mb-3 flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-bold text-amber-900">Farm 位置工具</p>
-                    <p className="text-xs leading-relaxed text-amber-700">
-                      调好后把每张图的 `x / y / scale` 发我，我再删掉这个工具。
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    className="rounded-lg border border-amber-200 px-2 py-1 text-xs font-semibold text-amber-700 hover:bg-amber-50"
-                    onClick={() => setFarmElementStates(getDefaultFarmButtonStates(isOtherFarm))}
-                  >
-                    Reset
-                  </button>
-                </div>
-
-                <div className="mb-3 flex flex-wrap gap-2">
-                  {adjustableElementIds.map((id) => (
-                    <button
-                      key={id}
-                      type="button"
-                      onClick={() => setSelectedAdjustElement(id)}
-                      className={`rounded-full border px-3 py-1 text-xs font-semibold transition ${
-                        activeAdjustElement === id
-                          ? "border-amber-400 bg-amber-400 text-white"
-                          : "border-amber-200 bg-white text-amber-800 hover:bg-amber-50"
-                      }`}
-                    >
-                      {id === "farmbacktomap"
-                        ? "Back"
-                        : id === "farmsetting"
-                          ? "Setting"
-                          : id === "farmwrittingboard"
-                            ? "Writing Board"
-                            : "Visit Others"}
-                    </button>
-                  ))}
-                </div>
-
-                {([
-                  { key: "x", label: "X", min: 0, max: 100, step: 0.1 },
-                  { key: "y", label: "Y", min: 0, max: 100, step: 0.1 },
-                  { key: "scale", label: "Scale", min: 0.2, max: 2.5, step: 0.01 },
-                ] as const).map((control) => (
-                  <label key={control.key} className="mb-3 block last:mb-0">
-                    <div className="mb-1 flex items-center justify-between text-xs font-semibold text-slate-700">
-                      <span>{control.label}</span>
-                      <span>{activeAdjustState[control.key].toFixed(control.key === "scale" ? 2 : 1)}</span>
-                    </div>
-                    <input
-                      type="range"
-                      min={control.min}
-                      max={control.max}
-                      step={control.step}
-                      value={activeAdjustState[control.key]}
-                      onChange={(e) => {
-                        const nextValue = Number(e.target.value)
-                        setFarmElementStates((prev) => ({
-                          ...prev,
-                          [activeAdjustElement]: {
-                            ...prev[activeAdjustElement],
-                            [control.key]: nextValue,
-                          },
-                        }))
-                      }}
-                      className="w-full accent-amber-500"
-                    />
-                  </label>
-                ))}
-
-                <div className="mt-3 rounded-xl bg-slate-900 px-3 py-2 font-mono text-xs text-slate-100">
-                  {`${activeAdjustElement}: x: ${activeAdjustState.x.toFixed(1)}, y: ${activeAdjustState.y.toFixed(1)}, scale: ${activeAdjustState.scale.toFixed(2)}`}
-                </div>
-              </div>
-            )}
 
             {/* Tree growth record modal: only on own farm when a tree is clicked */}
             {selectedTreeId != null && !isOtherFarm && (
