@@ -670,7 +670,7 @@ export default function BookReviewWriting({
                     <p className="text-sm text-gray-600">Generating book cover...</p>
                   </div>
                 ) : bookCoverUrl ? (
-                  <div className="relative w-full max-w-[180px] mx-auto aspect-[2/3] rounded-xl overflow-hidden border-4 border-amber-400 shadow-xl mb-4">
+                  <div className="relative w-full max-w-[180px] mx-auto aspect-[2/3] mb-4">
                     <Image
                       src={bookCoverUrl}
                       alt={`Cover of ${bookTitle}`}
@@ -680,7 +680,7 @@ export default function BookReviewWriting({
                     />
                   </div>
                 ) : (
-                  <div className="relative w-full max-w-[180px] mx-auto aspect-[2/3] rounded-xl bg-gray-200 flex items-center justify-center border-4 border-amber-400 shadow-xl mb-4">
+                  <div className="relative w-full max-w-[180px] mx-auto aspect-[2/3] flex items-center justify-center mb-4">
                     <p className="text-gray-500 text-sm">No cover available</p>
                   </div>
                 )}
