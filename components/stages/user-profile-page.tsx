@@ -6,6 +6,7 @@ import { BackButton } from "@/components/ui/back-button"
 import {
   BookOpen,
   FileText,
+  Flag,
   Mail,
   MessageCircle,
   User as UserIcon,
@@ -46,6 +47,26 @@ export interface TreeGrowthDetailRecord {
   timestamp: number
 }
 
+interface OtherMapFlagItem {
+  id: string
+  x: number
+  y: number
+  title: string
+  content?: string
+  workType?: string
+}
+
+interface OtherMapChapterState {
+  mapImageUrl: string
+  mapFlags: OtherMapFlagItem[]
+  currentPin: { x: number; y: number } | null
+}
+
+interface OtherMapChaptersState {
+  activeChapterIndex: number
+  chapters: OtherMapChapterState[]
+}
+
 const TREE_DIMENSION_NAMES: Record<number, string> = {
   1: "Perseverance",
   2: "Respect for Others",
@@ -79,12 +100,13 @@ interface UserProfilePageProps {
   isOtherFarm?: boolean
 }
 
-type FarmElementId = "farmbacktomap" | "farmsetting" | "farmwrittingboard" | "vistothersfarm"
+type FarmElementId = "farmbacktomap" | "farmsetting" | "farmwrittingboard" | "vistothersfarm" | "theirmap"
 
 interface FarmElementConfig {
   id: FarmElementId
   label: string
   imageSrc: string
+  baseWidthPercent?: number
 }
 
 /** 與 object-cover 背景對齊的 overlay 矩形（px），overlay 內 % 即為背景圖上的相對位置/大小 */
@@ -101,44 +123,76 @@ interface FarmElementState {
   scale: number
 }
 
-const getChapterBaseMapImageUrl = (chapterIndex: number) => {
-  return chapterIndex <= 0 ? "/firstmap.png" : "/secondmap.png"
+const getDefaultMapImageForChapter = (chapterIndex: number) => (chapterIndex > 0 ? "/secondmap.webp" : "/firstmap.webp")
+
+const normalizeOtherMapFlag = (raw: unknown, index: number): OtherMapFlagItem | null => {
+  if (!raw || typeof raw !== "object") return null
+  const source = raw as Partial<OtherMapFlagItem>
+  return {
+    id: typeof source.id === "string" && source.id.trim() ? source.id : `flag-${index}`,
+    x: typeof source.x === "number" ? source.x : 50,
+    y: typeof source.y === "number" ? source.y : 50,
+    title: typeof source.title === "string" && source.title.trim() ? source.title : "Writing Journey",
+    content: typeof source.content === "string" ? source.content : undefined,
+    workType: typeof source.workType === "string" ? source.workType : undefined,
+  }
 }
 
-const getMapImageUrlFromUserMapState = (raw: unknown): string | null => {
-  if (!raw || typeof raw !== "object") return null
-
-  const parsed = raw as {
-    mapImageUrl?: unknown
-    activeChapterIndex?: unknown
-    chapters?: Array<{ mapImageUrl?: unknown }> | unknown
-  }
-
-  if (typeof parsed.mapImageUrl === "string" && parsed.mapImageUrl.trim()) {
-    return parsed.mapImageUrl
-  }
-
-  if (Array.isArray(parsed.chapters) && parsed.chapters.length > 0) {
-    const activeChapterIndex = Number.isFinite(Number(parsed.activeChapterIndex))
-      ? Math.max(0, Math.floor(Number(parsed.activeChapterIndex)))
-      : 0
-
-    const activeChapter = parsed.chapters[activeChapterIndex]
-    if (activeChapter && typeof activeChapter.mapImageUrl === "string" && activeChapter.mapImageUrl.trim()) {
-      return activeChapter.mapImageUrl
+const normalizeOtherMapChapter = (raw: unknown, chapterIndex: number): OtherMapChapterState => {
+  if (!raw || typeof raw !== "object") {
+    return {
+      mapImageUrl: getDefaultMapImageForChapter(chapterIndex),
+      mapFlags: [],
+      currentPin: null,
     }
-
-    for (let idx = parsed.chapters.length - 1; idx >= 0; idx -= 1) {
-      const chapter = parsed.chapters[idx]
-      if (chapter && typeof chapter.mapImageUrl === "string" && chapter.mapImageUrl.trim()) {
-        return chapter.mapImageUrl
-      }
-    }
-
-    return getChapterBaseMapImageUrl(activeChapterIndex)
   }
 
-  return null
+  const source = raw as Partial<OtherMapChapterState>
+  return {
+    mapImageUrl:
+      typeof source.mapImageUrl === "string" && source.mapImageUrl.trim()
+        ? source.mapImageUrl
+        : getDefaultMapImageForChapter(chapterIndex),
+    mapFlags: Array.isArray(source.mapFlags)
+      ? source.mapFlags
+          .map((flag, index) => normalizeOtherMapFlag(flag, index))
+          .filter((flag): flag is OtherMapFlagItem => flag != null)
+      : [],
+    currentPin:
+      source.currentPin &&
+      typeof source.currentPin === "object" &&
+      typeof source.currentPin.x === "number" &&
+      typeof source.currentPin.y === "number"
+        ? source.currentPin
+        : null,
+  }
+}
+
+const normalizeOtherMapState = (raw: unknown): OtherMapChaptersState => {
+  if (!raw || typeof raw !== "object") {
+    return {
+      activeChapterIndex: 0,
+      chapters: [normalizeOtherMapChapter(null, 0)],
+    }
+  }
+
+  const source = raw as { activeChapterIndex?: unknown; chapters?: unknown[] }
+  if (Array.isArray(source.chapters) && source.chapters.length > 0) {
+    const chapters = source.chapters.map((chapter, index) => normalizeOtherMapChapter(chapter, index))
+    const requestedIndex =
+      typeof source.activeChapterIndex === "number" && Number.isFinite(source.activeChapterIndex)
+        ? Math.max(0, Math.floor(source.activeChapterIndex))
+        : 0
+    return {
+      activeChapterIndex: Math.min(requestedIndex, chapters.length - 1),
+      chapters,
+    }
+  }
+
+  return {
+    activeChapterIndex: 0,
+    chapters: [normalizeOtherMapChapter(raw, 0)],
+  }
 }
 
 const getDefaultFarmButtonStates = (otherFarm: boolean): Record<FarmElementId, FarmElementState> => ({
@@ -146,6 +200,7 @@ const getDefaultFarmButtonStates = (otherFarm: boolean): Record<FarmElementId, F
   farmsetting: otherFarm ? { x: 34.1, y: 49.6, scale: 0.8 } : { x: 34.3, y: 49.5, scale: 0.8 },
   farmwrittingboard: otherFarm ? { x: 62.8, y: 50.5, scale: 1.1 } : { x: 62.9, y: 51.0, scale: 1.15 },
   vistothersfarm: { x: 73.2, y: 37.0, scale: 0.81 },
+  theirmap: otherFarm ? { x: 49.5, y: 49.6, scale: 1 } : { x: 49.5, y: 49.6, scale: 1 },
 })
 
 const DEFAULT_TREE_LAYOUT: FarmElementState[] = [
@@ -165,8 +220,6 @@ const DEFAULT_TREE_LAYOUT: FarmElementState[] = [
 
 // 视觉上将两排树位对调：上排显示 7-12，下排显示 1-6
 const FARM_SLOT_TREE_IDS = [7, 8, 9, 10, 11, 12, 1, 2, 3, 4, 5, 6]
-const DEFAULT_THEIR_MAP_BUTTON_STATE: FarmElementState = { x: 84.8, y: 57.8, scale: 1 }
-const THEIR_MAP_BUTTON_BASE_WIDTH_PERCENT = 17
 
 export default function UserProfilePage({
   userId,
@@ -216,9 +269,15 @@ export default function UserProfilePage({
   const [hoveredTreeId, setHoveredTreeId] = useState<number | null>(null)
   const farmContainerRef = useRef<HTMLDivElement | null>(null)
   const [hoveredFarmElement, setHoveredFarmElement] = useState<FarmElementId | null>(null)
+  const [farmElementStates, setFarmElementStates] = useState<Record<FarmElementId, FarmElementState>>(() => getDefaultFarmButtonStates(isOtherFarm))
   const [viewMode, setViewMode] = useState<"farm" | "writings">("farm")
   // 进入 farm 视图的次数：用于确保每次切回 farm 时都能重新触发闪光动画
   const [farmViewNonce, setFarmViewNonce] = useState(0)
+  const [showOtherWritingMap, setShowOtherWritingMap] = useState(false)
+  const [otherMapLoading, setOtherMapLoading] = useState(false)
+  const [otherMapError, setOtherMapError] = useState<string | null>(null)
+  const [otherMapState, setOtherMapState] = useState<OtherMapChaptersState | null>(null)
+  const [otherMapChapterIndex, setOtherMapChapterIndex] = useState(0)
 
   useEffect(() => {
     if (!isOtherFarm && viewMode === "farm") {
@@ -227,11 +286,9 @@ export default function UserProfilePage({
   }, [viewMode, isOtherFarm])
 
   useEffect(() => {
-    setViewMode("farm")
-    setSelectedTreeId(null)
-    setHoveredTreeId(null)
-    setHoveredFarmElement(null)
-  }, [userId, isOtherFarm])
+    setFarmElementStates(getDefaultFarmButtonStates(isOtherFarm))
+    setShowOtherWritingMap(false)
+  }, [isOtherFarm, userId])
 
   // Writing Board 界面：Cagent 僅氣泡，無小熊圖片
   const [cagentBubbleOpen, setCagentBubbleOpen] = useState(false)
@@ -245,32 +302,25 @@ export default function UserProfilePage({
   const [cagentHoverTrigger, setCagentHoverTrigger] = useState(false)
   const [otherFarmBubbleStep, setOtherFarmBubbleStep] = useState<"intro" | "warning">("intro")
   const [bearLogoPosition, setBearLogoPosition] = useState({ x: 49.7, y: 43.7, scale: 0.5, rotation: -11 })
-  const [theirMapButtonState, setTheirMapButtonState] = useState<FarmElementState>(DEFAULT_THEIR_MAP_BUTTON_STATE)
-  const [theirMapHovered, setTheirMapHovered] = useState(false)
-  const [showTheirMapLayoutTool, setShowTheirMapLayoutTool] = useState(false)
-  const [otherFarmMapImageUrl, setOtherFarmMapImageUrl] = useState<string | null>(null)
-  const [otherFarmMapLoading, setOtherFarmMapLoading] = useState(false)
-  const [otherFarmMapError, setOtherFarmMapError] = useState<string | null>(null)
-  const [otherFarmMapDialogOpen, setOtherFarmMapDialogOpen] = useState(false)
 
   const farmElements: FarmElementConfig[] = isOtherFarm
     ? [
-        { id: "farmbacktomap", label: "Back", imageSrc: "/farmbacktomap.png" },
-        { id: "farmwrittingboard", label: "Writing Board", imageSrc: "/farmwritingboard.png" },
-        { id: "vistothersfarm", label: "Visit Others' Farms", imageSrc: "/visitothersfarm.png" },
+        { id: "farmbacktomap", label: "Back", imageSrc: "/farmbacktomap.webp" },
+        { id: "theirmap", label: "Writing Map", imageSrc: "/theirmap.webp", baseWidthPercent: 16 },
+        { id: "farmwrittingboard", label: "Writing Board", imageSrc: "/farmwritingboard.webp" },
+        { id: "vistothersfarm", label: "Visit Others' Farms", imageSrc: "/visitothersfarm.webp" },
       ]
     : [
-    { id: "farmbacktomap", label: "Back to Map", imageSrc: "/farmbacktomap.png" },
-    { id: "farmsetting", label: "Settings", imageSrc: "/farmsetting.png" },
-    { id: "farmwrittingboard", label: "Writing Board", imageSrc: "/farmwritingboard.png" },
-    { id: "vistothersfarm", label: "Visit Others' Farms", imageSrc: "/visitothersfarm.png" },
+    { id: "farmbacktomap", label: "Back to Map", imageSrc: "/farmbacktomap.webp" },
+    { id: "farmsetting", label: "Settings", imageSrc: "/farmsetting.webp" },
+    { id: "farmwrittingboard", label: "Writing Board", imageSrc: "/farmwritingboard.webp" },
+    { id: "vistothersfarm", label: "Visit Others' Farms", imageSrc: "/visitothersfarm.webp" },
   ]
 
-  const farmElementStates = getDefaultFarmButtonStates(isOtherFarm)
   const farmTreeStates = DEFAULT_TREE_LAYOUT
   const forestById = new Map(forest.map((tree) => [tree.id, tree] as const))
 
-  const farmBackgroundSrc = "/farm.png"
+  const farmBackgroundSrc = "/farm.webp"
   const farmBackgroundAlt = isOtherFarm ? "Other Student Farm Background" : "My Farm Background"
   const treeCount = 12
 
@@ -318,8 +368,37 @@ export default function UserProfilePage({
   }, [isOtherFarm, userId])
 
   useEffect(() => {
-    setTheirMapButtonState(DEFAULT_THEIR_MAP_BUTTON_STATE)
-  }, [userId, isOtherFarm])
+    if (!isOtherFarm || !userId) return
+    let cancelled = false
+
+    void (async () => {
+      setOtherMapLoading(true)
+      setOtherMapError(null)
+      try {
+        const res = await fetch(`/api/user-map-state?user_id=${encodeURIComponent(userId)}`)
+        if (!res.ok) {
+          throw new Error(`map_state_http_${res.status}`)
+        }
+        const data = await res.json()
+        if (cancelled) return
+        const normalized = normalizeOtherMapState(data?.state)
+        setOtherMapState(normalized)
+        setOtherMapChapterIndex(normalized.activeChapterIndex)
+      } catch (error) {
+        if (cancelled) return
+        console.error("Load other writing map failed:", error)
+        setOtherMapState(normalizeOtherMapState(null))
+        setOtherMapChapterIndex(0)
+        setOtherMapError("Unable to load this writing map right now.")
+      } finally {
+        if (!cancelled) setOtherMapLoading(false)
+      }
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [isOtherFarm, userId])
 
   useEffect(() => {
     Promise.all([
@@ -412,57 +491,6 @@ export default function UserProfilePage({
   }, [isOtherFarm, userId])
 
   useEffect(() => {
-    if (!isOtherFarm || !userId) {
-      setOtherFarmMapImageUrl(null)
-      setOtherFarmMapError(null)
-      setOtherFarmMapLoading(false)
-      return
-    }
-
-    let cancelled = false
-    setOtherFarmMapLoading(true)
-    setOtherFarmMapError(null)
-
-    void (async () => {
-      try {
-        const res = await fetch(`/api/user-map-state?user_id=${encodeURIComponent(userId)}`)
-        const data = await res.json().catch(() => ({}))
-        if (!res.ok) {
-          throw new Error(typeof data?.error === "string" ? data.error : `user_map_state_http_${res.status}`)
-        }
-        if (cancelled) return
-
-        const resolvedMapUrl = getMapImageUrlFromUserMapState(data?.state)
-        setOtherFarmMapImageUrl(resolvedMapUrl)
-        setOtherFarmMapError(resolvedMapUrl ? null : "No writing map available yet.")
-      } catch (error) {
-        if (cancelled) return
-        console.error("[other-farm] load writing map failed:", error)
-        setOtherFarmMapImageUrl(null)
-        setOtherFarmMapError("Failed to load this student's writing map.")
-      } finally {
-        if (!cancelled) {
-          setOtherFarmMapLoading(false)
-        }
-      }
-    })()
-
-    return () => {
-      cancelled = true
-    }
-  }, [isOtherFarm, userId])
-
-  useEffect(() => {
-    if (!isOtherFarm) {
-      setOtherFarmMapDialogOpen(false)
-      setTheirMapHovered(false)
-      return
-    }
-    setOtherFarmMapDialogOpen(false)
-    setTheirMapHovered(false)
-  }, [isOtherFarm, userId])
-
-  useEffect(() => {
     if (recentGrowthTreeId && trees && trees.some((t) => t.id === recentGrowthTreeId)) {
       // 强制“重新触发闪光”：
       // 如果这次进入 farm 的 recentGrowthTreeId 和上次相同，React 可能不会触发重新动画，
@@ -485,6 +513,11 @@ export default function UserProfilePage({
 
   const teacherReviews = reviews.filter((r) => r.reviewerRole === "teacher")
   const peerReviews = reviews.filter((r) => r.reviewerRole === "student")
+  const currentOtherMapChapter =
+    otherMapState?.chapters[
+      Math.min(otherMapChapterIndex, Math.max(0, (otherMapState?.chapters.length ?? 1) - 1))
+    ] ?? null
+  const theirMapState = farmElementStates.theirmap
 
   const fetchCagentGuide = useCallback(
     async (userMessage?: string) => {
@@ -1039,7 +1072,7 @@ export default function UserProfilePage({
                 const isHighlightedTree = treeData && highlightTreeId === treeData.id
                 const isHoveredTree = treeData && hoveredTreeId === treeData.id
                 const treeStage = Math.max(2, Math.min(4, Number(treeData?.stage ?? 2)))
-                const treeImageSrc = treeStage >= 4 ? "/tree4.png" : treeStage >= 3 ? "/tree3.png" : "/tree2.png"
+                const treeImageSrc = treeStage >= 4 ? "/tree4.webp" : treeStage >= 3 ? "/tree3.webp" : "/tree2.webp"
                 const treeBaseSizePercent = treeStage >= 4 ? 11.2 : 8
                 const treeTop = treeStage >= 4 ? treeState.y + 3.6 : treeState.y
                 const treeLeft = treeStage >= 4 ? treeState.x + 1.2 : treeState.x
@@ -1086,7 +1119,7 @@ export default function UserProfilePage({
               const state = farmElementStates[element.id]
               if (!state) return null
               const isHovered = hoveredFarmElement === element.id
-              const sizePercent = Math.min(25, 8 * state.scale)
+              const sizePercent = Math.min(32, (element.baseWidthPercent ?? 8) * state.scale)
               return (
                 <button
                   key={element.id}
@@ -1096,8 +1129,6 @@ export default function UserProfilePage({
                     left: `${state.x}%`,
                     top: `${state.y}%`,
                     width: `${sizePercent}%`,
-                    height: "auto",
-                    aspectRatio: "1",
                     transform: `translate(-50%, -50%) scale(${isHovered ? 1.08 : 1})`,
                     transformOrigin: "center center",
                     transition: "transform 0.25s ease-in-out",
@@ -1109,6 +1140,8 @@ export default function UserProfilePage({
                     if (element.id === "farmbacktomap") onBack()
                     else if (element.id === "farmsetting") {
                       if (!isOtherFarm) onOpenSettings()
+                    } else if (element.id === "theirmap") {
+                      setShowOtherWritingMap(true)
                     } else if (element.id === "farmwrittingboard") setViewMode("writings")
                     else if (element.id === "vistothersfarm") {
                       if (typeof onVisitOthersFarm === "function") onVisitOthersFarm()
@@ -1119,7 +1152,7 @@ export default function UserProfilePage({
                   <img
                     src={element.imageSrc}
                     alt={element.label}
-                    className="w-full h-full object-contain select-none pointer-events-none"
+                    className="block w-full h-auto object-contain select-none pointer-events-none"
                     draggable={false}
                   />
                   {element.id === "farmwrittingboard" && !isOtherFarm && unreadCount > 0 && (
@@ -1132,136 +1165,57 @@ export default function UserProfilePage({
               )
             })}
 
-            {isOtherFarm && (
-              <button
-                type="button"
-                className="absolute -translate-x-1/2 -translate-y-1/2 focus:outline-none origin-center"
-                style={{
-                  left: `${theirMapButtonState.x}%`,
-                  top: `${theirMapButtonState.y}%`,
-                  width: `${THEIR_MAP_BUTTON_BASE_WIDTH_PERCENT * theirMapButtonState.scale}%`,
-                  height: "auto",
-                  aspectRatio: "919 / 745",
-                  transform: `translate(-50%, -50%) scale(${theirMapHovered ? 1.08 : 1})`,
-                  transition: "transform 0.25s ease-in-out",
-                  zIndex: 20,
-                }}
-                onMouseEnter={() => setTheirMapHovered(true)}
-                onMouseLeave={() => setTheirMapHovered(false)}
-                onClick={() => setOtherFarmMapDialogOpen(true)}
-                aria-label={`Open ${userId}'s writing map`}
-              >
-                <img
-                  src="/theirmap.png"
-                  alt={`${userId}'s writing map`}
-                  className="w-full h-full object-contain select-none pointer-events-none"
-                  draggable={false}
-                />
-              </button>
-            )}
-
-            {isOtherFarm && process.env.NODE_ENV === "development" && (
-              <div className="absolute right-[2%] top-[6%] z-[70] w-[280px] rounded-2xl border border-amber-200/80 bg-white/95 p-3 shadow-xl">
-                <button
-                  type="button"
-                  className="mb-3 w-full rounded-xl bg-amber-500 px-3 py-2 text-sm font-semibold text-white hover:bg-amber-600"
-                  onClick={() => setShowTheirMapLayoutTool((prev) => !prev)}
-                >
-                  {showTheirMapLayoutTool ? "Hide" : "Adjust"} Their Map Layout
-                </button>
-                {showTheirMapLayoutTool && (
-                  <div className="space-y-3 text-xs text-amber-900">
-                    <p className="rounded-xl bg-amber-50 px-3 py-2 leading-relaxed">
-                      Position is stored as percentages inside the same cover overlay used by the other farm elements, so it stays aligned across screen sizes.
+            {isOtherFarm && theirMapState && (
+              <div className="fixed right-3 top-3 z-[120] w-[min(92vw,320px)] rounded-2xl border border-amber-200/80 bg-white/95 p-4 shadow-2xl backdrop-blur-sm">
+                <div className="mb-3 flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-bold text-amber-900">theirmap 调整工具</p>
+                    <p className="text-xs leading-relaxed text-amber-700">
+                      调好后把 `x / y / scale` 数值发我，我再把这个工具删掉。
                     </p>
-                    <div>
-                      <label className="mb-1 block font-semibold">X: {theirMapButtonState.x.toFixed(1)}%</label>
-                      <input
-                        type="range"
-                        min={0}
-                        max={100}
-                        step={0.1}
-                        value={theirMapButtonState.x}
-                        onChange={(e) =>
-                          setTheirMapButtonState((prev) => ({ ...prev, x: Number(e.target.value) }))
-                        }
-                        className="w-full"
-                      />
-                    </div>
-                    <div>
-                      <label className="mb-1 block font-semibold">Y: {theirMapButtonState.y.toFixed(1)}%</label>
-                      <input
-                        type="range"
-                        min={0}
-                        max={100}
-                        step={0.1}
-                        value={theirMapButtonState.y}
-                        onChange={(e) =>
-                          setTheirMapButtonState((prev) => ({ ...prev, y: Number(e.target.value) }))
-                        }
-                        className="w-full"
-                      />
-                    </div>
-                    <div>
-                      <label className="mb-1 block font-semibold">Scale: {theirMapButtonState.scale.toFixed(2)}</label>
-                      <input
-                        type="range"
-                        min={0.4}
-                        max={1.8}
-                        step={0.01}
-                        value={theirMapButtonState.scale}
-                        onChange={(e) =>
-                          setTheirMapButtonState((prev) => ({ ...prev, scale: Number(e.target.value) }))
-                        }
-                        className="w-full"
-                      />
-                    </div>
-                    <pre className="overflow-x-auto rounded-xl bg-slate-900 px-3 py-2 text-[11px] text-slate-100">
-{`{ x: ${theirMapButtonState.x.toFixed(1)}, y: ${theirMapButtonState.y.toFixed(1)}, scale: ${theirMapButtonState.scale.toFixed(2)} }`}
-                    </pre>
                   </div>
-                )}
-              </div>
-            )}
+                  <button
+                    type="button"
+                    className="rounded-lg border border-amber-200 px-2 py-1 text-xs font-semibold text-amber-700 hover:bg-amber-50"
+                    onClick={() => setFarmElementStates(getDefaultFarmButtonStates(true))}
+                  >
+                    Reset
+                  </button>
+                </div>
 
-            {isOtherFarm && otherFarmMapDialogOpen && (
-              <div
-                className="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 p-4"
-                onClick={() => setOtherFarmMapDialogOpen(false)}
-              >
-                <div
-                  className="relative w-full max-w-6xl rounded-3xl border border-amber-200 bg-[#f7ecd3] p-4 shadow-2xl"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <div className="mb-3 flex items-center justify-between gap-3">
-                    <div>
-                      <h2 className="font-hand text-2xl font-bold text-amber-900">{userId}'s Writing Map</h2>
-                      <p className="text-sm text-amber-800/80">Previewing the latest saved writing adventure map for this farm.</p>
+                {([
+                  { key: "x", label: "X", min: 0, max: 100, step: 0.1 },
+                  { key: "y", label: "Y", min: 0, max: 100, step: 0.1 },
+                  { key: "scale", label: "Scale", min: 0.3, max: 2.5, step: 0.01 },
+                ] as const).map((control) => (
+                  <label key={control.key} className="mb-3 block last:mb-0">
+                    <div className="mb-1 flex items-center justify-between text-xs font-semibold text-slate-700">
+                      <span>{control.label}</span>
+                      <span>{theirMapState[control.key].toFixed(control.key === "scale" ? 2 : 1)}</span>
                     </div>
-                    <button
-                      type="button"
-                      className="rounded-full bg-white/80 px-4 py-2 text-sm font-semibold text-amber-900 hover:bg-white"
-                      onClick={() => setOtherFarmMapDialogOpen(false)}
-                    >
-                      Close
-                    </button>
-                  </div>
-                  <div className="flex min-h-[320px] items-center justify-center overflow-hidden rounded-2xl border border-amber-200 bg-[#ead3a5]/60 p-3">
-                    {otherFarmMapLoading ? (
-                      <p className="font-hand text-lg text-amber-900">Loading writing map...</p>
-                    ) : otherFarmMapImageUrl ? (
-                      <img
-                        src={otherFarmMapImageUrl}
-                        alt={`${userId}'s writing map preview`}
-                        className="max-h-[75vh] w-auto max-w-full rounded-2xl object-contain shadow-lg"
-                        draggable={false}
-                      />
-                    ) : (
-                      <div className="max-w-lg rounded-2xl bg-white/80 px-6 py-8 text-center shadow-sm">
-                        <p className="font-hand text-lg text-amber-900">{otherFarmMapError || "No writing map available yet."}</p>
-                      </div>
-                    )}
-                  </div>
+                    <input
+                      type="range"
+                      min={control.min}
+                      max={control.max}
+                      step={control.step}
+                      value={theirMapState[control.key]}
+                      onChange={(e) => {
+                        const nextValue = Number(e.target.value)
+                        setFarmElementStates((prev) => ({
+                          ...prev,
+                          theirmap: {
+                            ...prev.theirmap,
+                            [control.key]: nextValue,
+                          },
+                        }))
+                      }}
+                      className="w-full accent-amber-500"
+                    />
+                  </label>
+                ))}
+
+                <div className="mt-3 rounded-xl bg-slate-900 px-3 py-2 font-mono text-xs text-slate-100">
+                  {`x: ${theirMapState.x.toFixed(1)}, y: ${theirMapState.y.toFixed(1)}, scale: ${theirMapState.scale.toFixed(2)}`}
                 </div>
               </div>
             )}
@@ -1439,7 +1393,7 @@ export default function UserProfilePage({
               }}
             >
               <img
-                src="/whitelogo.png"
+                src="/whitelogo.webp"
                 alt="Sweater logo"
                 className="w-10 h-10 object-contain select-none"
                 draggable={false}
@@ -1449,6 +1403,137 @@ export default function UserProfilePage({
 
 
         </div>
+
+      {showOtherWritingMap && (
+        <div
+          className="fixed inset-0 z-[130]"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="other-writing-map-title"
+        >
+          <div className="absolute inset-0 bg-black/65" onClick={() => setShowOtherWritingMap(false)} aria-hidden />
+
+          <div className="relative flex h-full w-full flex-col overflow-hidden">
+            <img
+              src={currentOtherMapChapter?.mapImageUrl || getDefaultMapImageForChapter(otherMapChapterIndex)}
+              alt={`${userId}'s writing map`}
+              className="absolute inset-0 h-full w-full object-cover"
+              draggable={false}
+            />
+            <div className="absolute inset-0 bg-gradient-to-b from-slate-950/35 via-transparent to-slate-950/45" />
+
+            <div className="relative z-10 flex items-center justify-between gap-3 px-4 py-4">
+              <button
+                type="button"
+                onClick={() => setShowOtherWritingMap(false)}
+                className="rounded-full border border-white/60 bg-white/15 px-4 py-2 text-sm font-semibold text-white backdrop-blur hover:bg-white/25"
+              >
+                Close
+              </button>
+
+              <div className="rounded-full border border-white/60 bg-black/25 px-4 py-2 text-center text-white backdrop-blur">
+                <p id="other-writing-map-title" className="text-sm font-bold">
+                  {userId}&apos;s Writing Map
+                </p>
+                <p className="text-xs text-white/85">
+                  Chapter {otherMapChapterIndex + 1} • {currentOtherMapChapter?.mapFlags.length ?? 0} flags
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setOtherMapChapterIndex((prev) => Math.max(0, prev - 1))}
+                  disabled={otherMapChapterIndex <= 0}
+                  className="rounded-full border border-white/60 bg-white/15 px-3 py-2 text-sm font-semibold text-white backdrop-blur hover:bg-white/25 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  Prev
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setOtherMapChapterIndex((prev) =>
+                      Math.min((otherMapState?.chapters.length ?? 1) - 1, prev + 1)
+                    )
+                  }
+                  disabled={otherMapChapterIndex >= (otherMapState?.chapters.length ?? 1) - 1}
+                  className="rounded-full border border-white/60 bg-white/15 px-3 py-2 text-sm font-semibold text-white backdrop-blur hover:bg-white/25 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+
+            <div className="relative z-10 flex-1">
+              {currentOtherMapChapter?.currentPin && (
+                <div
+                  className="absolute -translate-x-1/2 -translate-y-full"
+                  style={{
+                    left: `${currentOtherMapChapter.currentPin.x}%`,
+                    top: `${currentOtherMapChapter.currentPin.y}%`,
+                  }}
+                >
+                  <div className="flex flex-col items-center gap-1">
+                    <img src="/pin.webp" alt="Start pin" className="h-12 w-12 object-contain drop-shadow-lg" draggable={false} />
+                    <span className="rounded-full bg-white/95 px-3 py-1 text-xs font-semibold text-purple-700 shadow">
+                      Start
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {currentOtherMapChapter?.mapFlags.map((flag, index) => {
+                const colors = [
+                  "from-pink-100 to-pink-200 border-pink-300 text-pink-800",
+                  "from-purple-100 to-purple-200 border-purple-300 text-purple-800",
+                  "from-emerald-100 to-emerald-200 border-emerald-300 text-emerald-800",
+                  "from-sky-100 to-sky-200 border-sky-300 text-sky-800",
+                  "from-amber-100 to-amber-200 border-amber-300 text-amber-800",
+                ]
+                const colorClass = colors[index % colors.length]
+                return (
+                  <div
+                    key={flag.id}
+                    className="absolute -translate-x-1/2 -translate-y-full"
+                    style={{ left: `${flag.x}%`, top: `${flag.y}%` }}
+                    title={flag.content || flag.title}
+                  >
+                    <div className={`max-w-[180px] rounded-2xl border bg-gradient-to-r ${colorClass} px-3 py-1.5 shadow-xl`}>
+                      <div className="flex items-center gap-2">
+                        <Flag className="h-3.5 w-3.5 shrink-0 text-slate-800" />
+                        <span className="font-hand text-xs font-extrabold leading-tight text-slate-900 [overflow-wrap:anywhere]">
+                          {flag.title}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+
+              {!otherMapLoading && (currentOtherMapChapter?.mapFlags.length ?? 0) === 0 && !currentOtherMapChapter?.currentPin && (
+                <div className="absolute left-1/2 top-1/2 w-[min(90vw,420px)] -translate-x-1/2 -translate-y-1/2 rounded-3xl border border-white/60 bg-black/35 px-6 py-5 text-center text-white shadow-2xl backdrop-blur">
+                  <p className="text-lg font-bold">No writing pins yet</p>
+                  <p className="mt-2 text-sm text-white/85">
+                    This student has not saved a visible writing map marker yet.
+                  </p>
+                </div>
+              )}
+
+              {otherMapLoading && (
+                <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-white/60 bg-black/35 px-5 py-3 text-sm font-semibold text-white shadow-xl backdrop-blur">
+                  Loading writing map...
+                </div>
+              )}
+
+              {otherMapError && !otherMapLoading && (
+                <div className="absolute bottom-5 left-1/2 w-[min(92vw,480px)] -translate-x-1/2 rounded-2xl border border-rose-200/70 bg-rose-50/95 px-4 py-3 text-sm text-rose-800 shadow-xl">
+                  {otherMapError}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal: selected review + work content */}
       {false && selectedReview && (
