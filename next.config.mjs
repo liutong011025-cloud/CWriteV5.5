@@ -41,6 +41,10 @@ const nextConfig = {
         protocol: 'https',
         hostname: 'museaiwrite.eduhk.hk',
       },
+      {
+        protocol: 'https',
+        hostname: 'ark-acg-cn-beijing.tos-cn-beijing.volces.com',
+      },
     ],
   },
 }
