@@ -382,7 +382,7 @@ export default function BookReviewComplete({
           {/* 左侧：书封面 - 非AI用户不显示 */}
           {!isNoAi && (
             <div className="lg:col-span-4">
-              <div className="pixel-panel p-8 shadow-2xl sticky top-8">
+              <div className="p-8 sticky top-8">
                 <h2 className="text-2xl font-bold mb-6 flex items-center gap-2 pixel-text" style={{ color: "#6b5210" }}>
                   <span className="text-3xl">📖</span>
                   Book Cover
