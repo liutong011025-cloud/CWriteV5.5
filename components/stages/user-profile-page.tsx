@@ -101,6 +101,46 @@ interface FarmElementState {
   scale: number
 }
 
+const getChapterBaseMapImageUrl = (chapterIndex: number) => {
+  return chapterIndex <= 0 ? "/firstmap.png" : "/secondmap.png"
+}
+
+const getMapImageUrlFromUserMapState = (raw: unknown): string | null => {
+  if (!raw || typeof raw !== "object") return null
+
+  const parsed = raw as {
+    mapImageUrl?: unknown
+    activeChapterIndex?: unknown
+    chapters?: Array<{ mapImageUrl?: unknown }> | unknown
+  }
+
+  if (typeof parsed.mapImageUrl === "string" && parsed.mapImageUrl.trim()) {
+    return parsed.mapImageUrl
+  }
+
+  if (Array.isArray(parsed.chapters) && parsed.chapters.length > 0) {
+    const activeChapterIndex = Number.isFinite(Number(parsed.activeChapterIndex))
+      ? Math.max(0, Math.floor(Number(parsed.activeChapterIndex)))
+      : 0
+
+    const activeChapter = parsed.chapters[activeChapterIndex]
+    if (activeChapter && typeof activeChapter.mapImageUrl === "string" && activeChapter.mapImageUrl.trim()) {
+      return activeChapter.mapImageUrl
+    }
+
+    for (let idx = parsed.chapters.length - 1; idx >= 0; idx -= 1) {
+      const chapter = parsed.chapters[idx]
+      if (chapter && typeof chapter.mapImageUrl === "string" && chapter.mapImageUrl.trim()) {
+        return chapter.mapImageUrl
+      }
+    }
+
+    return getChapterBaseMapImageUrl(activeChapterIndex)
+  }
+
+  return null
+}
+
 const getDefaultFarmButtonStates = (otherFarm: boolean): Record<FarmElementId, FarmElementState> => ({
   farmbacktomap: otherFarm ? { x: 74, y: 43.9, scale: 0.75 } : { x: 74.1, y: 44.0, scale: 0.78 },
   farmsetting: otherFarm ? { x: 34.1, y: 49.6, scale: 0.8 } : { x: 34.3, y: 49.5, scale: 0.8 },
@@ -125,6 +165,8 @@ const DEFAULT_TREE_LAYOUT: FarmElementState[] = [
 
 // 视觉上将两排树位对调：上排显示 7-12，下排显示 1-6
 const FARM_SLOT_TREE_IDS = [7, 8, 9, 10, 11, 12, 1, 2, 3, 4, 5, 6]
+const DEFAULT_THEIR_MAP_BUTTON_STATE: FarmElementState = { x: 84.8, y: 57.8, scale: 1 }
+const THEIR_MAP_BUTTON_BASE_WIDTH_PERCENT = 17
 
 export default function UserProfilePage({
   userId,
@@ -196,25 +238,32 @@ export default function UserProfilePage({
   const [cagentHoverTrigger, setCagentHoverTrigger] = useState(false)
   const [otherFarmBubbleStep, setOtherFarmBubbleStep] = useState<"intro" | "warning">("intro")
   const [bearLogoPosition, setBearLogoPosition] = useState({ x: 49.7, y: 43.7, scale: 0.5, rotation: -11 })
+  const [theirMapButtonState, setTheirMapButtonState] = useState<FarmElementState>(DEFAULT_THEIR_MAP_BUTTON_STATE)
+  const [theirMapHovered, setTheirMapHovered] = useState(false)
+  const [showTheirMapLayoutTool, setShowTheirMapLayoutTool] = useState(false)
+  const [otherFarmMapImageUrl, setOtherFarmMapImageUrl] = useState<string | null>(null)
+  const [otherFarmMapLoading, setOtherFarmMapLoading] = useState(false)
+  const [otherFarmMapError, setOtherFarmMapError] = useState<string | null>(null)
+  const [otherFarmMapDialogOpen, setOtherFarmMapDialogOpen] = useState(false)
 
   const farmElements: FarmElementConfig[] = isOtherFarm
     ? [
-        { id: "farmbacktomap", label: "Back", imageSrc: "/farmbacktomap.webp" },
-        { id: "farmwrittingboard", label: "Writing Board", imageSrc: "/farmwritingboard.webp" },
-        { id: "vistothersfarm", label: "Visit Others' Farms", imageSrc: "/visitothersfarm.webp" },
+        { id: "farmbacktomap", label: "Back", imageSrc: "/farmbacktomap.png" },
+        { id: "farmwrittingboard", label: "Writing Board", imageSrc: "/farmwritingboard.png" },
+        { id: "vistothersfarm", label: "Visit Others' Farms", imageSrc: "/visitothersfarm.png" },
       ]
     : [
-    { id: "farmbacktomap", label: "Back to Map", imageSrc: "/farmbacktomap.webp" },
-    { id: "farmsetting", label: "Settings", imageSrc: "/farmsetting.webp" },
-    { id: "farmwrittingboard", label: "Writing Board", imageSrc: "/farmwritingboard.webp" },
-    { id: "vistothersfarm", label: "Visit Others' Farms", imageSrc: "/visitothersfarm.webp" },
+    { id: "farmbacktomap", label: "Back to Map", imageSrc: "/farmbacktomap.png" },
+    { id: "farmsetting", label: "Settings", imageSrc: "/farmsetting.png" },
+    { id: "farmwrittingboard", label: "Writing Board", imageSrc: "/farmwritingboard.png" },
+    { id: "vistothersfarm", label: "Visit Others' Farms", imageSrc: "/visitothersfarm.png" },
   ]
 
   const farmElementStates = getDefaultFarmButtonStates(isOtherFarm)
   const farmTreeStates = DEFAULT_TREE_LAYOUT
   const forestById = new Map(forest.map((tree) => [tree.id, tree] as const))
 
-  const farmBackgroundSrc = "/farm.webp"
+  const farmBackgroundSrc = "/farm.png"
   const farmBackgroundAlt = isOtherFarm ? "Other Student Farm Background" : "My Farm Background"
   const treeCount = 12
 
@@ -260,6 +309,10 @@ export default function UserProfilePage({
     setOtherFarmBubbleStep("intro")
     setCagentBubbleOpen(false)
   }, [isOtherFarm, userId])
+
+  useEffect(() => {
+    setTheirMapButtonState(DEFAULT_THEIR_MAP_BUTTON_STATE)
+  }, [userId, isOtherFarm])
 
   useEffect(() => {
     Promise.all([
@@ -349,6 +402,57 @@ export default function UserProfilePage({
     return () => {
       cancelled = true
     }
+  }, [isOtherFarm, userId])
+
+  useEffect(() => {
+    if (!isOtherFarm || !userId) {
+      setOtherFarmMapImageUrl(null)
+      setOtherFarmMapError(null)
+      setOtherFarmMapLoading(false)
+      return
+    }
+
+    let cancelled = false
+    setOtherFarmMapLoading(true)
+    setOtherFarmMapError(null)
+
+    void (async () => {
+      try {
+        const res = await fetch(`/api/user-map-state?user_id=${encodeURIComponent(userId)}`)
+        const data = await res.json().catch(() => ({}))
+        if (!res.ok) {
+          throw new Error(typeof data?.error === "string" ? data.error : `user_map_state_http_${res.status}`)
+        }
+        if (cancelled) return
+
+        const resolvedMapUrl = getMapImageUrlFromUserMapState(data?.state)
+        setOtherFarmMapImageUrl(resolvedMapUrl)
+        setOtherFarmMapError(resolvedMapUrl ? null : "No writing map available yet.")
+      } catch (error) {
+        if (cancelled) return
+        console.error("[other-farm] load writing map failed:", error)
+        setOtherFarmMapImageUrl(null)
+        setOtherFarmMapError("Failed to load this student's writing map.")
+      } finally {
+        if (!cancelled) {
+          setOtherFarmMapLoading(false)
+        }
+      }
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [isOtherFarm, userId])
+
+  useEffect(() => {
+    if (!isOtherFarm) {
+      setOtherFarmMapDialogOpen(false)
+      setTheirMapHovered(false)
+      return
+    }
+    setOtherFarmMapDialogOpen(false)
+    setTheirMapHovered(false)
   }, [isOtherFarm, userId])
 
   useEffect(() => {
@@ -928,7 +1032,7 @@ export default function UserProfilePage({
                 const isHighlightedTree = treeData && highlightTreeId === treeData.id
                 const isHoveredTree = treeData && hoveredTreeId === treeData.id
                 const treeStage = Math.max(2, Math.min(4, Number(treeData?.stage ?? 2)))
-                const treeImageSrc = treeStage >= 4 ? "/tree4.webp" : treeStage >= 3 ? "/tree3.webp" : "/tree2.webp"
+                const treeImageSrc = treeStage >= 4 ? "/tree4.png" : treeStage >= 3 ? "/tree3.png" : "/tree2.png"
                 const treeBaseSizePercent = treeStage >= 4 ? 11.2 : 8
                 const treeTop = treeStage >= 4 ? treeState.y + 3.6 : treeState.y
                 const treeLeft = treeStage >= 4 ? treeState.x + 1.2 : treeState.x
@@ -1020,6 +1124,140 @@ export default function UserProfilePage({
                 </button>
               )
             })}
+
+            {isOtherFarm && (
+              <button
+                type="button"
+                className="absolute -translate-x-1/2 -translate-y-1/2 focus:outline-none origin-center"
+                style={{
+                  left: `${theirMapButtonState.x}%`,
+                  top: `${theirMapButtonState.y}%`,
+                  width: `${THEIR_MAP_BUTTON_BASE_WIDTH_PERCENT * theirMapButtonState.scale}%`,
+                  height: "auto",
+                  aspectRatio: "919 / 745",
+                  transform: `translate(-50%, -50%) scale(${theirMapHovered ? 1.08 : 1})`,
+                  transition: "transform 0.25s ease-in-out",
+                  zIndex: 20,
+                }}
+                onMouseEnter={() => setTheirMapHovered(true)}
+                onMouseLeave={() => setTheirMapHovered(false)}
+                onClick={() => setOtherFarmMapDialogOpen(true)}
+                aria-label={`Open ${userId}'s writing map`}
+              >
+                <img
+                  src="/theirmap.png"
+                  alt={`${userId}'s writing map`}
+                  className="w-full h-full object-contain select-none pointer-events-none"
+                  draggable={false}
+                />
+              </button>
+            )}
+
+            {isOtherFarm && process.env.NODE_ENV === "development" && (
+              <div className="absolute right-[2%] top-[6%] z-[70] w-[280px] rounded-2xl border border-amber-200/80 bg-white/95 p-3 shadow-xl">
+                <button
+                  type="button"
+                  className="mb-3 w-full rounded-xl bg-amber-500 px-3 py-2 text-sm font-semibold text-white hover:bg-amber-600"
+                  onClick={() => setShowTheirMapLayoutTool((prev) => !prev)}
+                >
+                  {showTheirMapLayoutTool ? "Hide" : "Adjust"} Their Map Layout
+                </button>
+                {showTheirMapLayoutTool && (
+                  <div className="space-y-3 text-xs text-amber-900">
+                    <p className="rounded-xl bg-amber-50 px-3 py-2 leading-relaxed">
+                      Position is stored as percentages inside the same cover overlay used by the other farm elements, so it stays aligned across screen sizes.
+                    </p>
+                    <div>
+                      <label className="mb-1 block font-semibold">X: {theirMapButtonState.x.toFixed(1)}%</label>
+                      <input
+                        type="range"
+                        min={0}
+                        max={100}
+                        step={0.1}
+                        value={theirMapButtonState.x}
+                        onChange={(e) =>
+                          setTheirMapButtonState((prev) => ({ ...prev, x: Number(e.target.value) }))
+                        }
+                        className="w-full"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block font-semibold">Y: {theirMapButtonState.y.toFixed(1)}%</label>
+                      <input
+                        type="range"
+                        min={0}
+                        max={100}
+                        step={0.1}
+                        value={theirMapButtonState.y}
+                        onChange={(e) =>
+                          setTheirMapButtonState((prev) => ({ ...prev, y: Number(e.target.value) }))
+                        }
+                        className="w-full"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block font-semibold">Scale: {theirMapButtonState.scale.toFixed(2)}</label>
+                      <input
+                        type="range"
+                        min={0.4}
+                        max={1.8}
+                        step={0.01}
+                        value={theirMapButtonState.scale}
+                        onChange={(e) =>
+                          setTheirMapButtonState((prev) => ({ ...prev, scale: Number(e.target.value) }))
+                        }
+                        className="w-full"
+                      />
+                    </div>
+                    <pre className="overflow-x-auto rounded-xl bg-slate-900 px-3 py-2 text-[11px] text-slate-100">
+{`{ x: ${theirMapButtonState.x.toFixed(1)}, y: ${theirMapButtonState.y.toFixed(1)}, scale: ${theirMapButtonState.scale.toFixed(2)} }`}
+                    </pre>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {isOtherFarm && otherFarmMapDialogOpen && (
+              <div
+                className="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 p-4"
+                onClick={() => setOtherFarmMapDialogOpen(false)}
+              >
+                <div
+                  className="relative w-full max-w-6xl rounded-3xl border border-amber-200 bg-[#f7ecd3] p-4 shadow-2xl"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <div>
+                      <h2 className="font-hand text-2xl font-bold text-amber-900">{userId}'s Writing Map</h2>
+                      <p className="text-sm text-amber-800/80">Previewing the latest saved writing adventure map for this farm.</p>
+                    </div>
+                    <button
+                      type="button"
+                      className="rounded-full bg-white/80 px-4 py-2 text-sm font-semibold text-amber-900 hover:bg-white"
+                      onClick={() => setOtherFarmMapDialogOpen(false)}
+                    >
+                      Close
+                    </button>
+                  </div>
+                  <div className="flex min-h-[320px] items-center justify-center overflow-hidden rounded-2xl border border-amber-200 bg-[#ead3a5]/60 p-3">
+                    {otherFarmMapLoading ? (
+                      <p className="font-hand text-lg text-amber-900">Loading writing map...</p>
+                    ) : otherFarmMapImageUrl ? (
+                      <img
+                        src={otherFarmMapImageUrl}
+                        alt={`${userId}'s writing map preview`}
+                        className="max-h-[75vh] w-auto max-w-full rounded-2xl object-contain shadow-lg"
+                        draggable={false}
+                      />
+                    ) : (
+                      <div className="max-w-lg rounded-2xl bg-white/80 px-6 py-8 text-center shadow-sm">
+                        <p className="font-hand text-lg text-amber-900">{otherFarmMapError || "No writing map available yet."}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Tree growth record modal: only on own farm when a tree is clicked */}
             {selectedTreeId != null && !isOtherFarm && (
@@ -1194,7 +1432,7 @@ export default function UserProfilePage({
               }}
             >
               <img
-                src="/whitelogo.webp"
+                src="/whitelogo.png"
                 alt="Sweater logo"
                 className="w-10 h-10 object-contain select-none"
                 draggable={false}
