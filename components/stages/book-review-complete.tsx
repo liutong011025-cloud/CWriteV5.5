@@ -393,6 +393,7 @@ export default function BookReviewComplete({
                       src={bookCoverUrl}
                       alt={`Cover of ${bookTitle}`}
                       fill
+                      unoptimized={/^https?:\/\//.test(bookCoverUrl)}
                       className="object-cover"
                     />
                   </div>
