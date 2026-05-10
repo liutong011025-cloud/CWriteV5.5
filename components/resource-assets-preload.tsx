@@ -9,10 +9,13 @@ const RESOURCE_IMAGES = [
   "/srl.png",
 ] as const
 
-const HOVER_SOUND = "/bit.mp3"
+const RESOURCE_AUDIO = [
+  "/soundreality-finger-snap-179180.mp3",
+  "/yoshiyuki_tatsuya-pixel-hearts-foreverwav-427383.mp3",
+] as const
 
 /**
- * 進站後在背景預載 Resource 相關大圖與懸浮音效，減少首次打開時白屏等待。
+ * 進站後在背景預載 Resource 相關大圖與音效，減少首次打開時白屏等待。
  */
 export default function ResourceAssetsPreload() {
   useEffect(() => {
@@ -26,9 +29,11 @@ export default function ResourceAssetsPreload() {
       links.push(link)
     }
 
-    const audio = new Audio(HOVER_SOUND)
-    audio.preload = "auto"
-    void audio.load()
+    for (const src of RESOURCE_AUDIO) {
+      const a = new Audio(src)
+      a.preload = "auto"
+      void a.load()
+    }
 
     return () => {
       for (const l of links) {
