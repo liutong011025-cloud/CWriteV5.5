@@ -15,7 +15,8 @@ interface ResearchRoomProps {
 }
 
 const RESOURCE_BG = "/resources.png"
-const HOVER_SOUND = "/bit.mp3"
+const HOVER_SOUND = "/soundreality-finger-snap-179180.mp3"
+const BGM_LOOP = "/yoshiyuki_tatsuya-pixel-hearts-foreverwav-427383.mp3"
 
 const MAIN_ORDER: ResourceMainKey[] = ["cefr", "longman", "srl"]
 
@@ -105,6 +106,25 @@ export default function ResearchRoom({ onBack }: ResearchRoomProps) {
     }
   }, [])
 
+  useEffect(() => {
+    const bgm = new Audio(BGM_LOOP)
+    bgm.loop = true
+    bgm.volume = 0.35
+    bgm.preload = "auto"
+    const tryPlay = () => void bgm.play().catch(() => {})
+    tryPlay()
+    const onFirstGesture = () => {
+      tryPlay()
+      window.removeEventListener("pointerdown", onFirstGesture)
+    }
+    window.addEventListener("pointerdown", onFirstGesture, { passive: true })
+    return () => {
+      window.removeEventListener("pointerdown", onFirstGesture)
+      bgm.pause()
+      bgm.src = ""
+    }
+  }, [])
+
   const playHoverSound = useCallback(() => {
     const a = hoverAudioRef.current
     if (!a) return
@@ -144,10 +164,10 @@ export const RESOURCE_DETAIL_EXIT: ResourceImageRect = {
 
   return (
     <div
-      className="relative min-h-screen w-full overflow-x-hidden bg-black"
+      className="relative min-h-[100dvh] w-full overflow-x-hidden bg-black"
       style={{
         paddingTop: "var(--stage-top-padding)",
-        paddingBottom: "var(--stage-bottom-padding)",
+        paddingBottom: 0,
       }}
       data-stage="research"
     >
@@ -157,13 +177,13 @@ export const RESOURCE_DETAIL_EXIT: ResourceImageRect = {
         </div>
       )}
 
-      <div className="relative z-10 flex min-h-[calc(100dvh-var(--stage-top-padding))] w-full flex-col items-center justify-center px-2 pb-6">
-        <div className="relative inline-block max-w-full">
+      <div className="relative z-10 flex min-h-[calc(100dvh-var(--stage-top-padding))] w-full flex-col items-center justify-center px-0">
+        <div className="relative w-full max-w-[100vw]">
           {/* eslint-disable-next-line @next/next/no-img-element -- 百分比熱區需與實際渲染像素對齊 */}
           <img
             src={RESOURCE_BG}
             alt="Resources"
-            className="mx-auto block h-auto max-h-[calc(100dvh-var(--stage-top-padding)-48px)] w-auto max-w-[min(100vw-16px,1600px)] select-none"
+            className="mx-auto block h-auto max-h-[calc(100dvh-var(--stage-top-padding)-8px)] w-full max-w-[100vw] object-contain object-center select-none"
             draggable={false}
           />
 
