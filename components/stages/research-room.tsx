@@ -98,10 +98,6 @@ export default function ResearchRoom({ onBack }: ResearchRoomProps) {
   const mainImageRef = useRef<HTMLImageElement | null>(null)
   const [mainCoverRect, setMainCoverRect] = useState<CoverOverlayRect | null>(null)
 
-  const detailContainerRef = useRef<HTMLDivElement | null>(null)
-  const detailImageRef = useRef<HTMLImageElement | null>(null)
-  const [detailCoverRect, setDetailCoverRect] = useState<CoverOverlayRect | null>(null)
-
   const updateMainCoverRect = useCallback(() => {
     const container = mainContainerRef.current
     const img = mainImageRef.current
@@ -112,23 +108,6 @@ export default function ResearchRoom({ onBack }: ResearchRoomProps) {
     const ih = img.naturalHeight
     const s = Math.max(cw / iw, ch / ih)
     setMainCoverRect({
-      width: s * iw,
-      height: s * ih,
-      left: -(s * iw - cw) / 2,
-      top: -(s * ih - ch) / 2,
-    })
-  }, [])
-
-  const updateDetailCoverRect = useCallback(() => {
-    const container = detailContainerRef.current
-    const img = detailImageRef.current
-    if (!container || !img || !img.naturalWidth || !img.naturalHeight) return
-    const cw = container.clientWidth
-    const ch = container.clientHeight
-    const iw = img.naturalWidth
-    const ih = img.naturalHeight
-    const s = Math.max(cw / iw, ch / ih)
-    setDetailCoverRect({
       width: s * iw,
       height: s * ih,
       left: -(s * iw - cw) / 2,
@@ -162,26 +141,6 @@ export default function ResearchRoom({ onBack }: ResearchRoomProps) {
       ro.disconnect()
     }
   }, [updateMainCoverRect])
-
-  useEffect(() => {
-    if (!detail) {
-      setDetailCoverRect(null)
-      return
-    }
-    const container = detailContainerRef.current
-    const img = detailImageRef.current
-    if (!img || !container) return
-    if (img.complete && img.naturalWidth) updateDetailCoverRect()
-    img.addEventListener("load", updateDetailCoverRect)
-    window.addEventListener("resize", updateDetailCoverRect)
-    const ro = new ResizeObserver(updateDetailCoverRect)
-    ro.observe(container)
-    return () => {
-      img.removeEventListener("load", updateDetailCoverRect)
-      window.removeEventListener("resize", updateDetailCoverRect)
-      ro.disconnect()
-    }
-  }, [detail, updateDetailCoverRect])
 
   useEffect(() => {
     const a = new Audio(HOVER_SOUND)
@@ -264,6 +223,23 @@ export const RESOURCE_DETAIL_EXIT: ResourceImageRect = {
       style={{ paddingTop: 0, paddingBottom: 0 }}
       data-stage="research"
     >
+      {onBack && (
+        <div
+          className="fixed left-2.5 z-[60] sm:left-4 md:left-5"
+          style={{
+            top: "max(0.5rem, calc(var(--stage-top-padding) + 10px))",
+          }}
+        >
+          <BackButton
+            onClick={onBack}
+            variant="amber"
+            noFixed
+            aria-label="Back"
+            className="!h-14 !w-14 border-[3px] shadow-lg md:!h-[3.75rem] md:!w-[3.75rem] md:border-4 xl:!h-[4.5rem] xl:!w-[4.5rem] [&_svg]:!h-7 [&_svg]:!w-7 md:[&_svg]:!h-8 md:[&_svg]:!w-8 xl:[&_svg]:!h-10 xl:[&_svg]:!w-10"
+          />
+        </div>
+      )}
+
       {/* 與 My Farm 相同：固定視窗鋪滿，object-cover，熱區在 cover 對齊層內用 % */}
       <div ref={mainContainerRef} className="fixed inset-0 h-full w-full overflow-hidden bg-black">
         {/* eslint-disable-next-line @next/next/no-img-element -- 與農場一致，配合 cover 矩陣對齊熱區 */}
@@ -276,12 +252,6 @@ export const RESOURCE_DETAIL_EXIT: ResourceImageRect = {
         />
 
         <div className="absolute" style={overlayBoxStyle(mainCoverRect)}>
-          {onBack && (
-            <div className="absolute z-[60]" style={{ left: "2%", top: "6%" }}>
-              <BackButton onClick={onBack} variant="amber" noFixed aria-label="Back" />
-            </div>
-          )}
-
           {MAIN_ORDER.map((key) => (
             <button
               key={key}
@@ -300,21 +270,19 @@ export const RESOURCE_DETAIL_EXIT: ResourceImageRect = {
 
       {detail && (
         <div
-          ref={detailContainerRef}
-          className="fixed inset-0 z-[200] h-full w-full overflow-hidden bg-black"
+          className="fixed inset-0 z-[200] flex items-center justify-center overflow-y-auto bg-black/80 p-4 sm:p-6"
           role="dialog"
           aria-modal="true"
           aria-label="Resource detail"
         >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            ref={detailImageRef}
-            src={RESOURCE_DETAIL_SRC[detail]}
-            alt=""
-            className="absolute inset-0 h-full w-full object-cover object-center select-none"
-            draggable={false}
-          />
-          <div className="absolute" style={overlayBoxStyle(detailCoverRect)}>
+          <div className="relative inline-block max-w-[min(640px,88vw)]">
+            {/* eslint-disable-next-line @next/next/no-img-element -- 詳情縮小居中，熱區相對圖片包盒 */}
+            <img
+              src={RESOURCE_DETAIL_SRC[detail]}
+              alt=""
+              className="block h-auto max-h-[min(68vh,560px)] w-full object-contain select-none"
+              draggable={false}
+            />
             <button
               type="button"
               aria-label="Close"
