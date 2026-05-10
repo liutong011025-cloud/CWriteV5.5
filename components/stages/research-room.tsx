@@ -1,167 +1,261 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { Button } from "@/components/ui/button"
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react"
 import { BackButton } from "@/components/ui/back-button"
-import Image from "next/image"
+import {
+  RESOURCE_DETAIL_EXIT,
+  RESOURCE_DETAIL_SRC,
+  RESOURCE_MAIN_HOTSPOTS,
+  type ResourceImageRect,
+  type ResourceMainKey,
+} from "@/lib/resource-hotspots"
 
 interface ResearchRoomProps {
   onBack?: () => void
 }
 
-interface ResearchBook {
-  id: number
-  title: string
-  description: string
-  fileName: string
+const RESOURCE_BG = "/resources.png"
+const HOVER_SOUND = "/bit.mp3"
+
+const MAIN_ORDER: ResourceMainKey[] = ["cefr", "longman", "srl"]
+
+function cloneMain(
+  m: Record<ResourceMainKey, ResourceImageRect>
+): Record<ResourceMainKey, ResourceImageRect> {
+  return {
+    cefr: { ...m.cefr },
+    longman: { ...m.longman },
+    srl: { ...m.srl },
+  }
 }
 
-export default function ResearchRoom({ onBack }: ResearchRoomProps) {
-  const [books, setBooks] = useState<ResearchBook[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    let cancelled = false
-
-    const loadBooks = async () => {
-      try {
-        setIsLoading(true)
-        setError(null)
-        const res = await fetch("/api/research/list")
-        if (!res.ok) {
-          throw new Error(`Failed to load research books (${res.status})`)
-        }
-        const data = await res.json()
-        if (!cancelled) {
-          setBooks(data.books || [])
-        }
-      } catch (err) {
-        if (!cancelled) {
-          setError("Unable to load research books. Please contact your teacher.")
-          console.error(err)
-        }
-      } finally {
-        if (!cancelled) {
-          setIsLoading(false)
-        }
-      }
-    }
-
-    loadBooks()
-
-    return () => {
-      cancelled = true
-    }
-  }, [])
-
-  const handleOpen = (fileName: string) => {
-    if (typeof window !== "undefined") {
-      // 直接打開靜態 PDF，等同於用瀏覽器 PDF 閱讀器查看
-      const url = `/research/${encodeURIComponent(fileName)}`
-      window.open(url, "_blank")
-    }
+function rectStyle(r: ResourceImageRect): CSSProperties {
+  return {
+    position: "absolute",
+    left: `${r.left}%`,
+    top: `${r.top}%`,
+    width: `${r.width}%`,
+    height: `${r.height}%`,
   }
+}
 
+function RectFields({
+  label,
+  value,
+  onChange,
+}: {
+  label: string
+  value: ResourceImageRect
+  onChange: (next: ResourceImageRect) => void
+}) {
+  const row = (key: keyof ResourceImageRect, caption: string) => (
+    <label className="flex items-center gap-1 text-[10px] text-white/90">
+      <span className="w-10 shrink-0">{caption}</span>
+      <input
+        type="number"
+        step={0.1}
+        className="w-14 rounded border border-white/30 bg-black/50 px-1 text-[11px]"
+        value={value[key]}
+        onChange={(e) => {
+          const n = parseFloat(e.target.value)
+          if (Number.isFinite(n)) onChange({ ...value, [key]: n })
+        }}
+      />
+    </label>
+  )
   return (
-    <div
-      className="min-h-screen relative overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900"
-      style={{ paddingTop: "var(--stage-top-padding)", paddingBottom: "var(--stage-bottom-padding)" }}
-      data-stage="research"
-    >
-      {/* 背景：柔和的閲覽室燈光 + 書架剪影 */}
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(248,250,252,0.12),_transparent_60%)]" />
-        <div className="absolute bottom-0 inset-x-0 h-1/2 bg-gradient-to-t from-slate-950/90 via-slate-900/40 to-transparent" />
-        <Image
-          src="/library.webp"
-          alt="Reading room background"
-          fill
-          priority
-          className="object-cover mix-blend-multiply opacity-40"
-        />
-      </div>
-
-      <div className="relative z-10 max-w-6xl mx-auto px-4 md:px-8">
-        {onBack && <BackButton onClick={onBack} variant="amber" />}
-
-        {/* 標題區 */}
-        <div className="mb-10 text-center">
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-black bg-gradient-to-r from-amber-200 via-amber-400 to-yellow-300 bg-clip-text text-transparent drop-shadow-[0_0_15px_rgba(250,250,210,0.35)]">
-            Research Reading Room
-          </h1>
-          <p className="mt-3 text-base md:text-lg text-slate-200/90 max-w-2xl mx-auto">
-            Choose one of the research books below. Click a book to open the PDF and flip through the pages like a real
-            reading room.
-          </p>
-        </div>
-
-        {/* 狀態提示 */}
-        {isLoading && (
-          <div className="mt-10 text-center text-slate-200/80">
-            Loading research books...
-          </div>
-        )}
-        {error && !isLoading && (
-          <div className="mt-10 text-center text-red-200 text-sm">
-            {error}
-          </div>
-        )}
-
-        {/* 書架區域 */}
-        {!isLoading && !error && books.length > 0 && (
-          <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-            {books.map((book) => (
-              <button
-                key={book.id}
-                type="button"
-                onClick={() => handleOpen(book.fileName)}
-                className="group relative h-72 md:h-80 w-full max-w-sm mx-auto"
-              >
-                {/* 書本陰影 */}
-                <div className="absolute inset-x-6 bottom-0 h-5 rounded-full bg-black/40 blur-lg opacity-0 group-hover:opacity-80 transition-opacity duration-300" />
-
-                {/* 書本本體 */}
-                <div className="relative h-full w-full">
-                  <div className="absolute inset-0 rounded-[18px] bg-gradient-to-br from-amber-100 via-amber-200 to-amber-300 shadow-2xl border border-amber-500/60 transform origin-left group-hover:-rotate-y-6 group-hover:-translate-y-1 group-hover:translate-x-1 transition-transform duration-500 ease-out">
-                    {/* 書脊 */}
-                    <div className="absolute inset-y-3 left-0 w-7 bg-gradient-to-b from-amber-600 via-amber-700 to-amber-800 rounded-l-[18px] shadow-inner">
-                      <div className="h-full flex items-center justify-center">
-                        <span className="text-[11px] font-semibold tracking-[0.18em] text-amber-100 rotate-180 [writing-mode:vertical-rl]">
-                          RESEARCH
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* 封面內容 */}
-                    <div className="ml-7 h-full flex flex-col justify-between p-4">
-                      <div>
-                        <p className="text-xs uppercase tracking-[0.2em] text-amber-800/80 mb-1">
-                          Book {book.id.toString().padStart(2, "0")}
-                        </p>
-                        <h2 className="text-lg md:text-xl font-bold text-amber-950 leading-tight line-clamp-2">
-                          {book.title}
-                        </h2>
-                      </div>
-                      <div className="text-xs md:text-sm text-amber-900/90 line-clamp-3">
-                        {book.description}
-                      </div>
-                      <div className="flex items-center justify-between mt-2 text-[11px] text-amber-900/80">
-                        <span>Click to open PDF</span>
-                        <span className="font-semibold group-hover:text-amber-950">Flip ▶</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* 模擬翻頁效果的「內頁」 */}
-                  <div className="absolute inset-1 ml-6 rounded-[14px] bg-gradient-to-br from-white via-amber-50 to-amber-100 shadow-md opacity-0 group-hover:opacity-100 group-hover:translate-x-1 group-hover:-translate-y-1 transition-all duration-500 ease-out" />
-                </div>
-              </button>
-            ))}
-          </div>
-        )}
+    <div className="rounded-md border border-amber-400/40 bg-black/70 p-2">
+      <div className="mb-1 font-semibold text-amber-200">{label}</div>
+      <div className="grid grid-cols-2 gap-1">
+        {row("left", "L")}
+        {row("top", "T")}
+        {row("width", "W")}
+        {row("height", "H")}
       </div>
     </div>
   )
 }
 
+export default function ResearchRoom({ onBack }: ResearchRoomProps) {
+  const [detail, setDetail] = useState<ResourceMainKey | null>(null)
+  const [calibrate, setCalibrate] = useState(false)
+  const [mainRects, setMainRects] = useState(() => cloneMain(RESOURCE_MAIN_HOTSPOTS))
+  const [exitRect, setExitRect] = useState<ResourceImageRect>(() => ({
+    ...RESOURCE_DETAIL_EXIT,
+  }))
+  const hoverAudioRef = useRef<HTMLAudioElement | null>(null)
+
+  useEffect(() => {
+    try {
+      setCalibrate(
+        typeof window !== "undefined" &&
+          new URLSearchParams(window.location.search).get("calibrateResources") === "1"
+      )
+    } catch {
+      setCalibrate(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    const a = new Audio(HOVER_SOUND)
+    a.preload = "auto"
+    hoverAudioRef.current = a
+    return () => {
+      hoverAudioRef.current = null
+    }
+  }, [])
+
+  const playHoverSound = useCallback(() => {
+    const a = hoverAudioRef.current
+    if (!a) return
+    try {
+      a.currentTime = 0
+      void a.play().catch(() => {})
+    } catch {
+      // ignore
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!detail) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setDetail(null)
+    }
+    window.addEventListener("keydown", onKey)
+    return () => window.removeEventListener("keydown", onKey)
+  }, [detail])
+
+  const copyCalibrationSnippet = useCallback(() => {
+    const { cefr, longman, srl } = mainRects
+    const snippet = `// 貼到 lib/resource-hotspots.ts，覆蓋同名常數即可
+
+export const RESOURCE_MAIN_HOTSPOTS: Record<ResourceMainKey, ResourceImageRect> = {
+  cefr: { left: ${cefr.left}, top: ${cefr.top}, width: ${cefr.width}, height: ${cefr.height} },
+  longman: { left: ${longman.left}, top: ${longman.top}, width: ${longman.width}, height: ${longman.height} },
+  srl: { left: ${srl.left}, top: ${srl.top}, width: ${srl.width}, height: ${srl.height} },
+}
+
+export const RESOURCE_DETAIL_EXIT: ResourceImageRect = {
+  left: ${exitRect.left}, top: ${exitRect.top}, width: ${exitRect.width}, height: ${exitRect.height},
+}
+`
+    void navigator.clipboard.writeText(snippet)
+  }, [mainRects, exitRect])
+
+  return (
+    <div
+      className="relative min-h-screen w-full overflow-x-hidden bg-black"
+      style={{
+        paddingTop: "var(--stage-top-padding)",
+        paddingBottom: "var(--stage-bottom-padding)",
+      }}
+      data-stage="research"
+    >
+      {onBack && (
+        <div className="relative z-20 px-3 pt-2">
+          <BackButton onClick={onBack} variant="amber" />
+        </div>
+      )}
+
+      <div className="relative z-10 flex min-h-[calc(100dvh-var(--stage-top-padding))] w-full flex-col items-center justify-center px-2 pb-6">
+        <div className="relative inline-block max-w-full">
+          {/* eslint-disable-next-line @next/next/no-img-element -- 百分比熱區需與實際渲染像素對齊 */}
+          <img
+            src={RESOURCE_BG}
+            alt="Resources"
+            className="mx-auto block h-auto max-h-[calc(100dvh-var(--stage-top-padding)-48px)] w-auto max-w-[min(100vw-16px,1600px)] select-none"
+            draggable={false}
+          />
+
+          {MAIN_ORDER.map((key) => (
+            <button
+              key={key}
+              type="button"
+              aria-label={key === "cefr" ? "CEFR" : key === "longman" ? "Longman" : "SRL"}
+              className={`absolute z-[1] cursor-pointer border-0 bg-transparent p-0 outline-none transition-transform hover:scale-[1.02] focus-visible:ring-2 focus-visible:ring-amber-300 ${
+                calibrate ? "border-2 border-dashed border-red-400/80 bg-red-500/20" : ""
+              }`}
+              style={rectStyle(mainRects[key])}
+              onPointerEnter={playHoverSound}
+              onClick={() => setDetail(key)}
+            />
+          ))}
+        </div>
+      </div>
+
+      {detail && (
+        <div
+          className="fixed inset-0 z-[200] flex items-center justify-center bg-black/90 px-2 py-[max(env(safe-area-inset-top),8px)]"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Resource detail"
+        >
+          <div className="relative inline-block max-h-full max-w-full">
+            {/* eslint-disable-next-line @next/next/no-img-element -- 詳情圖透明關閉熱區對齊 */}
+            <img
+              src={RESOURCE_DETAIL_SRC[detail]}
+              alt=""
+              className="mx-auto block max-h-[calc(100dvh-16px)] max-w-[min(100vw-8px,1600px)] object-contain select-none"
+              draggable={false}
+            />
+            <button
+              type="button"
+              aria-label="Close"
+              className={`absolute z-[1] cursor-pointer border-0 bg-transparent p-0 outline-none focus-visible:ring-2 focus-visible:ring-amber-300 ${
+                calibrate ? "border-2 border-dashed border-cyan-400/80 bg-cyan-500/20" : ""
+              }`}
+              style={rectStyle(exitRect)}
+              onClick={() => setDetail(null)}
+            />
+          </div>
+        </div>
+      )}
+
+      {calibrate && (
+        <div className="fixed bottom-2 left-2 z-[250] max-h-[70vh] w-[min(100vw-16px,320px)] overflow-y-auto rounded-xl border border-amber-500/50 bg-slate-950/95 p-3 text-xs shadow-2xl backdrop-blur-sm">
+          <div className="mb-2 font-bold text-amber-300">Resource 熱區校準</div>
+          <p className="mb-2 text-[10px] leading-snug text-slate-300">
+            拖曳視窗對齊後，調整數值；完成後點「複製」把結果貼給開發者更新{" "}
+            <code className="text-amber-200/90">lib/resource-hotspots.ts</code>。移除此模式：去掉網址{" "}
+            <code className="text-amber-200/90">?calibrateResources=1</code>。
+          </p>
+          <div className="flex flex-col gap-2">
+            {MAIN_ORDER.map((key) => (
+              <RectFields
+                key={key}
+                label={key.toUpperCase()}
+                value={mainRects[key]}
+                onChange={(next) =>
+                  setMainRects((prev) => ({
+                    ...prev,
+                    [key]: next,
+                  }))
+                }
+              />
+            ))}
+            <RectFields label="詳情頁退出鈕 (X)" value={exitRect} onChange={setExitRect} />
+          </div>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button
+              type="button"
+              className="rounded-lg bg-amber-600 px-3 py-1.5 font-semibold text-white hover:bg-amber-500"
+              onClick={copyCalibrationSnippet}
+            >
+              複製設定片段
+            </button>
+            <button
+              type="button"
+              className="rounded-lg border border-slate-500 px-3 py-1.5 text-slate-200 hover:bg-slate-800"
+              onClick={() => {
+                setMainRects(cloneMain(RESOURCE_MAIN_HOTSPOTS))
+                setExitRect({ ...RESOURCE_DETAIL_EXIT })
+              }}
+            >
+              還原預設
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
