@@ -20,6 +20,14 @@ const BGM_LOOP = "/yoshiyuki_tatsuya-pixel-hearts-foreverwav-427383.mp3"
 
 const MAIN_ORDER: ResourceMainKey[] = ["cefr", "longman", "srl"]
 
+/** 與 object-cover 背景對齊的 overlay 矩形（px），同 My Farm / navigation */
+interface CoverOverlayRect {
+  width: number
+  height: number
+  left: number
+  top: number
+}
+
 function cloneMain(
   m: Record<ResourceMainKey, ResourceImageRect>
 ): Record<ResourceMainKey, ResourceImageRect> {
@@ -86,6 +94,48 @@ export default function ResearchRoom({ onBack }: ResearchRoomProps) {
   }))
   const hoverAudioRef = useRef<HTMLAudioElement | null>(null)
 
+  const mainContainerRef = useRef<HTMLDivElement | null>(null)
+  const mainImageRef = useRef<HTMLImageElement | null>(null)
+  const [mainCoverRect, setMainCoverRect] = useState<CoverOverlayRect | null>(null)
+
+  const detailContainerRef = useRef<HTMLDivElement | null>(null)
+  const detailImageRef = useRef<HTMLImageElement | null>(null)
+  const [detailCoverRect, setDetailCoverRect] = useState<CoverOverlayRect | null>(null)
+
+  const updateMainCoverRect = useCallback(() => {
+    const container = mainContainerRef.current
+    const img = mainImageRef.current
+    if (!container || !img || !img.naturalWidth || !img.naturalHeight) return
+    const cw = container.clientWidth
+    const ch = container.clientHeight
+    const iw = img.naturalWidth
+    const ih = img.naturalHeight
+    const s = Math.max(cw / iw, ch / ih)
+    setMainCoverRect({
+      width: s * iw,
+      height: s * ih,
+      left: -(s * iw - cw) / 2,
+      top: -(s * ih - ch) / 2,
+    })
+  }, [])
+
+  const updateDetailCoverRect = useCallback(() => {
+    const container = detailContainerRef.current
+    const img = detailImageRef.current
+    if (!container || !img || !img.naturalWidth || !img.naturalHeight) return
+    const cw = container.clientWidth
+    const ch = container.clientHeight
+    const iw = img.naturalWidth
+    const ih = img.naturalHeight
+    const s = Math.max(cw / iw, ch / ih)
+    setDetailCoverRect({
+      width: s * iw,
+      height: s * ih,
+      left: -(s * iw - cw) / 2,
+      top: -(s * ih - ch) / 2,
+    })
+  }, [])
+
   useEffect(() => {
     try {
       setCalibrate(
@@ -96,6 +146,42 @@ export default function ResearchRoom({ onBack }: ResearchRoomProps) {
       setCalibrate(false)
     }
   }, [])
+
+  useEffect(() => {
+    const container = mainContainerRef.current
+    const img = mainImageRef.current
+    if (!img || !container) return
+    if (img.complete && img.naturalWidth) updateMainCoverRect()
+    img.addEventListener("load", updateMainCoverRect)
+    window.addEventListener("resize", updateMainCoverRect)
+    const ro = new ResizeObserver(updateMainCoverRect)
+    ro.observe(container)
+    return () => {
+      img.removeEventListener("load", updateMainCoverRect)
+      window.removeEventListener("resize", updateMainCoverRect)
+      ro.disconnect()
+    }
+  }, [updateMainCoverRect])
+
+  useEffect(() => {
+    if (!detail) {
+      setDetailCoverRect(null)
+      return
+    }
+    const container = detailContainerRef.current
+    const img = detailImageRef.current
+    if (!img || !container) return
+    if (img.complete && img.naturalWidth) updateDetailCoverRect()
+    img.addEventListener("load", updateDetailCoverRect)
+    window.addEventListener("resize", updateDetailCoverRect)
+    const ro = new ResizeObserver(updateDetailCoverRect)
+    ro.observe(container)
+    return () => {
+      img.removeEventListener("load", updateDetailCoverRect)
+      window.removeEventListener("resize", updateDetailCoverRect)
+      ro.disconnect()
+    }
+  }, [detail, updateDetailCoverRect])
 
   useEffect(() => {
     const a = new Audio(HOVER_SOUND)
@@ -109,7 +195,7 @@ export default function ResearchRoom({ onBack }: ResearchRoomProps) {
   useEffect(() => {
     const bgm = new Audio(BGM_LOOP)
     bgm.loop = true
-    bgm.volume = 0.35
+    bgm.volume = 0.3
     bgm.preload = "auto"
     const tryPlay = () => void bgm.play().catch(() => {})
     tryPlay()
@@ -162,37 +248,46 @@ export const RESOURCE_DETAIL_EXIT: ResourceImageRect = {
     void navigator.clipboard.writeText(snippet)
   }, [mainRects, exitRect])
 
+  const overlayBoxStyle = (rect: CoverOverlayRect | null): CSSProperties =>
+    rect
+      ? {
+          width: rect.width,
+          height: rect.height,
+          left: rect.left,
+          top: rect.top,
+        }
+      : { left: 0, top: 0, right: 0, bottom: 0, width: "100%", height: "100%" }
+
   return (
     <div
-      className="relative min-h-[100dvh] w-full overflow-x-hidden bg-black"
-      style={{
-        paddingTop: "var(--stage-top-padding)",
-        paddingBottom: 0,
-      }}
+      className="min-h-screen w-full bg-transparent"
+      style={{ paddingTop: 0, paddingBottom: 0 }}
       data-stage="research"
     >
-      {onBack && (
-        <div className="relative z-20 px-3 pt-2">
-          <BackButton onClick={onBack} variant="amber" />
-        </div>
-      )}
+      {/* 與 My Farm 相同：固定視窗鋪滿，object-cover，熱區在 cover 對齊層內用 % */}
+      <div ref={mainContainerRef} className="fixed inset-0 h-full w-full overflow-hidden bg-black">
+        {/* eslint-disable-next-line @next/next/no-img-element -- 與農場一致，配合 cover 矩陣對齊熱區 */}
+        <img
+          ref={mainImageRef}
+          src={RESOURCE_BG}
+          alt="Resources"
+          className="absolute inset-0 h-full w-full object-cover object-center select-none"
+          draggable={false}
+        />
 
-      <div className="relative z-10 flex min-h-[calc(100dvh-var(--stage-top-padding))] w-full flex-col items-center justify-center px-0">
-        <div className="relative w-full max-w-[100vw]">
-          {/* eslint-disable-next-line @next/next/no-img-element -- 百分比熱區需與實際渲染像素對齊 */}
-          <img
-            src={RESOURCE_BG}
-            alt="Resources"
-            className="mx-auto block h-auto max-h-[calc(100dvh-var(--stage-top-padding)-8px)] w-full max-w-[100vw] object-contain object-center select-none"
-            draggable={false}
-          />
+        <div className="absolute" style={overlayBoxStyle(mainCoverRect)}>
+          {onBack && (
+            <div className="absolute z-[60]" style={{ left: "2%", top: "6%" }}>
+              <BackButton onClick={onBack} variant="amber" noFixed aria-label="Back" />
+            </div>
+          )}
 
           {MAIN_ORDER.map((key) => (
             <button
               key={key}
               type="button"
               aria-label={key === "cefr" ? "CEFR" : key === "longman" ? "Longman" : "SRL"}
-              className={`absolute z-[1] cursor-pointer border-0 bg-transparent p-0 outline-none transition-transform hover:scale-[1.02] focus-visible:ring-2 focus-visible:ring-amber-300 ${
+              className={`absolute z-20 cursor-pointer border-0 bg-transparent p-0 outline-none transition-transform hover:scale-[1.02] focus-visible:ring-2 focus-visible:ring-amber-300 ${
                 calibrate ? "border-2 border-dashed border-red-400/80 bg-red-500/20" : ""
               }`}
               style={rectStyle(mainRects[key])}
@@ -205,23 +300,25 @@ export const RESOURCE_DETAIL_EXIT: ResourceImageRect = {
 
       {detail && (
         <div
-          className="fixed inset-0 z-[200] flex items-center justify-center bg-black/90 px-2 py-[max(env(safe-area-inset-top),8px)]"
+          ref={detailContainerRef}
+          className="fixed inset-0 z-[200] h-full w-full overflow-hidden bg-black"
           role="dialog"
           aria-modal="true"
           aria-label="Resource detail"
         >
-          <div className="relative inline-block max-h-full max-w-full">
-            {/* eslint-disable-next-line @next/next/no-img-element -- 詳情圖透明關閉熱區對齊 */}
-            <img
-              src={RESOURCE_DETAIL_SRC[detail]}
-              alt=""
-              className="mx-auto block max-h-[calc(100dvh-16px)] max-w-[min(100vw-8px,1600px)] object-contain select-none"
-              draggable={false}
-            />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            ref={detailImageRef}
+            src={RESOURCE_DETAIL_SRC[detail]}
+            alt=""
+            className="absolute inset-0 h-full w-full object-cover object-center select-none"
+            draggable={false}
+          />
+          <div className="absolute" style={overlayBoxStyle(detailCoverRect)}>
             <button
               type="button"
               aria-label="Close"
-              className={`absolute z-[1] cursor-pointer border-0 bg-transparent p-0 outline-none focus-visible:ring-2 focus-visible:ring-amber-300 ${
+              className={`absolute z-20 cursor-pointer border-0 bg-transparent p-0 outline-none focus-visible:ring-2 focus-visible:ring-amber-300 ${
                 calibrate ? "border-2 border-dashed border-cyan-400/80 bg-cyan-500/20" : ""
               }`}
               style={rectStyle(exitRect)}
