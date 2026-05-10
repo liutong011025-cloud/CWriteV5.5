@@ -235,7 +235,7 @@ export const RESOURCE_DETAIL_EXIT: ResourceImageRect = {
             variant="amber"
             noFixed
             aria-label="Back"
-            className="!h-14 !w-14 border-[3px] shadow-lg md:!h-[3.75rem] md:!w-[3.75rem] md:border-4 xl:!h-[4.5rem] xl:!w-[4.5rem] [&_svg]:!h-7 [&_svg]:!w-7 md:[&_svg]:!h-8 md:[&_svg]:!w-8 xl:[&_svg]:!h-10 xl:[&_svg]:!w-10"
+            className="!h-16 !w-16 border-[3px] shadow-lg md:!h-[4.5rem] md:!w-[4.5rem] md:border-4 xl:!h-24 xl:!w-24 xl:border-[5px] [&_svg]:!h-8 [&_svg]:!w-8 md:[&_svg]:!h-9 md:[&_svg]:!w-9 xl:[&_svg]:!h-12 xl:[&_svg]:!w-12"
           />
         </div>
       )}
@@ -270,17 +270,18 @@ export const RESOURCE_DETAIL_EXIT: ResourceImageRect = {
 
       {detail && (
         <div
-          className="fixed inset-0 z-[200] flex items-center justify-center overflow-y-auto bg-black/80 p-4 sm:p-6"
+          className="fixed inset-0 z-[200] flex items-center justify-center overflow-y-auto bg-black/80 p-2 sm:p-4"
           role="dialog"
           aria-modal="true"
           aria-label="Resource detail"
         >
-          <div className="relative inline-block max-w-[min(640px,88vw)]">
-            {/* eslint-disable-next-line @next/next/no-img-element -- 詳情縮小居中，熱區相對圖片包盒 */}
+          {/* 約 √5 倍邊長 → 顯示面積約 5 倍（相對原 640×560 上限） */}
+          <div className="relative inline-block max-w-[min(1430px,96vw)]">
+            {/* eslint-disable-next-line @next/next/no-img-element -- 詳情居中，熱區相對圖片包盒 */}
             <img
               src={RESOURCE_DETAIL_SRC[detail]}
               alt=""
-              className="block h-auto max-h-[min(68vh,560px)] w-full object-contain select-none"
+              className="block h-auto max-h-[min(90vh,1240px)] w-full object-contain select-none"
               draggable={false}
             />
             <button
