@@ -6,6 +6,7 @@ import { Toaster } from '@/components/ui/sonner'
 import HeaderWrapper from '@/components/header-wrapper'
 import Footer from '@/components/footer'
 import ClickSoundProvider from '@/components/click-sound-provider'
+import ResourceAssetsPreload from '@/components/resource-assets-preload'
 import './globals.css'
 
 const geist = Geist({ subsets: ["latin"], variable: '--font-geist' });
@@ -65,6 +66,7 @@ export default function RootLayout({
           {children}
         </main>
         <ClickSoundProvider />
+        <ResourceAssetsPreload />
         <Footer />
         <Toaster />
         <Analytics />
