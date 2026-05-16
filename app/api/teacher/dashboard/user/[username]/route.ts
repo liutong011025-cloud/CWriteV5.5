@@ -186,6 +186,32 @@ export async function GET(_request: NextRequest, { params }: Params) {
 
     const writings = Array.from(writingMap.values()).sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())
 
+    const revisionEligible = writings.filter(
+      (w): w is WritingRecord & { type: "story" | "review" | "letter" } =>
+        w.type === "story" || w.type === "review" || w.type === "letter",
+    )
+    const revisionRows =
+      revisionEligible.length === 0
+        ? []
+        : await prisma.writingEditRevision.findMany({
+            where: {
+              OR: revisionEligible.map((w) => ({ workType: w.type, workId: w.id })),
+            },
+            orderBy: [{ workId: "asc" }, { version: "asc" }],
+          })
+
+    const revisionsByKey = new Map<string, Array<{ version: number; content: string; createdAt: string }>>()
+    for (const row of revisionRows) {
+      const key = `${row.workType}:${row.workId}`
+      const list = revisionsByKey.get(key) ?? []
+      list.push({
+        version: row.version,
+        content: row.content,
+        createdAt: row.createdAt.toISOString(),
+      })
+      revisionsByKey.set(key, list)
+    }
+
     const apiLogs = user.interactions
       .map((item: InteractionItem) => {
         const articleType = classifyInteractionType(item.stage, item.input, item.output, item.apiCalls)
@@ -229,6 +255,7 @@ export async function GET(_request: NextRequest, { params }: Params) {
         ...item,
         createdAt: item.createdAt.toISOString(),
         updatedAt: item.updatedAt.toISOString(),
+        editRevisions: revisionsByKey.get(`${item.type}:${item.id}`) ?? [],
       })),
       apiLogs,
       diagnostics: {
