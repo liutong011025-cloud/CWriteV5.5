@@ -58,31 +58,31 @@ type AnnotationMap = Record<string, Annotation[]>
 const PIE = ["#6366f1", "#06b6d4", "#22c55e", "#f59e0b", "#ec4899"]
 const TYPE_META: Record<string, { label: string; labelEn: string; badge: string; card: string }> = {
   story: {
-    label: "故事 Story",
+    label: "Story",
     labelEn: "Story",
     badge: "pixel-chip text-[#5a4a2a] bg-[#f5e6c8]",
     card: "pixel-card border-[#8b6914] bg-[#f5e6c8]/95",
   },
   review: {
-    label: "书评 Book Review",
+    label: "Book Review",
     labelEn: "Book Review",
     badge: "pixel-chip text-[#5a4a2a] bg-[#f5e6c8]",
     card: "pixel-card border-[#8b6914] bg-[#f5e6c8]/95",
   },
   letter: {
-    label: "书信 Letter",
+    label: "Letter",
     labelEn: "Letter",
     badge: "pixel-chip text-[#5a4a2a] bg-[#f5e6c8]",
     card: "pixel-card border-[#8b6914] bg-[#f5e6c8]/95",
   },
   drama: {
-    label: "戏剧 Drama",
+    label: "Drama",
     labelEn: "Drama",
     badge: "pixel-chip text-[#5a4a2a] bg-[#f5e6c8]",
     card: "pixel-card border-[#8b6914] bg-[#f5e6c8]/95",
   },
   poetry: {
-    label: "诗歌 Poetry",
+    label: "Poetry",
     labelEn: "Poetry",
     badge: "pixel-chip text-[#5a4a2a] bg-[#f5e6c8]",
     card: "pixel-card border-[#8b6914] bg-[#f5e6c8]/95",
@@ -105,7 +105,7 @@ function toDateLabel(iso: string): string {
 function formatDateTime(iso: string): string {
   const date = new Date(iso)
   if (Number.isNaN(date.getTime())) return iso
-  return date.toLocaleString("zh-CN", {
+  return date.toLocaleString("en-US", {
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
@@ -212,7 +212,7 @@ export default function DashboardV2({ user, onBack }: DashboardProps) {
     void loadStudent(selected)
   }, [selected])
 
-  /** AI 摘要仅在选定体裁后加载，避免未分流时占用接口；亦便于确认当前是否为「体裁分流」新版前端。 */
+  /** Load AI summary only after a writing kind is chosen (saves API calls; confirms kind-gate UI). */
   useEffect(() => {
     if (!selected || writingKind === null) return
     void loadSummary(selected)
@@ -427,7 +427,7 @@ export default function DashboardV2({ user, onBack }: DashboardProps) {
                 Luminai · TEACHER HQ
               </h2>
               <p className="mt-2 text-[9px] font-bold uppercase tracking-wider text-[#fffaf0]/80 sm:text-[10px]">
-                体裁分流 v2 · Step 1 选 Story / Review / Letter… 后再看文章与 AI 日志
+                Kind gate v2 · Pick Story / Review / Letter… then view writings & AI logs for that type only
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -486,7 +486,10 @@ export default function DashboardV2({ user, onBack }: DashboardProps) {
 
         <Card className="pixel-card border-[#6b5210] shadow-[6px_6px_0_rgba(0,0,0,0.2)]">
           <CardHeader>
-            <CardTitle className="pixel-text text-lg font-bold text-[#5a4a2a]">班级与学生 Class File Manager</CardTitle>
+            <CardTitle className="pixel-text text-lg font-bold text-[#5a4a2a]">Class file manager</CardTitle>
+            <p className="mt-1 text-[11px] font-semibold leading-snug text-[#6b5210] sm:text-xs">
+              Tile shade vs class max: more saved pieces → darker green (same roster heat map idea).
+            </p>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex flex-wrap items-center gap-2">
@@ -506,6 +509,8 @@ export default function DashboardV2({ user, onBack }: DashboardProps) {
               {users.map((u) => (
                 <button
                   key={u.id}
+                  type="button"
+                  title={`${u.totalWorks} saved pieces · shade vs class max (${maxWorks})`}
                   className={`rounded-lg border-[3px] border-[#6b5210] p-2 shadow-[3px_3px_0_rgba(0,0,0,0.2)] transition active:translate-x-[2px] active:translate-y-[2px] active:shadow-none ${selected === u.username ? "pixel-selected ring-[#e8c547]" : ""} ${
                     getUserHeatClass(u.totalWorks, maxWorks)
                   } ${getSafeUsername(u.username) ? "" : "cursor-not-allowed opacity-60"}`}
@@ -514,15 +519,14 @@ export default function DashboardV2({ user, onBack }: DashboardProps) {
                     if (!safeUsername) return
                     setSelected(safeUsername)
                   }}
-                  type="button"
                   disabled={!getSafeUsername(u.username)}
                 >
                   <Avatar className="mx-auto mb-2 h-11 w-11">
                     {u.avatarUrl ? <AvatarImage src={u.avatarUrl} alt={getUserDisplayName(u.username)} /> : null}
                     <AvatarFallback>{getUserAvatarFallback(u.username, u.avatarEmoji)}</AvatarFallback>
                   </Avatar>
-                  <p className="truncate text-xs">{getUserDisplayName(u.username)}</p>
-                  <p className="mt-1 text-[10px] font-semibold text-[#5a4a2a]/80">{u.totalWorks} works</p>
+                  <p className="truncate text-xs font-semibold opacity-95">{getUserDisplayName(u.username)}</p>
+                  <p className="mt-1 text-[10px] font-bold opacity-85">{u.totalWorks} works</p>
                 </button>
               ))}
             </div>
@@ -548,24 +552,26 @@ export default function DashboardV2({ user, onBack }: DashboardProps) {
                     {writingKind === null ? (
                       <div className="pixel-panel relative z-10 rounded-xl border-4 border-[#5a4a32] p-6 shadow-[6px_6px_0_rgba(0,0,0,0.22)] sm:p-8">
                         <p className="mb-2 text-center text-[11px] font-black uppercase leading-snug text-[#f5e6c8] sm:text-xs" style={{ textShadow: "2px 2px 0 #3d2914" }}>
-                          Step 1 · 选择文章类型
+                          Step 1 · Choose a writing type
                         </p>
                         <p className="mx-auto mb-6 max-w-xl text-center text-[10px] leading-relaxed text-[#fffaf0]/95 sm:text-[11px]">
-                          请先选择 Story / Book Review / Letter / Drama / Poetry，再查看<strong className="text-[#e8c547]">该类型的全部文章</strong>与<strong className="text-[#e8c547]">该类型的 AI 交互</strong>（不会再混在一起）。
+                          Pick <strong className="text-[#e8c547]">Story</strong>, <strong className="text-[#e8c547]">Book Review</strong>, <strong className="text-[#e8c547]">Letter</strong>,{" "}
+                          <strong className="text-[#e8c547]">Drama</strong>, or <strong className="text-[#e8c547]">Poetry</strong> — then only that type&apos;s{" "}
+                          <strong className="text-[#e8c547]">writings</strong> and <strong className="text-[#e8c547]">AI logs</strong> are shown.
                         </p>
                         {detail.degraded && (
                           <div className="mb-4 rounded-lg border-2 border-[#c94b4b] bg-black/25 px-4 py-3 text-center text-[11px] text-[#ffcccc]">
-                            数据库降级模式：文章与交互可能为空。
+                            Database degraded — writings and logs may be empty.
                           </div>
                         )}
                         {!detail.degraded && detail.diagnostics && detail.diagnostics.recoveredWritings > 0 && (
                           <div className="mb-4 rounded-lg border-2 border-[#5bc0de] bg-black/20 px-4 py-3 text-center text-[10px] text-[#e0f7ff]">
-                            已从 interaction 恢复 {detail.diagnostics.recoveredWritings} 条记录。
+                            Recovered {detail.diagnostics.recoveredWritings} writing row(s) from interaction history.
                           </div>
                         )}
                         {detail.writings.length === 0 && !detail.degraded ? (
                           <p className="mb-4 text-center text-[10px] text-[#f5e6c8]/90">
-                            提示：若暂无入库正文，选择类型后仍可查看该类型的 AI 对话日志。
+                            Tip: Even without saved drafts, you can still open AI logs after choosing a type.
                           </p>
                         ) : null}
                         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
@@ -587,8 +593,9 @@ export default function DashboardV2({ user, onBack }: DashboardProps) {
                                 <span className="text-[11px] font-black uppercase tracking-wide text-[#2c1810]" style={{ textShadow: "1px 1px 0 rgba(255,255,255,0.35)" }}>
                                   {meta.labelEn}
                                 </span>
-                                <span className="text-[10px] font-bold leading-tight text-[#3d2914]">{meta.label}</span>
-                                <span className="mt-1 rounded border-2 border-[#5a4a2a] bg-[#f5e6c8] px-3 py-1 text-[11px] font-black text-[#5a4a2a] shadow-[2px_2px_0_rgba(0,0,0,0.15)]">{count} 篇</span>
+                                <span className="mt-1 rounded border-2 border-[#5a4a2a] bg-[#f5e6c8] px-3 py-1 text-[11px] font-black text-[#5a4a2a] shadow-[2px_2px_0_rgba(0,0,0,0.15)]">
+                                  {count} {count === 1 ? "piece" : "pieces"}
+                                </span>
                               </button>
                             )
                           })}
@@ -608,17 +615,20 @@ export default function DashboardV2({ user, onBack }: DashboardProps) {
                             }}
                           >
                             <ArrowLeft className="mr-2 h-4 w-4" />
-                            返回类型选择
+                            Back to types
                           </Button>
                           <span className="rounded border-2 border-[#5a9a32] bg-[#7ec850] px-3 py-1.5 text-[10px] font-black uppercase text-white shadow-[2px_2px_0_rgba(0,0,0,0.2)]">
                             {(TYPE_META[writingKind] ?? defaultTypeMeta(writingKind)).labelEn}
                           </span>
                         </div>
 
-                        <div className="pixel-panel rounded-lg p-4">
-                          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-[#f5e6c8]">AI Diagnosis</p>
-                          <p className="whitespace-pre-wrap text-sm text-[#f5e6c8]">
-                            {loadingSummary ? "AI diagnosis is generating, please wait..." : summary || "No summary available yet."}
+                        <div className="pixel-panel rounded-lg border-2 border-[#6b5210] bg-[#5a4a32]/90 p-5 shadow-[4px_4px_0_rgba(0,0,0,0.2)]">
+                          <p className="mb-3 text-sm font-black uppercase tracking-wide text-[#f5e6c8]">AI diagnosis</p>
+                          <p
+                            className="whitespace-pre-wrap text-base font-semibold leading-relaxed text-[#fffef8] sm:text-lg md:text-xl"
+                            style={{ textShadow: "1px 1px 0 #2a1810" }}
+                          >
+                            {loadingSummary ? "Generating diagnosis…" : summary || "No summary yet for this student."}
                           </p>
                         </div>
 
@@ -629,7 +639,7 @@ export default function DashboardV2({ user, onBack }: DashboardProps) {
                             variant={panel === "writings" ? "default" : "outline"}
                             onClick={() => setPanel("writings")}
                           >
-                            文章 Writings
+                            Writings
                           </Button>
                           <Button
                             type="button"
@@ -637,7 +647,7 @@ export default function DashboardV2({ user, onBack }: DashboardProps) {
                             variant={panel === "api" ? "default" : "outline"}
                             onClick={() => setPanel("api")}
                           >
-                            AI 交互
+                            AI logs
                           </Button>
                         </div>
 
@@ -645,23 +655,23 @@ export default function DashboardV2({ user, onBack }: DashboardProps) {
                           <>
                             {detail.degraded && (
                               <div className="rounded-lg border-2 border-[#c94b4b] bg-[#f5e6c8] px-4 py-3 text-sm text-[#6b5210]">
-                                当前教师看板处于数据库降级模式，所以文章和交互可能全部为空。
+                                Teacher dashboard is in database fallback mode — writings and logs may be empty.
                               </div>
                             )}
                             {!detail.degraded && detail.diagnostics && detail.diagnostics.recoveredWritings > 0 && (
                               <div className="rounded-lg border-2 border-[#5bc0de] bg-[#f5e6c8] px-4 py-3 text-sm text-[#5a4a2a]">
-                                已从历史 interaction 日志中恢复 {detail.diagnostics.recoveredWritings} 条文章记录。
+                                Recovered {detail.diagnostics.recoveredWritings} writing row(s) from interaction history.
                               </div>
                             )}
                             {filteredWritings.length === 0 ? (
                               <div className="rounded-lg border-2 border-dashed border-[#8b6914] bg-[#f5e6c8]/60 p-6 text-center text-sm text-[#5a4a2a]">
                                 {detail.degraded
-                                  ? "数据库未连接，当前无法读取文章数据。"
+                                  ? "Database unavailable — cannot load writings."
                                   : detail.writings.length === 0 && detail.diagnostics && detail.diagnostics.interactionCount > 0
-                                    ? `发现 ${detail.diagnostics.interactionCount} 条历史 interaction，但还没有可恢复的正文记录。`
+                                    ? `Found ${detail.diagnostics.interactionCount} interaction(s), but no recoverable draft text yet.`
                                     : detail.writings.length === 0
-                                      ? "当前学生还没有可展示的文章记录。"
-                                      : `当前学生在「${(TYPE_META[writingKind] ?? defaultTypeMeta(writingKind)).label}」体裁下暂无文章。`}
+                                      ? "No writings on file for this student."
+                                      : `No ${(TYPE_META[writingKind] ?? defaultTypeMeta(writingKind)).label} pieces for this student (other types are hidden).`}
                               </div>
                             ) : (
                               filteredWritings.map((w) => {
@@ -702,7 +712,7 @@ export default function DashboardV2({ user, onBack }: DashboardProps) {
                                   <CardContent className="space-y-3">
                                     {sortedRevisions.length > 0 && (
                                       <div className="flex flex-wrap items-center gap-2 rounded-lg border-2 border-[#8b6914] bg-[#fffaf0] p-2">
-                                        <span className="text-xs font-bold text-[#5a4a2a]">编辑留存版本 Edit revisions:</span>
+                                        <span className="text-xs font-bold text-[#5a4a2a]">Saved edit revisions:</span>
                                         <div className="flex flex-wrap gap-1">
                                           {sortedRevisions.map((rev) => (
                                             <button
@@ -722,7 +732,7 @@ export default function DashboardV2({ user, onBack }: DashboardProps) {
                                     )}
                                     <div className="grid gap-3 lg:grid-cols-3">
                                       <div className="rounded-lg border-2 border-[#c4a574] bg-[#fffaf0] p-3 lg:col-span-2">
-                                        <p className="mb-2 text-xs font-bold text-[#6b5210]">正文（划句或点句批注） · Current version text</p>
+                                        <p className="mb-2 text-xs font-bold text-[#6b5210]">Current draft · Click a sentence to annotate</p>
                                         <div className="max-h-72 space-y-1 overflow-auto" onMouseUp={() => captureSelection(w)}>
                                           {sentenceList.length === 0 ? (
                                             <p className="text-sm text-[#9a7b4f]">(empty content)</p>
@@ -750,10 +760,10 @@ export default function DashboardV2({ user, onBack }: DashboardProps) {
                                       </div>
 
                                       <div className="rounded-lg border-2 border-[#8b6914] bg-[#f5e6c8]/90 p-3">
-                                        <p className="mb-2 text-xs font-bold text-[#6b5210]">教师评语 Comments</p>
+                                        <p className="mb-2 text-xs font-bold text-[#6b5210]">Teacher feedback</p>
                                         <div className="max-h-72 space-y-2 overflow-auto">
                                           {writingAnnotations.length === 0 ? (
-                                            <p className="text-xs text-[#9a7b4f]">从正文选择句子以添加批改。</p>
+                                            <p className="text-xs text-[#9a7b4f]">Select a sentence from the draft to add a comment.</p>
                                           ) : (
                                             writingAnnotations.map((annotation) => (
                                               <div
@@ -815,12 +825,12 @@ export default function DashboardV2({ user, onBack }: DashboardProps) {
                           filteredApiLogs.length === 0 ? (
                             <div className="rounded-lg border-2 border-dashed border-[#8b6914] bg-[#f5e6c8]/60 p-6 text-center text-sm text-[#5a4a2a]">
                               {detail.degraded
-                                ? "数据库未连接，当前无法读取 AI 交互数据。"
+                                ? "Database unavailable — cannot load AI logs."
                                 : detail.apiLogs.length === 0 && detail.diagnostics && detail.diagnostics.interactionCount > 0
-                                  ? `当前学生有 ${detail.diagnostics.interactionCount} 条 interaction，但其中没有可解析的 AI 对话内容。`
+                                  ? `${detail.diagnostics.interactionCount} interaction(s) on file, but none could be parsed into AI chat rows.`
                                   : detail.apiLogs.length === 0
-                                    ? "当前学生还没有可展示的 AI 交互记录。"
-                                    : `当前所选体裁「${(TYPE_META[writingKind] ?? defaultTypeMeta(writingKind)).label}」下暂无 AI 交互记录（其它体裁已隐藏）。`}
+                                    ? "No AI interaction logs for this student."
+                                    : `No AI logs for ${(TYPE_META[writingKind] ?? defaultTypeMeta(writingKind)).label} (other types hidden).`}
                             </div>
                           ) : filteredApiLogs.map((log) => {
                             const open = openLog === log.id
@@ -863,7 +873,7 @@ export default function DashboardV2({ user, onBack }: DashboardProps) {
                                           </div>
                                         ))
                                       ) : (
-                                        <p className="text-sm text-[#9a7b4f]">这一条 API 记录已显示，但当前没有可解析的对话文本。</p>
+                                        <p className="text-sm text-[#9a7b4f]">This log row has no parseable chat text.</p>
                                       )}
                                     </div>
                                   </CardContent>
@@ -908,8 +918,8 @@ function ChartCard({ title, children }: { title: string; children: ReactNode }) 
 
 function getUserHeatClass(totalWorks: number, maxWorks: number) {
   const ratio = maxWorks <= 0 ? 0 : totalWorks / maxWorks
-  if (ratio >= 0.75) return "bg-[#7ec850] hover:brightness-110"
-  if (ratio >= 0.5) return "bg-[#b8e997] hover:bg-[#7ec850]/90"
-  if (ratio >= 0.25) return "bg-[#f5e6c8] hover:bg-[#e8d9b8]"
-  return "bg-[#fffaf0] hover:bg-[#f5e6c8]"
+  if (ratio >= 0.75) return "bg-[#2f6b24] text-[#f4fff0] hover:brightness-110"
+  if (ratio >= 0.5) return "bg-[#4d9438] text-[#0f1f0c] hover:brightness-105"
+  if (ratio >= 0.25) return "bg-[#8fd06a] text-[#1e2e14] hover:brightness-105"
+  return "bg-[#faf6ee] text-[#5a4a2a] hover:bg-[#ebe4d4]"
 }
