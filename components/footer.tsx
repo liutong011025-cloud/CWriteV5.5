@@ -2,12 +2,19 @@
 
 import Image from "next/image"
 import { usePathname } from "next/navigation"
+import { useMainStage } from "@/hooks/use-main-stage"
 
 export default function Footer() {
   const pathname = usePathname()
+  const stage = useMainStage()
 
   // Hide footer on admin routes
   if (pathname?.startsWith('/admin')) {
+    return null
+  }
+
+  // 教师工作台：与首页沉浸像素场景一致，隐藏底部 EdUHK 横条
+  if (stage === "dashboard") {
     return null
   }
 
@@ -31,7 +38,7 @@ export default function Footer() {
                 alt="EdUHK Logo"
                 width={300}
                 height={98}
-                className="object-contain"
+                className="object-contain"
               />
             </div>
             
@@ -42,7 +49,7 @@ export default function Footer() {
                 alt="MIT Logo"
                 width={180}
                 height={51}
-                className="object-contain opacity-90"
+                className="object-contain opacity-90"
               />
             </div>
           </div>
