@@ -1668,6 +1668,7 @@ export default function Home() {
       {user &&
         stage !== "login" &&
         stage !== "home" &&
+        stage !== "dashboard" &&
         stage !== "userProfile" &&
         stage !== "otherFarm" &&
         stage !== "navigation" &&
