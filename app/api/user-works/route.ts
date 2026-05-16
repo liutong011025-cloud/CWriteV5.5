@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { isMissingDatabaseTableError } from '@/lib/prisma-errors'
 import { appendWritingEditRevision } from '@/lib/writing-revisions'
 
 export async function GET(request: NextRequest) {
@@ -177,7 +178,12 @@ export async function PATCH(request: NextRequest) {
     }
 
     if (affected > 0) {
-      await appendWritingEditRevision(work_type, work_id, content)
+      try {
+        await appendWritingEditRevision(work_type, work_id, content)
+      } catch (revisionError) {
+        if (!isMissingDatabaseTableError(revisionError)) throw revisionError
+        console.warn("[user-works PATCH] writing_edit_revisions missing; work saved without revision row.")
+      }
     }
 
     return NextResponse.json({ success: true })
