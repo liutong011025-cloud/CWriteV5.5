@@ -78,3 +78,16 @@ ALTER TABLE "poetries" DROP CONSTRAINT IF EXISTS "poetries_userId_fkey";
 ALTER TABLE "poetries" ADD CONSTRAINT "poetries_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE "poetries" DROP CONSTRAINT IF EXISTS "poetries_interactionId_fkey";
 ALTER TABLE "poetries" ADD CONSTRAINT "poetries_interactionId_fkey" FOREIGN KEY ("interactionId") REFERENCES "interactions"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- ========== 3. writing_edit_revisions（教师端 V1/V2 编辑快照）==========
+CREATE TABLE IF NOT EXISTS "writing_edit_revisions" (
+    "id" TEXT NOT NULL,
+    "workType" TEXT NOT NULL,
+    "workId" TEXT NOT NULL,
+    "version" INTEGER NOT NULL,
+    "content" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "writing_edit_revisions_pkey" PRIMARY KEY ("id")
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "writing_edit_revisions_workType_workId_version_key" ON "writing_edit_revisions"("workType", "workId", "version");
+CREATE INDEX IF NOT EXISTS "writing_edit_revisions_workType_workId_idx" ON "writing_edit_revisions"("workType", "workId");
