@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { isDatabaseConnectionError, isMissingDatabaseTableError } from "@/lib/prisma-errors"
+import { getStoryWritingMapTitle } from "@/lib/story-writing-map-title"
 
 type Params = { params: Promise<{ username: string }> }
 
@@ -42,25 +43,48 @@ interface ApiLogRecord {
 interface StoryItem {
   id: string
   content: string
+  character: unknown
+  plot: unknown
+  structure: unknown
   createdAt: Date
   updatedAt: Date
   interactionId: string | null
 }
 
-interface ReviewItem extends StoryItem {
+interface ReviewItem {
+  id: string
+  content: string
   bookTitle: string | null
+  createdAt: Date
+  updatedAt: Date
+  interactionId: string | null
 }
 
-interface LetterItem extends StoryItem {
+interface LetterItem {
+  id: string
+  content: string
   recipient: string | null
+  createdAt: Date
+  updatedAt: Date
+  interactionId: string | null
 }
 
-interface DramaItem extends StoryItem {
+interface DramaItem {
+  id: string
+  content: string
   title: string | null
+  createdAt: Date
+  updatedAt: Date
+  interactionId: string | null
 }
 
-interface PoetryItem extends StoryItem {
+interface PoetryItem {
+  id: string
+  content: string
   topic: string | null
+  createdAt: Date
+  updatedAt: Date
+  interactionId: string | null
 }
 
 interface InteractionItem {
@@ -126,7 +150,7 @@ export async function GET(_request: NextRequest, { params }: Params) {
       ...user.stories.map((item: StoryItem) => ({
         id: item.id,
         type: "story" as const,
-        title: deriveTitle(item.content, "Story"),
+        title: getStoryWritingMapTitle(item.character),
         content: item.content ?? "",
         createdAt: item.createdAt,
         updatedAt: item.updatedAt,
@@ -554,10 +578,12 @@ function extractWritingFromInteraction(item: InteractionItem): WritingRecord | n
 
   const story = asString(output.story || outputData.story)
   if (story.trim()) {
+    const inputRec = inputAsRecord(item.input)
+    const character = inputRec?.character ?? inputRec?.characters ?? null
     return {
       id: item.id,
       type: "story",
-      title: deriveTitle(story, "Story"),
+      title: getStoryWritingMapTitle(character),
       content: story,
       createdAt: item.timestamp,
       updatedAt: item.timestamp,
@@ -679,4 +705,9 @@ function deriveTitle(content: string | null | undefined, fallback: string): stri
 
   if (!normalized) return fallback
   return normalized.length > 90 ? `${normalized.slice(0, 90)}...` : normalized
+}
+
+function inputAsRecord(input: unknown): Record<string, unknown> | null {
+  if (!input || typeof input !== "object") return null
+  return input as Record<string, unknown>
 }
