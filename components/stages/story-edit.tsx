@@ -124,6 +124,7 @@ export default function StoryEdit({
           plot: storyState.plot,
           structure: storyState.structure,
           workId: workId || undefined,
+          save_edit_revision: true,
         }),
       })
 
