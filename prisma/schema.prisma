@@ -182,6 +182,20 @@ model Poetry {
   @@map("poetries")
 }
 
+/// Snapshots from Story / Book Review / Letter edit-stage saves (teacher sees V1, V2, …).
+model WritingEditRevision {
+  id        String   @id @default(cuid())
+  workType  String // "story" | "review" | "letter"
+  workId    String
+  version   Int
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+
+  @@unique([workType, workId, version])
+  @@index([workType, workId])
+  @@map("writing_edit_revisions")
+}
+
 // ─── ADMIN MODELS ───────────────────────────────────────────────────────────
 
 model Admin {
