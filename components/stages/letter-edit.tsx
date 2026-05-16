@@ -131,6 +131,7 @@ export default function LetterEdit({
           guidance: guidance || null,
           readerImageUrl: readerImageUrl || null,
           workId: workId || undefined,
+          save_edit_revision: true,
         }),
       })
 
