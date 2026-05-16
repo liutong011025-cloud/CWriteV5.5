@@ -29,6 +29,11 @@ export default function HeaderWrapper() {
           setShouldShowHeader(false)
           return
         }
+
+        if (stage === 'dashboard') {
+          setShouldShowHeader(false)
+          return
+        }
         
         // 检查是否有data-login-page属性
         if (loginElements.length > 0) {
