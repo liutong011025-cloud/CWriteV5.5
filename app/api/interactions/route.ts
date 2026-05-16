@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { appendWritingEditRevision } from '@/lib/writing-revisions'
 
 export async function GET(request: NextRequest) {
   try {
@@ -159,6 +160,7 @@ export async function POST(request: NextRequest) {
       poetryForm,
       poetryTopic,
       poetryLines,
+      save_edit_revision,
     } = body
     
     // 确保 bookSummary 有值（即使是空字符串）
@@ -482,6 +484,20 @@ export async function POST(request: NextRequest) {
       hasReview: !!review,
       hasLetter: !!letter,
     })
+
+    if (save_edit_revision && workId) {
+      try {
+        if (story && typeof story === "string" && (character || plot || structure)) {
+          await appendWritingEditRevision("story", workId, story)
+        } else if (review && typeof review === "string" && reviewType && bookTitle) {
+          await appendWritingEditRevision("review", workId, review)
+        } else if (letter && typeof letter === "string" && recipient) {
+          await appendWritingEditRevision("letter", workId, letter)
+        }
+      } catch (revisionError) {
+        console.error("appendWritingEditRevision failed:", revisionError)
+      }
+    }
 
     return NextResponse.json({
       success: true,
