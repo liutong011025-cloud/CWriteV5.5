@@ -12,3 +12,10 @@ export function isDatabaseConnectionError(error: unknown): boolean {
     )
   )
 }
+
+/** Table not migrated yet (e.g. writing_edit_revisions missing in prod). */
+export function isMissingDatabaseTableError(error: unknown): boolean {
+  const code =
+    error && typeof error === "object" && "code" in error ? (error as { code?: string }).code ?? "" : ""
+  return code === "P2021"
+}
