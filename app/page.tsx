@@ -58,6 +58,7 @@ import {
 } from "@/lib/cagent-context"
 import { toast } from "sonner"
 import { preloadGalleryData } from "@/lib/use-gallery-data"
+import { getStoryWritingMapTitle } from "@/lib/story-writing-map-title"
 
 export type Language = "en" | "zh"
 
@@ -1239,7 +1240,7 @@ export default function Home() {
       structure: { type: string },
     ) => {
       if (!journeyActive || !user) return
-      const storyTitle = character?.name?.trim() ? `${character.name}'s Story` : "My Story"
+      const storyTitle = getStoryWritingMapTitle(character)
       const topic = plot.setting || character?.name || storyTitle
       const plotSummary = buildStoryPlotSummary(character, plot)
       pendingStoryFlagFinalizationRef.current = null
@@ -2365,7 +2366,7 @@ export default function Home() {
           language={language}
           storyState={storyState}
           onReset={async (finalStory) => {
-            const storyTitle = storyState.character?.name?.trim() ? `${storyState.character.name}'s Story` : "My Story"
+            const storyTitle = getStoryWritingMapTitle(storyState.character)
             const topic = storyState.character?.name || storyState.plot?.setting || storyTitle
             void evaluateValuesGrowth(finalStory, "story", storyTitle)
             const updatedExistingStoryFlag = finalizeLatestStoryFlag(storyTitle, finalStory)
