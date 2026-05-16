@@ -1,16 +1,17 @@
 "use client"
 
-import type { ReactNode } from "react"
+import type { CSSProperties, HTMLAttributes, ReactNode } from "react"
 
 export default function PixelPage({
   children,
   className,
   style,
+  ...rest
 }: {
   children: ReactNode
   className?: string
-  style?: React.CSSProperties
-}) {
+  style?: CSSProperties
+} & Omit<HTMLAttributes<HTMLDivElement>, "children" | "className" | "style">) {
   const normalizedStyle: React.CSSProperties | undefined = style
     ? {
         ...style,
@@ -26,7 +27,11 @@ export default function PixelPage({
     : undefined
 
   return (
-    <div className={`min-h-screen relative overflow-hidden pixel-theme ${className || ""}`.trim()} style={normalizedStyle}>
+    <div
+      className={`min-h-screen relative overflow-hidden pixel-theme ${className || ""}`.trim()}
+      style={normalizedStyle}
+      {...rest}
+    >
       {/* Pixel art background */}
       <div
         className="fixed inset-0 z-0"
