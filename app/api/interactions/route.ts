@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { isMissingDatabaseTableError } from '@/lib/prisma-errors'
 import { appendWritingEditRevision } from '@/lib/writing-revisions'
 
 export async function GET(request: NextRequest) {
@@ -495,7 +496,11 @@ export async function POST(request: NextRequest) {
           await appendWritingEditRevision("letter", workId, letter)
         }
       } catch (revisionError) {
-        console.error("appendWritingEditRevision failed:", revisionError)
+        if (isMissingDatabaseTableError(revisionError)) {
+          console.warn("appendWritingEditRevision skipped: writing_edit_revisions table not migrated.")
+        } else {
+          console.error("appendWritingEditRevision failed:", revisionError)
+        }
       }
     }
 
