@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { appendWritingEditRevision } from '@/lib/writing-revisions'
 
 export async function GET(request: NextRequest) {
   try {
@@ -154,21 +155,29 @@ export async function PATCH(request: NextRequest) {
 
     const data = { content, updatedAt: new Date() }
 
+    let affected = 0
     if (work_type === "story") {
-      await prisma.story.updateMany({
+      const r = await prisma.story.updateMany({
         where: { id: work_id, userId: user.id },
         data,
       })
+      affected = r.count
     } else if (work_type === "review") {
-      await prisma.review.updateMany({
+      const r = await prisma.review.updateMany({
         where: { id: work_id, userId: user.id },
         data,
       })
+      affected = r.count
     } else {
-      await prisma.letter.updateMany({
+      const r = await prisma.letter.updateMany({
         where: { id: work_id, userId: user.id },
         data,
       })
+      affected = r.count
+    }
+
+    if (affected > 0) {
+      await appendWritingEditRevision(work_type, work_id, content)
     }
 
     return NextResponse.json({ success: true })
