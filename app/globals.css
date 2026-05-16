@@ -1481,3 +1481,9 @@
 .pixel-bounce {
   animation: pixel-bounce 0.8s ease-in-out infinite;
 }
+
+/* Teacher dashboard: remove map wallpaper behind PixelPage */
+html.teacher-dashboard-active body {
+  background-image: none !important;
+  background-color: var(--pixel-sky-light, #b8e4f9);
+}
