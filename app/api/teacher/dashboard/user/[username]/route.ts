@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
-import { isDatabaseConnectionError } from "@/lib/prisma-errors"
+import { isDatabaseConnectionError, isMissingDatabaseTableError } from "@/lib/prisma-errors"
 
 type Params = { params: Promise<{ username: string }> }
 
@@ -190,15 +190,23 @@ export async function GET(_request: NextRequest, { params }: Params) {
       (w): w is WritingRecord & { type: "story" | "review" | "letter" } =>
         w.type === "story" || w.type === "review" || w.type === "letter",
     )
-    const revisionRows =
-      revisionEligible.length === 0
-        ? []
-        : await prisma.writingEditRevision.findMany({
-            where: {
-              OR: revisionEligible.map((w) => ({ workType: w.type, workId: w.id })),
-            },
-            orderBy: [{ workId: "asc" }, { version: "asc" }],
-          })
+    let revisionRows: Awaited<ReturnType<typeof prisma.writingEditRevision.findMany>> = []
+    if (revisionEligible.length > 0) {
+      try {
+        revisionRows = await prisma.writingEditRevision.findMany({
+          where: {
+            OR: revisionEligible.map((w) => ({ workType: w.type, workId: w.id })),
+          },
+          orderBy: [{ workId: "asc" }, { version: "asc" }],
+        })
+      } catch (revisionError) {
+        if (!isMissingDatabaseTableError(revisionError)) throw revisionError
+        console.warn(
+          "[teacher dashboard user] writing_edit_revisions table missing; returning empty editRevisions. Run prisma db push or prisma/run-this-sql.sql section.",
+        )
+        revisionRows = []
+      }
+    }
 
     const revisionsByKey = new Map<string, Array<{ version: number; content: string; createdAt: string }>>()
     for (const row of revisionRows) {
