@@ -123,6 +123,7 @@ export default function BookReviewEdit({
           bookSummary: bookSummary || "",
           structure,
           workId: workId || undefined,
+          save_edit_revision: true,
         }),
       })
 
