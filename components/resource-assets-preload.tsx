@@ -5,7 +5,6 @@ import { useEffect } from "react"
 const RESOURCE_IMAGES = [
   "/resources.png",
   "/cefr.png",
-  "/Longman.png",
   "/srl.png",
 ] as const
 
