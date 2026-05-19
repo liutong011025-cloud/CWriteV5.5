@@ -104,10 +104,10 @@ export function PoetryEditor({ onBack }: PoetryEditorProps) {
                 <BookOpen className="h-3.5 w-3.5" style={{ color: "#5a4a2a" }} />
               </div>
               <div>
-                <p className="font-hand text-xs font-bold pixel-text" style={{ color: "#6b5210" }}>
+                <p className="font-hand text-sm font-bold pixel-text" style={{ color: "#6b5210" }}>
                   {formDef.name}
                 </p>
-                <p className="font-hand text-[10px] pixel-text" style={{ color: "#5a4a2a" }}>{formDef.rules}</p>
+                <p className="font-hand text-sm pixel-text" style={{ color: "#5a4a2a" }}>{formDef.rules}</p>
               </div>
             </div>
           </div>
@@ -116,7 +116,7 @@ export function PoetryEditor({ onBack }: PoetryEditorProps) {
             <button
               type="button"
               onClick={() => setShowExample((p) => !p)}
-              className="pixel-btn pixel-btn-wood px-3 py-1.5 font-hand text-[11px]"
+              className="pixel-btn pixel-btn-wood px-4 py-2 font-hand text-sm"
             >
               {showExample ? "Hide" : "Show"} Example
             </button>
@@ -124,7 +124,7 @@ export function PoetryEditor({ onBack }: PoetryEditorProps) {
               onClick={handleFinish}
               disabled={!hasContent}
               size="sm"
-              className="gap-1.5 font-hand text-xs shadow-md pixel-btn pixel-btn-green"
+              className="gap-1.5 font-hand text-sm shadow-md pixel-btn pixel-btn-green"
             >
               <CheckCircle2 className="h-3.5 w-3.5" />
               Finish & Review
@@ -149,7 +149,7 @@ export function PoetryEditor({ onBack }: PoetryEditorProps) {
       </header>
 
       <main className="relative z-10 mx-auto flex w-full max-w-7xl flex-1 gap-4 p-4 lg:gap-6 lg:p-6">
-        <aside className="hidden w-56 shrink-0 pixel-panel p-4 shadow-md lg:block">
+        <aside className="hidden w-64 shrink-0 pixel-panel p-4 shadow-md lg:block xl:w-72">
           <InspirationPanel topic={topic} onInsertWord={handleInsertWord} />
         </aside>
 
@@ -273,7 +273,7 @@ export function PoetryEditor({ onBack }: PoetryEditorProps) {
           </div>
         </section>
 
-        <aside className="hidden w-64 shrink-0 pixel-panel p-4 shadow-md md:block">
+        <aside className="hidden w-72 shrink-0 pixel-panel p-4 shadow-md md:block xl:w-80">
           <ToolPanel
             form={form}
             topic={topic}
