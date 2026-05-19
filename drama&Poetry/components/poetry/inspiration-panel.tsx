@@ -1,9 +1,9 @@
 "use client";
 
-import React from "react"
-
+import React from "react";
 import { useState, useEffect, useCallback } from "react";
 import { SENSORY_WORDS } from "@/lib/poetry-types";
+import { getCurrentLevel } from "@/lib/current-level";
 import { Eye, Ear, Wind, Hand, CookingPot, Lightbulb, Loader2, RefreshCw } from "lucide-react";
 
 const SENSE_ICONS: Record<string, React.ElementType> = {
@@ -15,11 +15,11 @@ const SENSE_ICONS: Record<string, React.ElementType> = {
 };
 
 const SENSE_COLORS: Record<string, string> = {
-  sight: "bg-chart-5/10 text-chart-5 border-chart-5/20",
-  sound: "bg-primary/10 text-primary border-primary/20",
-  smell: "bg-accent/10 text-accent border-accent/20",
-  touch: "bg-secondary/15 text-secondary-foreground border-secondary/20",
-  taste: "bg-chart-4/10 text-chart-4 border-chart-4/20",
+  sight: "bg-[#5c4d8a] text-white border-[#4a3d72] hover:bg-[#4a3d72]",
+  sound: "bg-[#2d5f8a] text-white border-[#245078] hover:bg-[#245078]",
+  smell: "bg-[#4a6b3a] text-white border-[#3a5530] hover:bg-[#3a5530]",
+  touch: "bg-[#6b5210] text-white border-[#5a4210] hover:bg-[#5a4210]",
+  taste: "bg-[#8a4538] text-white border-[#703830] hover:bg-[#703830]",
 };
 
 interface InspirationPanelProps {
@@ -61,7 +61,7 @@ export function InspirationPanel({ topic, onInsertWord }: InspirationPanelProps)
       const res = await fetch("/api/dify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "inspiration", topic }),
+        body: JSON.stringify({ action: "inspiration", topic, level: getCurrentLevel() }),
       });
       const data = await res.json();
       const parsed = parseSensoryResponse(data.result || "");
@@ -122,15 +122,14 @@ export function InspirationPanel({ topic, onInsertWord }: InspirationPanelProps)
         </div>
       )}
 
-      {/* Sensory word cards */}
       {Object.entries(words).map(([sense, senseWords]) => {
         const Icon = SENSE_ICONS[sense] || Eye;
         const color = SENSE_COLORS[sense] || "bg-muted text-foreground border-border";
         return (
           <div key={sense}>
             <div className="mb-1.5 flex items-center gap-1.5">
-              <Icon className="h-3 w-3 text-muted-foreground" />
-              <span className="font-hand text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+              <Icon className="h-3 w-3 text-foreground" />
+              <span className="font-hand text-[10px] font-bold uppercase tracking-wider text-foreground">
                 {sense}
               </span>
             </div>
@@ -140,7 +139,7 @@ export function InspirationPanel({ topic, onInsertWord }: InspirationPanelProps)
                   key={w}
                   type="button"
                   onClick={() => onInsertWord(w)}
-                  className={`rounded-full border px-2.5 py-0.5 font-hand text-[11px] transition-all hover:scale-105 hover:shadow-sm ${color}`}
+                  className={`rounded-full border px-2.5 py-0.5 font-hand text-[11px] font-semibold transition-all hover:scale-105 ${color}`}
                 >
                   {w}
                 </button>
