@@ -70,19 +70,19 @@ function RhymePanel({ topic, word, onInsertText }: { topic: string; word: string
   };
 
   return (
-    <div className="styled-scrollbar flex h-full flex-col gap-3 overflow-y-auto">
+    <div className="styled-scrollbar flex h-full flex-col gap-4 overflow-y-auto">
       <div className="flex items-center gap-2">
-        <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary/10 shadow-sm">
-          <BookOpen className="h-4 w-4 text-primary" />
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 shadow-sm">
+          <BookOpen className="h-5 w-5 text-primary" />
         </div>
         <div>
-          <h3 className="font-hand text-sm font-bold text-foreground">Rhyme Assistant</h3>
-          <p className="font-hand text-[10px] text-muted-foreground">Find rhyming words</p>
+          <h3 className="font-hand text-base font-bold text-foreground">Rhyme Assistant</h3>
+          <p className="font-hand text-sm text-muted-foreground">Find rhyming words</p>
         </div>
       </div>
 
       <div className="rounded-xl border border-border bg-muted/30 p-3">
-        <p className="mb-2 font-hand text-xs text-muted-foreground">
+        <p className="mb-2 font-hand text-sm text-muted-foreground">
           {word.trim() ? (
             <>Rhymes for: <span className="font-bold text-foreground">{word}</span></>
           ) : (
@@ -92,10 +92,9 @@ function RhymePanel({ topic, word, onInsertText }: { topic: string; word: string
         <Button
           onClick={fetchRhymes}
           disabled={loading || !word.trim() || store.aiUsageCount >= store.maxAIUsage}
-          size="sm"
-          className="w-full gap-1.5 rounded-xl font-hand text-xs shadow-sm"
+          className="h-auto w-full gap-2 rounded-xl px-4 py-2.5 font-hand text-sm shadow-sm"
         >
-          {loading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
           Get Rhyme Suggestions
         </Button>
       </div>
@@ -132,7 +131,7 @@ function RhymePanel({ topic, word, onInsertText }: { topic: string; word: string
         </div>
       )}
 
-      <p className="mt-auto font-hand text-[9px] text-muted-foreground/50">
+      <p className="mt-auto font-hand text-xs text-muted-foreground/50">
         AI suggestions: {store.aiUsageCount}/{store.maxAIUsage} used
       </p>
     </div>
@@ -171,14 +170,14 @@ function HaikuPanel({ topic, activeLineIndex, onReplaceLine }: { topic: string; 
   }, [activeLineIndex, lines, topic, store]);
 
   return (
-    <div className="styled-scrollbar flex h-full flex-col gap-3 overflow-y-auto">
+    <div className="styled-scrollbar flex h-full flex-col gap-4 overflow-y-auto">
       <div className="flex items-center gap-2">
-        <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-accent/10 shadow-sm">
-          <Hash className="h-4 w-4 text-accent" />
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent/10 shadow-sm">
+          <Hash className="h-5 w-5 text-accent" />
         </div>
         <div>
-          <h3 className="font-hand text-sm font-bold text-foreground">Syllable Counter</h3>
-          <p className="font-hand text-[10px] text-muted-foreground">Target: 5 / 7 / 5</p>
+          <h3 className="font-hand text-base font-bold text-foreground">Syllable Counter</h3>
+          <p className="font-hand text-sm text-muted-foreground">Target: 5 / 7 / 5</p>
         </div>
       </div>
 
@@ -189,18 +188,18 @@ function HaikuPanel({ topic, activeLineIndex, onReplaceLine }: { topic: string; 
           const ok = count === target;
           const over = count > target;
           return (
-            <div key={line.id} className={`rounded-xl border-2 px-3 py-2 transition-colors ${
+            <div key={line.id} className={`rounded-xl border-2 px-3.5 py-2.5 transition-colors ${
               i === activeLineIndex ? "border-primary/40 bg-primary/5" : "border-border bg-card"
             }`}>
               <div className="flex items-center justify-between">
-                <span className="font-hand text-xs text-muted-foreground">Line {i + 1}</span>
-                <span className={`rounded-full px-2 py-0.5 font-hand text-[10px] font-bold ${
+                <span className="font-hand text-sm font-semibold text-muted-foreground">Line {i + 1}</span>
+                <span className={`rounded-full px-2.5 py-0.5 font-hand text-xs font-bold ${
                   ok ? "bg-accent/10 text-accent" : over ? "bg-destructive/10 text-destructive" : "bg-secondary/15 text-secondary-foreground"
                 }`}>
                   {count} / {target} syllables
                 </span>
               </div>
-              <p className="mt-0.5 truncate font-hand text-xs text-foreground">
+              <p className="mt-1 truncate font-hand text-sm text-foreground">
                 {line.text || <span className="italic text-muted-foreground/50">empty</span>}
               </p>
             </div>
@@ -208,9 +207,9 @@ function HaikuPanel({ topic, activeLineIndex, onReplaceLine }: { topic: string; 
         })}
       </div>
 
-      <div className="flex items-start gap-1.5 rounded-xl border border-border/60 bg-muted/30 p-2.5">
-        <Info className="mt-0.5 h-3 w-3 shrink-0 text-muted-foreground/60" />
-        <p className="font-hand text-[10px] text-muted-foreground leading-relaxed">
+      <div className="flex items-start gap-2 rounded-xl border border-border/60 bg-muted/30 p-3">
+        <Info className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground/60" />
+        <p className="font-hand text-sm text-muted-foreground leading-relaxed">
           Syllable counts are estimates. Mixed-language text may be less accurate.
         </p>
       </div>
@@ -218,10 +217,9 @@ function HaikuPanel({ topic, activeLineIndex, onReplaceLine }: { topic: string; 
       <Button
         onClick={fetchSuggestions}
         disabled={loading || !lines[activeLineIndex]?.text.trim() || store.aiUsageCount >= store.maxAIUsage}
-        size="sm"
-        className="gap-1.5 rounded-xl font-hand text-xs shadow-sm"
+        className="h-auto gap-2 rounded-xl px-4 py-2.5 font-hand text-sm shadow-sm"
       >
-        {loading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Wand2 className="h-3 w-3" />}
+        {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
         Suggest Alternatives
       </Button>
 
@@ -235,18 +233,18 @@ function HaikuPanel({ topic, activeLineIndex, onReplaceLine }: { topic: string; 
 
             if (headerMatch) {
               return (
-                <p key={i} className="mt-2 font-hand text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                <p key={i} className="mt-2 font-hand text-xs font-bold uppercase tracking-wider text-muted-foreground">
                   {headerMatch[1]} alternatives
                 </p>
               );
             }
 
             return (
-              <div key={i} className="flex items-center justify-between gap-2 rounded-xl border border-border bg-card px-3 py-2">
-                <span className="font-hand text-xs text-foreground">{lineMatch ? clean : s}</span>
+              <div key={i} className="flex items-center justify-between gap-2 rounded-xl border border-border bg-card px-3.5 py-2.5">
+                <span className="font-hand text-sm text-foreground">{lineMatch ? clean : s}</span>
                 {isSuggestionLine && (
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <span className="font-hand text-[8px] text-muted-foreground/60">AI suggestion</span>
+                  <div className="flex shrink-0 items-center gap-1.5">
+                    <span className="font-hand text-[10px] text-muted-foreground/60">AI suggestion</span>
                     <button
                       type="button"
                       onClick={() => {
@@ -256,9 +254,9 @@ function HaikuPanel({ topic, activeLineIndex, onReplaceLine }: { topic: string; 
                         store.saveSnapshot(true);
                         setTimeout(() => setUsedIdx(null), 1200);
                       }}
-                      className="rounded-lg bg-primary/10 px-2 py-0.5 font-hand text-[10px] font-bold text-primary transition-colors hover:bg-primary/20"
+                      className="rounded-lg bg-primary/10 px-2.5 py-1 font-hand text-xs font-bold text-primary transition-colors hover:bg-primary/20"
                     >
-                      {usedIdx === i ? <Check className="inline h-2.5 w-2.5" /> : "Use"}
+                      {usedIdx === i ? <Check className="inline h-3 w-3" /> : "Use"}
                     </button>
                   </div>
                 )}
@@ -268,7 +266,7 @@ function HaikuPanel({ topic, activeLineIndex, onReplaceLine }: { topic: string; 
         </div>
       )}
 
-      <p className="mt-auto font-hand text-[9px] text-muted-foreground/50">
+      <p className="mt-auto font-hand text-xs text-muted-foreground/50">
         AI suggestions: {store.aiUsageCount}/{store.maxAIUsage} used
       </p>
     </div>
@@ -330,14 +328,14 @@ function FreeVersePanel({ topic, activeLineIndex, onInsertText, onReplaceLine }:
   };
 
   return (
-    <div className="styled-scrollbar flex h-full flex-col gap-3 overflow-y-auto">
+    <div className="styled-scrollbar flex h-full flex-col gap-4 overflow-y-auto">
       <div className="flex items-center gap-2">
-        <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-secondary/15 shadow-sm">
-          <Wand2 className="h-4 w-4 text-secondary-foreground" />
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-secondary/15 shadow-sm">
+          <Wand2 className="h-5 w-5 text-secondary-foreground" />
         </div>
         <div>
-          <h3 className="font-hand text-sm font-bold text-foreground">Rhetorical Devices</h3>
-          <p className="font-hand text-[10px] text-muted-foreground">Add literary techniques</p>
+          <h3 className="font-hand text-base font-bold text-foreground">Rhetorical Devices</h3>
+          <p className="font-hand text-sm text-muted-foreground">Add literary techniques</p>
         </div>
       </div>
 
@@ -394,7 +392,7 @@ function FreeVersePanel({ topic, activeLineIndex, onInsertText, onReplaceLine }:
         </div>
       )}
 
-      <p className="mt-auto font-hand text-[9px] text-muted-foreground/50">
+      <p className="mt-auto font-hand text-xs text-muted-foreground/50">
         AI suggestions: {store.aiUsageCount}/{store.maxAIUsage} used
       </p>
     </div>
