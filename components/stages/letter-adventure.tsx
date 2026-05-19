@@ -95,16 +95,16 @@ export default function LetterAdventure({ onStart, onBack, userId, noAi = false 
             <div className="mb-6 flex justify-center items-center gap-4">
               <Sparkles className="w-16 h-16 animate-pulse" style={{ color: "#e8c547" }} />
             </div>
-            <h1 className="text-5xl md:text-6xl font-black mb-4 pixel-title" style={{ color: "#6b5210", textShadow: "3px 3px 0 rgba(0,0,0,0.2)" }}>
+            <h1 className="text-5xl md:text-6xl font-black mb-4 pixel-title text-[#6b5210]">
               ✨ AI Writing Guide ✨
             </h1>
           </div>
 
-          <div className="pixel-panel p-8 shadow-2xl">
+          <div className="pixel-panel pixel-panel-light p-8 shadow-2xl" style={{ background: "#f5e6c8" }}>
             <div className="text-center mb-6">
-              <p className="text-2xl font-bold mb-4 pixel-text" style={{ color: "#6b5210" }}>Here's how to write your letter:</p>
-              <div className="pixel-card p-6" style={{ background: "#f5e6c8" }}>
-                <p className="text-lg leading-relaxed whitespace-pre-wrap pixel-text" style={{ color: "#5a4a2a" }}>
+              <p className="mb-4 text-2xl font-bold text-[#6b5210]">Here's how to write your letter:</p>
+              <div className="pixel-card p-6" style={{ background: "#fffef8" }}>
+                <p className="text-lg leading-relaxed whitespace-pre-wrap text-[#5a4a2a]">
                   {guidance}
                 </p>
               </div>
@@ -139,23 +139,23 @@ export default function LetterAdventure({ onStart, onBack, userId, noAi = false 
             <Sparkles className="w-12 h-12 text-purple-600 animate-pulse" />
             <Heart className="w-16 h-16 text-red-500 animate-pulse" />
           </div>
-          <h1 className="text-5xl md:text-6xl font-black mb-4 pixel-title" style={{ color: "#6b5210", textShadow: "3px 3px 0 rgba(0,0,0,0.2)" }}>
+          <h1 className="text-5xl md:text-6xl font-black mb-4 pixel-title text-[#6b5210]">
             ✨ Letter Adventure ✨
           </h1>
-          <p className="text-xl mb-2 pixel-text" style={{ color: "#5a4a2a" }}>
+          <p className="text-xl mb-2 pixel-text text-[#5a4a2a]">
             Create a magical letter for someone special! 💌
           </p>
-          <p className="text-lg pixel-text" style={{ color: "#6b5210" }}>
+          <p className="text-lg pixel-text text-[#5a4a2a]">
             Let's start your letter writing journey! 🚀
           </p>
         </div>
 
         {/* 输入卡片 */}
-        <div className="pixel-panel p-8 shadow-2xl mb-6">
+        <div className="pixel-panel pixel-panel-light mb-6 p-8 shadow-2xl" style={{ background: "#f5e6c8" }}>
           <div className="space-y-6">
             {/* 收信人输入 */}
             <div className="relative">
-              <label className="block text-2xl font-bold mb-4 flex items-center gap-3 pixel-text" style={{ color: "#6b5210" }}>
+              <label className="mb-4 flex items-center gap-3 font-hand text-2xl font-bold text-[#6b5210]">
                 <span className="text-4xl animate-bounce">👤</span>
                 <span>Who are you writing to?</span>
               </label>
@@ -164,7 +164,7 @@ export default function LetterAdventure({ onStart, onBack, userId, noAi = false 
                 value={recipient}
                 onChange={(e) => setRecipient(e.target.value)}
                 placeholder="e.g., My best friend Sarah, Mom, Teacher Johnson..."
-                className="w-full p-5 text-lg border-3 border-pink-200 rounded-2xl focus:border-pink-400 focus:ring-4 focus:ring-pink-300 focus:outline-none shadow-lg transition-all"
+                className="pixel-input h-auto w-full rounded-2xl border-[3px] border-[#8b6914] bg-[#fffef8] p-5 text-lg text-[#5a4a2a] shadow-lg placeholder:text-[#5a4a2a]/55 focus:border-[#c94b4b] focus:ring-4 focus:ring-[#e66767]/30 focus:outline-none"
                 disabled={isLoading}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && recipient.trim() && occasion.trim() && !isLoading) {
@@ -172,15 +172,15 @@ export default function LetterAdventure({ onStart, onBack, userId, noAi = false 
                   }
                 }}
               />
-              <p className="text-sm mt-3 flex items-center gap-2 pixel-text" style={{ color: "#6b5210" }}>
-                <Star className="w-4 h-4" style={{ color: "#e8c547" }} />
+              <p className="mt-3 flex items-center gap-2 font-hand text-base text-[#5a4a2a]">
+                <Star className="h-4 w-4 shrink-0 text-[#c9a82e]" />
                 <span>Who will receive this special letter?</span>
               </p>
             </div>
 
             {/* 写作契机输入 */}
             <div className="relative">
-              <label className="block text-2xl font-bold mb-4 flex items-center gap-3 pixel-text" style={{ color: "#6b5210" }}>
+              <label className="mb-4 flex items-center gap-3 font-hand text-2xl font-bold text-[#6b5210]">
                 <span className="text-4xl animate-bounce">💭</span>
                 <span>Why are you writing?</span>
               </label>
@@ -189,7 +189,7 @@ export default function LetterAdventure({ onStart, onBack, userId, noAi = false 
                 value={occasion}
                 onChange={(e) => setOccasion(e.target.value)}
                 placeholder="e.g., To say thank you, To share good news, To apologize..."
-                className="w-full p-5 text-lg border-3 border-purple-200 rounded-2xl focus:border-purple-400 focus:ring-4 focus:ring-purple-300 focus:outline-none shadow-lg transition-all"
+                className="pixel-input h-auto w-full rounded-2xl border-[3px] border-[#8b6914] bg-[#fffef8] p-5 text-lg text-[#5a4a2a] shadow-lg placeholder:text-[#5a4a2a]/55 focus:border-[#6b5210] focus:ring-4 focus:ring-[#8b6914]/25 focus:outline-none"
                 disabled={isLoading}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && recipient.trim() && occasion.trim() && !isLoading) {
@@ -197,8 +197,8 @@ export default function LetterAdventure({ onStart, onBack, userId, noAi = false 
                   }
                 }}
               />
-              <p className="text-sm mt-3 flex items-center gap-2 pixel-text" style={{ color: "#6b5210" }}>
-                <Heart className="w-4 h-4" style={{ color: "#e66767" }} />
+              <p className="mt-3 flex items-center gap-2 font-hand text-base text-[#5a4a2a]">
+                <Heart className="h-4 w-4 shrink-0 text-[#c94b4b]" />
                 <span>What's the special reason for this letter?</span>
               </p>
             </div>
