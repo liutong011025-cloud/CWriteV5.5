@@ -1218,6 +1218,137 @@
   pointer-events: none;
 }
 
+/* Pixel panel: light text on dark wood; dark text on light inset surfaces */
+.pixel-panel {
+  --on-panel-fg: var(--pixel-cream, #f5e6c8);
+  --on-panel-fg-muted: rgba(245, 230, 200, 0.78);
+  color: var(--on-panel-fg);
+}
+
+.pixel-panel-light,
+.pixel-panel[style*="#f5e6c8"],
+.pixel-panel[style*="#d4e8b4"],
+.pixel-panel[style*="#e8c547"],
+.pixel-panel[style*="#fff8ea"],
+.pixel-panel[style*="#f9f1dd"] {
+  --on-panel-fg: var(--pixel-wood-dark, #6b5210);
+  --on-panel-fg-muted: #5a4a2a;
+  color: var(--on-panel-fg);
+}
+
+.pixel-panel .text-foreground {
+  color: var(--on-panel-fg) !important;
+}
+
+.pixel-panel .text-muted-foreground {
+  color: var(--on-panel-fg-muted) !important;
+}
+
+.pixel-panel .pixel-panel-surface,
+.pixel-panel .pixel-card,
+.pixel-panel .pixel-input,
+.pixel-panel input:not([type="checkbox"]):not([type="radio"]),
+.pixel-panel textarea,
+.pixel-panel select,
+.pixel-panel [class*="bg-card"],
+.pixel-panel [class*="bg-white"],
+.pixel-panel [class*="bg-muted"],
+.pixel-panel [class*="bg-primary/"],
+.pixel-panel [class*="bg-accent/"],
+.pixel-panel [class*="bg-secondary/"],
+.pixel-panel [class*="bg-destructive/"],
+.pixel-panel [class*="bg-chart-"],
+.pixel-panel [style*="background: #f5e6c8"],
+.pixel-panel [style*="background:#f5e6c8"],
+.pixel-panel [style*="background: #fff"],
+.pixel-panel [style*="background:#fff"],
+.pixel-panel [style*="background: white"],
+.pixel-panel [style*="background: #d4e8b4"],
+.pixel-panel [style*="background: #e8c547"],
+.pixel-panel [style*="background: #e8d4a8"],
+.pixel-panel [style*="background: linear-gradient(180deg, #f9f1dd"],
+.pixel-panel [style*="background: linear-gradient(180deg, #e8c547"],
+.pixel-panel [style*="rgba(245,230,200"] {
+  --on-panel-fg: var(--pixel-wood-dark, #6b5210);
+  --on-panel-fg-muted: #5a4a2a;
+  color: var(--on-panel-fg);
+}
+
+.pixel-panel .pixel-panel-surface .text-foreground,
+.pixel-panel .pixel-card .text-foreground,
+.pixel-panel .pixel-input,
+.pixel-panel [class*="bg-card"] .text-foreground,
+.pixel-panel [class*="bg-muted"] .text-foreground,
+.pixel-panel [style*="background: #f5e6c8"] .text-foreground,
+.pixel-panel [style*="background:#f5e6c8"] .text-foreground,
+.pixel-panel [style*="background: #fff"] .text-foreground,
+.pixel-panel [style*="background: #d4e8b4"] .text-foreground,
+.pixel-panel [style*="background: #e8c547"] .text-foreground,
+.pixel-panel [style*="background: #e8d4a8"] .text-foreground,
+.pixel-panel [style*="background: linear-gradient(180deg, #f9f1dd"] .text-foreground,
+.pixel-panel [style*="rgba(245,230,200"] .text-foreground {
+  color: var(--foreground) !important;
+}
+
+.pixel-panel .pixel-panel-surface .text-muted-foreground,
+.pixel-panel .pixel-card .text-muted-foreground,
+.pixel-panel [class*="bg-card"] .text-muted-foreground,
+.pixel-panel [class*="bg-muted"] .text-muted-foreground,
+.pixel-panel [style*="background: #f5e6c8"] .text-muted-foreground,
+.pixel-panel [style*="background:#f5e6c8"] .text-muted-foreground,
+.pixel-panel [style*="background: #fff"] .text-muted-foreground,
+.pixel-panel [style*="background: #d4e8b4"] .text-muted-foreground,
+.pixel-panel [style*="background: #e8c547"] .text-muted-foreground,
+.pixel-panel [style*="background: #e8d4a8"] .text-muted-foreground,
+.pixel-panel [style*="background: linear-gradient(180deg, #f9f1dd"] .text-muted-foreground,
+.pixel-panel [style*="rgba(245,230,200"] .text-muted-foreground {
+  color: var(--muted-foreground) !important;
+}
+
+/* Inline dark browns on wood (skip elements that set their own background) */
+.pixel-panel:not(.pixel-panel-light):not([style*="#f5e6c8"]):not([style*="#d4e8b4"]):not([style*="#e8c547"]):not([style*="#f9f1dd"])
+  [style*="color: #5a4a2a"]:not([style*="background"]),
+.pixel-panel:not(.pixel-panel-light):not([style*="#f5e6c8"]):not([style*="#d4e8b4"]):not([style*="#e8c547"]):not([style*="#f9f1dd"])
+  [style*="color: #6b5210"]:not([style*="background"]),
+.pixel-panel:not(.pixel-panel-light):not([style*="#f5e6c8"]):not([style*="#d4e8b4"]):not([style*="#e8c547"]):not([style*="#f9f1dd"])
+  [style*="color: #8b6914"]:not([style*="background"]) {
+  color: var(--on-panel-fg) !important;
+}
+
+/* Keep dark text inside light islands (after wood-panel overrides) */
+.pixel-panel .pixel-card [style*="color: #5a4a2a"],
+.pixel-panel .pixel-card [style*="color: #6b5210"],
+.pixel-panel .pixel-card [style*="color: #3d5a1f"],
+.pixel-panel .pixel-card [style*="color: #3a8aa3"],
+.pixel-panel .pixel-panel-surface [style*="color: #5a4a2a"],
+.pixel-panel .pixel-panel-surface [style*="color: #6b5210"],
+.pixel-panel [style*="background: #f5e6c8"] [style*="color: #5a4a2a"],
+.pixel-panel [style*="background: #f5e6c8"] [style*="color: #6b5210"],
+.pixel-panel [style*="background:#f5e6c8"] [style*="color: #5a4a2a"],
+.pixel-panel [style*="background:#f5e6c8"] [style*="color: #6b5210"],
+.pixel-panel [style*="background: #fff"] [style*="color: #5a4a2a"],
+.pixel-panel [style*="background: #d4e8b4"] [style*="color: #5a4a2a"],
+.pixel-panel [style*="background: #d4e8b4"] [style*="color: #3d5a1f"],
+.pixel-panel [style*="background: #d4e8b4"] [style*="color: #6b5210"],
+.pixel-panel [style*="background: #e8c547"] [style*="color: #5a4a2a"],
+.pixel-panel [style*="background: #e8c547"] [style*="color: #6b5210"],
+.pixel-panel [style*="background: #e8d4a8"] [style*="color: #5a4a2a"],
+.pixel-panel [style*="background: #e8d4a8"] [style*="color: #6b5210"],
+.pixel-panel [style*="background: linear-gradient(180deg, #f9f1dd"] [style*="color: #5a4a2a"],
+.pixel-panel [style*="background: linear-gradient(180deg, #f9f1dd"] [style*="color: #6b5210"],
+.pixel-panel [style*="rgba(245,230,200"] [style*="color: #5a4a2a"],
+.pixel-panel [style*="rgba(245,230,200"] [style*="color: #6b5210"] {
+  color: var(--on-panel-fg) !important;
+}
+
+.pixel-panel:not(.pixel-panel-light):not([style*="#f5e6c8"]) .text-primary {
+  color: #b8e4f9 !important;
+}
+
+.pixel-panel:not(.pixel-panel-light):not([style*="#f5e6c8"]) [class*="drop-shadow"] {
+  filter: none !important;
+}
+
 /* Pixel button styles */
 .pixel-btn {
   border: 3px solid;
