@@ -85,12 +85,12 @@ export function InspirationPanel({ topic, onInsertWord }: InspirationPanelProps)
   return (
     <div className="styled-scrollbar flex h-full flex-col gap-3 overflow-y-auto">
       <div className="flex items-center gap-2">
-        <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-secondary/15 shadow-sm">
-          <Lightbulb className="h-4 w-4 text-secondary-foreground" />
+        <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#f5e6c8]/20 shadow-sm">
+          <Lightbulb className="h-4 w-4 text-[#f5e6c8]" />
         </div>
         <div className="flex-1">
-          <h3 className="font-hand text-sm font-bold text-foreground">Inspiration</h3>
-          <p className="font-hand text-[10px] text-muted-foreground">
+          <h3 className="font-hand text-sm font-bold text-[#f5e6c8]">Inspiration</h3>
+          <p className="font-hand text-[10px] text-[#f5e6c8]/85">
             {isTopicSpecific ? `Words for "${topic}"` : `Topic: ${topic}`}
           </p>
         </div>
@@ -99,7 +99,7 @@ export function InspirationPanel({ topic, onInsertWord }: InspirationPanelProps)
           onClick={fetchWords}
           disabled={loading}
           title="Refresh words for this topic"
-          className="flex h-6 w-6 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-40"
+          className="flex h-6 w-6 items-center justify-center rounded-lg text-[#f5e6c8]/80 transition-colors hover:bg-[#f5e6c8]/15 hover:text-[#f5e6c8] disabled:opacity-40"
         >
           {loading ? (
             <Loader2 className="h-3 w-3 animate-spin" />
@@ -109,14 +109,14 @@ export function InspirationPanel({ topic, onInsertWord }: InspirationPanelProps)
         </button>
       </div>
 
-      <p className="font-hand text-[11px] leading-relaxed text-muted-foreground">
+      <p className="font-hand text-[11px] leading-relaxed text-[#f5e6c8]/75">
         Click any word to add it to your current line.
       </p>
 
       {loading && !isTopicSpecific && (
-        <div className="flex items-center justify-center gap-2 rounded-xl border border-border bg-card/50 py-4">
-          <Loader2 className="h-4 w-4 animate-spin text-primary" />
-          <span className="font-hand text-xs text-muted-foreground">
+        <div className="flex items-center justify-center gap-2 rounded-xl border border-[#f5e6c8]/30 bg-[#f5e6c8]/10 py-4">
+          <Loader2 className="h-4 w-4 animate-spin text-[#f5e6c8]" />
+          <span className="font-hand text-xs text-[#f5e6c8]/90">
             Finding words about {topic}...
           </span>
         </div>
@@ -124,12 +124,12 @@ export function InspirationPanel({ topic, onInsertWord }: InspirationPanelProps)
 
       {Object.entries(words).map(([sense, senseWords]) => {
         const Icon = SENSE_ICONS[sense] || Eye;
-        const color = SENSE_COLORS[sense] || "bg-muted text-foreground border-border";
+        const color = SENSE_COLORS[sense] || "bg-[#5a4210] text-white border-[#4a3510] hover:bg-[#4a3510]";
         return (
           <div key={sense}>
             <div className="mb-1.5 flex items-center gap-1.5">
-              <Icon className="h-3 w-3 text-foreground" />
-              <span className="font-hand text-[10px] font-bold uppercase tracking-wider text-foreground">
+              <Icon className="h-3 w-3 text-[#f5e6c8]/90" />
+              <span className="font-hand text-[10px] font-bold uppercase tracking-wider text-[#f5e6c8]">
                 {sense}
               </span>
             </div>
