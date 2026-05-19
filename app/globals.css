@@ -1020,7 +1020,7 @@
   pointer-events: none;
   font-family: var(--font-press-start-2p), ui-monospace, monospace;
   letter-spacing: 0.02em;
-  text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.25);
+  text-shadow: none;
   /* Start hidden: reveal from right -> left */
   clip-path: inset(0 0 0 100%);
   opacity: 0.98;
@@ -1249,28 +1249,24 @@
   background: linear-gradient(180deg, #6fcf6f 0%, #4ca84c 100%);
   border-color: #3d8a3d;
   color: #fff;
-  text-shadow: 1px 1px 0 rgba(0,0,0,0.3);
 }
 
 .pixel-btn-red {
   background: linear-gradient(180deg, #e66767 0%, #c94b4b 100%);
   border-color: #a33a3a;
   color: #fff;
-  text-shadow: 1px 1px 0 rgba(0,0,0,0.3);
 }
 
 .pixel-btn-blue {
   background: linear-gradient(180deg, #6bc9e8 0%, #4aa8c7 100%);
   border-color: #3a8aa3;
   color: #fff;
-  text-shadow: 1px 1px 0 rgba(0,0,0,0.3);
 }
 
 .pixel-btn-wood {
   background: linear-gradient(180deg, var(--pixel-wood-light) 0%, var(--pixel-wood) 100%);
   border-color: var(--pixel-wood-dark);
   color: #fff;
-  text-shadow: 1px 1px 0 rgba(0,0,0,0.4);
 }
 
 /* Pixel input field */
@@ -1414,14 +1410,10 @@
 
 /* Pixel text styling */
 .pixel-text {
-  text-shadow: 2px 2px 0 rgba(0,0,0,0.2);
   letter-spacing: 0.5px;
 }
 
 .pixel-title {
-  text-shadow: 
-    2px 2px 0 var(--pixel-wood-dark),
-    4px 4px 0 rgba(0,0,0,0.15);
   letter-spacing: 1px;
 }
 
@@ -1486,4 +1478,11 @@
 html.teacher-dashboard-active body {
   background-image: none !important;
   background-color: var(--pixel-sky-light, #b8e4f9);
+}
+
+/* Readability: no decorative text shadows site-wide (overrides inline styles) */
+*,
+*::before,
+*::after {
+  text-shadow: none !important;
 }
