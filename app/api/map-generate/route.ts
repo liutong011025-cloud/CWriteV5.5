@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
-import { ArkImageError, generateArkImage } from "@/lib/ark-images"
+import { fal } from "@fal-ai/client"
+import { extractFalImageUrl, FAL_NANO_BANANA_MODEL, getFalKey } from "@/lib/fal-map"
 
 type MapGenerateRequestBody = {
   userId: string
@@ -11,11 +12,11 @@ type MapGenerateRequestBody = {
 
 export async function POST(request: NextRequest) {
   try {
-    if (!process.env.ARK_API_KEY && !process.env.VOLCENGINE_ARK_API_KEY) {
-      console.error("[map-generate] ARK_API_KEY not configured")
+    if (!getFalKey()) {
+      console.error("[map-generate] FAL_KEY not configured")
       return NextResponse.json(
         { error: "map_unavailable", message: "Map is resting. Try again later." },
-        { status: 200 }
+        { status: 200 },
       )
     }
 
@@ -25,7 +26,7 @@ export async function POST(request: NextRequest) {
     if (!userId || !topic) {
       return NextResponse.json(
         { error: "bad_request", message: "Missing userId or topic." },
-        { status: 400 }
+        { status: 400 },
       )
     }
 
@@ -48,15 +49,31 @@ Overall style: imaginative, welcoming, slightly stylized, suitable for a childre
 Avoid logos and real-world text.
 `.trim()
 
-    const result = await generateArkImage({
-      prompt,
-      size: "2048x2048",
-      outputFormat: "png",
+    const result = await fal.subscribe(FAL_NANO_BANANA_MODEL, {
+      input: {
+        prompt,
+        resolution: "1K",
+        output_format: "png",
+        num_images: 1,
+        limit_generations: true,
+        safety_tolerance: "4",
+      },
+      logs: false,
     })
 
+    const imageUrl = extractFalImageUrl(result.data)
+    if (!imageUrl) {
+      console.error("[map-generate] Fal response missing image URL", result.data)
+      return NextResponse.json(
+        { error: "map_unavailable", message: "Could not generate initial map image." },
+        { status: 200 },
+      )
+    }
+
+    const data = result.data as { description?: string }
     return NextResponse.json({
-      imageUrl: result.imageUrl,
-      description: result.description || "",
+      imageUrl,
+      description: data?.description || "",
       topic,
       title,
       mapX,
@@ -65,16 +82,9 @@ Avoid logos and real-world text.
     })
   } catch (error) {
     console.error("[map-generate] Error:", error)
-    if (error instanceof ArkImageError) {
-      return NextResponse.json(
-        { error: "map_unavailable", message: error.detail ? `${error.message} ${error.detail}` : error.message },
-        { status: 200 }
-      )
-    }
     return NextResponse.json(
       { error: "map_unavailable", message: "Something went wrong generating the map." },
-      { status: 200 }
+      { status: 200 },
     )
   }
 }
-
