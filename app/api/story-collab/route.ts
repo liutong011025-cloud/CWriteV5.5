@@ -2,10 +2,12 @@ import { NextRequest, NextResponse } from "next/server"
 import { logApiCall } from "@/lib/log-api-call"
 import { chat, isConfigured, DeepSeekError } from "@/lib/deepseek"
 import { getLevelPromptSuffix } from "@/lib/level-details"
+import { evaluateStorySection } from "@/lib/story-section-evaluation"
 import {
-  buildSectionSubmitSystemPrompt,
-  evaluateStorySection,
-} from "@/lib/story-section-evaluation"
+  buildSectionGraderSystemPrompt,
+  combineSectionPassDecision,
+  parseAiSectionGrade,
+} from "@/lib/story-section-grader"
 import {
   buildRevisionTagsPromptRules,
   parseRevisionTags,
@@ -362,7 +364,14 @@ function finalizeWritingSectionFeedback(
 
   const { min, max } = evaluation.tagBounds
 
-  if (evaluation.pass) {
+  const aiGrade = parseAiSectionGrade(meta as Record<string, unknown>, answer)
+  const passed = combineSectionPassDecision(
+    evaluation.mechanicalPass,
+    evaluation.structureOk,
+    aiGrade,
+  )
+
+  if (passed) {
     const passLine = isLastSection ? PASS_LAST_SECTION : PASS_NEXT_SECTION
     return {
       answer: `Nice work on ${section.section}! ${passLine}`,
@@ -371,7 +380,7 @@ function finalizeWritingSectionFeedback(
     }
   }
 
-  let revision_tags = parseRevisionTags((meta as { revision_tags?: unknown }).revision_tags)
+  let revision_tags = aiGrade.revision_tags.length > 0 ? aiGrade.revision_tags : []
   const weakAiTags =
     revision_tags.length > 0 &&
     revision_tags.every((t) => t.rationale.toLowerCase() === t.label.toLowerCase())
@@ -430,18 +439,20 @@ export async function POST(request: NextRequest) {
       const section = req.story_blocks[idx]
       const sectionText = (section.text || "").trim() || queryText
       const charName = req.character?.name || "the hero"
-      const systemPrompt = buildSectionSubmitSystemPrompt(
-        section.section,
-        req.level,
-        charName,
-        req.plot_state || {},
-      )
       const prevTexts = getPreviousSectionTexts(req, idx)
+      const systemPrompt = buildSectionGraderSystemPrompt({
+        sectionName: section.section,
+        level: req.level,
+        characterName: charName,
+        characterAge: req.character?.age,
+        plot: req.plot_state || {},
+        structureType: req.structure_type,
+        sectionIndex: idx,
+        sectionCount: req.story_blocks.length,
+        previousSections: prevTexts,
+      })
       const userPayload =
-        `Section: ${section.section}\nDraft:\n${sectionText}` +
-        (prevTexts.length > 0
-          ? `\n\nEarlier sections exist — reject if this draft repeats the same opening instead of this beat.`
-          : "")
+        `Grade this draft for "${section.section}" only.\n\nDraft:\n${sectionText}`
 
       rawAnswer = await chat({
         messages: [
@@ -449,8 +460,8 @@ export async function POST(request: NextRequest) {
           { role: "user", content: userPayload },
         ],
         timeout: 45_000,
-        temperature: 0.25,
-        maxTokens: 500,
+        temperature: 0.2,
+        maxTokens: 700,
       })
       const parsed = parseResponse(rawAnswer)
       parsedAnswer = parsed.answer
