@@ -399,7 +399,7 @@ export default function StoryCollab({
       const welcome: CollabMessage = {
         id: "welcome",
         role: "assistant",
-        content: `Hi! Let's plan a story for ${charName}.\n\nFirst, what kind of story sounds fun? Then we'll pick where it happens, what problem appears, and what ${charName} wants to do.`,
+        content: `Hi! Let's dream up a story for ${charName} together.\n\nWhat kind of story are you in the mood for?`,
         suggestions: ["Adventure", "Magic", "Mystery", "Funny"],
       }
       setMessages([welcome])
@@ -409,7 +409,7 @@ export default function StoryCollab({
 
   /* ── API call ── */
   const sendMessage = useCallback(
-    async (text: string, action?: "help_me" | "chat") => {
+    async (text: string, action?: "help_me" | "chat" | "submit_section") => {
       if (isLoading) return
 
       const padSnapshot =
@@ -490,7 +490,7 @@ export default function StoryCollab({
         }
 
         const rawAnswer = data.answer || ""
-        const sectionPassed = !!data.section_passed || detectAdvanceNextSectionSignal(rawAnswer)
+        const sectionPassed = data.section_passed === true
         if (
           sectionPassed &&
           selectedStructure &&
@@ -506,7 +506,7 @@ export default function StoryCollab({
         }
 
         if (
-          (sectionPassed || detectLastSectionGreatJobSignal(rawAnswer)) &&
+          sectionPassed &&
           selectedStructure &&
           storyBlocks.length > 0 &&
           currentWritingSection === storyBlocks.length - 1
@@ -529,12 +529,16 @@ export default function StoryCollab({
         const aiMsg: CollabMessage = {
           id: `ai-${Date.now()}`,
           role: "assistant",
-          content: cleaned,
-          suggestions: data.suggestions,
+          content:
+            data.revision_tags?.length
+              ? data.answer?.trim() ||
+                "Revise your Writing Pad — tap each tag to see why, then tap Finish! again."
+              : cleaned,
+          suggestions: data.revision_tags?.length ? [] : data.suggestions,
           storySnippet: data.story_snippet,
           structureCards: showStructureCards,
           revisionTags: data.revision_tags?.length ? data.revision_tags : undefined,
-          sectionPassed: data.section_passed,
+          sectionPassed: data.section_passed === true && !data.revision_tags?.length,
         }
         setMessages((prev) => [...prev, aiMsg])
 
@@ -701,7 +705,8 @@ export default function StoryCollab({
     }
 
     updateWritingMoodFromText(text)
-    void sendMessage(text)
+    const submitSection = storyBlocks.length > 0 && mode === "ai"
+    void sendMessage(text, submitSection ? "submit_section" : "chat")
   }, [
     chatInput,
     isLoading,
@@ -755,10 +760,19 @@ export default function StoryCollab({
   const handleSuggestionClick = useCallback(
     (suggestion: string) => {
       if (isLoading) return
+      if (storyBlocks.length > 0 && mode === "ai") {
+        setChatInput((prev) => {
+          const p = prev.trim()
+          if (!p) return suggestion
+          if (p.toLowerCase().includes(suggestion.toLowerCase())) return p
+          return `${p} ${suggestion}`
+        })
+        return
+      }
       updateWritingMoodFromText(suggestion)
       void sendMessage(suggestion)
     },
-    [isLoading, sendMessage, updateWritingMoodFromText],
+    [isLoading, sendMessage, updateWritingMoodFromText, storyBlocks.length, mode],
   )
 
   const handleHelpMe = useCallback(() => {
@@ -936,43 +950,6 @@ export default function StoryCollab({
               {mode === "ai" ? (
                 /* ──── AI chat mode (all phases: explore → plot → structure → writing) ──── */
                 <>
-                  {/* Plot checklist — before structure is chosen */}
-                  {!selectedStructure && mode === "ai" && (
-                    <div
-                      className="px-5 pt-4 pb-3"
-                      style={{
-                        borderBottom: "4px solid #8b6914",
-                        background: "linear-gradient(180deg, #d4e8b4 0%, #a8d080 100%)",
-                      }}
-                    >
-                      <p className="text-xs font-bold mb-2" style={{ color: "#3d5a1f" }}>
-                        Plot plan: Setting · Problem · Goal
-                      </p>
-                      <div className="flex flex-wrap gap-2">
-                        {(
-                          [
-                            { key: "setting", label: "Setting", value: plotData.setting },
-                            { key: "conflict", label: "Problem", value: plotData.conflict },
-                            { key: "goal", label: "Goal", value: plotData.goal },
-                          ] as const
-                        ).map((item) => (
-                          <span
-                            key={item.key}
-                            className="px-2 py-1 text-[10px] font-bold"
-                            style={{
-                              background: item.value?.trim() ? "#7ec850" : "#e8dcc0",
-                              color: item.value?.trim() ? "#fff" : "#6b5210",
-                              border: `2px solid ${item.value?.trim() ? "#5a9a32" : "#8b6914"}`,
-                            }}
-                          >
-                            {item.label}
-                            {item.value?.trim() ? " ✓" : " …"}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
                   {/* Section progress bar — visible only once structure is chosen */}
                   {storyBlocks.length > 0 && (
                     <div className="px-5 pt-4 pb-3" style={{
