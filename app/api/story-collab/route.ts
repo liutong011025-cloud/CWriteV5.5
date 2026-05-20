@@ -2,7 +2,10 @@ import { NextRequest, NextResponse } from "next/server"
 import { logApiCall } from "@/lib/log-api-call"
 import { chat, isConfigured, DeepSeekError } from "@/lib/deepseek"
 import { getLevelPromptSuffix } from "@/lib/level-details"
-import { evaluateStoryWriting } from "@/lib/cagent-writing-rubric"
+import {
+  buildSectionSubmitSystemPrompt,
+  evaluateStorySection,
+} from "@/lib/story-section-evaluation"
 import {
   buildRevisionTagsPromptRules,
   parseRevisionTags,
@@ -13,7 +16,6 @@ import {
 import {
   buildExplorePromptRules,
   buildPlotPhasePromptRules,
-  buildPlotStatusLine,
   finalizePlotFromConversation,
   isPlotComplete,
   type PlotState,
@@ -33,7 +35,7 @@ interface CollabRequest {
   current_phase: CollabPhase
   user_id: string
   level: number
-  action?: "help_me" | "chat"
+  action?: "help_me" | "chat" | "submit_section"
 }
 
 interface CollabResponse {
@@ -64,6 +66,7 @@ function countWords(text: string): number {
 
 function isSectionDraftSubmission(req: CollabRequest, queryText: string): boolean {
   if (req.action === "help_me") return false
+  if (req.action === "submit_section") return !!req.structure_type
   if (!req.structure_type) return false
   const idx = req.current_writing_section_index
   if (typeof idx !== "number" || idx < 0 || idx >= (req.story_blocks?.length ?? 0)) return false
@@ -92,7 +95,7 @@ function determinePhase(req: CollabRequest): CollabPhase {
   return "polish"
 }
 
-function buildSystemPrompt(req: CollabRequest, phase: CollabPhase): string {
+function buildSystemPrompt(req: CollabRequest, phase: CollabPhase, lastStudentMessage: string): string {
   const parts: string[] = []
 
   parts.push(
@@ -187,22 +190,21 @@ function buildSystemPrompt(req: CollabRequest, phase: CollabPhase): string {
   const userTurns = req.conversation_history.filter((m) => m.role === "user").length
 
   if (phase === "explore") {
-    parts.push(buildExplorePromptRules(charName))
+    parts.push(buildExplorePromptRules(charName, lastStudentMessage))
   }
   if (phase === "plot" || (phase === "explore" && userTurns >= 1)) {
-    parts.push(buildPlotPhasePromptRules(req.plot_state || {}, charName, userTurns + 1))
-    parts.push(`\nPlot checklist for you: ${buildPlotStatusLine(req.plot_state || {})}`)
+    parts.push(buildPlotPhasePromptRules(req.plot_state || {}, charName, lastStudentMessage))
   }
 
   // Phase-specific instructions
   const phaseInstructions: Record<CollabPhase, string> = {
     explore:
-      "Ask what story theme sounds fun, then move to WHERE the story happens. " +
+      "Have a short chat about story mood/theme, then naturally ask where it could happen. " +
       "Never use vague suggestion buttons.",
     plot:
-      "Collect Setting → Problem → Goal in order. ONE question per reply about the next missing piece. " +
-      "Always fill plot_update in META when the student answers. " +
-      "suggestions must be concrete answer choices, not generic chat buttons.",
+      "Guide setting, problem, and goal through connected questions — each reply builds on the student's last words. " +
+      "Save at most one plot field per turn in plot_update. " +
+      "suggestions must fit your exact question, not generic chat buttons.",
     structure:
       "The student has a complete plot! Now suggest a story structure. Briefly explain the 3 options: " +
       "Freytag's Pyramid (5 parts: exposition, rising action, climax, falling action, resolution), " +
@@ -307,6 +309,13 @@ function appendPassSentence(answer: string, isLastSection: boolean): string {
   return base ? `${base}\n${passLine}` : passLine
 }
 
+function getPreviousSectionTexts(req: CollabRequest, currentIndex: number): string[] {
+  return (req.story_blocks || [])
+    .slice(0, currentIndex)
+    .map((b) => b.text?.trim() || "")
+    .filter(Boolean)
+}
+
 function finalizeWritingSectionFeedback(
   req: CollabRequest,
   answer: string,
@@ -326,46 +335,37 @@ function finalizeWritingSectionFeedback(
   const section = req.story_blocks[idx]
   const sectionText = (section.text || "").trim() || (req.message || "").trim()
   const isLastSection = idx >= req.story_blocks.length - 1
-  const rubric = evaluateStoryWriting(
+  const evaluation = evaluateStorySection(
     sectionText,
     section.section,
     req.level,
     req.character,
     req.plot_state,
+    getPreviousSectionTexts(req, idx),
   )
 
-  let revision_tags = parseRevisionTags((meta as { revision_tags?: unknown }).revision_tags)
   const { min, max } = revisionTagBoundsForLevel(req.level)
 
-  if (rubric.pass) {
-    const cleaned = appendPassSentence(stripPassSignalsFromAnswer(answer), isLastSection)
+  if (evaluation.pass) {
+    const passLine = isLastSection ? PASS_LAST_SECTION : PASS_NEXT_SECTION
     return {
-      answer: cleaned,
+      answer: `Nice work on ${section.section}! ${passLine}`,
       revision_tags: [],
       section_passed: true,
     }
   }
 
-  let cleanedAnswer = stripPassSignalsFromAnswer(answer)
-  if (!cleanedAnswer) {
-    cleanedAnswer = "Nice try! Tap each tag, revise your Writing Pad, then tap Finish! again."
-  }
-
+  let revision_tags = parseRevisionTags((meta as { revision_tags?: unknown }).revision_tags)
   if (revision_tags.length < min) {
-    const fromTips = tipsToRevisionTags(rubric.tips, req.level)
-    revision_tags = fromTips.length > 0 ? fromTips : revision_tags
+    revision_tags = evaluation.revisionTags
+  }
+  if (revision_tags.length < min) {
+    revision_tags = tipsToRevisionTags(evaluation.tips.length > 0 ? evaluation.tips : evaluation.reasons, req.level)
   }
   revision_tags = revision_tags.slice(0, max)
 
-  if (revision_tags.length === 0) {
-    revision_tags = tipsToRevisionTags(
-      [`Revise the ${section.section} part with clearer sentences`, "Add one more detail that fits this part"],
-      req.level,
-    )
-  }
-
   return {
-    answer: cleanedAnswer,
+    answer: "Revise your Writing Pad — tap each tag to see why, then tap Finish! again.",
     revision_tags,
     section_passed: false,
   }
@@ -385,24 +385,6 @@ export async function POST(request: NextRequest) {
     }
 
     const phase = determinePhase(req)
-    const systemPrompt = buildSystemPrompt(req, phase)
-
-    // Build messages: system + last 20 history + current
-    const messages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
-      { role: "system", content: systemPrompt },
-    ]
-
-    const history = req.conversation_history || []
-    const recentHistory = history.slice(-20)
-    for (const msg of recentHistory) {
-      if (msg.role === "user" || msg.role === "assistant") {
-        messages.push({ role: msg.role, content: msg.content })
-      }
-    }
-    messages.push({ role: "user", content: queryText })
-
-    const rawAnswer = await chat({ messages, timeout: 60_000 })
-    const { answer: parsedAnswer, meta } = parseResponse(rawAnswer)
 
     const inWritingSection =
       !!req.structure_type &&
@@ -411,6 +393,60 @@ export async function POST(request: NextRequest) {
       req.current_writing_section_index < (req.story_blocks?.length ?? 0)
 
     const draftSubmission = inWritingSection && isSectionDraftSubmission(req, queryText)
+
+    let parsedAnswer = ""
+    let meta: Partial<CollabResponse> = {}
+    let rawAnswer = ""
+
+    if (draftSubmission) {
+      const idx = req.current_writing_section_index as number
+      const section = req.story_blocks[idx]
+      const sectionText = (section.text || "").trim() || queryText
+      const charName = req.character?.name || "the hero"
+      const systemPrompt = buildSectionSubmitSystemPrompt(
+        section.section,
+        req.level,
+        charName,
+        req.plot_state || {},
+      )
+      const prevTexts = getPreviousSectionTexts(req, idx)
+      const userPayload =
+        `Section: ${section.section}\nDraft:\n${sectionText}` +
+        (prevTexts.length > 0
+          ? `\n\nEarlier sections exist — reject if this draft repeats the same opening instead of this beat.`
+          : "")
+
+      rawAnswer = await chat({
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPayload },
+        ],
+        timeout: 45_000,
+        temperature: 0.25,
+        maxTokens: 500,
+      })
+      const parsed = parseResponse(rawAnswer)
+      parsedAnswer = parsed.answer
+      meta = parsed.meta
+    } else {
+      const phase = determinePhase(req)
+      const systemPrompt = buildSystemPrompt(req, phase, queryText)
+      const messages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
+        { role: "system", content: systemPrompt },
+      ]
+      const history = req.conversation_history || []
+      const recentHistory = history.slice(-20)
+      for (const msg of recentHistory) {
+        if (msg.role === "user" || msg.role === "assistant") {
+          messages.push({ role: msg.role, content: msg.content })
+        }
+      }
+      messages.push({ role: "user", content: queryText })
+      rawAnswer = await chat({ messages, timeout: 60_000 })
+      const parsed = parseResponse(rawAnswer)
+      parsedAnswer = parsed.answer
+      meta = parsed.meta
+    }
 
     const finalized = draftSubmission
       ? finalizeWritingSectionFeedback(req, parsedAnswer || rawAnswer, meta)
@@ -436,7 +472,7 @@ export async function POST(request: NextRequest) {
     let plot_update = meta.plot_update || null
     let plot_state: PlotState | undefined
     let plot_complete: boolean | undefined
-    let finalPhase = (meta.phase as CollabPhase) || phase
+    let finalPhase: CollabPhase = draftSubmission ? "writing" : (meta.phase as CollabPhase) || phase
     let suggestions = meta.suggestions
 
     if (plotFinal) {
@@ -447,7 +483,7 @@ export async function POST(request: NextRequest) {
         finalPhase = "structure"
         if (!/structure|choose|pick/i.test(answer)) {
           answer =
-            `${answer}\n\nYour plot is ready — Setting, Problem, and Goal are all set! Choose a story structure below.`.trim()
+            `${answer}\n\nYour story idea sounds ready — pick a structure below when you like!`.trim()
         }
       } else if (!plotFinal.plot_complete) {
         finalPhase = plotFinal.phase
@@ -465,15 +501,22 @@ export async function POST(request: NextRequest) {
     const defaultSuggestions = inPlotPhase
       ? plotFinal?.suggestions || ["At school", "In a forest", "On a beach"]
       : draftSubmission && !finalized.section_passed
-        ? ["Revise and Finish! again", "Add more detail", "Try a stronger verb"]
+        ? []
         : draftSubmission && finalized.section_passed
-          ? ["Next section!", "Add one more detail"]
+          ? []
           : ["Adventure", "Magic", "Mystery"]
+
+    const responseSuggestions =
+      draftSubmission && finalized.revision_tags.length > 0
+        ? []
+        : suggestions?.length
+          ? suggestions
+          : defaultSuggestions
 
     const response: CollabResponse = {
       answer: answer || rawAnswer,
       phase: finalPhase,
-      suggestions: suggestions?.length ? suggestions : defaultSuggestions,
+      suggestions: responseSuggestions,
       story_snippet: meta.story_snippet || null,
       plot_update,
       plot_state,
