@@ -9,7 +9,6 @@ import {
 import {
   buildRevisionTagsPromptRules,
   parseRevisionTags,
-  revisionTagBoundsForLevel,
   tipsToRevisionTags,
   type StoryRevisionTag,
 } from "@/lib/story-revision-tags"
@@ -361,7 +360,7 @@ function finalizeWritingSectionFeedback(
     getPreviousSectionTexts(req, idx),
   )
 
-  const { min, max } = revisionTagBoundsForLevel(req.level)
+  const { min, max } = evaluation.tagBounds
 
   if (evaluation.pass) {
     const passLine = isLastSection ? PASS_LAST_SECTION : PASS_NEXT_SECTION
@@ -383,7 +382,11 @@ function finalizeWritingSectionFeedback(
     revision_tags = tipsToRevisionTags(
       evaluation.tips.length > 0 ? evaluation.tips : evaluation.reasons,
       req.level,
-      { sectionName: section.section, characterName: req.character?.name },
+      {
+        sectionName: section.section,
+        characterName: req.character?.name,
+        maxTags: max,
+      },
     )
   }
   revision_tags = revision_tags.slice(0, max)
