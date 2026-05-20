@@ -154,6 +154,24 @@ const getChapterBaseMapImageUrl = (chapterIndex: number) => {
   return chapterIndex <= 0 ? "/firstmap.webp" : "/secondmap.webp"
 }
 
+const isChapterBaseMapImageUrl = (url?: string | null) => {
+  const trimmed = (url || "").trim()
+  return !trimmed || trimmed === "/firstmap.webp" || trimmed === "/secondmap.webp"
+}
+
+/** Prefer the latest AI-edited map URL; fall back to static chapter base only when none exists. */
+const pickBestPreviousMapImageUrl = (
+  liveUrl: string | undefined,
+  chapterUrl: string | undefined,
+  chapterIndex: number,
+) => {
+  const candidates = [liveUrl, chapterUrl].filter((u): u is string => Boolean(u?.trim()))
+  for (const url of candidates) {
+    if (!isChapterBaseMapImageUrl(url)) return url
+  }
+  return candidates[0] || getChapterBaseMapImageUrl(chapterIndex)
+}
+
 interface PersistedMapChaptersState {
   activeChapterIndex?: number
   chapters?: PersistedMapState[]
@@ -604,6 +622,8 @@ export default function Home() {
   const [activeMapChapterIndex, setActiveMapChapterIndex] = useState(0)
   const [mapChapters, setMapChapters] = useState<PersistedMapState[]>([])
   const mapStateHydratedRef = useRef(false)
+  const [mapStateHydrated, setMapStateHydrated] = useState(false)
+  const mapImageUrlRef = useRef<string | undefined>(undefined)
   const mapUpdateInFlightRef = useRef(false)
   const pendingMapUpdateRef = useRef<{
     title: string
@@ -1130,9 +1150,14 @@ export default function Home() {
     }
   }, [user?.username])
 
+  useEffect(() => {
+    mapImageUrlRef.current = mapImageUrl
+  }, [mapImageUrl])
+
   // Load map state from DB / localStorage
   useEffect(() => {
     mapStateHydratedRef.current = false
+    setMapStateHydrated(false)
     if (!user?.username || typeof window === "undefined") return
     setMapImageUrl(undefined)
     setMapFlags([])
@@ -1155,7 +1180,9 @@ export default function Home() {
             setMapChapters(normalized.chapters)
             setActiveMapChapterIndex(normalized.activeChapterIndex)
             const active = normalized.chapters[normalized.activeChapterIndex] || normalized.chapters[0]
-            setMapImageUrl(active?.mapImageUrl || getChapterBaseMapImageUrl(normalized.activeChapterIndex))
+            const hydratedMapUrl = active?.mapImageUrl || getChapterBaseMapImageUrl(normalized.activeChapterIndex)
+            setMapImageUrl(hydratedMapUrl)
+            mapImageUrlRef.current = hydratedMapUrl
             setMapFlags(active?.mapFlags ?? [])
             setCurrentPin(active?.currentPin ?? null)
             setJourneySelection(active?.journeySelection ?? null)
@@ -1176,7 +1203,9 @@ export default function Home() {
             setMapChapters(normalized.chapters)
             setActiveMapChapterIndex(normalized.activeChapterIndex)
             const active = normalized.chapters[normalized.activeChapterIndex] || normalized.chapters[0]
-            setMapImageUrl(active?.mapImageUrl || getChapterBaseMapImageUrl(normalized.activeChapterIndex))
+            const hydratedMapUrl = active?.mapImageUrl || getChapterBaseMapImageUrl(normalized.activeChapterIndex)
+            setMapImageUrl(hydratedMapUrl)
+            mapImageUrlRef.current = hydratedMapUrl
             setMapFlags(active?.mapFlags ?? [])
             setCurrentPin(active?.currentPin ?? null)
             setJourneySelection(active?.journeySelection ?? null)
@@ -1190,6 +1219,7 @@ export default function Home() {
 
       if (!cancelled) {
         mapStateHydratedRef.current = true
+        setMapStateHydrated(true)
       }
     })()
     return () => { cancelled = true }
@@ -1295,7 +1325,12 @@ export default function Home() {
       }
       const pinSnapshot = currentPin ?? lastJourneyPinRef.current ?? { x: 50, y: 50 }
       lastJourneyPinRef.current = pinSnapshot
-      const previousMapImageUrl = mapImageUrl || getChapterBaseMapImageUrl(activeMapChapterIndex)
+      const chapterSnapshot = mapChapters[activeMapChapterIndex]
+      const previousMapImageUrl = pickBestPreviousMapImageUrl(
+        mapImageUrlRef.current ?? mapImageUrl,
+        chapterSnapshot?.mapImageUrl,
+        activeMapChapterIndex,
+      )
       const isBackgroundStructure = params.source === "storyStructure"
 
       void (async () => {
@@ -1325,6 +1360,7 @@ export default function Home() {
           if (mapRes.ok && !mapJson?.error && mapJson?.imageUrl) {
             const newImageUrl = mapJson.imageUrl as string
             mapLocalUpdatedAtRef.current = Date.now()
+            mapImageUrlRef.current = newImageUrl
             setMapImageUrl(newImageUrl)
             setCurrentPin(null)
             if (!params.skipNewFlag) {
@@ -1370,7 +1406,7 @@ export default function Home() {
         }
       })()
     },
-    [journeyActive, user, currentPin, mapImageUrl, activeMapChapterIndex, persistMapStateNow],
+    [journeyActive, user, currentPin, mapImageUrl, mapChapters, activeMapChapterIndex, persistMapStateNow],
   )
 
   const runStoryJourneyMapAtStructureSelect = useCallback(
@@ -1415,13 +1451,14 @@ export default function Home() {
 
   /** Start map image edit as soon as structure is chosen — do not wait for Writing Map screen. */
   useEffect(() => {
-    if (!journeyActive || !user?.username) return
+    if (!journeyActive || !user?.username || !mapStateHydrated) return
     const structure = storyState.structure
     const plot = storyState.plot
     const character = storyState.character
     if (!structure || !plot || !character) return
 
     const dedupeKey = [
+      "hydrated",
       structure.type,
       plot.setting,
       plot.conflict,
@@ -1438,6 +1475,7 @@ export default function Home() {
     storyState.character,
     journeyActive,
     user?.username,
+    mapStateHydrated,
     activeMapChapterIndex,
     runStoryJourneyMapAtStructureSelect,
   ])
