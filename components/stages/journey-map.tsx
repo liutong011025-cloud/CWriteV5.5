@@ -114,6 +114,37 @@ export default function JourneyMap({
     return "Story"
   }
 
+  const getFlagDialogTitle = (workType?: MapWorkType, editing?: boolean) => {
+    const base =
+      workType === "review"
+        ? "Book Review"
+        : workType === "letter"
+          ? "Letter"
+          : workType === "drama"
+            ? "Drama"
+            : workType === "poetry"
+              ? "Poetry"
+              : "Story"
+    return editing ? `Edit ${base}` : base
+  }
+
+  const getFlagBodyLabel = (workType?: MapWorkType) => {
+    if (workType === "story") return "Your story"
+    if (workType === "review") return "Full review"
+    if (workType === "letter") return "Full letter"
+    return "Full text"
+  }
+
+  const isPlotOutlineOnly = (text: string) => {
+    const lines = text
+      .trim()
+      .split(/\n+/)
+      .map((line) => line.trim())
+      .filter(Boolean)
+    if (!lines.length) return false
+    return lines.every((line) => /^(Character|Species|Setting|Conflict|Goal|Structure):/i.test(line))
+  }
+
   useEffect(() => {
     if (pin) {
       setInternalPin(pin)
@@ -386,7 +417,7 @@ export default function JourneyMap({
             <div className="flex items-center justify-between gap-3 border-b border-purple-200 bg-purple-50/80 px-4 py-3">
               <div className="min-w-0">
                 <h2 id="article-dialog-title" className="text-lg font-bold text-purple-900">
-                  {isEditingFlag ? "Edit Article" : "Article"}
+                  {getFlagDialogTitle(selectedFlag.workType, isEditingFlag)}
                 </h2>
                 <p className="text-xs font-semibold text-purple-600">
                   {getWorkTypeLabel(selectedFlag.workType)}
@@ -425,13 +456,15 @@ export default function JourneyMap({
                     />
                   </div>
                   <div>
-                    <label className="mb-1 block text-sm font-semibold text-purple-800">Full article</label>
+                    <label className="mb-1 block text-sm font-semibold text-purple-800">
+                      {getFlagBodyLabel(selectedFlag.workType)}
+                    </label>
                     <textarea
                       value={editContent}
                       onChange={(e) => setEditContent(e.target.value)}
                       rows={14}
                       className="w-full resize-y rounded-lg border border-purple-200 px-3 py-2 text-purple-900 whitespace-pre-wrap break-words [overflow-wrap:anywhere] focus:outline-none focus:ring-2 focus:ring-purple-400"
-                      placeholder="No content stored for this article."
+                      placeholder="Paste or write your full text here."
                     />
                   </div>
                 </>
@@ -444,10 +477,23 @@ export default function JourneyMap({
                     </h3>
                   </div>
                   <div className="rounded-2xl border border-purple-200 bg-white px-4 py-4">
-                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-purple-600">Full article</p>
-                    <div className="max-h-[50vh] overflow-y-auto whitespace-pre-wrap break-words text-sm leading-7 text-purple-900 [overflow-wrap:anywhere]">
-                      {editContent?.trim() ? editContent : "No content stored for this article yet."}
-                    </div>
+                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-purple-600">
+                      {getFlagBodyLabel(selectedFlag.workType)}
+                    </p>
+                    {isPlotOutlineOnly(editContent) ? (
+                      <p className="text-sm leading-7 text-amber-900 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+                        This pin only has your plot plan notes, not your finished story. Complete your story and
+                        submit it — the full text will appear here automatically.
+                      </p>
+                    ) : (
+                      <div className="max-h-[50vh] overflow-y-auto whitespace-pre-wrap break-words text-sm leading-7 text-purple-900 [overflow-wrap:anywhere]">
+                        {editContent?.trim()
+                          ? editContent
+                          : selectedFlag.workType === "story"
+                            ? "No story text saved yet. Finish writing and submit your story first."
+                            : "No content stored yet."}
+                      </div>
+                    )}
                   </div>
                 </>
               )}
