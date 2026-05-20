@@ -6,6 +6,7 @@ import { evaluateStorySection } from "@/lib/story-section-evaluation"
 import {
   buildSectionGraderSystemPrompt,
   combineSectionPassDecision,
+  alignAiGradeWithDraft,
   parseAiSectionGrade,
 } from "@/lib/story-section-grader"
 import {
@@ -364,7 +365,10 @@ function finalizeWritingSectionFeedback(
     getPreviousSectionTexts(req, idx),
   )
 
-  const aiGrade = parseAiSectionGrade(meta as Record<string, unknown>, answer)
+  const aiGrade = alignAiGradeWithDraft(
+    sectionText,
+    parseAiSectionGrade(meta as Record<string, unknown>, answer),
+  )
   const passed = combineSectionPassDecision(
     evaluation.mechanicalPass,
     evaluation.structureOk,
