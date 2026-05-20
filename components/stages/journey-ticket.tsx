@@ -126,22 +126,22 @@ export default function JourneyTicket({
           >
             {/* Header strip */}
             <div
-              className="flex items-center justify-between gap-3 px-4 md:px-6 py-3 border-b-4"
+              className="flex items-center justify-between gap-4 px-5 md:px-8 py-4 md:py-5 border-b-4"
               style={{ borderColor: TICKET.border, background: "rgba(255,253,246,0.85)" }}
             >
-              <div className="flex items-center gap-2 md:gap-3">
+              <div className="flex flex-wrap items-center gap-3 md:gap-4">
                 <span
-                  className="text-[10px] md:text-xs uppercase tracking-[0.2em] font-bold px-2 py-1 pixel-chip"
+                  className="text-base md:text-lg uppercase tracking-[0.15em] font-bold px-3 py-1.5 pixel-chip"
                   style={{ color: TICKET.label, background: "#e8d4a8" }}
                 >
                   Boarding Pass
                 </span>
-                <span className="text-[10px] md:text-xs uppercase tracking-widest pixel-text" style={{ color: TICKET.muted }}>
+                <span className="text-base md:text-lg uppercase tracking-widest font-bold pixel-text" style={{ color: TICKET.muted }}>
                   CW · LUNA AIR
                 </span>
               </div>
               <span
-                className={`text-2xl md:text-3xl ${isDeparting ? "plane-flyaway" : ""}`}
+                className={`text-3xl md:text-4xl xl:text-5xl ${isDeparting ? "plane-flyaway" : ""}`}
                 style={{ imageRendering: "pixelated" }}
                 aria-hidden
               >
@@ -189,11 +189,11 @@ export default function JourneyTicket({
             <div className="flex flex-col md:flex-row">
               {/* Left stub — journey types (part of ticket) */}
               <div
-                className="md:w-[172px] xl:w-[190px] shrink-0 p-3 md:p-4 flex flex-col gap-3"
+                className="md:w-[188px] xl:w-[210px] shrink-0 p-4 md:p-5 flex flex-col gap-3.5"
                 style={{ background: TICKET.stub, borderBottom: "4px dashed", borderColor: TICKET.perforation }}
               >
                 <p
-                  className="text-xs md:text-sm uppercase tracking-widest font-bold pixel-text text-center"
+                  className="text-lg md:text-xl uppercase tracking-widest font-bold pixel-text text-center"
                   style={{ color: TICKET.label }}
                 >
                   Pick Journey
@@ -274,31 +274,31 @@ export default function JourneyTicket({
               </div>
 
               {/* Main ticket body */}
-              <div className="flex-1 p-5 md:p-7 md:pl-6 min-w-0">
-                <div className="grid sm:grid-cols-3 gap-5 md:gap-6 mb-5 md:mb-6">
+              <div className="flex-1 p-6 md:p-8 md:pl-7 min-w-0">
+                <div className="grid sm:grid-cols-3 gap-6 md:gap-8 mb-6 md:mb-8">
                   <div>
-                    <p className="text-xs md:text-sm uppercase tracking-widest font-bold pixel-text mb-1" style={{ color: TICKET.label }}>
+                    <p className="text-base md:text-lg uppercase tracking-widest font-bold pixel-text mb-1.5" style={{ color: TICKET.label }}>
                       Passenger
                     </p>
-                    <p className="text-xl md:text-2xl font-bold pixel-text truncate" style={{ color: TICKET.value }}>
+                    <p className="text-2xl md:text-3xl xl:text-4xl font-bold pixel-text truncate leading-tight" style={{ color: TICKET.value }}>
                       {userName}
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs md:text-sm uppercase tracking-widest font-bold pixel-text mb-1" style={{ color: TICKET.label }}>
+                    <p className="text-base md:text-lg uppercase tracking-widest font-bold pixel-text mb-1.5" style={{ color: TICKET.label }}>
                       Writing Level
                     </p>
-                    <p className="text-xl md:text-2xl font-bold pixel-text" style={{ color: TICKET.accent }}>
+                    <p className="text-2xl md:text-3xl xl:text-4xl font-bold pixel-text leading-tight" style={{ color: TICKET.accent }}>
                       Level {level}
                     </p>
-                    <div className="flex items-center gap-2 flex-wrap mt-1">
-                      <p className="text-sm md:text-base pixel-text font-semibold" style={{ color: TICKET.muted }}>
+                    <div className="flex items-center gap-2 flex-wrap mt-2">
+                      <p className="text-base md:text-lg pixel-text font-semibold" style={{ color: TICKET.muted }}>
                         Score {score}/7
                       </p>
                       {onRetest && (
                         <button
                           type="button"
-                          className="px-3 py-1 text-xs md:text-sm font-bold text-white pixel-btn pixel-btn-blue"
+                          className="px-4 py-1.5 text-sm md:text-base font-bold text-white pixel-btn pixel-btn-blue"
                           onClick={onRetest}
                         >
                           Retest
@@ -307,16 +307,16 @@ export default function JourneyTicket({
                     </div>
                   </div>
                   <div>
-                    <p className="text-xs md:text-sm uppercase tracking-widest font-bold pixel-text mb-1" style={{ color: TICKET.label }}>
+                    <p className="text-base md:text-lg uppercase tracking-widest font-bold pixel-text mb-1.5" style={{ color: TICKET.label }}>
                       Journey
                     </p>
-                    <p className="text-xl md:text-2xl font-bold pixel-text" style={{ color: TICKET.value }}>
+                    <p className="text-2xl md:text-3xl xl:text-4xl font-bold pixel-text leading-tight" style={{ color: TICKET.value }}>
                       {selectedType ? journeyOptions.find((o) => o.id === selectedType)?.title : "—"}
                     </p>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-3 md:gap-4 mb-5 md:mb-6">
+                <div className="grid grid-cols-3 gap-4 md:gap-5 mb-6 md:mb-8">
                   {[
                     ["Flight", "YL-2024"],
                     ["Gate", "LUNA"],
@@ -324,17 +324,17 @@ export default function JourneyTicket({
                   ].map(([label, val]) => (
                     <div
                       key={label}
-                      className="p-3 md:p-4 text-center"
+                      className="p-4 md:p-5 text-center"
                       style={{
                         background: "#fffdf6",
                         border: `3px solid ${TICKET.border}`,
                         boxShadow: "inset 2px 2px 0 #fff, 2px 2px 0 rgba(0,0,0,0.08)",
                       }}
                     >
-                      <p className="text-xs uppercase tracking-widest font-bold mb-1" style={{ color: TICKET.label }}>
+                      <p className="text-sm md:text-base uppercase tracking-widest font-bold mb-1.5" style={{ color: TICKET.label }}>
                         {label}
                       </p>
-                      <p className="text-base md:text-lg font-bold pixel-text" style={{ color: TICKET.value }}>
+                      <p className="text-xl md:text-2xl xl:text-3xl font-bold pixel-text leading-tight" style={{ color: TICKET.value }}>
                         {val}
                       </p>
                     </div>
