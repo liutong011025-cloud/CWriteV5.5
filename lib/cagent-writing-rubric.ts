@@ -403,7 +403,7 @@ export const evaluateStoryWriting = (
   plot: any
 ) => {
   const metrics = buildBaseMetrics(text)
-  const minWords = level <= 2 ? 8 : 12
+  const minWords = 15
   const minSentences = level <= 2 ? 1 : 2
   const fluency = scoreFluency(metrics, minWords, minSentences)
   const vocabulary = scoreVocabulary(metrics, level, level <= 2 ? 3 : 4)
@@ -434,18 +434,24 @@ export const evaluateStoryWriting = (
     if (/\b(finally|solved|saved|learned|ended)\b/i.test(text)) structureAlignment += 10
   }
 
+  const baseThresholds = getLevelThresholds(level)
   return buildRubricResult({
     level,
     sectionName,
+    thresholds: {
+      fluency: Math.max(28, baseThresholds.fluency - 12),
+      vocabulary: Math.max(14, baseThresholds.vocabulary - 10),
+      structureAlignment: Math.max(22, baseThresholds.structureAlignment - 12),
+    },
     fluency,
     vocabulary,
     structureAlignment: Math.min(100, structureAlignment),
     dangerousTerms: metrics.dangerousTerms,
     gibberishRatio: metrics.gibberishRatio,
     failTips: [
-      `add clearer action and details for the ${sectionName} section`,
-      "connect this paragraph to the character, plot problem, or goal",
-      "rewrite any unclear sentences so the story is easy to follow",
+      `add a little more action or detail for ${sectionName}`,
+      "connect this part to your character or plot when you can",
+      "smooth any unclear sentences so the story is easy to follow",
     ],
   })
 }
