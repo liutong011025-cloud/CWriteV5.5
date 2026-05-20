@@ -1,5 +1,11 @@
 import { evaluateStoryWriting, type CagentRubricResult } from "@/lib/cagent-writing-rubric"
-import { buildRevisionTagsPromptRules, tipsToRevisionTags, type StoryRevisionTag } from "@/lib/story-revision-tags"
+import {
+  buildRevisionTagsPromptRules,
+  MIN_SECTION_WORD_COUNT,
+  revisionTagBoundsForSituation,
+  tipsToRevisionTags,
+  type StoryRevisionTag,
+} from "@/lib/story-revision-tags"
 
 export type PlotState = { setting?: string; conflict?: string; goal?: string }
 
@@ -9,6 +15,8 @@ export type SectionEvaluation = {
   reasons: string[]
   tips: string[]
   revisionTags: StoryRevisionTag[]
+  issueCount: number
+  tagBounds: { min: number; max: number }
 }
 
 const STOPWORDS = new Set([
@@ -25,16 +33,21 @@ function normalizeCompare(text: string): string {
 
 function isNearDuplicate(text: string, previousTexts: string[]): boolean {
   const current = normalizeCompare(text)
-  if (current.length < 30) return false
+  if (current.length < 40) return false
   for (const prev of previousTexts) {
     const p = normalizeCompare(prev)
-    if (!p || p.length < 30) continue
+    if (!p || p.length < 40) continue
     if (current === p) return true
     const short = current.length <= p.length ? current : p
     const long = current.length > p.length ? current : p
-    if (long.includes(short) && short.length / long.length >= 0.82) return true
+    // Only block near-copy (not loosely similar paragraphs)
+    if (long.includes(short) && short.length / long.length >= 0.92) return true
   }
   return false
+}
+
+function wordCount(text: string): number {
+  return (text.match(/[\u4e00-\u9fff]|[a-zA-Z']+/g) || []).length
 }
 
 function includesAny(text: string, patterns: RegExp[]): boolean {
@@ -47,30 +60,43 @@ function scoreSectionBeat(text: string, sectionName: string): { score: number; r
   const reasons: string[] = []
 
   if (s.includes("setup") || s.includes("exposition") || s.includes("begin")) {
-    let score = 0
-    if (includesAny(t, [/\bone day\b/, /\bonce upon\b/, /\bevery (day|morning)\b/, /\bin a\b/, /\bat the\b/, /\bvillage\b/, /\bforest\b/, /\bschool\b/])) {
-      score += 45
+    let score = 18
+    if (includesAny(t, [/\bone day\b/, /\bonce upon\b/, /\bevery (day|morning)\b/, /\bin a\b/, /\bat the\b/, /\bvillage\b/, /\bforest\b/, /\bschool\b/, /\bthere\b/, /\blived\b/, /\bwas\b/])) {
+      score += 35
+    } else if (t.length >= 20) {
+      score += 22
     } else {
-      reasons.push("this part should show where and when the story begins")
+      reasons.push("add a little more about where or when the story starts")
     }
     if (includesAny(t, [/\bstorm\b/, /\bthunder\b/, /\broar\b/, /\bscream\b/, /\bdisappear\b/, /\bfog\b/, /\bcrisis\b/])) {
-      score -= 25
-      reasons.push("Setup should come before the big trouble — save the storm for the next part")
+      score -= 12
+      reasons.push("you can save the big storm for the next part")
     }
     return { score: Math.max(0, score), reasons }
   }
 
   if (s.includes("confront") || s.includes("rising") || s.includes("crisis")) {
-    let score = 0
-    if (includesAny(t, [/\bstorm\b/, /\brain\b/, /\bthunder\b/, /\bdanger\b/, /\btrouble\b/, /\bproblem\b/, /\bafraid\b/, /\bscared\b/, /\blost\b/, /\bfog\b/, /\bdark\b/, /\bhowever\b/, /\bbut suddenly\b/, /\bsuddenly\b/])) {
-      score += 50
+    let score = 15
+    if (
+      includesAny(t, [
+        /\bstorm\b/, /\brain\b/, /\bthunder\b/, /\bdanger\b/, /\btrouble\b/, /\bproblem\b/,
+        /\bafraid\b/, /\bscared\b/, /\blost\b/, /\bfog\b/, /\bdark\b/, /\bhowever\b/,
+        /\bbut suddenly\b/, /\bsuddenly\b/, /\bbird\b/, /\bsteal\b/, /\bstole\b/, /\bsnack\b/,
+        /\bfunny\b/, /\bsilly\b/, /\boops\b/, /\blaugh\b/, /\boh no\b/, /\bworried\b/,
+      ])
+    ) {
+      score += 40
+    } else if (includesAny(t, [/\bbut\b/, /\bhowever\b/, /\bthen\b/, /\bone day\b/]) && t.length >= 25) {
+      score += 25
     } else {
-      reasons.push("this part needs the problem or danger to start (storm, trouble, fear, etc.)")
+      reasons.push("hint at what goes wrong or gets tricky in this part")
     }
-    if (includesAny(t, [/\bevery day\b/, /\balways feel happy\b/, /\bfull of color and laugh\b/, /\bplay with\b/]) &&
-      !includesAny(t, [/\bstorm\b/, /\brain\b/, /\bthunder\b/, /\btrouble\b/, /\bdanger\b/, /\bproblem\b/])) {
-      score -= 40
-      reasons.push("this sounds like the happy beginning — write what goes wrong when trouble begins")
+    if (
+      includesAny(t, [/\bevery day\b/, /\balways feel happy\b/, /\bfull of color and laugh\b/]) &&
+      !includesAny(t, [/\bstorm\b/, /\brain\b/, /\bthunder\b/, /\btrouble\b/, /\bdanger\b/, /\bproblem\b/, /\bbut\b/, /\bhowever\b/, /\bbird\b/, /\bsteal\b/])
+    ) {
+      score -= 25
+      reasons.push("this still sounds like the happy opening — add what starts to go wrong")
     }
     return { score: Math.max(0, score), reasons }
   }
@@ -96,37 +122,44 @@ function scoreSectionBeat(text: string, sectionName: string): { score: number; r
   return { score: 25, reasons }
 }
 
-function plotConnectionScore(text: string, sectionName: string, plot: PlotState): { ok: boolean; reason?: string } {
-  const tokens = tokenize(text)
+/** Same story as plot plan — any plot anchor counts; do not require setting+conflict+goal in one section. */
+function plotStoryCoherence(
+  text: string,
+  plot: PlotState,
+  characterName: string,
+): { ok: boolean; reason?: string } {
+  const plotFields = [plot?.setting, plot?.conflict, plot?.goal].filter(Boolean) as string[]
+  if (plotFields.length === 0) return { ok: true }
+
   const textLower = text.toLowerCase()
-  const s = sectionName.toLowerCase()
+  const anchors = [
+    ...new Set(
+      plotFields.flatMap((field) => tokenize(field)).filter((w) => w.length >= 3),
+    ),
+  ]
 
-  const settingTokens = tokenize(String(plot?.setting || ""))
-  const conflictTokens = tokenize(String(plot?.conflict || ""))
-  const goalTokens = tokenize(String(plot?.goal || ""))
-
-  const hasSetting = settingTokens.some((w) => textLower.includes(w))
-  const hasConflict = conflictTokens.some((w) => textLower.includes(w))
-  const hasGoal = goalTokens.some((w) => textLower.includes(w))
-
-  if (s.includes("setup") || s.includes("exposition")) {
-    if (settingTokens.length > 0 && !hasSetting && tokens.length >= 8) {
-      return { ok: false, reason: "mention the place from your plot plan in this opening" }
-    }
+  if (characterName.length >= 2 && textLower.includes(characterName.toLowerCase())) {
     return { ok: true }
   }
-  if (s.includes("confront") || s.includes("rising") || s.includes("crisis")) {
-    if (conflictTokens.length > 0 && !hasConflict && !includesAny(textLower, [/\bstorm\b/, /\brain\b/, /\btrouble\b/, /\bdanger\b/, /\bproblem\b/])) {
-      return { ok: false, reason: "connect this part to the problem you planned in your plot" }
-    }
+
+  if (anchors.some((word) => textLower.includes(word))) {
     return { ok: true }
   }
-  if (s.includes("resol") || s.includes("falling") || s.includes("climax")) {
-    if (goalTokens.length > 0 && !hasGoal && !hasConflict) {
-      return { ok: false, reason: "show how your hero works toward the goal you planned" }
+
+  for (const field of plotFields) {
+    const phrase = field.trim().toLowerCase()
+    if (phrase.length >= 6 && textLower.includes(phrase.slice(0, Math.min(phrase.length, 24)))) {
+      return { ok: true }
     }
-    return { ok: true }
   }
+
+  if (wordCount(text) >= MIN_SECTION_WORD_COUNT) {
+    return {
+      ok: false,
+      reason: "keep this part in the same story as your plot plan — one link to place, trouble, or wish is enough",
+    }
+  }
+
   return { ok: true }
 }
 
@@ -144,32 +177,59 @@ export function evaluateStorySection(
   const tips: string[] = [...rubric.tips]
 
   const characterName = String(character?.name || "").trim()
-  if (characterName.length >= 2 && !trimmed.toLowerCase().includes(characterName.toLowerCase())) {
-    reasons.push(`use your hero ${characterName} in this part (not only other names)`)
-    tips.unshift(`name ${characterName} and what they do in this beat`)
+  const heroMissing =
+    characterName.length >= 2 && !trimmed.toLowerCase().includes(characterName.toLowerCase())
+  if (heroMissing) {
+    tips.push(`you could name ${characterName} once in this part`)
   }
 
-  if (isNearDuplicate(trimmed, previousSectionTexts)) {
+  const duplicate = isNearDuplicate(trimmed, previousSectionTexts)
+  if (duplicate) {
     reasons.push("write something new for this section — do not copy the same paragraph from before")
     tips.unshift(`write fresh sentences for "${sectionName}" only`)
   }
 
   const beat = scoreSectionBeat(trimmed, sectionName)
-  if (beat.score < 35) {
+  const beatWeak = beat.score < 22
+  if (beatWeak) {
     reasons.push(...beat.reasons)
   }
 
-  const plotLink = plotConnectionScore(trimmed, sectionName, plot || {})
-  if (!plotLink.ok && plotLink.reason) {
-    reasons.push(plotLink.reason)
+  const plotCoherence = plotStoryCoherence(trimmed, plot || {}, characterName)
+  if (!plotCoherence.ok && plotCoherence.reason) {
+    reasons.push(plotCoherence.reason)
   }
 
-  const pass =
-    rubric.pass &&
-    beat.score >= 35 &&
-    plotLink.ok &&
-    !isNearDuplicate(trimmed, previousSectionTexts) &&
-    (characterName.length < 2 || trimmed.toLowerCase().includes(characterName.toLowerCase()))
+  const wc = wordCount(trimmed)
+  const tooShort = wc < MIN_SECTION_WORD_COUNT
+  if (tooShort) {
+    reasons.push(`write at least ${MIN_SECTION_WORD_COUNT} words for ${sectionName}`)
+  }
+
+  let issueCount = 0
+  if (tooShort) issueCount++
+  if (duplicate) issueCount++
+  if (!plotCoherence.ok) issueCount++
+  if (beatWeak) issueCount++
+  if (!rubric.pass && rubric.reasons.length > 0) issueCount++
+  if (heroMissing) issueCount++
+
+  const hardFail =
+    tooShort ||
+    duplicate ||
+    !plotCoherence.ok ||
+    rubric.safety !== 100 ||
+    rubric.gibberishRatio >= 0.45
+
+  const softOk =
+    rubric.pass ||
+    (beat.score >= 18 &&
+      wc >= MIN_SECTION_WORD_COUNT &&
+      plotCoherence.ok &&
+      rubric.fluency >= rubric.thresholds.fluency - 10)
+
+  const pass = !hardFail && softOk
+  const tagBounds = revisionTagBoundsForSituation(level, pass ? 0 : Math.max(1, issueCount))
 
   const uniqueReasons = [...new Set(reasons)].slice(0, 4)
   const uniqueTips = [...new Set(tips)].slice(0, 4)
@@ -178,6 +238,7 @@ export function evaluateStorySection(
     : tipsToRevisionTags(uniqueTips.length > 0 ? uniqueTips : uniqueReasons, level, {
         sectionName,
         characterName: character?.name || "your hero",
+        maxTags: tagBounds.max,
       })
 
   return {
@@ -186,6 +247,8 @@ export function evaluateStorySection(
     reasons: uniqueReasons,
     tips: uniqueTips,
     revisionTags,
+    issueCount,
+    tagBounds,
   }
 }
 
@@ -199,8 +262,10 @@ export function buildSectionSubmitSystemPrompt(
     "You grade ONE section of a child's story. Reply with at most ONE short sentence (under 15 words), then META only.\n" +
     `Section: ${sectionName}. Level: ${level}. Hero: ${characterName}.\n` +
     `Plot plan — setting: ${plot.setting || "?"}, problem: ${plot.conflict || "?"}, goal: ${plot.goal || "?"}.\n` +
-    "If the draft does NOT fit this section beat, output revision_tags (2-4 items) and NO pass sentence.\n" +
-    "If it fits this section, hero, and plot, output empty revision_tags and end with pass sentence in the reply.\n" +
+    `Minimum ${MIN_SECTION_WORD_COUNT} words in this section.\n` +
+    "Pass if it fits this section beat, is at least 15 words, and feels like the SAME story as the plot (any one link is enough — not all three plot parts).\n" +
+    "If the draft clearly fails (too short, wrong story, duplicate section, or wrong beat), output revision_tags and NO pass sentence.\n" +
+    "If it is good enough, output empty revision_tags and end with pass sentence in the reply.\n" +
     "FORBIDDEN: long feedback, listing bullet options in prose, repeating the student's whole draft.\n" +
     buildRevisionTagsPromptRules(level, sectionName)
   )
