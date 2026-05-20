@@ -10,8 +10,11 @@ import {
   parseAiSectionGrade,
 } from "@/lib/story-section-grader"
 import {
+  buildDraftSpecificRevisionTags,
   buildFallbackRevisionTags,
   buildRevisionTagsPromptRules,
+  isGenericRevisionTag,
+  mergeRevisionTags,
   parseRevisionTags,
   revisionTagBoundsForSituation,
   tipsToRevisionTags,
@@ -368,6 +371,7 @@ function finalizeWritingSectionFeedback(
   const aiGrade = alignAiGradeWithDraft(
     sectionText,
     parseAiSectionGrade(meta as Record<string, unknown>, answer),
+    { characterName: req.character?.name },
   )
   const passed = combineSectionPassDecision(
     evaluation.mechanicalPass,
@@ -392,29 +396,48 @@ function finalizeWritingSectionFeedback(
     }
   }
 
-  let revision_tags = aiGrade.revision_tags.length > 0 ? aiGrade.revision_tags : []
-  const weakAiTags =
-    revision_tags.length > 0 &&
-    revision_tags.every((t) => t.rationale.toLowerCase() === t.label.toLowerCase())
-  if (revision_tags.length < min || weakAiTags) {
-    revision_tags = evaluation.revisionTags
-  }
+  const draftTags = buildDraftSpecificRevisionTags(
+    sectionText,
+    evaluation.tips,
+    evaluation.reasons,
+    {
+      sectionName: section.section,
+      characterName: req.character?.name,
+      level: req.level,
+      maxTags: max,
+    },
+  )
+
+  const aiTags = aiGrade.revision_tags.filter((t) => !isGenericRevisionTag(t))
+  let revision_tags = mergeRevisionTags(aiTags, draftTags, max)
+
   if (revision_tags.length < min) {
-    revision_tags = tipsToRevisionTags(
-      evaluation.tips.length > 0 ? evaluation.tips : evaluation.reasons,
-      req.level,
-      {
-        sectionName: section.section,
-        characterName: req.character?.name,
-        maxTags: max,
-      },
+    revision_tags = mergeRevisionTags(
+      revision_tags,
+      tipsToRevisionTags(
+        evaluation.tips.length > 0 ? evaluation.tips : evaluation.reasons,
+        req.level,
+        {
+          sectionName: section.section,
+          characterName: req.character?.name,
+          maxTags: max,
+          draftText: sectionText,
+        },
+      ),
+      max,
     )
   }
-  revision_tags = revision_tags.slice(0, Math.max(max, min))
 
-  if (revision_tags.length === 0) {
-    revision_tags = buildFallbackRevisionTags(section.section, req.level, Math.max(min, 1))
+  if (revision_tags.length < min) {
+    revision_tags = buildFallbackRevisionTags(
+      section.section,
+      req.level,
+      Math.max(min, 1),
+      sectionText,
+      req.character?.name,
+    )
   }
+  revision_tags = revision_tags.slice(0, max)
 
   return {
     answer: "Revise your Writing Pad — tap each tag to see why, then tap Finish! again.",
