@@ -2,6 +2,14 @@ import { NextRequest, NextResponse } from "next/server"
 import { logApiCall } from "@/lib/log-api-call"
 import { chat, isConfigured, DeepSeekError } from "@/lib/deepseek"
 import { getLevelPromptSuffix } from "@/lib/level-details"
+import { evaluateStoryWriting } from "@/lib/cagent-writing-rubric"
+import {
+  buildRevisionTagsPromptRules,
+  parseRevisionTags,
+  revisionTagBoundsForLevel,
+  tipsToRevisionTags,
+  type StoryRevisionTag,
+} from "@/lib/story-revision-tags"
 
 type CollabPhase = "explore" | "plot" | "structure" | "writing" | "polish"
 
@@ -27,6 +35,31 @@ interface CollabResponse {
   story_snippet: string | null
   plot_update: { setting?: string; conflict?: string; goal?: string } | null
   structure_suggestion: string | null
+  revision_tags?: StoryRevisionTag[]
+  section_passed?: boolean
+}
+
+const PASS_NEXT_SECTION = "You can move to the next section."
+const PASS_LAST_SECTION = "Great job!"
+const PASS_GUIDED_WRITING = "You can move on to the next part of your writing!"
+
+function countWords(text: string): number {
+  if (!text?.trim()) return 0
+  const chineseChars = (text.match(/[\u4e00-\u9fff]/g) || []).length
+  const englishText = text.replace(/[\u4e00-\u9fff]/g, " ").trim()
+  const englishWords = englishText ? englishText.split(/\s+/).filter(Boolean).length : 0
+  return chineseChars + englishWords
+}
+
+function isSectionDraftSubmission(req: CollabRequest, queryText: string): boolean {
+  if (req.action === "help_me") return false
+  if (!req.structure_type) return false
+  const idx = req.current_writing_section_index
+  if (typeof idx !== "number" || idx < 0 || idx >= (req.story_blocks?.length ?? 0)) return false
+  const minWords = req.level <= 2 ? 5 : 8
+  const sectionText = (req.story_blocks[idx]?.text || "").trim()
+  const draftText = sectionText || queryText.trim()
+  return countWords(draftText) >= minWords
 }
 
 function determinePhase(req: CollabRequest): CollabPhase {
@@ -129,11 +162,13 @@ function buildSystemPrompt(req: CollabRequest, phase: CollabPhase): string {
         (isLastSection
           ? `Do NOT use "You can move to the next section." (there is no next section).\n` +
             `When "${cur.section}" is good enough **for this final beat alone** (not the entire story in one box), end your reply with this exact sentence on its own line at the very end (before META): ` +
-            `Great job!\n` +
-            `If "${cur.section}" still needs work, do NOT write "Great job!"; keep helping with this part only.\n`
+            `${PASS_LAST_SECTION}\n` +
+            `If "${cur.section}" still needs work, do NOT write "${PASS_LAST_SECTION}"; use revision_tags instead (see below).\n`
           : `When "${cur.section}" is good enough **for this structural beat alone** (not the whole story), end your reply with this exact sentence on its own line at the very end (before META): ` +
-            `You can move to the next section.\n` +
-            `If "${cur.section}" still needs improvement, do NOT use that sentence; keep helping with this part only.\n`)
+            `${PASS_NEXT_SECTION}\n` +
+            `You may also use: "${PASS_GUIDED_WRITING}"\n` +
+            `If "${cur.section}" still needs improvement, do NOT use those pass sentences; use revision_tags instead (see below).\n`) +
+        buildRevisionTagsPromptRules(req.level, cur.section)
     )
   }
 
@@ -155,7 +190,7 @@ function buildSystemPrompt(req: CollabRequest, phase: CollabPhase): string {
       "Ask which sounds most fun. Set structure_suggestion in META when they choose.",
     writing:
       "Help the student write **one structural section at a time** (see [CRITICAL — section-only writing] if present). " +
-      "Offer starter sentences, vocabulary suggestions, and ideas for **that section only**. " +
+      "After they submit a draft, give feedback as colored revision_tags (not long chat paragraphs). " +
       "When you suggest sample text, put it in story_snippet in META. " +
       "Be enthusiastic. Never imply they should complete every part of the structure in a single Writing Pad turn.",
     polish:
@@ -178,7 +213,7 @@ function buildSystemPrompt(req: CollabRequest, phase: CollabPhase): string {
   // Output format
   parts.push(
     "\n\nIMPORTANT: After your conversational response, you MUST append a META block in this exact format:" +
-    '\n---META---\n{"phase":"...","suggestions":[...],"story_snippet":"..."|null,"plot_update":{...}|null,"structure_suggestion":"..."|null}\n---END---' +
+    '\n---META---\n{"phase":"...","suggestions":[...],"story_snippet":"..."|null,"plot_update":{...}|null,"structure_suggestion":"..."|null,"revision_tags":[{"label":"...","rationale":"...","color":"amber"}]}\n---END---' +
     "\nThe suggestions array must contain 2-4 short clickable options (1-4 words each) relevant to your question. Always include suggestions."
   )
 
@@ -231,6 +266,89 @@ function parseResponse(raw: string): { answer: string; meta: Partial<CollabRespo
   return { answer, meta }
 }
 
+function stripPassSignalsFromAnswer(answer: string): string {
+  return answer
+    .replace(/\n*You can move on to the next part of your writing!\.?\s*$/i, "")
+    .replace(/\n*You can move to the next section\.?\s*$/i, "")
+    .replace(/\n*You may move to the next section\.?\s*$/i, "")
+    .replace(/\n*Great job!?\.?\s*$/i, "")
+    .replace(/\n*太棒了[！!。.]?\s*$/, "")
+    .replace(/\n*做得好[！!。.]?\s*$/, "")
+    .replace(/\s{2,}/g, " ")
+    .trim()
+}
+
+function appendPassSentence(answer: string, isLastSection: boolean): string {
+  const base = stripPassSignalsFromAnswer(answer)
+  const passLine = isLastSection ? PASS_LAST_SECTION : PASS_NEXT_SECTION
+  if (base.toLowerCase().includes(passLine.toLowerCase())) return base
+  return base ? `${base}\n${passLine}` : passLine
+}
+
+function finalizeWritingSectionFeedback(
+  req: CollabRequest,
+  answer: string,
+  meta: Partial<CollabResponse>,
+): { answer: string; revision_tags: StoryRevisionTag[]; section_passed: boolean } {
+  const idx =
+    typeof req.current_writing_section_index === "number" &&
+    req.current_writing_section_index >= 0 &&
+    req.current_writing_section_index < (req.story_blocks?.length ?? 0)
+      ? req.current_writing_section_index
+      : null
+
+  if (!req.structure_type || idx === null || !req.story_blocks[idx]) {
+    return { answer, revision_tags: [], section_passed: false }
+  }
+
+  const section = req.story_blocks[idx]
+  const sectionText = (section.text || "").trim() || (req.message || "").trim()
+  const isLastSection = idx >= req.story_blocks.length - 1
+  const rubric = evaluateStoryWriting(
+    sectionText,
+    section.section,
+    req.level,
+    req.character,
+    req.plot_state,
+  )
+
+  let revision_tags = parseRevisionTags((meta as { revision_tags?: unknown }).revision_tags)
+  const { min, max } = revisionTagBoundsForLevel(req.level)
+
+  if (rubric.pass) {
+    const cleaned = appendPassSentence(stripPassSignalsFromAnswer(answer), isLastSection)
+    return {
+      answer: cleaned,
+      revision_tags: [],
+      section_passed: true,
+    }
+  }
+
+  let cleanedAnswer = stripPassSignalsFromAnswer(answer)
+  if (!cleanedAnswer) {
+    cleanedAnswer = "Nice try! Tap each tag, revise your Writing Pad, then tap Finish! again."
+  }
+
+  if (revision_tags.length < min) {
+    const fromTips = tipsToRevisionTags(rubric.tips, req.level)
+    revision_tags = fromTips.length > 0 ? fromTips : revision_tags
+  }
+  revision_tags = revision_tags.slice(0, max)
+
+  if (revision_tags.length === 0) {
+    revision_tags = tipsToRevisionTags(
+      [`Revise the ${section.section} part with clearer sentences`, "Add one more detail that fits this part"],
+      req.level,
+    )
+  }
+
+  return {
+    answer: cleanedAnswer,
+    revision_tags,
+    section_passed: false,
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const req = (await request.json()) as CollabRequest
@@ -262,7 +380,21 @@ export async function POST(request: NextRequest) {
     messages.push({ role: "user", content: queryText })
 
     const rawAnswer = await chat({ messages, timeout: 60_000 })
-    const { answer, meta } = parseResponse(rawAnswer)
+    const { answer: parsedAnswer, meta } = parseResponse(rawAnswer)
+
+    const inWritingSection =
+      !!req.structure_type &&
+      typeof req.current_writing_section_index === "number" &&
+      req.current_writing_section_index >= 0 &&
+      req.current_writing_section_index < (req.story_blocks?.length ?? 0)
+
+    const draftSubmission = inWritingSection && isSectionDraftSubmission(req, queryText)
+
+    const finalized = draftSubmission
+      ? finalizeWritingSectionFeedback(req, parsedAnswer || rawAnswer, meta)
+      : { answer: parsedAnswer || rawAnswer, revision_tags: [] as StoryRevisionTag[], section_passed: false }
+
+    const answer = finalized.answer
 
     const hasPlot = !!(req.plot_state?.setting && req.plot_state?.conflict && req.plot_state?.goal)
     const hasStructure = !!req.structure_type
@@ -272,13 +404,22 @@ export async function POST(request: NextRequest) {
       finalPhase = "structure"
     }
 
+    const defaultSuggestions =
+      draftSubmission && !finalized.section_passed
+        ? ["Revise and Finish! again", "Help me", "Add one more detail"]
+        : draftSubmission && finalized.section_passed
+          ? ["Next section!", "Help me"]
+          : ["Tell me more", "What happens next?", "Help me"]
+
     const response: CollabResponse = {
       answer: answer || rawAnswer,
       phase: finalPhase,
-      suggestions: meta.suggestions?.length ? meta.suggestions : ["Tell me more", "What happens next?", "Help me"],
+      suggestions: meta.suggestions?.length ? meta.suggestions : defaultSuggestions,
       story_snippet: meta.story_snippet || null,
       plot_update: meta.plot_update || null,
       structure_suggestion: meta.structure_suggestion || null,
+      revision_tags: finalized.revision_tags.length ? finalized.revision_tags : undefined,
+      section_passed: finalized.section_passed || undefined,
     }
 
     await logApiCall(
