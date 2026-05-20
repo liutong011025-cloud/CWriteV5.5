@@ -277,14 +277,20 @@ export function evaluateStorySection(
 
   const uniqueReasons = [...new Set(reasons)].slice(0, 4)
   const uniqueTips = [...new Set(tips)].slice(0, 4)
+  const tagSource =
+    uniqueTips.length > 0
+      ? uniqueTips
+      : uniqueReasons.length > 0
+        ? uniqueReasons
+        : ["Revise this part so it fits the story beat"]
   const revisionTags =
-    mechanicalPass && structureOk
-      ? []
-      : tipsToRevisionTags(uniqueTips.length > 0 ? uniqueTips : uniqueReasons, level, {
+    tagBounds.max > 0
+      ? tipsToRevisionTags(tagSource, level, {
           sectionName,
           characterName: character?.name || "your hero",
           maxTags: tagBounds.max,
         })
+      : []
 
   return {
     mechanicalPass,
