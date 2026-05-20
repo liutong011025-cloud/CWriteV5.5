@@ -1422,6 +1422,7 @@ export default function Home() {
       const pinSnapshot = lastJourneyPinRef.current ?? { x: 50, y: 50 }
       pendingStoryFlagFinalizationRef.current = null
       pendingStoryMapPinRef.current = { x: pinSnapshot.x, y: pinSnapshot.y, title: storyTitle }
+      toast.info("Updating your writing map in the background…", { duration: 3500 })
 
       void queueJourneyMapUpdate({
         title: storyTitle,
@@ -1442,7 +1443,36 @@ export default function Home() {
         },
       })
     },
-    [journeyActive, user, queueJourneyMapUpdate, persistMapStateNow],
+    [journeyActive, user, queueJourneyMapUpdate],
+  )
+
+  /** Fire map edit immediately when the student picks a structure (not when opening Writing Map). */
+  const triggerMapOnStructureSelect = useCallback(
+    (
+      structure: { type: string },
+      character?: StoryState["character"],
+      plot?: StoryState["plot"] | null,
+    ) => {
+      const char = character ?? storyState.character
+      const pl = plot ?? storyState.plot
+      if (!char || !pl) return
+      structureMapTriggeredRef.current = [
+        "manual",
+        structure.type,
+        pl.setting,
+        pl.conflict,
+        pl.goal,
+        char.name,
+        activeMapChapterIndex,
+      ].join("|")
+      runStoryJourneyMapAtStructureSelect(char, pl, structure)
+    },
+    [
+      storyState.character,
+      storyState.plot,
+      activeMapChapterIndex,
+      runStoryJourneyMapAtStructureSelect,
+    ],
   )
 
   useEffect(() => {
@@ -2491,6 +2521,7 @@ export default function Home() {
           }}
           onStructureSelect={(structure) => {
             setStoryState((prev) => ({ ...prev, structure, story: prev.story }))
+            triggerMapOnStructureSelect(structure)
           }}
           onStoryWrite={(story) => {
             setStoryState((prev) => ({ ...prev, story }))
@@ -2514,6 +2545,7 @@ export default function Home() {
           }}
           onStructureSelect={(structure) => {
             setStoryState((prev) => ({ ...prev, structure, story: prev.story }))
+            triggerMapOnStructureSelect(structure)
           }}
           onStoryWrite={(story) => {
             setStoryState((prev) => ({ ...prev, story }))
@@ -2559,6 +2591,7 @@ export default function Home() {
               plot={storyState.plot}
               onStructureSelect={(structure) => {
                 setStoryState(prev => ({ ...prev, structure }))
+                triggerMapOnStructureSelect(structure, storyState.character, storyState.plot)
                 setStage("writing")
               }}
               onBack={() => setStage("plot")}
@@ -2570,6 +2603,7 @@ export default function Home() {
               plot={storyState.plot}
               onStructureSelect={(structure) => {
                 setStoryState(prev => ({ ...prev, structure }))
+                triggerMapOnStructureSelect(structure, storyState.character, storyState.plot)
                 setStage("writing")
               }}
               onBack={() => setStage("plot")}
@@ -2618,24 +2652,22 @@ export default function Home() {
             void evaluateValuesGrowth(finalStory, "story", storyTitle)
             upsertStoryMapFlag(storyTitle, finalStory)
             pendingStoryFlagFinalizationRef.current = null
-            if (!mapUpdateInFlightRef.current) {
-              void queueJourneyMapUpdate({
-                title: storyTitle,
-                topic,
-                workType: "story",
-                source: "storyReview",
-                skipNewFlag: true,
-                summaryKey: "storySummary",
-                summaryValue: {
-                  characterName: storyState.character?.name || null,
-                  species: storyState.character?.species || null,
-                  setting: storyState.plot?.setting || null,
-                  conflict: storyState.plot?.conflict || null,
-                  goal: storyState.plot?.goal || null,
-                  plotSummary: buildStoryPlotSummary(storyState.character, storyState.plot) || null,
-                },
-              })
-            }
+            void queueJourneyMapUpdate({
+              title: storyTitle,
+              topic,
+              workType: "story",
+              source: "storyReview",
+              skipNewFlag: true,
+              summaryKey: "storySummary",
+              summaryValue: {
+                characterName: storyState.character?.name || null,
+                species: storyState.character?.species || null,
+                setting: storyState.plot?.setting || null,
+                conflict: storyState.plot?.conflict || null,
+                goal: storyState.plot?.goal || null,
+                plotSummary: buildStoryPlotSummary(storyState.character, storyState.plot) || null,
+              },
+            })
 
             setStoryState({ character: null, plot: null, structure: null, story: "" })
             setStage(journeyActive ? "journeyMap" : "home")
