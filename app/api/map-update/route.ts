@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from "next/server"
 import {
   ArkImageError,
   generateArkImage,
+  MAP_UPDATE_IMAGE_SIZE,
   resolveArkImageInput,
-  truncateArkPrompt,
 } from "@/lib/ark-images"
 
 type MapUpdateRequestBody = {
@@ -30,7 +30,8 @@ const clampPercent = (value: unknown, fallback: number) => {
   return Math.max(0, Math.min(100, value))
 }
 
-function buildMapUpdatePrompt(params: {
+/** Strict image-to-image edit — preserve almost all existing map pixels. */
+function buildMapEditPrompt(params: {
   safeTitle: string
   safeTopic: string
   safeMapX: number
@@ -42,7 +43,6 @@ function buildMapUpdatePrompt(params: {
   detailedGoal: string | null
   structureType: string | null
   extraPrompt: string
-  useBaseImage: boolean
 }): string {
   const {
     safeTitle,
@@ -56,64 +56,24 @@ function buildMapUpdatePrompt(params: {
     detailedGoal,
     structureType,
     extraPrompt,
-    useBaseImage,
   } = params
 
-  const base = useBaseImage
-    ? `Edit the provided map image. Keep style, palette, and camera angle.`
-    : `Paint a children's adventure map in the same cozy illustrated style as a learning game world.`
-
-  return truncateArkPrompt(
-    [
-      base,
-      `Pin at (${safeMapX}, ${safeMapY}) on a 0–100 grid (top-left origin).`,
-      `Add only tiny map-scale details in a 2–3% radius patch at the pin: small paths, plants, props, mini buildings.`,
-      `Topic: ${safeTopic}. Title: ${safeTitle}.`,
-      `Hero: ${characterName || "hero"} (${species || "creature"}).`,
-      `Plot hints — place: ${detailedSetting || safeTopic}; trouble: ${detailedConflict || "—"}; wish: ${detailedGoal || "—"}.`,
-      structureType ? `Structure: ${structureType}.` : "",
-      "No text labels, logos, or UI. Rest of map nearly unchanged.",
-      extraPrompt || "Elements must stay small and subtle.",
-    ]
-      .filter(Boolean)
-      .join(" "),
-  )
-}
-
-async function runMapImageGeneration(
-  promptWithImage: string,
-  promptTextOnly: string,
-  baseImage: string | null,
-) {
-  if (baseImage) {
-    try {
-      return await generateArkImage({
-        prompt: promptWithImage,
-        image: baseImage,
-        size: "2048x2048",
-        outputFormat: "png",
-      })
-    } catch (error) {
-      if (error instanceof ArkImageError && error.status === 400) {
-        console.warn(
-          "[map-update] image-to-image failed (400), retrying without base image:",
-          error.detail?.slice(0, 200),
-        )
-        return await generateArkImage({
-          prompt: promptTextOnly,
-          size: "2048x2048",
-          outputFormat: "png",
-        })
-      }
-      throw error
-    }
-  }
-
-  return await generateArkImage({
-    prompt: promptTextOnly,
-    size: "2048x2048",
-    outputFormat: "png",
-  })
+  return [
+    "IMAGE-TO-IMAGE EDIT ONLY. You MUST keep the provided base map.",
+    "Preserve at least 98% of the image: same camera, palette, hills, rivers, paths, forests, and every existing landmark.",
+    "Do NOT redraw the whole map. Do NOT erase previous small details. Do NOT change style or zoom.",
+    `Only touch a micro patch centered at (${safeMapX}, ${safeMapY}) on a 0-100 grid (top-left origin).`,
+    "Patch radius about 1% of map width — smaller than a pin head at this zoom.",
+    "Inside the patch add 2-4 MICROscopic props only (each under 5px tall at map scale): tiny path dots, one small plant, one pebble, one mini icon.",
+    "FORBIDDEN: large buildings, giant trees, huge forests, poster-sized objects, new regions, text, logos.",
+    `Story hint (subtle only): ${safeTopic}. Hero: ${characterName || "hero"} (${species || "creature"}).`,
+    `Place: ${detailedSetting || safeTopic}. Trouble: ${detailedConflict || "—"}. Wish: ${detailedGoal || "—"}.`,
+    structureType ? `Structure: ${structureType}.` : "",
+    `Title: ${safeTitle}.`,
+    extraPrompt,
+  ]
+    .filter(Boolean)
+    .join(" ")
 }
 
 export async function POST(request: NextRequest) {
@@ -145,12 +105,17 @@ export async function POST(request: NextRequest) {
     })
 
     if (!baseImage) {
-      console.warn("[map-update] Could not load base map as Ark input; using text-only generation.", {
-        previousMapImageUrl,
-      })
+      console.error("[map-update] No base image for edit — refusing full regen.", { previousMapImageUrl })
+      return NextResponse.json(
+        {
+          error: "map_unavailable",
+          message: "Could not load the current map for editing. Your old map is unchanged.",
+        },
+        { status: 200 },
+      )
     }
 
-    const promptParams = {
+    const prompt = buildMapEditPrompt({
       safeTitle,
       safeTopic,
       safeMapX,
@@ -162,13 +127,15 @@ export async function POST(request: NextRequest) {
       detailedGoal: storySummary?.goal || null,
       structureType: storySummary?.structureType || null,
       extraPrompt: (mapPrompt || "").trim(),
-    }
+    })
 
-    const result = await runMapImageGeneration(
-      buildMapUpdatePrompt({ ...promptParams, useBaseImage: true }),
-      buildMapUpdatePrompt({ ...promptParams, useBaseImage: false }),
-      baseImage,
-    )
+    const result = await generateArkImage({
+      prompt,
+      image: baseImage,
+      size: MAP_UPDATE_IMAGE_SIZE,
+      outputFormat: "png",
+      timeoutMs: 90_000,
+    })
 
     return NextResponse.json({
       imageUrl: result.imageUrl,
