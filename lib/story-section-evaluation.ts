@@ -1,6 +1,5 @@
 import { evaluateStoryWriting, type CagentRubricResult } from "@/lib/cagent-writing-rubric"
 import {
-  buildRevisionTagsPromptRules,
   MIN_SECTION_WORD_COUNT,
   revisionTagBoundsForSituation,
   tipsToRevisionTags,
@@ -10,7 +9,10 @@ import {
 export type PlotState = { setting?: string; conflict?: string; goal?: string }
 
 export type SectionEvaluation = {
-  pass: boolean
+  /** Server rules: length, complete sentences, duplicate, plot link, safety */
+  mechanicalPass: boolean
+  /** Narrative beat fits this structural section */
+  structureOk: boolean
   rubric: CagentRubricResult
   reasons: string[]
   tips: string[]
@@ -50,6 +52,37 @@ function wordCount(text: string): number {
   return (text.match(/[\u4e00-\u9fff]|[a-zA-Z']+/g) || []).length
 }
 
+function finishedSentenceCount(text: string): number {
+  const parts = text
+    .trim()
+    .split(/(?<=[.!?])\s+/)
+    .map((s) => s.trim())
+    .filter(Boolean)
+  return parts.filter((s) => /[.!?]$/.test(s)).length
+}
+
+/** Cut-off drafts like "...speak in a low," must not pass. */
+export function isIncompleteDraft(text: string): boolean {
+  const t = text.trim()
+  if (!t) return true
+
+  if (/[,;:]\s*$/.test(t)) return true
+  if (/\b(in|on|at|to|the|a|an|and|but|with|of|for|when|as)\s*$/i.test(t)) return true
+  if (/\b(low|high|big|small|very|so|then|suddenly)\s*,?\s*$/i.test(t)) return true
+
+  const sentences = t.split(/(?<=[.!?])\s+/).map((s) => s.trim()).filter(Boolean)
+  if (sentences.length === 0) return true
+
+  const last = sentences[sentences.length - 1]
+  if (!/[.!?]$/.test(last)) return true
+
+  if (finishedSentenceCount(t) < 2 && wordCount(t) < MIN_SECTION_WORD_COUNT + 5) {
+    return true
+  }
+
+  return false
+}
+
 function includesAny(text: string, patterns: RegExp[]): boolean {
   return patterns.some((re) => re.test(text))
 }
@@ -83,6 +116,7 @@ function scoreSectionBeat(text: string, sectionName: string): { score: number; r
         /\bafraid\b/, /\bscared\b/, /\blost\b/, /\bfog\b/, /\bdark\b/, /\bhowever\b/,
         /\bbut suddenly\b/, /\bsuddenly\b/, /\bbird\b/, /\bsteal\b/, /\bstole\b/, /\bsnack\b/,
         /\bfunny\b/, /\bsilly\b/, /\boops\b/, /\blaugh\b/, /\boh no\b/, /\bworried\b/,
+        /\bstrange\b/, /\bvoice\b/, /\bhear\b/, /\bheard\b/, /\btalking\b/, /\bcave\b/, /\bdoorway\b/,
       ])
     ) {
       score += 40
@@ -190,8 +224,8 @@ export function evaluateStorySection(
   }
 
   const beat = scoreSectionBeat(trimmed, sectionName)
-  const beatWeak = beat.score < 22
-  if (beatWeak) {
+  const structureOk = beat.score >= 28
+  if (!structureOk) {
     reasons.push(...beat.reasons)
   }
 
@@ -206,43 +240,55 @@ export function evaluateStorySection(
     reasons.push(`write at least ${MIN_SECTION_WORD_COUNT} words for ${sectionName}`)
   }
 
+  const incomplete = isIncompleteDraft(trimmed)
+  if (incomplete) {
+    reasons.push("finish your last sentence — end with . ! or ? before submitting")
+    tips.unshift("complete the cut-off sentence at the end")
+  }
+
+  const finishedSentences = finishedSentenceCount(trimmed)
+  if (!tooShort && finishedSentences < 2) {
+    reasons.push("write at least two complete sentences in this section")
+  }
+
   let issueCount = 0
   if (tooShort) issueCount++
+  if (incomplete) issueCount++
+  if (finishedSentences < 2) issueCount++
   if (duplicate) issueCount++
   if (!plotCoherence.ok) issueCount++
-  if (beatWeak) issueCount++
+  if (!structureOk) issueCount++
   if (!rubric.pass && rubric.reasons.length > 0) issueCount++
   if (heroMissing) issueCount++
 
-  const hardFail =
-    tooShort ||
-    duplicate ||
-    !plotCoherence.ok ||
-    rubric.safety !== 100 ||
-    rubric.gibberishRatio >= 0.45
+  const mechanicalPass =
+    !tooShort &&
+    !incomplete &&
+    finishedSentences >= 2 &&
+    !duplicate &&
+    plotCoherence.ok &&
+    rubric.safety === 100 &&
+    rubric.gibberishRatio < 0.45
 
-  const softOk =
-    rubric.pass ||
-    (beat.score >= 18 &&
-      wc >= MIN_SECTION_WORD_COUNT &&
-      plotCoherence.ok &&
-      rubric.fluency >= rubric.thresholds.fluency - 10)
-
-  const pass = !hardFail && softOk
-  const tagBounds = revisionTagBoundsForSituation(level, pass ? 0 : Math.max(1, issueCount))
+  const tagBounds = revisionTagBoundsForSituation(
+    level,
+    mechanicalPass && structureOk ? 0 : Math.max(1, issueCount),
+  )
 
   const uniqueReasons = [...new Set(reasons)].slice(0, 4)
   const uniqueTips = [...new Set(tips)].slice(0, 4)
-  const revisionTags = pass
-    ? []
-    : tipsToRevisionTags(uniqueTips.length > 0 ? uniqueTips : uniqueReasons, level, {
-        sectionName,
-        characterName: character?.name || "your hero",
-        maxTags: tagBounds.max,
-      })
+  const revisionTags =
+    mechanicalPass && structureOk
+      ? []
+      : tipsToRevisionTags(uniqueTips.length > 0 ? uniqueTips : uniqueReasons, level, {
+          sectionName,
+          characterName: character?.name || "your hero",
+          maxTags: tagBounds.max,
+        })
 
   return {
-    pass,
+    mechanicalPass,
+    structureOk,
     rubric,
     reasons: uniqueReasons,
     tips: uniqueTips,
@@ -250,23 +296,4 @@ export function evaluateStorySection(
     issueCount,
     tagBounds,
   }
-}
-
-export function buildSectionSubmitSystemPrompt(
-  sectionName: string,
-  level: number,
-  characterName: string,
-  plot: PlotState,
-): string {
-  return (
-    "You grade ONE section of a child's story. Reply with at most ONE short sentence (under 15 words), then META only.\n" +
-    `Section: ${sectionName}. Level: ${level}. Hero: ${characterName}.\n` +
-    `Plot plan — setting: ${plot.setting || "?"}, problem: ${plot.conflict || "?"}, goal: ${plot.goal || "?"}.\n` +
-    `Minimum ${MIN_SECTION_WORD_COUNT} words in this section.\n` +
-    "Pass if it fits this section beat, is at least 15 words, and feels like the SAME story as the plot (any one link is enough — not all three plot parts).\n" +
-    "If the draft clearly fails (too short, wrong story, duplicate section, or wrong beat), output revision_tags and NO pass sentence.\n" +
-    "If it is good enough, output empty revision_tags and end with pass sentence in the reply.\n" +
-    "FORBIDDEN: long feedback, listing bullet options in prose, repeating the student's whole draft.\n" +
-    buildRevisionTagsPromptRules(level, sectionName)
-  )
 }
