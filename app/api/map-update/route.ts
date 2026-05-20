@@ -32,7 +32,7 @@ const clampPercent = (value: unknown, fallback: number) => {
   return Math.max(0, Math.min(100, value))
 }
 
-/** Strict image-to-image edit — preserve almost all existing map pixels. */
+/** Same style as the original map-update: strict edit on the uploaded base map. */
 function buildMapEditPrompt(params: {
   safeTitle: string
   safeTopic: string
@@ -61,18 +61,16 @@ function buildMapEditPrompt(params: {
   } = params
 
   return [
-    "IMAGE-TO-IMAGE EDIT ONLY. You MUST keep the provided base map.",
-    "Preserve at least 98% of the image: same camera, palette, hills, rivers, paths, forests, and every existing landmark.",
-    "Do NOT redraw the whole map. Do NOT erase previous small details. Do NOT change style or zoom.",
-    `Only touch a micro patch centered at (${safeMapX}, ${safeMapY}) on a 0-100 grid (top-left origin).`,
-    "Patch radius about 1% of map width — smaller than a pin head at this zoom.",
-    "Inside the patch add 2-4 MICROscopic props only (each under 5px tall at map scale): tiny path dots, one small plant, one pebble, one mini icon.",
-    "FORBIDDEN: large buildings, giant trees, huge forests, poster-sized objects, new regions, text, logos.",
-    `Story hint (subtle only): ${safeTopic}. Hero: ${characterName || "hero"} (${species || "creature"}).`,
-    `Place: ${detailedSetting || safeTopic}. Trouble: ${detailedConflict || "—"}. Wish: ${detailedGoal || "—"}.`,
+    "Edit the provided map image. Keep style, palette, hills, rivers, paths, forests, and camera angle.",
+    "Preserve at least 95% of pixels unchanged. Do NOT redraw the whole map or change zoom.",
+    `Pin at (${safeMapX}, ${safeMapY}) on a 0–100 grid (top-left origin).`,
+    "Add only tiny map-scale details in a 2–3% radius patch at the pin: small paths, plants, props, mini buildings.",
+    `Topic: ${safeTopic}. Title: ${safeTitle}.`,
+    `Hero: ${characterName || "hero"} (${species || "creature"}).`,
+    `Plot hints — place: ${detailedSetting || safeTopic}; trouble: ${detailedConflict || "—"}; wish: ${detailedGoal || "—"}.`,
     structureType ? `Structure: ${structureType}.` : "",
-    `Title: ${safeTitle}.`,
-    extraPrompt,
+    "No text labels, logos, or UI. Rest of map nearly unchanged.",
+    extraPrompt || "Elements must stay small and subtle.",
   ]
     .filter(Boolean)
     .join(" ")
@@ -116,6 +114,14 @@ export async function POST(request: NextRequest) {
         { status: 200 },
       )
     }
+
+    const baseKind = baseImage.startsWith("data:") ? "base64" : "url"
+    console.info("[map-update] image-to-image", {
+      previousMapImageUrl: previousMapImageUrl.slice(0, 120),
+      baseKind,
+      mapX: safeMapX,
+      mapY: safeMapY,
+    })
 
     const prompt = buildMapEditPrompt({
       safeTitle,
