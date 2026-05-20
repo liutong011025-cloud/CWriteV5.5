@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { getCurrentLevel } from "@/lib/current-level"
 import type { StoryRevisionTag } from "@/lib/story-revision-tags"
+import type { PlotConversationProgress } from "@/lib/story-plot-coach"
 import { cn } from "@/lib/utils"
 import StoryRevisionTags from "@/components/stages/story-revision-tags"
 
@@ -58,6 +59,7 @@ interface CollabApiResponse {
   revision_tags?: StoryRevisionTag[]
   section_passed?: boolean
   plot_state?: { setting?: string; conflict?: string; goal?: string }
+  plot_progress?: PlotConversationProgress
   plot_complete?: boolean
   error?: string
   message?: string
@@ -216,6 +218,8 @@ export default function StoryCollab({
     conflict: storyState.plot?.conflict || "",
     goal: storyState.plot?.goal || "",
   })
+  const [plotProgress, setPlotProgress] = useState<PlotConversationProgress>({})
+  const [plotReadyForStructure, setPlotReadyForStructure] = useState(false)
 
   // Structure
   const [selectedStructure, setSelectedStructure] = useState<StructureType | null>(
@@ -259,7 +263,8 @@ export default function StoryCollab({
     return sum
   }, [storyBlocks, currentWritingSection, chatInput, mode])
 
-  const plotComplete = !!(plotData.setting && plotData.conflict && plotData.goal)
+  const plotFieldsFilled = !!(plotData.setting && plotData.conflict && plotData.goal)
+  const plotComplete = plotReadyForStructure || (mode === "manual" && plotFieldsFilled)
 
   const activeBear = useMemo(() => {
     const n = storyBlocks.length
@@ -446,6 +451,7 @@ export default function StoryCollab({
             conversation_history: newHistory.slice(-20),
             character: storyState.character,
             plot_state: plotData,
+            plot_progress: plotProgress,
             structure_type: selectedStructure,
             story_blocks: storyBlocksPayload,
             current_writing_section_index:
@@ -479,6 +485,12 @@ export default function StoryCollab({
           applyPlotState(data.plot_state)
         } else if (data.plot_update) {
           applyPlotState(data.plot_update)
+        }
+        if (data.plot_progress) {
+          setPlotProgress(data.plot_progress)
+        }
+        if (data.plot_complete === true) {
+          setPlotReadyForStructure(true)
         }
 
         // Handle structure_suggestion
@@ -568,6 +580,7 @@ export default function StoryCollab({
       conversationHistory,
       storyState.character,
       plotData,
+      plotProgress,
       selectedStructure,
       storyBlocks,
       phase,
