@@ -78,12 +78,27 @@ const normalizeSingleImageInput = (value: string) => {
   return trimmed
 }
 
-const normalizeImageInput = (value?: ArkImageReference) => {
+/** Ark Seedream expects `images: string[]`, not `image`. */
+const normalizeImagesArray = (value?: ArkImageReference): string[] | undefined => {
   if (!value) return undefined
   if (Array.isArray(value)) {
     return value.map(normalizeSingleImageInput)
   }
-  return normalizeSingleImageInput(value)
+  return [normalizeSingleImageInput(value)]
+}
+
+export function parseArkErrorMessage(detail: string): string {
+  const trimmed = detail.trim()
+  if (!trimmed) return ""
+  try {
+    const parsed = JSON.parse(trimmed) as { error?: { message?: string; code?: string }; message?: string }
+    const msg = parsed?.error?.message || parsed?.message
+    const code = parsed?.error?.code
+    if (msg && code) return `${code}: ${msg}`
+    return msg || trimmed
+  } catch {
+    return trimmed.slice(0, 400)
+  }
 }
 
 const extractErrorText = async (response: Response) => {
@@ -197,31 +212,13 @@ export async function resolveArkImageInput(
   }
 }
 
-export async function generateArkImage(options: ArkGenerateImageOptions) {
-  const apiKey = getArkApiKey()
-  if (!apiKey) {
-    throw new ArkImageError("ARK_API_KEY is not configured.")
-  }
-
-  const prompt = options.prompt?.trim()
-  if (!prompt) {
-    throw new ArkImageError("Prompt cannot be empty.")
-  }
-
-  const requestBody = {
-    model: ARK_IMAGE_MODEL,
-    prompt,
-    size: options.size || SIZE_BY_ASPECT_RATIO["1:1"],
-    sequential_image_generation: options.sequentialImageGeneration || "disabled",
-    response_format: "url",
-    stream: false,
-    watermark: options.watermark ?? false,
-    ...(options.outputFormat ? { output_format: options.outputFormat } : {}),
-    ...(options.image ? { image: normalizeImageInput(options.image) } : {}),
-  }
-
+async function postArkImageRequest(
+  apiKey: string,
+  requestBody: Record<string, unknown>,
+  timeoutMs: number,
+): Promise<{ imageUrl: string; description: string; raw: unknown }> {
   const controller = new AbortController()
-  const timeoutId = setTimeout(() => controller.abort(), options.timeoutMs || DEFAULT_TIMEOUT_MS)
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
 
   try {
     const response = await fetch(ARK_IMAGE_API_ENDPOINT, {
@@ -256,12 +253,85 @@ export async function generateArkImage(options: ArkGenerateImageOptions) {
       description: extractDescription(result),
       raw: result,
     }
-  } catch (error: any) {
-    if (error?.name === "AbortError") {
+  } catch (error: unknown) {
+    if ((error as { name?: string })?.name === "AbortError") {
       throw new ArkImageError("Image generation timed out.", { status: 504 })
     }
     throw error
   } finally {
     clearTimeout(timeoutId)
+  }
+}
+
+export async function generateArkImage(options: ArkGenerateImageOptions) {
+  const apiKey = getArkApiKey()
+  if (!apiKey) {
+    throw new ArkImageError("ARK_API_KEY is not configured.")
+  }
+
+  const prompt = options.prompt?.trim()
+  if (!prompt) {
+    throw new ArkImageError("Prompt cannot be empty.")
+  }
+
+  const images = normalizeImagesArray(options.image)
+  const size = options.size || SIZE_BY_ASPECT_RATIO["1:1"]
+  const timeoutMs = options.timeoutMs || DEFAULT_TIMEOUT_MS
+
+  const baseBody: Record<string, unknown> = {
+    model: ARK_IMAGE_MODEL,
+    prompt,
+    size,
+    sequential_image_generation: options.sequentialImageGeneration || "disabled",
+    response_format: "url",
+    stream: false,
+    watermark: options.watermark ?? false,
+    ...(options.outputFormat ? { output_format: options.outputFormat } : {}),
+    ...(images?.length ? { images } : {}),
+  }
+
+  try {
+    return await postArkImageRequest(apiKey, baseBody, timeoutMs)
+  } catch (error) {
+    if (!(error instanceof ArkImageError) || error.status !== 400 || !images?.length) {
+      throw error
+    }
+
+    const detail = error.detail || ""
+    const retryBodies: Record<string, unknown>[] = []
+
+    if (/image/i.test(detail)) {
+      retryBodies.push({ ...baseBody, images })
+    }
+
+    retryBodies.push({
+      ...baseBody,
+      images,
+      size: "2K",
+      output_format: options.outputFormat || "jpeg",
+    })
+
+    retryBodies.push({
+      ...baseBody,
+      images,
+      size: "2K",
+    })
+    delete retryBodies[retryBodies.length - 1].output_format
+
+    const seen = new Set<string>()
+    for (const body of retryBodies) {
+      const key = JSON.stringify(body)
+      if (seen.has(key)) continue
+      seen.add(key)
+      try {
+        return await postArkImageRequest(apiKey, body, timeoutMs)
+      } catch (retryErr) {
+        if (!(retryErr instanceof ArkImageError) || retryErr.status !== 400) {
+          throw retryErr
+        }
+      }
+    }
+
+    throw error
   }
 }
