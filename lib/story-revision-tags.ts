@@ -129,9 +129,12 @@ export function tipsToRevisionTags(
     } else if (lower.includes("plot") || lower.includes("connect") || lower.includes("same story")) {
       label = "Same story"
       rationale = `Keep this part in the same story as your plot plan — you do not need every detail, but it should still feel connected.`
-    } else if (lower.includes("word") || lower.includes("short") || lower.includes("more words")) {
+    } else if (lower.includes("complete") || lower.includes("finish") || lower.includes("cut-off") || lower.includes("cut off")) {
+      label = "Finish the sentence"
+      rationale = `Your last sentence stops early — finish the thought, then end with . ! or ?`
+    } else if (lower.includes("word") || lower.includes("short") || lower.includes("more words") || lower.includes("two complete")) {
       label = "Add more words"
-      rationale = `Write at least ${MIN_SECTION_WORD_COUNT} words in this section so readers can follow what happens.`
+      rationale = `Write at least ${MIN_SECTION_WORD_COUNT} words and two complete sentences so readers can follow what happens.`
     } else {
       const short = trimmed.split(/[.;]/)[0]?.trim() || trimmed
       label = short.length <= 28 ? short.replace(/\.$/, "") : short.slice(0, 28).trim()
