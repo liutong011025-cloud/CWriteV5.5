@@ -350,10 +350,10 @@ export default function JourneyMap({
                   aria-label={flag.title}
                 >
                   <div
-                    className={`max-w-[160px] rounded-2xl bg-gradient-to-r ${colorClass} px-3 py-1.5 shadow-xl flex items-center gap-2 group-hover:brightness-110 transition`}
+                    className={`max-w-[110px] rounded-xl bg-gradient-to-r ${colorClass} px-2 py-1 shadow-lg flex items-center gap-1.5 group-hover:brightness-110 transition`}
                   >
-                    <Flag className="h-3.5 w-3.5 shrink-0 text-slate-800 drop-shadow" />
-                    <span className="font-hand text-xs font-extrabold leading-tight text-slate-900 break-words [overflow-wrap:anywhere] drop-shadow-[0_1px_1px_rgba(255,255,255,0.9)]">
+                    <Flag className="h-2.5 w-2.5 shrink-0 text-slate-800 drop-shadow" />
+                    <span className="font-hand text-[10px] font-extrabold leading-tight text-slate-900 break-words [overflow-wrap:anywhere] drop-shadow-[0_1px_1px_rgba(255,255,255,0.9)]">
                       {flag.title}
                     </span>
                   </div>
