@@ -199,9 +199,17 @@ function buildSystemPrompt(req: CollabRequest, phase: CollabPhase, lastStudentMe
     parts.push(buildExplorePromptRules(charName, lastStudentMessage))
   }
   if (phase === "plot" || (phase === "explore" && userTurns >= 1)) {
-    const microStep = getPlotMicroStep(req.plot_state || {}, userTurns, req.plot_progress || {})
+    const plotProgress = req.plot_progress || {}
+    const microStep = getPlotMicroStep(req.plot_state || {}, userTurns, plotProgress)
     parts.push(
-      buildPlotPhasePromptRules(req.plot_state || {}, charName, lastStudentMessage, userTurns, microStep),
+      buildPlotPhasePromptRules(
+        req.plot_state || {},
+        charName,
+        lastStudentMessage,
+        userTurns,
+        microStep,
+        plotProgress,
+      ),
     )
   }
 
@@ -495,7 +503,7 @@ export async function POST(request: NextRequest) {
 
     if (plotFinal) {
       plot_state = plotFinal.plot
-      plot_progress = plotFinal.progress
+      plot_progress = plotFinal.plot_progress
       plot_complete = plotFinal.plot_complete
       if (plotFinal.plot_update) plot_update = plotFinal.plot_update
       if (!draftSubmission && plotFinal.suggestions?.length) {
