@@ -305,12 +305,10 @@ const buildStoryStructureMapPrompt = (
   const species = character?.species?.trim() || "story character"
   const name = character?.name?.trim() || "hero"
   return [
-    `At the pin, add only very small map-scale details (tiny props, mini paths, small plants) — noticeably smaller than houses or trees.`,
-    `Hint at setting: ${plot.setting || "the story place"}.`,
-    `Subtle trouble cues: ${plot.conflict || "the problem"}.`,
-    `Tiny goal marker for: ${plot.goal || "what the hero wants"}.`,
-    `Species vibe: ${species} (${name}). Structure: ${structureType}.`,
-    `No oversized landmarks; keep everything compact and subtle.`,
+    "Keep ALL existing map art. Micro-edit only at the pin.",
+    "New marks must be pin-head sized or smaller — never large buildings or trees.",
+    `Tiny hints only: ${plot.setting || "place"}, ${plot.conflict || "trouble"}, ${plot.goal || "wish"}.`,
+    `${species} (${name}), structure ${structureType}.`,
   ].join(" ")
 }
 
@@ -1218,14 +1216,21 @@ export default function Home() {
       content?: string
       workType?: MapWorkType
       source: string
+      /** When true, only refresh map image — flag was already added (e.g. structure select). */
+      skipNewFlag?: boolean
     }) => {
       if (!journeyActive || !user) return
+      if (mapUpdateInFlightRef.current) {
+        console.warn(`[map-update] ${params.source} skipped — update already running`)
+        return
+      }
       const pinSnapshot = currentPin ?? lastJourneyPinRef.current ?? { x: 50, y: 50 }
       lastJourneyPinRef.current = pinSnapshot
       const previousMapImageUrl = mapImageUrl || getChapterBaseMapImageUrl(activeMapChapterIndex)
 
       void (async () => {
         mapUpdateInFlightRef.current = true
+        toast.info("Updating your writing map in the background…", { duration: 4000 })
         try {
           const payload: Record<string, unknown> = {
             userId: user.username,
@@ -1247,26 +1252,29 @@ export default function Home() {
 
           if (mapRes.ok && !mapJson?.error && mapJson?.imageUrl) {
             setMapImageUrl(mapJson.imageUrl as string)
-            setMapFlags((prev: MapFlagItem[]) => {
-              const pendingStoryFinal = params.workType === "story" ? pendingStoryFlagFinalizationRef.current : null
-              if (pendingStoryFinal) pendingStoryFlagFinalizationRef.current = null
-              return [
-                ...prev,
-                {
-                  id: mapJson.userId && mapJson.title ? `${mapJson.userId}-${mapJson.title}-${Date.now()}` : `${Date.now()}`,
-                  x: mapJson.mapX ?? pinSnapshot.x,
-                  y: mapJson.mapY ?? pinSnapshot.y,
-                  title: pendingStoryFinal?.title || mapJson.title || params.title,
-                  content: pendingStoryFinal?.content || params.content,
-                  workType: params.workType,
-                },
-              ]
-            })
+            if (!params.skipNewFlag) {
+              setMapFlags((prev: MapFlagItem[]) => {
+                const pendingStoryFinal = params.workType === "story" ? pendingStoryFlagFinalizationRef.current : null
+                if (pendingStoryFinal) pendingStoryFlagFinalizationRef.current = null
+                return [
+                  ...prev,
+                  {
+                    id: mapJson.userId && mapJson.title ? `${mapJson.userId}-${mapJson.title}-${Date.now()}` : `${Date.now()}`,
+                    x: mapJson.mapX ?? pinSnapshot.x,
+                    y: mapJson.mapY ?? pinSnapshot.y,
+                    title: pendingStoryFinal?.title || mapJson.title || params.title,
+                    content: pendingStoryFinal?.content || params.content,
+                    workType: params.workType,
+                  },
+                ]
+              })
+            }
             setCurrentPin(null)
+            toast.success("Writing map updated!")
             return
           }
           console.error(`[map-update] ${params.source} failed:`, { status: mapRes.status, body: mapJson })
-          toast.warning("Map could not update right now. Your story is saved — try again from the map later.")
+          toast.warning("Map was not changed — your previous map is still there. You can try again later.")
         } catch (error) {
           console.error(`[map-update] ${params.source} error:`, error)
         } finally {
@@ -1287,7 +1295,21 @@ export default function Home() {
       const storyTitle = getStoryWritingMapTitle(character)
       const topic = plot.setting || character?.name || storyTitle
       const plotSummary = buildStoryPlotSummary(character, plot)
+      const pinSnapshot = lastJourneyPinRef.current ?? { x: 50, y: 50 }
       pendingStoryFlagFinalizationRef.current = null
+
+      setMapFlags((prev: MapFlagItem[]) => [
+        ...prev,
+        {
+          id: `story-struct-${Date.now()}`,
+          x: pinSnapshot.x,
+          y: pinSnapshot.y,
+          title: storyTitle,
+          content: [plotSummary, `Structure: ${structure.type}`].filter(Boolean).join("\n"),
+          workType: "story",
+        },
+      ])
+
       void queueJourneyMapUpdate({
         title: storyTitle,
         topic,
@@ -1295,6 +1317,7 @@ export default function Home() {
         content: [plotSummary, `Story structure: ${structure.type}`].filter(Boolean).join("\n"),
         workType: "story",
         source: "storyStructure",
+        skipNewFlag: true,
         summaryKey: "storySummary",
         summaryValue: {
           characterName: character?.name || null,
