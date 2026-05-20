@@ -7,6 +7,9 @@ const DEFAULT_TIMEOUT_MS = 120_000
 const MAX_INPUT_IMAGE_BYTES = 10 * 1024 * 1024
 const MAX_MAP_PROMPT_CHARS = 1800
 
+/** Map edits use smaller output — faster and enough for on-screen display. */
+export const MAP_UPDATE_IMAGE_SIZE = "1536x1536"
+
 const SIZE_BY_ASPECT_RATIO: Record<string, string> = {
   "1:1": "2048x2048",
   "4:3": "2304x1728",
