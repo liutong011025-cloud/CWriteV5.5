@@ -56,6 +56,12 @@ const journeyOptions = [
   },
 ] as const
 
+/** Labels on dark wood ticket panel — light text for contrast */
+const TICKET_LABEL = "#f5e6c8"
+const TICKET_VALUE = "#fff8ea"
+const TICKET_VALUE_MUTED = "rgba(245, 230, 200, 0.82)"
+const TICKET_ACCENT = "#b8f07a"
+
 export default function JourneyTicket({
   language = "en",
   userName,
@@ -178,7 +184,7 @@ export default function JourneyTicket({
           </p>
         </div>
 
-        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-[260px_1fr] xl:grid-cols-[300px_1fr] gap-6 md:gap-8 xl:gap-10 mb-8 md:mb-10 xl:mb-12">
+        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-[260px_1fr] xl:grid-cols-[300px_1fr] gap-6 md:gap-8 xl:gap-10">
           {/* Left side - Journey type cards with pixel styling */}
           <div className="flex flex-col justify-center lg:justify-start">
             <p className="mb-4 md:mb-5 text-sm md:text-[15px] text-center xl:text-left max-w-[320px] pixel-text" style={{ color: "#5a4a2a" }}>
@@ -249,7 +255,7 @@ export default function JourneyTicket({
               )}
 
               {/* Pixel-style boarding pass label */}
-              <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-3 text-[10px] md:text-[11px] xl:text-xs uppercase tracking-widest px-3 md:px-4 py-1 pixel-chip" style={{ color: "#8b6914" }}>
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-3 text-[10px] md:text-[11px] xl:text-xs uppercase tracking-widest px-3 md:px-4 py-1 pixel-chip" style={{ color: TICKET_LABEL }}>
                 BOARDING PASS
               </div>
 
@@ -279,14 +285,14 @@ export default function JourneyTicket({
                   {/* Passenger info with pixel styling */}
                   <div className="grid md:grid-cols-3 gap-4 md:gap-5 xl:gap-6 items-center">
                     <div className="space-y-2">
-                      <p className="text-xs uppercase tracking-widest pixel-text" style={{ color: "#8b6914" }}>Passenger</p>
-                      <p className="text-xl md:text-[22px] xl:text-2xl font-bold pixel-text" style={{ color: "#5a4a2a" }}>{userName}</p>
+                      <p className="text-xs uppercase tracking-widest pixel-text font-semibold" style={{ color: TICKET_LABEL }}>Passenger</p>
+                      <p className="text-xl md:text-[22px] xl:text-2xl font-bold pixel-text" style={{ color: TICKET_VALUE }}>{userName}</p>
                     </div>
                     <div className="space-y-2">
-                      <p className="text-xs uppercase tracking-widest pixel-text" style={{ color: "#8b6914" }}>Writing Level</p>
-                      <p className="text-xl md:text-[22px] xl:text-2xl font-bold pixel-text" style={{ color: "#7ec850" }}>Level {level}</p>
+                      <p className="text-xs uppercase tracking-widest pixel-text font-semibold" style={{ color: TICKET_LABEL }}>Writing Level</p>
+                      <p className="text-xl md:text-[22px] xl:text-2xl font-bold pixel-text" style={{ color: TICKET_ACCENT }}>Level {level}</p>
                       <div className="flex items-center gap-2 md:gap-3 flex-wrap">
-                        <p className="text-xs md:text-sm pixel-text" style={{ color: "#6b5210" }}>Score: {score}/7</p>
+                        <p className="text-xs md:text-sm pixel-text" style={{ color: TICKET_VALUE_MUTED }}>Score: {score}/7</p>
                         {onRetest && (
                           <button
                             type="button"
@@ -299,8 +305,8 @@ export default function JourneyTicket({
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <p className="text-xs uppercase tracking-widest pixel-text" style={{ color: "#8b6914" }}>Journey</p>
-                      <p className="text-xl md:text-[22px] xl:text-2xl font-bold pixel-text" style={{ color: "#5a4a2a" }}>
+                      <p className="text-xs uppercase tracking-widest pixel-text font-semibold" style={{ color: TICKET_LABEL }}>Journey</p>
+                      <p className="text-xl md:text-[22px] xl:text-2xl font-bold pixel-text" style={{ color: TICKET_VALUE }}>
                         {selectedType ? journeyOptions.find((option) => option.id === selectedType)?.title : "—"}
                       </p>
                     </div>
@@ -324,7 +330,7 @@ export default function JourneyTicket({
 
                   {/* Difficulty selector with pixel buttons */}
                   <div className="mt-6 md:mt-7 xl:mt-8">
-                    <p className="text-sm uppercase tracking-widest mb-3 pixel-text" style={{ color: "#8b6914" }}>Choose Difficulty</p>
+                    <p className="text-sm uppercase tracking-widest mb-3 pixel-text font-semibold" style={{ color: TICKET_LABEL }}>Choose Difficulty</p>
                     <div className="flex flex-wrap gap-2">
                       {[1, 2, 3, 4, 5].map((value) => (
                         <button
@@ -340,7 +346,7 @@ export default function JourneyTicket({
                         </button>
                       ))}
                     </div>
-                    {notice && <p className="mt-3 text-xs md:text-sm font-semibold pixel-text" style={{ color: "#c9a82e" }}>{notice}</p>}
+                    {notice && <p className="mt-3 text-xs md:text-sm font-semibold pixel-text" style={{ color: "#ffe9a8" }}>{notice}</p>}
                   </div>
                 </div>
 
@@ -358,7 +364,7 @@ export default function JourneyTicket({
 
                   {/* Drop zone with pixel styling */}
                   <div className="mt-6 flex flex-col items-center">
-                    <p className="text-xs uppercase tracking-widest mb-3 pixel-text" style={{ color: "#8b6914" }}>Drop Type</p>
+                    <p className="text-xs uppercase tracking-widest mb-3 pixel-text font-semibold" style={{ color: TICKET_LABEL }}>Drop Type</p>
                     <div
                       className={`w-20 h-20 md:w-24 md:h-24 flex items-center justify-center text-center text-[11px] md:text-xs font-bold transition-all ${
                         dragOver || isDragging
@@ -403,23 +409,22 @@ export default function JourneyTicket({
                 </div>
               </div>
             </div>
-          </div>
-        </div>
 
-        {/* Start button with pixel styling */}
-        <div className="text-center mt-2 md:mt-3 xl:mt-4 space-y-3">
-          <Button
-            onClick={handleStart}
-            size="lg"
-            disabled={!selectedType || !difficulty}
-            className="pixel-btn pixel-btn-green text-base md:text-lg xl:text-2xl font-bold py-4 md:py-[18px] xl:py-6 px-8 md:px-10 xl:px-14 disabled:opacity-50 disabled:cursor-not-allowed"
-            style={{
-              borderRadius: 0,
-              textShadow: "2px 2px 0 rgba(0,0,0,0.3)",
-            }}
-          >
-            ✈️ Start
-          </Button>
+            <div className="text-center mt-3 md:mt-4">
+              <Button
+                onClick={handleStart}
+                size="lg"
+                disabled={!selectedType || !difficulty}
+                className="pixel-btn pixel-btn-green text-base md:text-lg xl:text-2xl font-bold py-4 md:py-[18px] xl:py-5 px-8 md:px-10 xl:px-14 disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{
+                  borderRadius: 0,
+                  textShadow: "2px 2px 0 rgba(0,0,0,0.3)",
+                }}
+              >
+                ✈️ Start
+              </Button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
