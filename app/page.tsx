@@ -605,6 +605,19 @@ export default function Home() {
   const [mapChapters, setMapChapters] = useState<PersistedMapState[]>([])
   const mapStateHydratedRef = useRef(false)
   const mapUpdateInFlightRef = useRef(false)
+  const pendingMapUpdateRef = useRef<{
+    title: string
+    topic: string
+    mapPrompt?: string
+    summaryKey?: string
+    summaryValue?: Record<string, unknown>
+    content?: string
+    workType?: MapWorkType
+    source: string
+    skipNewFlag?: boolean
+  } | null>(null)
+  const structureMapTriggeredRef = useRef<string | null>(null)
+  const mapLocalUpdatedAtRef = useRef(0)
   const pendingStoryFlagFinalizationRef = useRef<{ title: string; content: string } | null>(null)
   /** 首次地圖迭代成功後會清空 currentPin；後續 Fal 請求仍用此座標 */
   const lastJourneyPinRef = useRef<{ x: number; y: number } | null>(null)
@@ -1203,8 +1216,62 @@ export default function Home() {
 
   useEffect(() => {
     if (stage !== "journeyMap" || !user?.username || !mapStateHydratedRef.current) return
+    if (mapUpdateInFlightRef.current) return
+    if (Date.now() - mapLocalUpdatedAtRef.current < 60_000) return
     void refreshMapStateFromServer()
   }, [stage, user?.username, refreshMapStateFromServer])
+
+  const persistMapStateNow = useCallback(
+    (override?: Partial<PersistedMapState>) => {
+      if (!user?.username || typeof window === "undefined" || !mapStateHydratedRef.current) return
+      const currentChapter: PersistedMapState = {
+        mapImageUrl: override?.mapImageUrl ?? mapImageUrl,
+        mapFlags: override?.mapFlags ?? mapFlags,
+        currentPin: override?.currentPin ?? currentPin,
+        journeySelection: override?.journeySelection ?? journeySelection,
+        journeyActive: override?.journeyActive ?? journeyActive,
+        levelBadgeUnlocked: override?.levelBadgeUnlocked ?? levelBadgeUnlocked,
+      }
+      const chapters = Array.isArray(mapChapters) ? [...mapChapters] : []
+      const needLen = Math.max(activeMapChapterIndex + 1, chapters.length)
+      for (let i = chapters.length; i < needLen; i++) {
+        chapters.push({
+          mapImageUrl: getChapterBaseMapImageUrl(i),
+          mapFlags: [],
+          currentPin: null,
+          journeySelection: null,
+          journeyActive: false,
+          levelBadgeUnlocked: false,
+        })
+      }
+      chapters[activeMapChapterIndex] = {
+        ...currentChapter,
+        mapImageUrl: currentChapter.mapImageUrl || getChapterBaseMapImageUrl(activeMapChapterIndex),
+      }
+      const payload: PersistedMapChaptersState = { activeChapterIndex: activeMapChapterIndex, chapters }
+      try {
+        localStorage.setItem(getMapStateKey(user.username), JSON.stringify(payload))
+      } catch {
+        // ignore
+      }
+      void fetch("/api/user-map-state", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_id: user.username, state: payload }),
+      }).catch(() => {})
+    },
+    [
+      user?.username,
+      mapImageUrl,
+      mapFlags,
+      currentPin,
+      journeySelection,
+      journeyActive,
+      levelBadgeUnlocked,
+      mapChapters,
+      activeMapChapterIndex,
+    ],
+  )
 
   const queueJourneyMapUpdate = useCallback(
     (params: {
@@ -1221,16 +1288,19 @@ export default function Home() {
     }) => {
       if (!journeyActive || !user) return
       if (mapUpdateInFlightRef.current) {
-        console.warn(`[map-update] ${params.source} skipped — update already running`)
+        pendingMapUpdateRef.current = params
         return
       }
       const pinSnapshot = currentPin ?? lastJourneyPinRef.current ?? { x: 50, y: 50 }
       lastJourneyPinRef.current = pinSnapshot
       const previousMapImageUrl = mapImageUrl || getChapterBaseMapImageUrl(activeMapChapterIndex)
+      const isBackgroundStructure = params.source === "storyStructure"
 
       void (async () => {
         mapUpdateInFlightRef.current = true
-        toast.info("Updating your writing map in the background…", { duration: 4000 })
+        if (!isBackgroundStructure) {
+          toast.info("Updating your writing map in the background…", { duration: 4000 })
+        }
         try {
           const payload: Record<string, unknown> = {
             userId: user.username,
@@ -1251,12 +1321,15 @@ export default function Home() {
           const mapJson = await mapRes.json()
 
           if (mapRes.ok && !mapJson?.error && mapJson?.imageUrl) {
-            setMapImageUrl(mapJson.imageUrl as string)
+            const newImageUrl = mapJson.imageUrl as string
+            mapLocalUpdatedAtRef.current = Date.now()
+            setMapImageUrl(newImageUrl)
+            setCurrentPin(null)
             if (!params.skipNewFlag) {
+              const pendingStoryFinal = params.workType === "story" ? pendingStoryFlagFinalizationRef.current : null
+              if (pendingStoryFinal) pendingStoryFlagFinalizationRef.current = null
               setMapFlags((prev: MapFlagItem[]) => {
-                const pendingStoryFinal = params.workType === "story" ? pendingStoryFlagFinalizationRef.current : null
-                if (pendingStoryFinal) pendingStoryFlagFinalizationRef.current = null
-                return [
+                const next = [
                   ...prev,
                   {
                     id: mapJson.userId && mapJson.title ? `${mapJson.userId}-${mapJson.title}-${Date.now()}` : `${Date.now()}`,
@@ -1267,10 +1340,18 @@ export default function Home() {
                     workType: params.workType,
                   },
                 ]
+                persistMapStateNow({ mapImageUrl: newImageUrl, mapFlags: next, currentPin: null })
+                return next
+              })
+            } else {
+              setMapFlags((prev: MapFlagItem[]) => {
+                persistMapStateNow({ mapImageUrl: newImageUrl, mapFlags: prev, currentPin: null })
+                return prev
               })
             }
-            setCurrentPin(null)
-            toast.success("Writing map updated!")
+            if (!isBackgroundStructure) {
+              toast.success("Writing map updated!")
+            }
             return
           }
           console.error(`[map-update] ${params.source} failed:`, { status: mapRes.status, body: mapJson })
@@ -1279,10 +1360,15 @@ export default function Home() {
           console.error(`[map-update] ${params.source} error:`, error)
         } finally {
           mapUpdateInFlightRef.current = false
+          const pending = pendingMapUpdateRef.current
+          if (pending) {
+            pendingMapUpdateRef.current = null
+            queueJourneyMapUpdate(pending)
+          }
         }
       })()
     },
-    [journeyActive, user, currentPin, mapImageUrl, activeMapChapterIndex],
+    [journeyActive, user, currentPin, mapImageUrl, activeMapChapterIndex, persistMapStateNow],
   )
 
   const runStoryJourneyMapAtStructureSelect = useCallback(
@@ -1298,17 +1384,21 @@ export default function Home() {
       const pinSnapshot = lastJourneyPinRef.current ?? { x: 50, y: 50 }
       pendingStoryFlagFinalizationRef.current = null
 
-      setMapFlags((prev: MapFlagItem[]) => [
-        ...prev,
-        {
-          id: `story-struct-${Date.now()}`,
-          x: pinSnapshot.x,
-          y: pinSnapshot.y,
-          title: storyTitle,
-          content: [plotSummary, `Structure: ${structure.type}`].filter(Boolean).join("\n"),
-          workType: "story",
-        },
-      ])
+      setMapFlags((prev: MapFlagItem[]) => {
+        const next: MapFlagItem[] = [
+          ...prev,
+          {
+            id: `story-struct-${Date.now()}`,
+            x: pinSnapshot.x,
+            y: pinSnapshot.y,
+            title: storyTitle,
+            content: [plotSummary, `Structure: ${structure.type}`].filter(Boolean).join("\n"),
+            workType: "story",
+          },
+        ]
+        persistMapStateNow({ mapFlags: next })
+        return next
+      })
 
       void queueJourneyMapUpdate({
         title: storyTitle,
@@ -1330,8 +1420,41 @@ export default function Home() {
         },
       })
     },
-    [journeyActive, user, queueJourneyMapUpdate],
+    [journeyActive, user, queueJourneyMapUpdate, persistMapStateNow],
   )
+
+  useEffect(() => {
+    if (!storyState.plot) structureMapTriggeredRef.current = null
+  }, [storyState.plot])
+
+  /** Start map image edit as soon as structure is chosen — do not wait for Writing Map screen. */
+  useEffect(() => {
+    if (!journeyActive || !user?.username) return
+    const structure = storyState.structure
+    const plot = storyState.plot
+    const character = storyState.character
+    if (!structure || !plot || !character) return
+
+    const dedupeKey = [
+      structure.type,
+      plot.setting,
+      plot.conflict,
+      plot.goal,
+      character.name,
+      activeMapChapterIndex,
+    ].join("|")
+    if (structureMapTriggeredRef.current === dedupeKey) return
+    structureMapTriggeredRef.current = dedupeKey
+    runStoryJourneyMapAtStructureSelect(character, plot, structure)
+  }, [
+    storyState.structure,
+    storyState.plot,
+    storyState.character,
+    journeyActive,
+    user?.username,
+    activeMapChapterIndex,
+    runStoryJourneyMapAtStructureSelect,
+  ])
 
   const canMoveToNextChapter = (mapFlags?.length ?? 0) >= 10
 
@@ -2300,9 +2423,6 @@ export default function Home() {
           }}
           onStructureSelect={(structure) => {
             setStoryState((prev) => ({ ...prev, structure, story: prev.story }))
-            const plot = storyState.plot
-            const character = storyState.character
-            if (plot && character) runStoryJourneyMapAtStructureSelect(character, plot, structure)
           }}
           onStoryWrite={(story) => {
             setStoryState((prev) => ({ ...prev, story }))
@@ -2326,9 +2446,6 @@ export default function Home() {
           }}
           onStructureSelect={(structure) => {
             setStoryState((prev) => ({ ...prev, structure, story: prev.story }))
-            const plot = storyState.plot
-            const character = storyState.character
-            if (plot && character) runStoryJourneyMapAtStructureSelect(character, plot, structure)
           }}
           onStoryWrite={(story) => {
             setStoryState((prev) => ({ ...prev, story }))
@@ -2375,9 +2492,6 @@ export default function Home() {
               onStructureSelect={(structure) => {
                 setStoryState(prev => ({ ...prev, structure }))
                 setStage("writing")
-                const plot = storyState.plot
-                const character = storyState.character
-                if (plot && character) runStoryJourneyMapAtStructureSelect(character, plot, structure)
               }}
               onBack={() => setStage("plot")}
             />
@@ -2389,9 +2503,6 @@ export default function Home() {
               onStructureSelect={(structure) => {
                 setStoryState(prev => ({ ...prev, structure }))
                 setStage("writing")
-                const plot = storyState.plot
-                const character = storyState.character
-                if (plot && character) runStoryJourneyMapAtStructureSelect(character, plot, structure)
               }}
               onBack={() => setStage("plot")}
               userId={user.username}
