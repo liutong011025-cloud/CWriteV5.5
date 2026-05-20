@@ -76,6 +76,21 @@ export function normalizeRevisionTagColor(raw: unknown, index: number): Revision
   return TAG_COLORS[index % TAG_COLORS.length]
 }
 
+export function buildFallbackRevisionTags(
+  sectionName: string,
+  level: number,
+  maxTags = 2,
+): StoryRevisionTag[] {
+  return tipsToRevisionTags(
+    [
+      `Add a little more for ${sectionName}`,
+      "Keep it in the same story as your plot plan",
+    ],
+    level,
+    { sectionName, maxTags },
+  )
+}
+
 export function parseRevisionTags(raw: unknown): StoryRevisionTag[] {
   if (!Array.isArray(raw)) return []
   const tags: StoryRevisionTag[] = []
