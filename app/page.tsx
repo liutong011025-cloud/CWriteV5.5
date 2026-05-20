@@ -297,6 +297,23 @@ const buildStoryPlotSummary = (
     .join("\n")
 }
 
+const buildStoryStructureMapPrompt = (
+  character: StoryState["character"],
+  plot: NonNullable<StoryState["plot"]>,
+  structureType: string,
+) => {
+  const species = character?.species?.trim() || "story character"
+  const name = character?.name?.trim() || "hero"
+  return [
+    `At the pin, add only very small map-scale details (tiny props, mini paths, small plants) — noticeably smaller than houses or trees.`,
+    `Hint at setting: ${plot.setting || "the story place"}.`,
+    `Subtle trouble cues: ${plot.conflict || "the problem"}.`,
+    `Tiny goal marker for: ${plot.goal || "what the hero wants"}.`,
+    `Species vibe: ${species} (${name}). Structure: ${structureType}.`,
+    `No oversized landmarks; keep everything compact and subtle.`,
+  ].join(" ")
+}
+
 const buildDramaMapSummary = (
   scenes: Array<{ backgroundPrompt?: string; notes?: string }>,
   dramaTitle: string,
@@ -1165,6 +1182,32 @@ export default function Home() {
     return () => { cancelled = true }
   }, [user?.username])
 
+  const refreshMapStateFromServer = useCallback(async () => {
+    if (!user?.username) return
+    try {
+      const dbRes = await fetch(`/api/user-map-state?user_id=${encodeURIComponent(user.username)}`)
+      if (!dbRes.ok) return
+      const dbJson = await dbRes.json()
+      const normalized = normalizeMapChaptersState(dbJson?.state)
+      setMapChapters(normalized.chapters)
+      setActiveMapChapterIndex(normalized.activeChapterIndex)
+      const active = normalized.chapters[normalized.activeChapterIndex] || normalized.chapters[0]
+      setMapImageUrl(active?.mapImageUrl || getChapterBaseMapImageUrl(normalized.activeChapterIndex))
+      setMapFlags(active?.mapFlags ?? [])
+      setCurrentPin(active?.currentPin ?? null)
+      setJourneySelection(active?.journeySelection ?? null)
+      setJourneyActive(typeof active?.journeyActive === "boolean" ? active?.journeyActive : false)
+      setLevelBadgeUnlocked(typeof active?.levelBadgeUnlocked === "boolean" ? active?.levelBadgeUnlocked : false)
+    } catch {
+      // ignore refresh errors
+    }
+  }, [user?.username])
+
+  useEffect(() => {
+    if (stage !== "journeyMap" || !user?.username || !mapStateHydratedRef.current) return
+    void refreshMapStateFromServer()
+  }, [stage, user?.username, refreshMapStateFromServer])
+
   const queueJourneyMapUpdate = useCallback(
     (params: {
       title: string
@@ -1223,6 +1266,7 @@ export default function Home() {
             return
           }
           console.error(`[map-update] ${params.source} failed:`, { status: mapRes.status, body: mapJson })
+          toast.warning("Map could not update right now. Your story is saved — try again from the map later.")
         } catch (error) {
           console.error(`[map-update] ${params.source} error:`, error)
         } finally {
@@ -1247,6 +1291,7 @@ export default function Home() {
       void queueJourneyMapUpdate({
         title: storyTitle,
         topic,
+        mapPrompt: buildStoryStructureMapPrompt(character, plot, structure.type),
         content: [plotSummary, `Story structure: ${structure.type}`].filter(Boolean).join("\n"),
         workType: "story",
         source: "storyStructure",
