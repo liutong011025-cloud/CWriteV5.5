@@ -163,6 +163,8 @@ export async function resolveArkImageInput(
   options?: {
     requestHeaders?: Headers
     appBaseUrl?: string
+    /** Fetch remote URLs and send base64 so Ark never fails to load the reference image. */
+    forceDataUrl?: boolean
   },
 ): Promise<string | null> {
   const trimmed = imageRef.trim()
@@ -196,7 +198,7 @@ export async function resolveArkImageInput(
     }
   }
 
-  if (!isLocalHostname(url.hostname)) {
+  if (!isLocalHostname(url.hostname) && !options?.forceDataUrl) {
     return absolute
   }
 
@@ -277,46 +279,42 @@ export async function generateArkImage(options: ArkGenerateImageOptions) {
   const size = options.size || SIZE_BY_ASPECT_RATIO["1:1"]
   const timeoutMs = options.timeoutMs || DEFAULT_TIMEOUT_MS
 
-  const baseBody: Record<string, unknown> = {
-    model: ARK_IMAGE_MODEL,
-    prompt,
-    size,
-    sequential_image_generation: options.sequentialImageGeneration || "disabled",
-    response_format: "url",
-    stream: false,
-    watermark: options.watermark ?? false,
-    ...(options.outputFormat ? { output_format: options.outputFormat } : {}),
-    // Seedream accepts reference images as `image` or `images` depending on SDK/version — send both.
-    ...(images?.length ? { image: images, images } : {}),
+  /** Volcengine Ark v3 uses `image` (string or string[]), not `images` — extra fields cause InvalidParameter. */
+  const imageParam =
+    images?.length === 1 ? images[0] : images?.length ? images : undefined
+
+  const buildBody = (overrides?: Record<string, unknown>, omitOutputFormat = false) => {
+    const body: Record<string, unknown> = {
+      model: ARK_IMAGE_MODEL,
+      prompt,
+      size,
+      sequential_image_generation: options.sequentialImageGeneration || "disabled",
+      response_format: "url",
+      stream: false,
+      watermark: options.watermark ?? false,
+      ...(imageParam ? { image: imageParam } : {}),
+      ...overrides,
+    }
+    if (!omitOutputFormat && options.outputFormat) {
+      body.output_format = options.outputFormat
+    }
+    return body
   }
+
+  const baseBody = buildBody()
 
   try {
     return await postArkImageRequest(apiKey, baseBody, timeoutMs)
   } catch (error) {
-    if (!(error instanceof ArkImageError) || error.status !== 400 || !images?.length) {
+    if (!(error instanceof ArkImageError) || error.status !== 400 || !imageParam) {
       throw error
     }
 
-    const detail = error.detail || ""
-    const retryBodies: Record<string, unknown>[] = []
-
-    if (/image/i.test(detail)) {
-      retryBodies.push({ ...baseBody, images })
-    }
-
-    retryBodies.push({
-      ...baseBody,
-      images,
-      size: "2K",
-      output_format: options.outputFormat || "jpeg",
-    })
-
-    retryBodies.push({
-      ...baseBody,
-      images,
-      size: "2K",
-    })
-    delete retryBodies[retryBodies.length - 1].output_format
+    const retryBodies: Record<string, unknown>[] = [
+      buildBody({ size: "2K" }, true),
+      buildBody({ size: MAP_UPDATE_IMAGE_SIZE }, true),
+      buildBody({ size: "2K", output_format: "jpeg" }, true),
+    ]
 
     const seen = new Set<string>()
     for (const body of retryBodies) {
