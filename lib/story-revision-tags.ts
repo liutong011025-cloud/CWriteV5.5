@@ -44,11 +44,30 @@ export const REVISION_TAG_COLOR_STYLES: Record<
 
 const TAG_COLORS: RevisionTagColor[] = ["amber", "sky", "rose", "violet", "emerald"]
 
+/** Minimum words per structural section (Setup, Confrontation, etc.). */
+export const MIN_SECTION_WORD_COUNT = 15
+
+/** Default bounds when issue count is unknown (legacy callers). */
 export function revisionTagBoundsForLevel(level: number): { min: number; max: number } {
+  return revisionTagBoundsForSituation(level, 2)
+}
+
+/** Tag count scales with how many separate problems the draft has. */
+export function revisionTagBoundsForSituation(
+  level: number,
+  issueCount: number,
+): { min: number; max: number } {
   const lv = Math.min(5, Math.max(1, Math.floor(level) || 1))
-  if (lv <= 2) return { min: 2, max: 2 }
-  if (lv === 3) return { min: 2, max: 3 }
-  return { min: 3, max: 4 }
+  const issues = Math.max(0, Math.floor(issueCount))
+
+  if (issues === 0) return { min: 0, max: 0 }
+  if (issues === 1) {
+    return lv <= 3 ? { min: 1, max: 1 } : { min: 1, max: 2 }
+  }
+  if (issues === 2) {
+    return lv <= 2 ? { min: 1, max: 2 } : lv <= 4 ? { min: 2, max: 2 } : { min: 2, max: 3 }
+  }
+  return lv <= 2 ? { min: 2, max: 2 } : lv <= 4 ? { min: 2, max: 3 } : { min: 2, max: 4 }
 }
 
 export function normalizeRevisionTagColor(raw: unknown, index: number): RevisionTagColor {
@@ -82,9 +101,9 @@ export function parseRevisionTags(raw: unknown): StoryRevisionTag[] {
 export function tipsToRevisionTags(
   tips: string[],
   level: number,
-  context?: { sectionName?: string; characterName?: string },
+  context?: { sectionName?: string; characterName?: string; maxTags?: number },
 ): StoryRevisionTag[] {
-  const { max } = revisionTagBoundsForLevel(level)
+  const max = context?.maxTags ?? revisionTagBoundsForLevel(level).max
   const section = context?.sectionName || "this part"
   const hero = context?.characterName || "your hero"
 
@@ -107,9 +126,12 @@ export function tipsToRevisionTags(
     } else if (lower.includes("setup") || lower.includes("section")) {
       label = `Fix ${section}`
       rationale = `Readers should feel this is truly the "${section}" beat — add action and detail that match this step only.`
-    } else if (lower.includes("plot") || lower.includes("connect")) {
-      label = "Link to your plot"
-      rationale = `Mention the place, problem, or goal from your plan so this part fits the story you chose.`
+    } else if (lower.includes("plot") || lower.includes("connect") || lower.includes("same story")) {
+      label = "Same story"
+      rationale = `Keep this part in the same story as your plot plan — you do not need every detail, but it should still feel connected.`
+    } else if (lower.includes("word") || lower.includes("short") || lower.includes("more words")) {
+      label = "Add more words"
+      rationale = `Write at least ${MIN_SECTION_WORD_COUNT} words in this section so readers can follow what happens.`
     } else {
       const short = trimmed.split(/[.;]/)[0]?.trim() || trimmed
       label = short.length <= 28 ? short.replace(/\.$/, "") : short.slice(0, 28).trim()
@@ -127,13 +149,19 @@ export function tipsToRevisionTags(
   })
 }
 
-export function buildRevisionTagsPromptRules(level: number, sectionName: string): string {
-  const { min, max } = revisionTagBoundsForLevel(level)
+export function buildRevisionTagsPromptRules(
+  level: number,
+  sectionName: string,
+  tagBounds?: { min: number; max: number },
+): string {
+  const { min, max } = tagBounds ?? revisionTagBoundsForLevel(level)
   return (
     `\n[SECTION REVISION TAGS — level ${level}]\n` +
     `When the student submits a draft for "${sectionName}" (e.g. Finish! / submit this part):\n` +
+    `- Minimum length: ${MIN_SECTION_WORD_COUNT} words in this section.\n` +
+    `- Must feel like the SAME story as the plot plan; do NOT require setting + conflict + goal all in one section.\n` +
     `- Main reply: at most ONE short encouraging sentence (no long revision paragraphs).\n` +
-    `- Put ${min}-${max} revision suggestions in META as revision_tags (array). Each item:\n` +
+    `- Put ${min}-${max} revision suggestions in META as revision_tags (array) — fewer issues → fewer tags.\n` +
     `  {"label":"3-6 words on the chip (short command)","rationale":"1-2 kid-friendly sentences explaining WHY — must NOT repeat the label text","color":"amber|sky|rose|violet|emerald"}\n` +
     `- One tag = one concrete improvement. label and rationale must be clearly different.\n` +
     `- Level 1-2: gentle, simple tags. Level 4-5: more specific craft (verbs, connectors, plot tie-in).\n` +
