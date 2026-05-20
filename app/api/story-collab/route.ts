@@ -9,8 +9,10 @@ import {
   parseAiSectionGrade,
 } from "@/lib/story-section-grader"
 import {
+  buildFallbackRevisionTags,
   buildRevisionTagsPromptRules,
   parseRevisionTags,
+  revisionTagBoundsForSituation,
   tipsToRevisionTags,
   type StoryRevisionTag,
 } from "@/lib/story-revision-tags"
@@ -362,13 +364,19 @@ function finalizeWritingSectionFeedback(
     getPreviousSectionTexts(req, idx),
   )
 
-  const { min, max } = evaluation.tagBounds
-
   const aiGrade = parseAiSectionGrade(meta as Record<string, unknown>, answer)
   const passed = combineSectionPassDecision(
     evaluation.mechanicalPass,
     evaluation.structureOk,
     aiGrade,
+  )
+
+  const issueCountForTags = passed
+    ? 0
+    : Math.max(1, evaluation.issueCount + (aiGrade.pass === false ? 1 : 0))
+  const { min, max } = revisionTagBoundsForSituation(
+    req.level,
+    issueCountForTags,
   )
 
   if (passed) {
@@ -398,7 +406,11 @@ function finalizeWritingSectionFeedback(
       },
     )
   }
-  revision_tags = revision_tags.slice(0, max)
+  revision_tags = revision_tags.slice(0, Math.max(max, min))
+
+  if (revision_tags.length === 0) {
+    revision_tags = buildFallbackRevisionTags(section.section, req.level, Math.max(min, 1))
+  }
 
   return {
     answer: "Revise your Writing Pad — tap each tag to see why, then tap Finish! again.",
@@ -570,7 +582,7 @@ export async function POST(request: NextRequest) {
       plot_progress,
       plot_complete,
       structure_suggestion: meta.structure_suggestion || null,
-      revision_tags: finalized.revision_tags.length ? finalized.revision_tags : undefined,
+      revision_tags: finalized.section_passed ? undefined : finalized.revision_tags,
       section_passed: finalized.section_passed || undefined,
     }
 
