@@ -1,6 +1,24 @@
 export type PlotState = { setting?: string; conflict?: string; goal?: string }
 export type PlotFocus = "setting" | "conflict" | "goal" | "done"
 
+export type PlotMicroStep =
+  | "theme"
+  | "setting_place"
+  | "setting_detail"
+  | "conflict_hook"
+  | "conflict_detail"
+  | "goal_wish"
+  | "goal_detail"
+  | "ready"
+
+export interface PlotConversationProgress {
+  settingBroad?: string
+  conflictBroad?: string
+}
+
+/** 约 5–7 轮对话后再允许进入结构选择 */
+export const MIN_USER_TURNS_FOR_PLOT_COMPLETE = 6
+
 const GENERIC_SUGGESTIONS = new Set([
   "tell me more",
   "what happens next?",
@@ -9,6 +27,9 @@ const GENERIC_SUGGESTIONS = new Set([
   "next section!",
   "revise and finish! again",
   "add one more detail",
+  "pick three act",
+  "pick freytag",
+  "pick fichtean",
 ])
 
 const THEME_ONLY = new Set([
@@ -24,11 +45,23 @@ const THEME_ONLY = new Set([
   "school",
 ])
 
+const GENERIC_GOAL_PHRASES = [
+  /^the hero wants to\b/i,
+  /^wants to fix the problem$/i,
+  /^wants to help a friend$/i,
+  /^wants to find what was lost$/i,
+  /^wants to be brave and try$/i,
+]
+
 export function isPlotComplete(plot: PlotState | null | undefined): boolean {
   const s = plot?.setting?.trim()
   const c = plot?.conflict?.trim()
   const g = plot?.goal?.trim()
-  return !!(s && c && g && s.length >= 3 && c.length >= 3 && g.length >= 3)
+  return !!(s && c && g && s.length >= 8 && c.length >= 8 && g.length >= 8)
+}
+
+export function canCompletePlot(plot: PlotState | null | undefined, userTurnCount: number): boolean {
+  return isPlotComplete(plot) && userTurnCount >= MIN_USER_TURNS_FOR_PLOT_COMPLETE
 }
 
 export function getPlotFocus(plot: PlotState | null | undefined): PlotFocus {
@@ -36,6 +69,23 @@ export function getPlotFocus(plot: PlotState | null | undefined): PlotFocus {
   if (!plot?.conflict?.trim()) return "conflict"
   if (!plot?.goal?.trim()) return "goal"
   return "done"
+}
+
+export function getPlotMicroStep(
+  plot: PlotState,
+  userTurnCount: number,
+  progress: PlotConversationProgress,
+): PlotMicroStep {
+  if (userTurnCount <= 0) return "theme"
+  if (!plot.setting?.trim()) {
+    return progress.settingBroad?.trim() ? "setting_detail" : "setting_place"
+  }
+  if (!plot.conflict?.trim()) {
+    return progress.conflictBroad?.trim() ? "conflict_detail" : "conflict_hook"
+  }
+  if (!plot.goal?.trim()) return "goal_wish"
+  if (!canCompletePlot(plot, userTurnCount)) return "goal_detail"
+  return "ready"
 }
 
 export function mergePlotState(
@@ -61,30 +111,17 @@ function isGenericUserReply(text: string): boolean {
   if (GENERIC_SUGGESTIONS.has(t)) return true
   if (THEME_ONLY.has(t)) return true
   if (/^(yes|no|ok|okay|sure|maybe|idk|i don't know)$/i.test(t)) return true
+  if (GENERIC_GOAL_PHRASES.some((re) => re.test(t))) return true
   return false
 }
 
-/** Assign the latest student message to the field we are currently asking about. */
-export function assignUserMessageToFocus(
-  plot: PlotState,
-  userMessage: string,
-  focus: PlotFocus,
-): PlotState {
-  const text = userMessage.trim()
-  if (isGenericUserReply(text) || text.length < 4) return plot
-  if (focus === "setting" && !plot.setting?.trim()) {
-    return { ...plot, setting: normalizePlotField(text) }
-  }
-  if (focus === "conflict" && !plot.conflict?.trim()) {
-    return { ...plot, conflict: normalizePlotField(text) }
-  }
-  if (focus === "goal" && !plot.goal?.trim()) {
-    return { ...plot, goal: normalizePlotField(text) }
-  }
-  return plot
+function combinePlace(broad: string | undefined, detail: string): string {
+  const b = broad?.trim()
+  const d = detail.trim()
+  if (b && d) return normalizePlotField(`${b} — ${d}`)
+  return normalizePlotField(d || b || "")
 }
 
-/** Only accept META plot_update for the one field being discussed this turn. */
 export function applyMetaUpdateForFocus(
   plot: PlotState,
   metaUpdate: PlotState | null | undefined,
@@ -104,56 +141,125 @@ export function applyMetaUpdateForFocus(
   return next
 }
 
-function buildPlotMemoryForAi(plot: PlotState): string {
-  const lines: string[] = []
-  if (plot.setting?.trim()) lines.push(`Where/when (saved): ${plot.setting}`)
-  if (plot.conflict?.trim()) lines.push(`Problem (saved): ${plot.conflict}`)
-  if (plot.goal?.trim()) lines.push(`Goal (saved): ${plot.goal}`)
-  return lines.length > 0 ? lines.join("\n") : "Nothing saved yet — build from the conversation step by step."
+export function applyProgressivePlotTurn(
+  plot: PlotState,
+  progress: PlotConversationProgress,
+  microStep: PlotMicroStep,
+  userMessage: string,
+  metaUpdate: PlotState | null | undefined,
+  characterName: string,
+): { plot: PlotState; progress: PlotConversationProgress } {
+  const text = userMessage.trim()
+  let nextPlot = { ...plot }
+  let nextProgress = { ...progress }
+
+  if (!isGenericUserReply(text) && text.length >= 3) {
+    if (microStep === "setting_place") {
+      nextProgress.settingBroad = normalizePlotField(text)
+    } else if (microStep === "setting_detail") {
+      nextPlot.setting = combinePlace(nextProgress.settingBroad, text)
+      nextProgress.settingBroad = undefined
+    } else if (microStep === "conflict_hook") {
+      nextProgress.conflictBroad = normalizePlotField(text)
+    } else if (microStep === "conflict_detail") {
+      nextPlot.conflict = combinePlace(nextProgress.conflictBroad, text)
+      nextProgress.conflictBroad = undefined
+    } else if (microStep === "goal_wish" || microStep === "goal_detail") {
+      const goalText = text.replace(/^the hero wants to\s+/i, `${characterName} wants to `)
+      nextPlot.goal = normalizePlotField(goalText)
+    }
+  }
+
+  const focus = getPlotFocus(nextPlot)
+  if (focus !== "done") {
+    nextPlot = applyMetaUpdateForFocus(nextPlot, metaUpdate, focus)
+    if (focus === "setting" && !nextPlot.setting && microStep === "setting_detail") {
+      nextPlot.setting = combinePlace(nextProgress.settingBroad, text)
+    }
+    if (focus === "conflict" && !nextPlot.conflict && microStep === "conflict_detail") {
+      nextPlot.conflict = combinePlace(nextProgress.conflictBroad, text)
+    }
+  }
+
+  return { plot: nextPlot, progress: nextProgress }
+}
+
+export function stripOptionsFromAnswer(answer: string, suggestions: string[]): string {
+  let text = answer.replace(/\r/g, "").trim()
+  for (const option of suggestions) {
+    const escaped = option.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+    text = text.replace(new RegExp(`^\\s*[-•*–—]?\\s*${escaped}\\s*$`, "gim"), "")
+    text = text.replace(new RegExp(`\\s*[-–—]\\s*${escaped}\\s*`, "gi"), " ")
+  }
+  text = text.replace(/\n\s*[-•*–—]\s+[^\n]+/g, "\n")
+  text = text.replace(/\n{3,}/g, "\n\n").trim()
+  return text
+}
+
+function microStepPrompt(microStep: PlotMicroStep, characterName: string, plot: PlotState): string {
+  const name = characterName || "your character"
+  switch (microStep) {
+    case "theme":
+      return `Ask what kind of story feels fun for ${name} (one short question).`
+    case "setting_place":
+      return `Ask where this story could happen (general place only — not every option listed in the message).`
+    case "setting_detail":
+      return `Ask one small follow-up about WHERE inside that place (room, time of day, corner of the world).`
+    case "conflict_hook":
+      return `Ask what strange or worrying thing ${name} notices at that place (hint only, not the full problem yet).`
+    case "conflict_detail":
+      return `Ask what the real trouble is and why it matters to ${name}.`
+    case "goal_wish":
+      return `Ask what ${name} hopes to do about the trouble (one clear wish).`
+    case "goal_detail":
+      return `Ask one follow-up: how ${name} plans to try, or who they want to help.`
+    case "ready":
+      return `Celebrate briefly in one sentence; invite structure pick. No new questions.`
+    default:
+      return "Ask one friendly follow-up."
+  }
 }
 
 export function buildPlotPhasePromptRules(
   plot: PlotState,
   characterName: string,
   lastStudentMessage: string,
+  userTurnCount: number,
+  microStep: PlotMicroStep,
 ): string {
-  const focus = getPlotFocus(plot)
-  if (focus === "done") {
+  if (microStep === "ready") {
     return (
       `\n[PLOT — ready for structure]\n` +
-      `Warmly wrap up the story idea in one sentence using their setting, problem, and goal.\n` +
-      `Invite them to pick a story structure (cards will appear). Do NOT ask new plot questions.\n` +
+      `One warm sentence wrapping up ${characterName}'s place, trouble, and wish.\n` +
       `suggestions: ["Pick Three Act", "Pick Freytag", "Pick Fichtean"]\n`
     )
   }
 
-  const focusGuide: Record<Exclude<PlotFocus, "done">, string> = {
-    setting:
-      "where and when the story takes place (be specific — not just a theme word like Adventure or Magic)",
-    conflict: "what problem or trouble appears in that place",
-    goal: `what ${characterName} wants to do about that problem`,
-  }
-
-  const saved = buildPlotMemoryForAi(plot)
-  const last = lastStudentMessage.trim() || "(waiting for student)"
+  const saved = [
+    plot.setting?.trim() ? `Place: ${plot.setting}` : null,
+    plot.conflict?.trim() ? `Trouble: ${plot.conflict}` : null,
+    plot.goal?.trim() ? `Wish: ${plot.goal}` : null,
+  ]
+    .filter(Boolean)
+    .join("\n")
 
   return (
-    `\n[PLOT — one step at a time, conversational]\n` +
-    `What you already saved:\n${saved}\n` +
-    `Student's latest message: "${last}"\n` +
-    `Your job THIS turn:\n` +
-    `1) Echo one concrete detail from their latest message (quote a phrase) so they feel heard.\n` +
-    `2) If their latest message answers the piece you were asking about, save ONLY that piece in plot_update (one field max): {"plot_update":{"${focus}":"short summary"}}\n` +
-    `3) Ask ONE warm follow-up question about: ${focusGuide[focus]} — it MUST connect to what they just said (use their place, problem, or theme words).\n` +
-    `4) Do NOT ask about parts already saved above unless you need a tiny clarification.\n` +
-    `5) Do NOT dump Setting/Problem/Goal labels on the student. Do NOT rush — extra clarifying turns are fine.\n` +
-    `6) Do NOT save theme-only replies (Adventure, Magic, etc.) as the setting.\n` +
-    `7) suggestions: 3-4 short answers (2-8 words) that fit YOUR follow-up question and their last message — never "Tell me more", "What happens next?", or "Help me".\n`
+    `\n[PLOT — gradual chat, turn ${userTurnCount}]\n` +
+    (saved ? `Already saved:\n${saved}\n` : "") +
+    `Student just said: "${lastStudentMessage.trim() || "…"}"\n` +
+    `Step now: ${microStep}. ${microStepPrompt(microStep, characterName, plot)}\n` +
+    `Rules:\n` +
+    `- Reply in 2-3 short sentences MAX. Echo one phrase they used.\n` +
+    `- NEVER list or repeat the suggestion button labels in your message (buttons are separate).\n` +
+    `- Do NOT use bullet lists or lines starting with "-" in the reply.\n` +
+    `- Ask only ONE question this turn.\n` +
+    `- plot_update in META only when this step is complete (one field max).\n` +
+    `- suggestions in META only: 3-4 short answers (2-6 words), never "Tell me more" / "Help me".\n`
   )
 }
 
 export function buildPlotSuggestions(
-  focus: PlotFocus,
+  microStep: PlotMicroStep,
   characterName: string,
   plot: PlotState,
   themeHint?: string,
@@ -161,67 +267,50 @@ export function buildPlotSuggestions(
   const name = characterName || "the hero"
   const theme = themeHint?.trim().toLowerCase()
 
-  if (focus === "setting") {
-    const base = [
-      "At school after class",
-      "In a sunny forest",
-      "On a rainy city street",
-      "Inside a cozy treehouse",
-    ]
-    if (theme === "magic") return ["In a magic forest", "At a wizard school", "On a floating island", "Inside a crystal cave"]
-    if (theme === "mystery") return ["In an old library", "On a foggy pier", "At a quiet museum", "In a hidden attic"]
-    if (theme === "funny") return ["At a silly pet shop", "On a bouncy farm", "In a messy kitchen", "At a goofy carnival"]
-    return base
+  if (microStep === "theme") {
+    return ["Adventure", "Magic", "Mystery", "Funny"]
   }
-
-  if (focus === "conflict") {
-    const place = plot.setting?.trim()
-    if (place) {
-      return [
-        `Something goes wrong in ${place.slice(0, 24)}`,
-        `A stranger causes trouble there`,
-        `The weather turns dangerous`,
-        `An old secret causes trouble`,
-      ]
-    }
+  if (microStep === "setting_place") {
+    if (theme === "mystery") return ["Spooky forest", "Old house", "Hidden cave", "Quiet attic"]
+    if (theme === "magic") return ["Magic forest", "Floating school", "Crystal cave", "Cloud city"]
+    return ["Sunny village", "School yard", "By the sea", "Mountain path"]
+  }
+  if (microStep === "setting_detail") {
+    return ["Warm kitchen", "Quiet basement", "Windy rooftop", "Dusty attic"]
+  }
+  if (microStep === "conflict_hook") {
+    return ["Strange sound", "Missing object", "Weird shadow", "Locked door"]
+  }
+  if (microStep === "conflict_detail") {
+    return ["Friend needs help", "Storm is coming", "Secret was stolen", "Trap underground"]
+  }
+  if (microStep === "goal_wish" || microStep === "goal_detail") {
     return [
-      `${name} loses something important`,
-      `A loud storm scares everyone`,
-      `A tricky riddle blocks the way`,
-      `Friends disagree about a plan`,
+      `${name} wants to rescue`,
+      `${name} wants to find clues`,
+      `${name} wants to stay brave`,
+      `${name} wants to fix it`,
     ]
   }
-
-  if (focus === "goal") {
-    const problem = plot.conflict?.trim()
-    if (problem) {
-      return [
-        `${name} tries to solve it`,
-        `${name} asks a friend for help`,
-        `${name} looks for a clue`,
-        `${name} stays brave and keeps going`,
-      ]
-    }
-    return [
-      `${name} wants to fix the problem`,
-      `${name} wants to help a friend`,
-      `${name} wants to find what was lost`,
-      `${name} wants to be brave and try`,
-    ]
-  }
-
   return ["Pick Three Act", "Pick Freytag", "Pick Fichtean"]
 }
 
-export function filterPlotSuggestions(suggestions: string[] | undefined, focus: PlotFocus): string[] {
+export function filterPlotSuggestions(
+  suggestions: string[] | undefined,
+  microStep: PlotMicroStep,
+  characterName: string,
+  plot: PlotState,
+  themeHint?: string,
+): string[] {
   const filtered = (suggestions || [])
     .map((s) => s.trim())
     .filter((s) => s.length > 0 && s.length <= 48)
     .filter((s) => !GENERIC_SUGGESTIONS.has(s.toLowerCase()))
+    .filter((s) => !GENERIC_GOAL_PHRASES.some((re) => re.test(s)))
 
   if (filtered.length >= 2) return filtered.slice(0, 4)
 
-  return buildPlotSuggestions(focus, "the hero", {})
+  return buildPlotSuggestions(microStep, characterName, plot, themeHint)
 }
 
 export function detectThemeFromMessages(studentMessages: string[]): string | undefined {
@@ -235,18 +324,16 @@ export function detectThemeFromMessages(studentMessages: string[]): string | und
 export function buildExplorePromptRules(characterName: string, lastStudentMessage: string): string {
   const last = lastStudentMessage.trim()
   if (last && !isGenericUserReply(last)) {
-    const theme = last.toLowerCase()
     return (
       `\n[EXPLORE — follow their theme]\n` +
-      `They said: "${last}". React to that theme with ${characterName} in mind.\n` +
-      `Ask where this kind of story could happen — one friendly question, not a checklist.\n` +
-      `suggestions: 3-4 places that match "${last}" (2-8 words each). No generic chat buttons.\n`
+      `They said: "${last}". React in one sentence, then ask ONE question about where ${characterName}'s story could begin.\n` +
+      `Do NOT list button labels in the reply. suggestions in META only (3-4 places, 2-6 words).\n`
     )
   }
   return (
     `\n[EXPLORE — story theme]\n` +
-    `Ask what kind of story they want with ${characterName}.\n` +
-    `suggestions: ["Adventure", "Magic", "Mystery", "Funny"] — NOT "Tell me more" or "Help me".\n`
+    `Ask what kind of story they want with ${characterName} (one question).\n` +
+    `suggestions in META only: ["Adventure", "Magic", "Mystery", "Funny"].\n`
   )
 }
 
@@ -263,6 +350,7 @@ export function diffPlotUpdate(
 
 export function finalizePlotFromConversation(
   basePlot: PlotState | null | undefined,
+  progressIn: PlotConversationProgress | undefined,
   metaUpdate: PlotState | null | undefined,
   queryText: string,
   studentMessages: string[],
@@ -270,49 +358,49 @@ export function finalizePlotFromConversation(
   metaSuggestions?: string[],
 ): {
   plot: PlotState
+  plot_progress: PlotConversationProgress
   plot_update: PlotState | null
   plot_complete: boolean
   focus: PlotFocus
   suggestions: string[]
   phase: "explore" | "plot" | "structure"
+  microStep: PlotMicroStep
 } {
-  const focusBefore = getPlotFocus(basePlot)
-  let plot = mergePlotState(basePlot, {})
-  plot = applyMetaUpdateForFocus(plot, metaUpdate, focusBefore)
-  plot = assignUserMessageToFocus(plot, queryText, focusBefore)
-
-  const theme = detectThemeFromMessages(studentMessages)
   const userCount = studentMessages.length
-  const plot_complete = isPlotComplete(plot)
+  const theme = detectThemeFromMessages(studentMessages)
+  let progress = { ...(progressIn || {}) }
+
+  const microStepBefore = getPlotMicroStep(basePlot || {}, userCount, progress)
+  const { plot, progress: nextProgress } = applyProgressivePlotTurn(
+    mergePlotState(basePlot, {}),
+    progress,
+    microStepBefore,
+    queryText,
+    metaUpdate,
+    characterName,
+  )
+  progress = nextProgress
+
+  const microStep = getPlotMicroStep(plot, userCount, progress)
+  const plot_complete = canCompletePlot(plot, userCount)
   const focus = getPlotFocus(plot)
 
   let phase: "explore" | "plot" | "structure" = "plot"
   if (plot_complete) phase = "structure"
   else if (userCount <= 1 && !plot.setting?.trim()) phase = "explore"
 
-  const activeFocus = focus === "done" ? "goal" : focus
-  let suggestions = plot_complete
-    ? buildPlotSuggestions("done", characterName, plot)
-    : filterPlotSuggestions(metaSuggestions, activeFocus)
-
-  if (!plot_complete && suggestions.length < 2) {
-    const built = buildPlotSuggestions(activeFocus, characterName, plot, theme)
-    return {
-      plot,
-      plot_update: diffPlotUpdate(basePlot, plot),
-      plot_complete,
-      focus,
-      suggestions: built,
-      phase,
-    }
-  }
+  const suggestions = plot_complete
+    ? buildPlotSuggestions("ready", characterName, plot)
+    : filterPlotSuggestions(metaSuggestions, microStep, characterName, plot, theme)
 
   return {
     plot,
+    plot_progress: progress,
     plot_update: diffPlotUpdate(basePlot, plot),
     plot_complete,
     focus,
     suggestions,
     phase,
+    microStep,
   }
 }
