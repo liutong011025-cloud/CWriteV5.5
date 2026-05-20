@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server"
 import {
   ArkImageError,
   generateArkImage,
-  MAP_UPDATE_IMAGE_SIZE,
   parseArkErrorMessage,
   resolveArkImageInput,
   truncateArkPrompt,
@@ -63,7 +62,7 @@ function buildMapEditPrompt(params: {
   return [
     "Edit the provided map image. Keep style, palette, hills, rivers, paths, forests, and camera angle.",
     "Preserve at least 95% of pixels unchanged. Do NOT redraw the whole map or change zoom.",
-    `Pin at (${safeMapX}, ${safeMapY}) on a 0–100 grid (top-left origin).`,
+    `Pin at (${safeMapX}, ${safeMapY}) on a 0-100 grid (top-left origin).`,
     "Add only tiny map-scale details in a 2–3% radius patch at the pin: small paths, plants, props, mini buildings.",
     `Topic: ${safeTopic}. Title: ${safeTitle}.`,
     `Hero: ${characterName || "hero"} (${species || "creature"}).`,
@@ -102,6 +101,7 @@ export async function POST(request: NextRequest) {
 
     const baseImage = await resolveArkImageInput(previousMapImageUrl, {
       requestHeaders: request.headers,
+      forceDataUrl: true,
     })
 
     if (!baseImage) {
@@ -140,8 +140,7 @@ export async function POST(request: NextRequest) {
     const result = await generateArkImage({
       prompt: truncateArkPrompt(prompt),
       image: baseImage,
-      size: MAP_UPDATE_IMAGE_SIZE,
-      outputFormat: "png",
+      size: "2K",
       timeoutMs: 120_000,
     })
 
