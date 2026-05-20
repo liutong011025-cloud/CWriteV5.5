@@ -24,35 +24,6 @@ const THEME_ONLY = new Set([
   "school",
 ])
 
-const SETTING_WORDS = new Set([
-  "school",
-  "park",
-  "forest",
-  "beach",
-  "city",
-  "village",
-  "castle",
-  "home",
-  "library",
-  "mountain",
-  "farm",
-  "island",
-  "cave",
-  "ocean",
-  "space",
-  "spaceship",
-  "night",
-  "morning",
-])
-
-const CONFLICT_CUES =
-  /\b(lost|stole|stolen|trapped|stuck|danger|problem|broken|missing|scared|afraid|fight|argue|bully|storm|fire|monster|dragon|thief|noise|dark|sick|can't|cannot|won't|fail)\b/i
-
-const GOAL_CUES =
-  /\b(want|wants|need|needs|hope|hopes|try|tries|find|save|help|protect|escape|win|discover|fix|learn|befriend|return|get back|solve)\b/i
-
-const SETTING_CUES = /\b(in|at|on|inside|near|during|one day|morning|night|forest|school|home|park|beach|city|village|castle)\b/i
-
 export function isPlotComplete(plot: PlotState | null | undefined): boolean {
   const s = plot?.setting?.trim()
   const c = plot?.conflict?.trim()
@@ -113,87 +84,71 @@ export function assignUserMessageToFocus(
   return plot
 }
 
-/** Lightweight scan of all student messages (from dify-plot-summary vocabulary). */
-export function extractPlotFromStudentMessages(studentMessages: string[]): PlotState {
-  const normalizedMessages = studentMessages
-    .map((m) => m.toLowerCase().replace(/[^a-z\s]/g, " ").trim())
-    .map((m) => m.split(/\s+/).filter(Boolean))
-    .filter((words) => words.length > 0)
-
-  let setting = ""
-  let conflict = ""
-  let goal = ""
-
-  for (const words of normalizedMessages) {
-    const line = words.join(" ")
-    if (!setting && (SETTING_CUES.test(line) || words.some((w) => SETTING_WORDS.has(w)))) {
-      const raw = studentMessages.find((m) => m.toLowerCase().includes(words[0])) || line
-      if (raw.length >= 4 && !isGenericUserReply(raw)) setting = normalizePlotField(raw)
-    }
-    if (!conflict && CONFLICT_CUES.test(line)) {
-      const raw = studentMessages.find((m) => CONFLICT_CUES.test(m)) || line
-      if (raw.length >= 4) conflict = normalizePlotField(raw)
-    }
-    if (!goal && GOAL_CUES.test(line)) {
-      const raw = studentMessages.find((m) => GOAL_CUES.test(m)) || line
-      if (raw.length >= 4) goal = normalizePlotField(raw)
-    }
+/** Only accept META plot_update for the one field being discussed this turn. */
+export function applyMetaUpdateForFocus(
+  plot: PlotState,
+  metaUpdate: PlotState | null | undefined,
+  focus: PlotFocus,
+): PlotState {
+  if (!metaUpdate || focus === "done") return plot
+  const next = { ...plot }
+  if (focus === "setting" && metaUpdate.setting?.trim()) {
+    next.setting = normalizePlotField(metaUpdate.setting)
   }
-
-  if (!setting && studentMessages[0] && studentMessages[0].trim().split(/\s+/).length >= 3) {
-    setting = normalizePlotField(studentMessages[0])
+  if (focus === "conflict" && metaUpdate.conflict?.trim()) {
+    next.conflict = normalizePlotField(metaUpdate.conflict)
   }
-  if (!conflict && studentMessages.length >= 2) {
-    const candidate = studentMessages.find((m) => CONFLICT_CUES.test(m) && m.trim().split(/\s+/).length >= 3)
-    if (candidate) conflict = normalizePlotField(candidate)
+  if (focus === "goal" && metaUpdate.goal?.trim()) {
+    next.goal = normalizePlotField(metaUpdate.goal)
   }
-  if (!goal && studentMessages.length >= 2) {
-    const candidate = [...studentMessages].reverse().find((m) => GOAL_CUES.test(m) && m.trim().split(/\s+/).length >= 3)
-    if (candidate) goal = normalizePlotField(candidate)
-  }
-
-  return {
-    setting: setting || undefined,
-    conflict: conflict || undefined,
-    goal: goal || undefined,
-  }
+  return next
 }
 
-export function buildPlotStatusLine(plot: PlotState): string {
-  const mark = (v?: string) => (v?.trim() ? "✓" : "—")
-  return `Setting ${mark(plot.setting)} | Problem ${mark(plot.conflict)} | Goal ${mark(plot.goal)}`
+function buildPlotMemoryForAi(plot: PlotState): string {
+  const lines: string[] = []
+  if (plot.setting?.trim()) lines.push(`Where/when (saved): ${plot.setting}`)
+  if (plot.conflict?.trim()) lines.push(`Problem (saved): ${plot.conflict}`)
+  if (plot.goal?.trim()) lines.push(`Goal (saved): ${plot.goal}`)
+  return lines.length > 0 ? lines.join("\n") : "Nothing saved yet — build from the conversation step by step."
 }
 
 export function buildPlotPhasePromptRules(
   plot: PlotState,
   characterName: string,
-  userTurnCount: number,
+  lastStudentMessage: string,
 ): string {
   const focus = getPlotFocus(plot)
   if (focus === "done") {
     return (
-      `\n[PLOT COMPLETE]\nAll three elements are set. Congratulate briefly and tell the student to choose a story structure (cards will appear).\n` +
-      `Do NOT ask more plot questions. suggestions: ["Pick Three Act", "Pick Freytag", "Pick Fichtean"]\n`
+      `\n[PLOT — ready for structure]\n` +
+      `Warmly wrap up the story idea in one sentence using their setting, problem, and goal.\n` +
+      `Invite them to pick a story structure (cards will appear). Do NOT ask new plot questions.\n` +
+      `suggestions: ["Pick Three Act", "Pick Freytag", "Pick Fichtean"]\n`
     )
   }
 
-  const focusLabels: Record<Exclude<PlotFocus, "done">, string> = {
-    setting: "Setting (where and when does the story happen?)",
-    conflict: "Conflict (what problem or trouble happens?)",
-    goal: `Goal (what does ${characterName} want to do about the problem?)`,
+  const focusGuide: Record<Exclude<PlotFocus, "done">, string> = {
+    setting:
+      "where and when the story takes place (be specific — not just a theme word like Adventure or Magic)",
+    conflict: "what problem or trouble appears in that place",
+    goal: `what ${characterName} wants to do about that problem`,
   }
 
+  const saved = buildPlotMemoryForAi(plot)
+  const last = lastStudentMessage.trim() || "(waiting for student)"
+
   return (
-    `\n[PLOT THREE ELEMENTS — REQUIRED]\n` +
-    `Status: ${buildPlotStatusLine(plot)}\n` +
-    `Ask ONE clear question about ONLY: ${focusLabels[focus]}.\n` +
-    `Do NOT ask about elements already marked ✓.\n` +
-    `Do NOT use generic suggestion buttons like "Tell me more", "What happens next?", or "Help me".\n` +
-    `suggestions MUST be 3-4 short answers (2-6 words each) that directly answer YOUR question.\n` +
-    `When the student's message gives a usable answer, you MUST set plot_update in META, e.g. {"plot_update":{"${focus}":"their words summarized in one short English phrase"}}.\n` +
-    `Keep plot_update values short (under 20 words) but specific.\n` +
-    `Student turn count: ${userTurnCount}. If they already answered in earlier messages, infer from context and fill plot_update — do not make them repeat.\n` +
-    `After confirming one element, immediately ask for the next missing one in the same reply if another is still missing.\n`
+    `\n[PLOT — one step at a time, conversational]\n` +
+    `What you already saved:\n${saved}\n` +
+    `Student's latest message: "${last}"\n` +
+    `Your job THIS turn:\n` +
+    `1) Echo one concrete detail from their latest message (quote a phrase) so they feel heard.\n` +
+    `2) If their latest message answers the piece you were asking about, save ONLY that piece in plot_update (one field max): {"plot_update":{"${focus}":"short summary"}}\n` +
+    `3) Ask ONE warm follow-up question about: ${focusGuide[focus]} — it MUST connect to what they just said (use their place, problem, or theme words).\n` +
+    `4) Do NOT ask about parts already saved above unless you need a tiny clarification.\n` +
+    `5) Do NOT dump Setting/Problem/Goal labels on the student. Do NOT rush — extra clarifying turns are fine.\n` +
+    `6) Do NOT save theme-only replies (Adventure, Magic, etc.) as the setting.\n` +
+    `7) suggestions: 3-4 short answers (2-8 words) that fit YOUR follow-up question and their last message — never "Tell me more", "What happens next?", or "Help me".\n`
   )
 }
 
@@ -220,16 +175,33 @@ export function buildPlotSuggestions(
   }
 
   if (focus === "conflict") {
-    const where = plot.setting ? ` near ${plot.setting.slice(0, 30)}` : ""
+    const place = plot.setting?.trim()
+    if (place) {
+      return [
+        `Something goes wrong in ${place.slice(0, 24)}`,
+        `A stranger causes trouble there`,
+        `The weather turns dangerous`,
+        `An old secret causes trouble`,
+      ]
+    }
     return [
       `${name} loses something important`,
-      `A loud storm scares everyone${where}`,
+      `A loud storm scares everyone`,
       `A tricky riddle blocks the way`,
       `Friends disagree about a plan`,
     ]
   }
 
   if (focus === "goal") {
+    const problem = plot.conflict?.trim()
+    if (problem) {
+      return [
+        `${name} tries to solve it`,
+        `${name} asks a friend for help`,
+        `${name} looks for a clue`,
+        `${name} stays brave and keeps going`,
+      ]
+    }
     return [
       `${name} wants to fix the problem`,
       `${name} wants to help a friend`,
@@ -260,12 +232,21 @@ export function detectThemeFromMessages(studentMessages: string[]): string | und
   return undefined
 }
 
-export function buildExplorePromptRules(characterName: string): string {
+export function buildExplorePromptRules(characterName: string, lastStudentMessage: string): string {
+  const last = lastStudentMessage.trim()
+  if (last && !isGenericUserReply(last)) {
+    const theme = last.toLowerCase()
+    return (
+      `\n[EXPLORE — follow their theme]\n` +
+      `They said: "${last}". React to that theme with ${characterName} in mind.\n` +
+      `Ask where this kind of story could happen — one friendly question, not a checklist.\n` +
+      `suggestions: 3-4 places that match "${last}" (2-8 words each). No generic chat buttons.\n`
+    )
+  }
   return (
     `\n[EXPLORE — story theme]\n` +
     `Ask what kind of story they want with ${characterName}.\n` +
-    `suggestions MUST be story themes only: ["Adventure", "Magic", "Mystery", "Funny"] — NOT "Tell me more" or "Help me".\n` +
-    `After they pick a theme, ask where the story happens (first plot question).\n`
+    `suggestions: ["Adventure", "Magic", "Mystery", "Funny"] — NOT "Tell me more" or "Help me".\n`
   )
 }
 
@@ -296,9 +277,9 @@ export function finalizePlotFromConversation(
   phase: "explore" | "plot" | "structure"
 } {
   const focusBefore = getPlotFocus(basePlot)
-  let plot = mergePlotState(basePlot, metaUpdate)
+  let plot = mergePlotState(basePlot, {})
+  plot = applyMetaUpdateForFocus(plot, metaUpdate, focusBefore)
   plot = assignUserMessageToFocus(plot, queryText, focusBefore)
-  plot = mergePlotState(plot, extractPlotFromStudentMessages(studentMessages))
 
   const theme = detectThemeFromMessages(studentMessages)
   const userCount = studentMessages.length
