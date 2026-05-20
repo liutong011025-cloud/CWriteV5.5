@@ -3,6 +3,7 @@ import {
   ArkImageError,
   generateArkImage,
   MAP_UPDATE_IMAGE_SIZE,
+  parseArkErrorMessage,
   resolveArkImageInput,
   truncateArkPrompt,
 } from "@/lib/ark-images"
@@ -155,13 +156,12 @@ export async function POST(request: NextRequest) {
     })
     if (error instanceof ArkImageError) {
       const detail = error.detail || ""
+      const arkMsg = parseArkErrorMessage(detail)
       const userMessage =
-        error.status === 400 && /invalid|size|pixel|parameter/i.test(detail)
-          ? "Map image settings were rejected by the image service. Your map was not changed — try again in a moment."
-          : error.status === 400
-            ? "Could not edit the map image right now. Your previous map is unchanged."
-            : "Map update failed. Your previous map is unchanged."
-      console.error("[map-update] Ark detail:", detail.slice(0, 800))
+        error.status === 400
+          ? `Map edit was rejected by the image API${arkMsg ? ` (${arkMsg})` : ""}. Your previous map is unchanged.`
+          : "Map update failed. Your previous map is unchanged."
+      console.error("[map-update] Ark detail:", arkMsg || detail.slice(0, 800))
       return NextResponse.json(
         {
           error: "map_unavailable",
