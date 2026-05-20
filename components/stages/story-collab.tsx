@@ -10,7 +10,9 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { getCurrentLevel } from "@/lib/current-level"
+import type { StoryRevisionTag } from "@/lib/story-revision-tags"
 import { cn } from "@/lib/utils"
+import StoryRevisionTags from "@/components/stages/story-revision-tags"
 
 /* ── Types ───────────────────────────────────────────── */
 
@@ -42,6 +44,8 @@ interface CollabMessage {
   suggestions?: string[]
   storySnippet?: string | null
   structureCards?: boolean
+  revisionTags?: StoryRevisionTag[]
+  sectionPassed?: boolean
 }
 
 interface CollabApiResponse {
@@ -51,6 +55,8 @@ interface CollabApiResponse {
   story_snippet: string | null
   plot_update: { setting?: string; conflict?: string; goal?: string } | null
   structure_suggestion: string | null
+  revision_tags?: StoryRevisionTag[]
+  section_passed?: boolean
   error?: string
   message?: string
 }
@@ -114,6 +120,7 @@ function detectAdvanceNextSectionSignal(answer: string): boolean {
   const t = answer.trim()
   if (!t) return false
   return (
+    /\byou can move on to the next part of your writing!/i.test(t) ||
     /\byou can move to the next section\b/i.test(t) ||
     /\byou may move to the next section\b/i.test(t) ||
     /\byou'?re ready to move to the next section\b/i.test(t) ||
@@ -135,6 +142,7 @@ function detectLastSectionGreatJobSignal(answer: string): boolean {
 function stripAdvanceNextSectionPhrases(text: string): string {
   let t = text
   const removals: RegExp[] = [
+    /\n*You can move on to the next part of your writing!\.?\s*$/i,
     /\n*You can move to the next section\.?\s*$/i,
     /\n*You may move to the next section\.?\s*$/i,
     /\n*You'?re ready to move to the next section\.?\s*$/i,
@@ -477,8 +485,9 @@ export default function StoryCollab({
         }
 
         const rawAnswer = data.answer || ""
+        const sectionPassed = !!data.section_passed || detectAdvanceNextSectionSignal(rawAnswer)
         if (
-          detectAdvanceNextSectionSignal(rawAnswer) &&
+          sectionPassed &&
           selectedStructure &&
           storyBlocks.length > 0 &&
           currentWritingSection < storyBlocks.length - 1
@@ -492,7 +501,7 @@ export default function StoryCollab({
         }
 
         if (
-          detectLastSectionGreatJobSignal(rawAnswer) &&
+          (sectionPassed || detectLastSectionGreatJobSignal(rawAnswer)) &&
           selectedStructure &&
           storyBlocks.length > 0 &&
           currentWritingSection === storyBlocks.length - 1
@@ -518,6 +527,8 @@ export default function StoryCollab({
           suggestions: data.suggestions,
           storySnippet: data.story_snippet,
           structureCards: showStructureCards,
+          revisionTags: data.revision_tags?.length ? data.revision_tags : undefined,
+          sectionPassed: data.section_passed,
         }
         setMessages((prev) => [...prev, aiMsg])
 
@@ -982,6 +993,19 @@ export default function StoryCollab({
                               {msg.content}
                             </p>
 
+                            {msg.role === "assistant" && msg.revisionTags && msg.revisionTags.length > 0 && (
+                              <StoryRevisionTags tags={msg.revisionTags} />
+                            )}
+
+                            {msg.role === "assistant" && msg.sectionPassed && (
+                              <p
+                                className="mt-2 text-sm font-bold"
+                                style={{ color: "#3d5a1f" }}
+                              >
+                                ✓ This part looks good — you can move on when you are ready!
+                              </p>
+                            )}
+
                             {/* Suggestion pills */}
                             {msg.role === "assistant" && msg.suggestions && msg.suggestions.length > 0 && (
                               <div className="mt-3 flex flex-wrap gap-2">
@@ -1083,8 +1107,8 @@ export default function StoryCollab({
                             placeholder={
                               currentWritingSection < storyBlocks.length
                                 ? currentWritingSection === storyBlocks.length - 1
-                                  ? `Last part (${storyBlocks[currentWritingSection].sectionName}): Finish! to chat. When the AI says Great job!, tap Continue to put it on the right — Finish Story only counts text saved in the editor.`
-                                  : `Write your ${storyBlocks[currentWritingSection].sectionName} in the pad… Tap Finish! to chat with the AI (text stays here). Ctrl+Enter = Finish!`
+                                  ? `Last part (${storyBlocks[currentWritingSection].sectionName}): Finish! to submit. Fix the colored tags, then Finish! again. When you see the green check, tap Continue.`
+                                  : `Write your ${storyBlocks[currentWritingSection].sectionName} in the pad… Tap Finish! to get revision tags (hover / tap each tag). Revise and Finish! again until you can go to the next section.`
                                 : "Write the ending touch for your story..."
                             }
                             disabled={isLoading}
