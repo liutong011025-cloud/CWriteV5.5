@@ -64,10 +64,13 @@ export default function StoryRevisionTags({ tags, className }: StoryRevisionTags
             boxShadow: "4px 4px 0 rgba(0,0,0,0.14)",
           }}
         >
-          <p className="text-sm font-extrabold uppercase tracking-wide mb-2" style={{ color: "#6b5210" }}>
+          <p className="text-sm font-extrabold uppercase tracking-wide mb-1" style={{ color: "#6b5210" }}>
             Why change this?
           </p>
-          <p className="text-lg">{tags[openIndex].rationale}</p>
+          <p className="text-base font-bold mb-2" style={{ color: REVISION_TAG_COLOR_STYLES[tags[openIndex].color].text }}>
+            {tags[openIndex].label}
+          </p>
+          <p className="text-lg leading-relaxed whitespace-pre-wrap">{tags[openIndex].rationale}</p>
         </div>
       )}
     </div>
