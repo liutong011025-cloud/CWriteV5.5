@@ -173,7 +173,12 @@ export function evaluateStorySection(
 
   const uniqueReasons = [...new Set(reasons)].slice(0, 4)
   const uniqueTips = [...new Set(tips)].slice(0, 4)
-  const revisionTags = pass ? [] : tipsToRevisionTags(uniqueTips.length > 0 ? uniqueTips : uniqueReasons, level)
+  const revisionTags = pass
+    ? []
+    : tipsToRevisionTags(uniqueTips.length > 0 ? uniqueTips : uniqueReasons, level, {
+        sectionName,
+        characterName: character?.name || "your hero",
+      })
 
   return {
     pass,
