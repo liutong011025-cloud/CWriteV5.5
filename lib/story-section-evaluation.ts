@@ -109,21 +109,26 @@ function scoreSectionBeat(text: string, sectionName: string): { score: number; r
   }
 
   if (s.includes("confront") || s.includes("rising") || s.includes("crisis")) {
-    let score = 15
+    let score = 20
     if (
       includesAny(t, [
         /\bstorm\b/, /\brain\b/, /\bthunder\b/, /\bdanger\b/, /\btrouble\b/, /\bproblem\b/,
-        /\bafraid\b/, /\bscared\b/, /\blost\b/, /\bfog\b/, /\bdark\b/, /\bhowever\b/,
+        /\bafraid\b/, /\bscared\b/, /\blost\b/, /\bmissing\b/, /\bfog\b/, /\bdark\b/, /\bhowever\b/,
         /\bbut suddenly\b/, /\bsuddenly\b/, /\bbird\b/, /\bsteal\b/, /\bstole\b/, /\bsnack\b/,
         /\bfunny\b/, /\bsilly\b/, /\boops\b/, /\blaugh\b/, /\boh no\b/, /\bworried\b/,
         /\bstrange\b/, /\bvoice\b/, /\bhear\b/, /\bheard\b/, /\btalking\b/, /\bcave\b/, /\bdoorway\b/,
+        /\bclue\b/, /\bclues\b/, /\bfootprint\b/, /\bfollow\b/, /\bfind\b/, /\bfound\b/, /\bsearch\b/,
+        /\blook\b/, /\blooked\b/, /\bcheck\b/, /\bchecked\b/, /\bsee\b/, /\bsaw\b/, /\bhidden\b/,
+        /\bgoal\b/, /\bobject\b/, /\bbear\b/, /\bhair\b/, /\bhairs\b/, /\bdusty\b/, /\bstone\b/,
       ])
     ) {
       score += 40
-    } else if (includesAny(t, [/\bbut\b/, /\bhowever\b/, /\bthen\b/, /\bone day\b/]) && t.length >= 25) {
-      score += 25
+    } else if (includesAny(t, [/\bbut\b/, /\bhowever\b/, /\bthen\b/, /\bwhen\b/, /\balso\b/]) && t.length >= 25) {
+      score += 28
+    } else if (t.length >= 40) {
+      score += 22
     } else {
-      reasons.push("hint at what goes wrong or gets tricky in this part")
+      reasons.push("add a little more action or detail for this part of the story")
     }
     if (
       includesAny(t, [/\bevery day\b/, /\balways feel happy\b/, /\bfull of color and laugh\b/]) &&
@@ -153,7 +158,29 @@ function scoreSectionBeat(text: string, sectionName: string): { score: number; r
     return { score, reasons }
   }
 
-  return { score: 25, reasons }
+  return { score: 32, reasons: [] }
+}
+
+/** True when the draft is clearly real story prose (not empty / gibberish). */
+export function draftHasSubstantiveStoryContent(
+  text: string,
+  characterName?: string,
+): boolean {
+  const trimmed = text.trim()
+  if (wordCount(trimmed) < MIN_SECTION_WORD_COUNT) return false
+  if (finishedSentenceCount(trimmed) < 2) return false
+
+  const t = trimmed.toLowerCase()
+  const hero = (characterName || "").trim().toLowerCase()
+  if (hero.length >= 2 && t.includes(hero)) return true
+
+  return includesAny(t, [
+    /\bfind\b/, /\bfound\b/, /\blook\b/, /\blooked\b/, /\bsee\b/, /\bsaw\b/, /\bcheck\b/, /\bchecked\b/,
+    /\bfollow\b/, /\bclue\b/, /\bclues\b/, /\bfootprint\b/, /\bmissing\b/, /\blost\b/, /\bgoal\b/,
+    /\bwent\b/, /\bwalk\b/, /\brun\b/, /\bcave\b/, /\bforest\b/, /\bhome\b/, /\bschool\b/,
+    /\bbut\b/, /\bhowever\b/, /\bthen\b/, /\bwhen\b/, /\bsuddenly\b/, /\btry\b/, /\bwant\b/,
+    /\bher\b/, /\bhis\b/, /\bthey\b/, /\bshe\b/, /\bhe\b/,
+  ])
 }
 
 /** Same story as plot plan — any plot anchor counts; do not require setting+conflict+goal in one section. */
@@ -185,6 +212,10 @@ function plotStoryCoherence(
     if (phrase.length >= 6 && textLower.includes(phrase.slice(0, Math.min(phrase.length, 24)))) {
       return { ok: true }
     }
+  }
+
+  if (draftHasSubstantiveStoryContent(text, characterName)) {
+    return { ok: true }
   }
 
   if (wordCount(text) >= MIN_SECTION_WORD_COUNT) {
@@ -224,8 +255,10 @@ export function evaluateStorySection(
   }
 
   const beat = scoreSectionBeat(trimmed, sectionName)
-  const structureOk = beat.score >= 28
-  if (!structureOk) {
+  const structureOk =
+    beat.score >= 28 ||
+    (draftHasSubstantiveStoryContent(trimmed, characterName) && beat.score >= 20)
+  if (!structureOk && beat.reasons.length > 0) {
     reasons.push(...beat.reasons)
   }
 
@@ -289,6 +322,7 @@ export function evaluateStorySection(
           sectionName,
           characterName: character?.name || "your hero",
           maxTags: tagBounds.max,
+          draftText: trimmed,
         })
       : []
 
