@@ -67,7 +67,7 @@ function scoreSectionBeat(text: string, sectionName: string): { score: number; r
     } else {
       reasons.push("this part needs the problem or danger to start (storm, trouble, fear, etc.)")
     }
-    if (includesAny(t, [/\bevery day\b/, /\balways feel happy\b/, /\bfull of color and laugh\b/, /\bplay with\b]) &&
+    if (includesAny(t, [/\bevery day\b/, /\balways feel happy\b/, /\bfull of color and laugh\b/, /\bplay with\b/]) &&
       !includesAny(t, [/\bstorm\b/, /\brain\b/, /\bthunder\b/, /\btrouble\b/, /\bdanger\b/, /\bproblem\b/])) {
       score -= 40
       reasons.push("this sounds like the happy beginning — write what goes wrong when trouble begins")
