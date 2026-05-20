@@ -102,7 +102,7 @@ export default function JourneyTicket({
       >
         {onBack && <BackButton onClick={onBack} variant="purple" aria-label="Back to Map" />}
 
-        <div className="mb-6 md:mb-8 text-center max-w-4xl mx-auto">
+        <div className="mb-4 md:mb-5 text-center max-w-4xl mx-auto">
           <h1
             className="text-3xl md:text-4xl xl:text-5xl font-black mb-2 pixel-title"
             style={{ color: "#8b6914", textShadow: "3px 3px 0 #6b5210, 4px 4px 0 rgba(0,0,0,0.15)" }}
@@ -114,7 +114,7 @@ export default function JourneyTicket({
           </p>
         </div>
 
-        <div className="max-w-6xl mx-auto">
+        <div className="max-w-[min(100%,92rem)] mx-auto">
           <div
             className={`relative overflow-hidden ${isDeparting ? "animate-ticket-tear" : ""}`}
             style={{
@@ -126,7 +126,7 @@ export default function JourneyTicket({
           >
             {/* Header strip */}
             <div
-              className="flex items-center justify-between gap-4 px-5 md:px-8 py-4 md:py-5 border-b-4"
+              className="flex items-center justify-between gap-3 px-4 md:px-6 py-2 md:py-2.5 border-b-4"
               style={{ borderColor: TICKET.border, background: "rgba(255,253,246,0.85)" }}
             >
               <div className="flex flex-wrap items-center gap-3 md:gap-4">
@@ -185,20 +185,20 @@ export default function JourneyTicket({
               </div>
             )}
 
-            {/* Unified body: journey strip + perforation + main */}
-            <div className="flex flex-col md:flex-row">
-              {/* Left stub — journey types (part of ticket) */}
+            {/* Unified body: long horizontal boarding pass */}
+            <div className="flex flex-col md:flex-row md:items-stretch">
+              {/* Left stub — journey types in a row on desktop */}
               <div
-                className="md:w-[188px] xl:w-[210px] shrink-0 p-4 md:p-5 flex flex-col gap-3.5"
-                style={{ background: TICKET.stub, borderBottom: "4px dashed", borderColor: TICKET.perforation }}
+                className="shrink-0 p-3 md:py-3 md:px-4 flex flex-col md:flex-row md:items-center gap-2 md:gap-3 border-b-4 md:border-b-0 md:border-r-4 border-dashed"
+                style={{ background: TICKET.stub, borderColor: TICKET.perforation }}
               >
                 <p
-                  className="text-lg md:text-xl uppercase tracking-widest font-bold pixel-text text-center"
+                  className="text-lg md:text-xl uppercase tracking-widest font-bold pixel-text text-center md:text-left md:shrink-0 md:w-[7.5rem] leading-tight"
                   style={{ color: TICKET.label }}
                 >
                   Pick Journey
                 </p>
-                <div className="flex flex-row md:flex-col gap-2.5 w-full overflow-x-auto md:overflow-visible pb-1 md:pb-0">
+                <div className="flex flex-row gap-1.5 md:gap-2 w-full overflow-x-auto md:overflow-visible pb-1 md:pb-0 md:flex-1">
                   {journeyOptions.map((option, idx) => {
                     const isSelected = selectedType === option.id
                     return (
@@ -215,11 +215,11 @@ export default function JourneyTicket({
                           setDragOver(false)
                         }}
                         onClick={() => selectType(option.id)}
-                        className="flex-1 md:flex-none min-w-[96px] md:min-w-0 cursor-pointer transition-all pixel-btn"
+                        className="flex-1 md:flex-none min-w-[72px] cursor-pointer transition-all pixel-btn"
                         style={{
                           background: option.accent,
                           borderColor: option.border,
-                          padding: "10px 12px",
+                          padding: "6px 8px",
                           transform: isSelected ? "translate(-2px, -2px)" : undefined,
                           boxShadow: isSelected
                             ? `inset -2px -2px 0 rgba(0,0,0,0.2), inset 2px 2px 0 rgba(255,255,255,0.35), 4px 4px 0 rgba(0,0,0,0.25), 0 0 0 3px ${TICKET.accent}`
@@ -227,7 +227,7 @@ export default function JourneyTicket({
                           animation: !isSelected ? `pixel-bounce 2s ease-in-out infinite ${idx * 0.12}s` : undefined,
                         }}
                       >
-                        <div className="flex md:flex-col items-center justify-center gap-1.5">
+                        <div className="flex flex-col items-center justify-center gap-0.5">
                           <span className="text-xl md:text-2xl leading-none" style={{ imageRendering: "pixelated" }}>
                             {option.icon}
                           </span>
@@ -240,20 +240,23 @@ export default function JourneyTicket({
                   })}
                 </div>
                 <div
-                  className="p-2.5 md:p-3 text-center"
+                  className="hidden md:block shrink-0 p-2 text-center max-w-[7rem] leading-tight"
                   style={{
                     background: "#fffdf6",
                     border: `3px dashed ${TICKET.label}`,
                     boxShadow: "inset 2px 2px 0 #fff",
                   }}
                 >
-                  <p className="text-sm md:text-base font-extrabold pixel-text leading-snug" style={{ color: TICKET.label }}>
-                    Drag to stamp →
+                  <p className="text-sm md:text-base font-extrabold pixel-text" style={{ color: TICKET.label }}>
+                    Drag → stamp
                   </p>
-                  <p className="text-xs md:text-sm font-semibold pixel-text mt-1" style={{ color: TICKET.muted }}>
-                    or tap a type
+                  <p className="text-xs md:text-sm font-semibold pixel-text" style={{ color: TICKET.muted }}>
+                    or tap
                   </p>
                 </div>
+                <p className="md:hidden text-center text-xs font-semibold pixel-text" style={{ color: TICKET.muted }}>
+                  Drag to stamp or tap a type
+                </p>
               </div>
 
               {/* Perforation */}
@@ -273,11 +276,11 @@ export default function JourneyTicket({
                 />
               </div>
 
-              {/* Main ticket body */}
-              <div className="flex-1 p-6 md:p-8 md:pl-7 min-w-0">
-                <div className="grid sm:grid-cols-3 gap-6 md:gap-8 mb-6 md:mb-8">
+              {/* Main ticket body — compact horizontal bands */}
+              <div className="flex-1 min-w-0 flex flex-col justify-center gap-2 md:gap-2.5 p-3 md:px-5 md:py-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-5">
                   <div>
-                    <p className="text-base md:text-lg uppercase tracking-widest font-bold pixel-text mb-1.5" style={{ color: TICKET.label }}>
+                    <p className="text-base md:text-lg uppercase tracking-widest font-bold pixel-text mb-0.5" style={{ color: TICKET.label }}>
                       Passenger
                     </p>
                     <p className="text-2xl md:text-3xl xl:text-4xl font-bold pixel-text truncate leading-tight" style={{ color: TICKET.value }}>
@@ -285,13 +288,13 @@ export default function JourneyTicket({
                     </p>
                   </div>
                   <div>
-                    <p className="text-base md:text-lg uppercase tracking-widest font-bold pixel-text mb-1.5" style={{ color: TICKET.label }}>
+                    <p className="text-base md:text-lg uppercase tracking-widest font-bold pixel-text mb-0.5" style={{ color: TICKET.label }}>
                       Writing Level
                     </p>
                     <p className="text-2xl md:text-3xl xl:text-4xl font-bold pixel-text leading-tight" style={{ color: TICKET.accent }}>
                       Level {level}
                     </p>
-                    <div className="flex items-center gap-2 flex-wrap mt-2">
+                    <div className="flex items-center gap-2 flex-wrap mt-0.5">
                       <p className="text-base md:text-lg pixel-text font-semibold" style={{ color: TICKET.muted }}>
                         Score {score}/7
                       </p>
@@ -307,7 +310,7 @@ export default function JourneyTicket({
                     </div>
                   </div>
                   <div>
-                    <p className="text-base md:text-lg uppercase tracking-widest font-bold pixel-text mb-1.5" style={{ color: TICKET.label }}>
+                    <p className="text-base md:text-lg uppercase tracking-widest font-bold pixel-text mb-0.5" style={{ color: TICKET.label }}>
                       Journey
                     </p>
                     <p className="text-2xl md:text-3xl xl:text-4xl font-bold pixel-text leading-tight" style={{ color: TICKET.value }}>
@@ -316,43 +319,49 @@ export default function JourneyTicket({
                   </div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-4 md:gap-5 mb-6 md:mb-8">
-                  {[
-                    ["Flight", "YL-2024"],
-                    ["Gate", "LUNA"],
-                    ["Seat", "A1"],
-                  ].map(([label, val]) => (
-                    <div
-                      key={label}
-                      className="p-4 md:p-5 text-center"
-                      style={{
-                        background: "#fffdf6",
-                        border: `3px solid ${TICKET.border}`,
-                        boxShadow: "inset 2px 2px 0 #fff, 2px 2px 0 rgba(0,0,0,0.08)",
-                      }}
-                    >
-                      <p className="text-sm md:text-base uppercase tracking-widest font-bold mb-1.5" style={{ color: TICKET.label }}>
-                        {label}
-                      </p>
-                      <p className="text-xl md:text-2xl xl:text-3xl font-bold pixel-text leading-tight" style={{ color: TICKET.value }}>
-                        {val}
-                      </p>
-                    </div>
-                  ))}
-                </div>
+                <div
+                  className="flex flex-col xl:flex-row xl:items-center gap-2 md:gap-3 pt-2 border-t-2 md:border-t-0 md:pt-0"
+                  style={{ borderColor: TICKET.perforation }}
+                >
+                  <div className="grid grid-cols-3 gap-2 md:gap-3 shrink-0 xl:max-w-[340px]">
+                    {[
+                      ["Flight", "YL-2024"],
+                      ["Gate", "LUNA"],
+                      ["Seat", "A1"],
+                    ].map(([label, val]) => (
+                      <div
+                        key={label}
+                        className="p-2 md:p-3 text-center"
+                        style={{
+                          background: "#fffdf6",
+                          border: `3px solid ${TICKET.border}`,
+                          boxShadow: "inset 2px 2px 0 #fff, 2px 2px 0 rgba(0,0,0,0.08)",
+                        }}
+                      >
+                        <p className="text-sm md:text-base uppercase tracking-widest font-bold mb-0.5" style={{ color: TICKET.label }}>
+                          {label}
+                        </p>
+                        <p className="text-xl md:text-2xl xl:text-3xl font-bold pixel-text leading-tight" style={{ color: TICKET.value }}>
+                          {val}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
 
-                <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 lg:items-stretch">
-                  <div className="flex-1 min-w-0 flex flex-col">
-                    <p className="text-sm md:text-base uppercase tracking-widest font-bold mb-3 pixel-text" style={{ color: TICKET.label }}>
+                  <div className="flex-1 min-w-0 flex flex-col md:flex-row md:flex-wrap md:items-center gap-2 md:gap-3">
+                    <p
+                      className="text-sm md:text-base uppercase tracking-widest font-bold pixel-text shrink-0 md:mr-1"
+                      style={{ color: TICKET.label }}
+                    >
                       Choose Difficulty
                     </p>
-                    <div className="flex flex-wrap gap-2.5 md:gap-3">
+                    <div className="flex flex-wrap gap-2">
                       {[1, 2, 3, 4, 5].map((value) => (
                         <button
                           key={value}
                           type="button"
                           onClick={() => setDifficulty(value)}
-                          className={`min-w-[48px] px-5 py-2.5 md:px-6 md:py-3 font-bold text-base md:text-lg transition-all pixel-btn ${
+                          className={`min-w-[44px] px-4 py-2 md:px-5 md:py-2.5 font-bold text-base md:text-lg transition-all pixel-btn ${
                             difficulty === value ? "pixel-btn-green pixel-selected" : "pixel-btn-wood"
                           }`}
                         >
@@ -361,94 +370,107 @@ export default function JourneyTicket({
                       ))}
                     </div>
                     {notice && (
-                      <p className="mt-3 text-sm md:text-base font-semibold pixel-text leading-relaxed" style={{ color: "#a58b3d" }}>
+                      <p className="w-full md:w-auto md:flex-1 text-sm md:text-base font-semibold pixel-text leading-snug" style={{ color: "#a58b3d" }}>
                         {notice}
                       </p>
                     )}
-
-                    <div className="mt-5 md:mt-6 pt-4 border-t-4" style={{ borderColor: TICKET.perforation }}>
+                    <div className="w-full md:w-auto md:ml-auto shrink-0">
                       <Button
                         onClick={handleStart}
                         size="lg"
                         disabled={!selectedType || !difficulty}
-                        className="w-full pixel-btn pixel-btn-green text-lg md:text-xl xl:text-2xl font-bold py-4 md:py-5 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="w-full md:w-auto min-w-[140px] pixel-btn pixel-btn-green text-lg md:text-xl xl:text-2xl font-bold py-3 md:py-3.5 px-6 disabled:opacity-50 disabled:cursor-not-allowed"
                         style={{ borderRadius: 0, textShadow: "2px 2px 0 rgba(0,0,0,0.3)" }}
                       >
                         ✈️ Start
                       </Button>
                       {(!selectedType || !difficulty) && (
-                        <p className="mt-2 text-center text-sm md:text-base font-semibold pixel-text" style={{ color: TICKET.muted }}>
+                        <p className="mt-1 text-center md:text-right text-sm md:text-base font-semibold pixel-text" style={{ color: TICKET.muted }}>
                           {!selectedType ? "Pick a journey type and stamp it" : "Choose a difficulty level"}
                         </p>
                       )}
                     </div>
                   </div>
+                </div>
+              </div>
 
-                  {/* Tear-off stub: barcode + stamp drop */}
+              {/* Perforation before tear-off stub */}
+              <div
+                className="hidden md:flex flex-col items-center justify-center w-3 shrink-0 relative"
+                style={{ background: TICKET.paper }}
+                aria-hidden
+              >
+                <div
+                  className="absolute -left-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full"
+                  style={{ background: "#87ceeb", border: `3px solid ${TICKET.border}` }}
+                />
+                <div className="h-full w-0 border-l-4 border-dashed" style={{ borderColor: TICKET.perforation }} />
+                <div
+                  className="absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full"
+                  style={{ background: "#87ceeb", border: `3px solid ${TICKET.border}` }}
+                />
+              </div>
+
+              {/* Tear-off stub: barcode + stamp */}
+              <div
+                className="shrink-0 p-3 md:py-3 md:px-4 flex flex-row md:flex-col items-center justify-center gap-3 md:gap-2 border-t-4 md:border-t-0 md:border-l-4 border-dashed"
+                style={{ background: TICKET.stub, borderColor: TICKET.perforation }}
+              >
+                <div className="flex-1 md:flex-none text-center min-w-0">
+                  <p className="text-xs md:text-sm uppercase tracking-widest font-bold mb-1" style={{ color: TICKET.label }}>
+                    Boarding
+                  </p>
                   <div
-                    className="lg:w-[220px] xl:w-[240px] shrink-0 p-4 md:p-5 flex flex-row lg:flex-col items-center justify-center gap-5"
+                    className="h-8 md:h-10 mx-auto max-w-[120px]"
                     style={{
-                      background: TICKET.stub,
-                      border: `4px dashed ${TICKET.label}`,
+                      background: `repeating-linear-gradient(90deg, ${TICKET.value} 0px, ${TICKET.value} 3px, transparent 3px, transparent 6px)`,
+                    }}
+                  />
+                  <p className="mt-1 text-xs uppercase tracking-widest font-bold" style={{ color: TICKET.label }}>
+                    Code
+                  </p>
+                  <p className="text-sm md:text-base font-bold pixel-text" style={{ color: TICKET.value }}>
+                    CW-LUNA
+                  </p>
+                </div>
+
+                <div className="flex flex-col items-center shrink-0">
+                  <p className="text-sm md:text-base uppercase tracking-widest font-extrabold mb-1.5 pixel-text text-center" style={{ color: TICKET.label }}>
+                    Stamp Here
+                  </p>
+                  <div
+                    className={`w-[80px] h-[80px] md:w-[84px] md:h-[84px] flex items-center justify-center text-center text-sm md:text-base font-bold transition-all ${
+                      dragOver || isDragging ? "pixel-selected" : selectedType ? "" : "pixel-bounce"
+                    }`}
+                    style={{
+                      background: selectedType ? TICKET.accent : "#fffdf6",
+                      border: `4px dashed ${dragOver || isDragging ? TICKET.accent : TICKET.label}`,
+                      color: selectedType ? "#fff" : TICKET.label,
+                      boxShadow: dragOver
+                        ? "0 0 0 4px rgba(90,154,50,0.4)"
+                        : "inset 2px 2px 0 rgba(255,255,255,0.8)",
+                    }}
+                    onDragOver={(e) => {
+                      e.preventDefault()
+                      e.dataTransfer.dropEffect = "move"
+                      if (!dragOver) setDragOver(true)
+                    }}
+                    onDragLeave={() => setDragOver(false)}
+                    onDragEnter={() => setIsDragging(true)}
+                    onDrop={(e) => {
+                      e.preventDefault()
+                      setIsDragging(false)
+                      const id = e.dataTransfer.getData("text/plain") as JourneyType
+                      if (id) handleDropType(id)
                     }}
                   >
-                    <div className="flex-1 lg:flex-none w-full text-center">
-                      <p className="text-xs md:text-sm uppercase tracking-widest font-bold mb-2" style={{ color: TICKET.label }}>
-                        Boarding
-                      </p>
-                      <div
-                        className="h-12 md:h-14 mx-auto max-w-[200px]"
-                        style={{
-                          background: `repeating-linear-gradient(90deg, ${TICKET.value} 0px, ${TICKET.value} 3px, transparent 3px, transparent 6px)`,
-                        }}
-                      />
-                      <p className="mt-2 text-xs uppercase tracking-widest font-bold" style={{ color: TICKET.label }}>
-                        Code
-                      </p>
-                      <p className="text-sm md:text-base font-bold pixel-text" style={{ color: TICKET.value }}>
-                        CW-LUNA
-                      </p>
-                    </div>
-
-                    <div className="flex flex-col items-center w-full">
-                      <p className="text-sm md:text-base uppercase tracking-widest font-extrabold mb-3 pixel-text text-center" style={{ color: TICKET.label }}>
-                        Stamp Here
-                      </p>
-                      <div
-                        className={`w-[88px] h-[88px] md:w-24 md:h-24 flex items-center justify-center text-center text-sm md:text-base font-bold transition-all ${
-                          dragOver || isDragging ? "pixel-selected" : selectedType ? "" : "pixel-bounce"
-                        }`}
-                        style={{
-                          background: selectedType ? TICKET.accent : "#fffdf6",
-                          border: `4px dashed ${dragOver || isDragging ? TICKET.accent : TICKET.label}`,
-                          color: selectedType ? "#fff" : TICKET.label,
-                          boxShadow: dragOver
-                            ? "0 0 0 4px rgba(90,154,50,0.4)"
-                            : "inset 2px 2px 0 rgba(255,255,255,0.8)",
-                        }}
-                        onDragOver={(e) => {
-                          e.preventDefault()
-                          e.dataTransfer.dropEffect = "move"
-                          if (!dragOver) setDragOver(true)
-                        }}
-                        onDragLeave={() => setDragOver(false)}
-                        onDragEnter={() => setIsDragging(true)}
-                        onDrop={(e) => {
-                          e.preventDefault()
-                          setIsDragging(false)
-                          const id = e.dataTransfer.getData("text/plain") as JourneyType
-                          if (id) handleDropType(id)
-                        }}
-                      >
-                        {selectedType ? (
-                          <span className="pixel-text leading-tight px-2">
-                            {journeyOptions.find((o) => o.id === selectedType)?.title}
-                          </span>
-                        ) : (
-                          <span className="pixel-text text-xs md:text-sm leading-snug px-1">Drop journey here</span>
-                        )}
-                      </div>
-                    </div>
+                    {selectedType ? (
+                      <span className="pixel-text leading-tight px-2">
+                        {journeyOptions.find((o) => o.id === selectedType)?.title}
+                      </span>
+                    ) : (
+                      <span className="pixel-text text-xs md:text-sm leading-snug px-1">Drop here</span>
+                    )}
                   </div>
                 </div>
               </div>
