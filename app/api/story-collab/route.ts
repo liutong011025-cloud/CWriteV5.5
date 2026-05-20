@@ -10,6 +10,14 @@ import {
   tipsToRevisionTags,
   type StoryRevisionTag,
 } from "@/lib/story-revision-tags"
+import {
+  buildExplorePromptRules,
+  buildPlotPhasePromptRules,
+  buildPlotStatusLine,
+  finalizePlotFromConversation,
+  isPlotComplete,
+  type PlotState,
+} from "@/lib/story-plot-coach"
 
 type CollabPhase = "explore" | "plot" | "structure" | "writing" | "polish"
 
@@ -37,6 +45,9 @@ interface CollabResponse {
   structure_suggestion: string | null
   revision_tags?: StoryRevisionTag[]
   section_passed?: boolean
+  /** Merged plot after this turn (client should sync from this). */
+  plot_state?: PlotState
+  plot_complete?: boolean
 }
 
 const PASS_NEXT_SECTION = "You can move to the next section."
@@ -63,10 +74,10 @@ function isSectionDraftSubmission(req: CollabRequest, queryText: string): boolea
 }
 
 function determinePhase(req: CollabRequest): CollabPhase {
-  const msgCount = req.conversation_history.length
   const plot = req.plot_state
-  const hasPlot = !!(plot?.setting && plot?.conflict && plot?.goal)
+  const hasPlot = isPlotComplete(plot)
   const hasStructure = !!req.structure_type
+  const userTurns = req.conversation_history.filter((m) => m.role === "user").length
   const totalWords = req.story_blocks.reduce((sum, b) => {
     const text = b.text || ""
     const cn = (text.match(/[\u4e00-\u9fff]/g) || []).length
@@ -74,7 +85,7 @@ function determinePhase(req: CollabRequest): CollabPhase {
     return sum + cn + en
   }, 0)
 
-  if (msgCount < 2 && !hasPlot) return "explore"
+  if (!hasPlot && userTurns <= 1 && !plot?.setting?.trim()) return "explore"
   if (!hasPlot) return "plot"
   if (!hasStructure) return "structure"
   if (totalWords < 100) return "writing"
@@ -172,16 +183,26 @@ function buildSystemPrompt(req: CollabRequest, phase: CollabPhase): string {
     )
   }
 
+  const charName = req.character?.name || "the hero"
+  const userTurns = req.conversation_history.filter((m) => m.role === "user").length
+
+  if (phase === "explore") {
+    parts.push(buildExplorePromptRules(charName))
+  }
+  if (phase === "plot" || (phase === "explore" && userTurns >= 1)) {
+    parts.push(buildPlotPhasePromptRules(req.plot_state || {}, charName, userTurns + 1))
+    parts.push(`\nPlot checklist for you: ${buildPlotStatusLine(req.plot_state || {})}`)
+  }
+
   // Phase-specific instructions
   const phaseInstructions: Record<CollabPhase, string> = {
     explore:
-      "Ask fun, open-ended questions about what kind of story the student wants. " +
-      "Suggest themes like adventure, magic, mystery, funny situations. " +
-      "Keep it light and exciting. After 2-3 exchanges, start guiding toward plot elements.",
+      "Ask what story theme sounds fun, then move to WHERE the story happens. " +
+      "Never use vague suggestion buttons.",
     plot:
-      "Guide the student to define: 1) Setting (where/when), 2) Conflict (the problem), " +
-      "3) Goal (what the hero wants). Ask about one element at a time. " +
-      "When you detect a clear answer, include it in your META block as plot_update.",
+      "Collect Setting → Problem → Goal in order. ONE question per reply about the next missing piece. " +
+      "Always fill plot_update in META when the student answers. " +
+      "suggestions must be concrete answer choices, not generic chat buttons.",
     structure:
       "The student has a complete plot! Now suggest a story structure. Briefly explain the 3 options: " +
       "Freytag's Pyramid (5 parts: exposition, rising action, climax, falling action, resolution), " +
@@ -214,7 +235,8 @@ function buildSystemPrompt(req: CollabRequest, phase: CollabPhase): string {
   parts.push(
     "\n\nIMPORTANT: After your conversational response, you MUST append a META block in this exact format:" +
     '\n---META---\n{"phase":"...","suggestions":[...],"story_snippet":"..."|null,"plot_update":{...}|null,"structure_suggestion":"..."|null,"revision_tags":[{"label":"...","rationale":"...","color":"amber"}]}\n---END---' +
-    "\nThe suggestions array must contain 2-4 short clickable options (1-4 words each) relevant to your question. Always include suggestions."
+    "\nThe suggestions array must contain 2-4 short clickable options (2-6 words each) that answer YOUR question. " +
+    "FORBIDDEN suggestions: Tell me more, What happens next?, Help me. Always include suggestions."
   )
 
   return parts.join("")
@@ -394,29 +416,68 @@ export async function POST(request: NextRequest) {
       ? finalizeWritingSectionFeedback(req, parsedAnswer || rawAnswer, meta)
       : { answer: parsedAnswer || rawAnswer, revision_tags: [] as StoryRevisionTag[], section_passed: false }
 
-    const answer = finalized.answer
+    let answer = finalized.answer
 
-    const hasPlot = !!(req.plot_state?.setting && req.plot_state?.conflict && req.plot_state?.goal)
-    const hasStructure = !!req.structure_type
-    // 模型 META 里的 phase 常会写成 plot/explore，覆盖后用户要多聊几轮才出现结构卡片
+    const studentMessages = req.conversation_history
+      .filter((m) => m.role === "user")
+      .map((m) => m.content)
+    const charName = req.character?.name || "the hero"
+    const plotFinal = !req.structure_type
+      ? finalizePlotFromConversation(
+          req.plot_state,
+          meta.plot_update || null,
+          queryText,
+          studentMessages,
+          charName,
+          meta.suggestions,
+        )
+      : null
+
+    let plot_update = meta.plot_update || null
+    let plot_state: PlotState | undefined
+    let plot_complete: boolean | undefined
     let finalPhase = (meta.phase as CollabPhase) || phase
-    if (hasPlot && !hasStructure) {
+    let suggestions = meta.suggestions
+
+    if (plotFinal) {
+      plot_state = plotFinal.plot
+      plot_complete = plotFinal.plot_complete
+      if (plotFinal.plot_update) plot_update = plotFinal.plot_update
+      if (plotFinal.plot_complete && !req.structure_type) {
+        finalPhase = "structure"
+        if (!/structure|choose|pick/i.test(answer)) {
+          answer =
+            `${answer}\n\nYour plot is ready — Setting, Problem, and Goal are all set! Choose a story structure below.`.trim()
+        }
+      } else if (!plotFinal.plot_complete) {
+        finalPhase = plotFinal.phase
+      }
+      suggestions = plotFinal.suggestions
+    }
+
+    const hasStructure = !!req.structure_type
+    if (isPlotComplete(plot_state || req.plot_state) && !hasStructure) {
       finalPhase = "structure"
     }
 
-    const defaultSuggestions =
-      draftSubmission && !finalized.section_passed
-        ? ["Revise and Finish! again", "Help me", "Add one more detail"]
+    const inPlotPhase = !req.structure_type && !isPlotComplete(plot_state || req.plot_state)
+
+    const defaultSuggestions = inPlotPhase
+      ? plotFinal?.suggestions || ["At school", "In a forest", "On a beach"]
+      : draftSubmission && !finalized.section_passed
+        ? ["Revise and Finish! again", "Add more detail", "Try a stronger verb"]
         : draftSubmission && finalized.section_passed
-          ? ["Next section!", "Help me"]
-          : ["Tell me more", "What happens next?", "Help me"]
+          ? ["Next section!", "Add one more detail"]
+          : ["Adventure", "Magic", "Mystery"]
 
     const response: CollabResponse = {
       answer: answer || rawAnswer,
       phase: finalPhase,
-      suggestions: meta.suggestions?.length ? meta.suggestions : defaultSuggestions,
+      suggestions: suggestions?.length ? suggestions : defaultSuggestions,
       story_snippet: meta.story_snippet || null,
-      plot_update: meta.plot_update || null,
+      plot_update,
+      plot_state,
+      plot_complete,
       structure_suggestion: meta.structure_suggestion || null,
       revision_tags: finalized.revision_tags.length ? finalized.revision_tags : undefined,
       section_passed: finalized.section_passed || undefined,
