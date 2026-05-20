@@ -57,6 +57,8 @@ interface CollabApiResponse {
   structure_suggestion: string | null
   revision_tags?: StoryRevisionTag[]
   section_passed?: boolean
+  plot_state?: { setting?: string; conflict?: string; goal?: string }
+  plot_complete?: boolean
   error?: string
   message?: string
 }
@@ -397,7 +399,7 @@ export default function StoryCollab({
       const welcome: CollabMessage = {
         id: "welcome",
         role: "assistant",
-        content: `Hi there! I'm so excited to write a story with you and ${charName}! 🎉\n\nWhat kind of adventure should we go on? Something magical, mysterious, funny, or action-packed?`,
+        content: `Hi! Let's plan a story for ${charName}.\n\nFirst, what kind of story sounds fun? Then we'll pick where it happens, what problem appears, and what ${charName} wants to do.`,
         suggestions: ["Adventure", "Magic", "Mystery", "Funny"],
       }
       setMessages([welcome])
@@ -465,15 +467,18 @@ export default function StoryCollab({
         // Update phase
         if (data.phase) setPhase(data.phase)
 
-        // Handle plot_update
-        if (data.plot_update) {
-          setPlotData((prev) => {
-            const next = { ...prev }
-            if (data.plot_update!.setting) next.setting = data.plot_update!.setting
-            if (data.plot_update!.conflict) next.conflict = data.plot_update!.conflict
-            if (data.plot_update!.goal) next.goal = data.plot_update!.goal
-            return next
-          })
+        const applyPlotState = (patch?: { setting?: string; conflict?: string; goal?: string } | null) => {
+          if (!patch) return
+          setPlotData((prev) => ({
+            setting: patch.setting?.trim() || prev.setting,
+            conflict: patch.conflict?.trim() || prev.conflict,
+            goal: patch.goal?.trim() || prev.goal,
+          }))
+        }
+        if (data.plot_state) {
+          applyPlotState(data.plot_state)
+        } else if (data.plot_update) {
+          applyPlotState(data.plot_update)
         }
 
         // Handle structure_suggestion
@@ -518,7 +523,8 @@ export default function StoryCollab({
         const cleaned = stripLastSectionGreatJobPhrases(
           stripAdvanceNextSectionPhrases(cleanAiDisplayText(rawAnswer)),
         )
-        const showStructureCards = data.phase === "structure" && !selectedStructure
+        const showStructureCards =
+          !selectedStructure && (data.plot_complete === true || data.phase === "structure")
 
         const aiMsg: CollabMessage = {
           id: `ai-${Date.now()}`,
@@ -546,7 +552,7 @@ export default function StoryCollab({
             id: `err-${Date.now()}`,
             role: "assistant",
             content: "Oops, I had a little hiccup! Could you try saying that again? 😊",
-            suggestions: ["Try again", "Help me"],
+            suggestions: ["At school", "In a forest", "A magic problem"],
           },
         ])
       } finally {
@@ -930,6 +936,43 @@ export default function StoryCollab({
               {mode === "ai" ? (
                 /* ──── AI chat mode (all phases: explore → plot → structure → writing) ──── */
                 <>
+                  {/* Plot checklist — before structure is chosen */}
+                  {!selectedStructure && mode === "ai" && (
+                    <div
+                      className="px-5 pt-4 pb-3"
+                      style={{
+                        borderBottom: "4px solid #8b6914",
+                        background: "linear-gradient(180deg, #d4e8b4 0%, #a8d080 100%)",
+                      }}
+                    >
+                      <p className="text-xs font-bold mb-2" style={{ color: "#3d5a1f" }}>
+                        Plot plan: Setting · Problem · Goal
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {(
+                          [
+                            { key: "setting", label: "Setting", value: plotData.setting },
+                            { key: "conflict", label: "Problem", value: plotData.conflict },
+                            { key: "goal", label: "Goal", value: plotData.goal },
+                          ] as const
+                        ).map((item) => (
+                          <span
+                            key={item.key}
+                            className="px-2 py-1 text-[10px] font-bold"
+                            style={{
+                              background: item.value?.trim() ? "#7ec850" : "#e8dcc0",
+                              color: item.value?.trim() ? "#fff" : "#6b5210",
+                              border: `2px solid ${item.value?.trim() ? "#5a9a32" : "#8b6914"}`,
+                            }}
+                          >
+                            {item.label}
+                            {item.value?.trim() ? " ✓" : " …"}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Section progress bar — visible only once structure is chosen */}
                   {storyBlocks.length > 0 && (
                     <div className="px-5 pt-4 pb-3" style={{
