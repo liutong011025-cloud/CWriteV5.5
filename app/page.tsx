@@ -619,6 +619,8 @@ export default function Home() {
   const structureMapTriggeredRef = useRef<string | null>(null)
   const mapLocalUpdatedAtRef = useRef(0)
   const pendingStoryFlagFinalizationRef = useRef<{ title: string; content: string } | null>(null)
+  /** Pin/title for the story flag — created only when the full story is finished. */
+  const pendingStoryMapPinRef = useRef<{ x: number; y: number; title: string } | null>(null)
   /** 首次地圖迭代成功後會清空 currentPin；後續 Fal 請求仍用此座標 */
   const lastJourneyPinRef = useRef<{ x: number; y: number } | null>(null)
   const [pendingDramaMapTitle, setPendingDramaMapTitle] = useState<string | null>(null)
@@ -1383,28 +1385,12 @@ export default function Home() {
       const plotSummary = buildStoryPlotSummary(character, plot)
       const pinSnapshot = lastJourneyPinRef.current ?? { x: 50, y: 50 }
       pendingStoryFlagFinalizationRef.current = null
-
-      setMapFlags((prev: MapFlagItem[]) => {
-        const next: MapFlagItem[] = [
-          ...prev,
-          {
-            id: `story-struct-${Date.now()}`,
-            x: pinSnapshot.x,
-            y: pinSnapshot.y,
-            title: storyTitle,
-            content: [plotSummary, `Structure: ${structure.type}`].filter(Boolean).join("\n"),
-            workType: "story",
-          },
-        ]
-        persistMapStateNow({ mapFlags: next })
-        return next
-      })
+      pendingStoryMapPinRef.current = { x: pinSnapshot.x, y: pinSnapshot.y, title: storyTitle }
 
       void queueJourneyMapUpdate({
         title: storyTitle,
         topic,
         mapPrompt: buildStoryStructureMapPrompt(character, plot, structure.type),
-        content: [plotSummary, `Story structure: ${structure.type}`].filter(Boolean).join("\n"),
         workType: "story",
         source: "storyStructure",
         skipNewFlag: true,
@@ -1657,6 +1643,50 @@ export default function Home() {
   const finalizeLatestStoryFlag = useCallback((title: string, content: string) => {
     return finalizeLatestMapFlag("story", title, content)
   }, [finalizeLatestMapFlag])
+
+  /** Map flag shows the finished story text — not plot outline metadata. */
+  const upsertStoryMapFlag = useCallback(
+    (title: string, fullStory: string) => {
+      const body = fullStory.trim()
+      if (!body) return false
+      const pin =
+        lastJourneyPinRef.current ??
+        (pendingStoryMapPinRef.current
+          ? { x: pendingStoryMapPinRef.current.x, y: pendingStoryMapPinRef.current.y }
+          : { x: 50, y: 50 })
+      const safeTitle = title.trim() || pendingStoryMapPinRef.current?.title || "My Story"
+
+      setMapFlags((prev: MapFlagItem[]) => {
+        const reverseIdx = [...prev]
+          .map((_, index) => index)
+          .reverse()
+          .find((index) => prev[index]?.workType === "story")
+        let next: MapFlagItem[]
+        if (reverseIdx !== undefined) {
+          next = prev.map((flag, index) =>
+            index === reverseIdx ? { ...flag, title: safeTitle, content: body } : flag,
+          )
+        } else {
+          next = [
+            ...prev,
+            {
+              id: `story-${Date.now()}`,
+              x: pin.x,
+              y: pin.y,
+              title: safeTitle,
+              content: body,
+              workType: "story",
+            },
+          ]
+        }
+        persistMapStateNow({ mapFlags: next })
+        return next
+      })
+      pendingStoryMapPinRef.current = null
+      return true
+    },
+    [persistMapStateNow],
+  )
 
   // Refetch and update header when profile/reviews change (e.g. after marking reviews read)
   useEffect(() => {
@@ -2548,27 +2578,25 @@ export default function Home() {
             const storyTitle = getStoryWritingMapTitle(storyState.character)
             const topic = storyState.character?.name || storyState.plot?.setting || storyTitle
             void evaluateValuesGrowth(finalStory, "story", storyTitle)
-            const updatedExistingStoryFlag = finalizeLatestStoryFlag(storyTitle, finalStory)
-            if (!updatedExistingStoryFlag) {
-              pendingStoryFlagFinalizationRef.current = { title: storyTitle, content: finalStory }
-              if (!mapUpdateInFlightRef.current) {
-                void queueJourneyMapUpdate({
-                  title: storyTitle,
-                  topic,
-                  content: finalStory,
-                  workType: "story",
-                  source: "storyReview",
-                  summaryKey: "storySummary",
-                  summaryValue: {
-                    characterName: storyState.character?.name || null,
-                    species: storyState.character?.species || null,
-                    setting: storyState.plot?.setting || null,
-                    conflict: storyState.plot?.conflict || null,
-                    goal: storyState.plot?.goal || null,
-                    plotSummary: buildStoryPlotSummary(storyState.character, storyState.plot) || null,
-                  },
-                })
-              }
+            upsertStoryMapFlag(storyTitle, finalStory)
+            pendingStoryFlagFinalizationRef.current = null
+            if (!mapUpdateInFlightRef.current) {
+              void queueJourneyMapUpdate({
+                title: storyTitle,
+                topic,
+                workType: "story",
+                source: "storyReview",
+                skipNewFlag: true,
+                summaryKey: "storySummary",
+                summaryValue: {
+                  characterName: storyState.character?.name || null,
+                  species: storyState.character?.species || null,
+                  setting: storyState.plot?.setting || null,
+                  conflict: storyState.plot?.conflict || null,
+                  goal: storyState.plot?.goal || null,
+                  plotSummary: buildStoryPlotSummary(storyState.character, storyState.plot) || null,
+                },
+              })
             }
 
             setStoryState({ character: null, plot: null, structure: null, story: "" })
