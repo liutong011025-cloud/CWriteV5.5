@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server"
+import { fal } from "@fal-ai/client"
 import {
-  ArkImageError,
-  generateArkImage,
-  parseArkErrorMessage,
-  resolveArkImageInput,
-  truncateArkPrompt,
-} from "@/lib/ark-images"
+  extractFalImageUrl,
+  FAL_NANO_BANANA_EDIT_MODEL,
+  getFalKey,
+  resolveMapImageUrlForFal,
+} from "@/lib/fal-map"
 
 type MapUpdateRequestBody = {
   userId: string
@@ -31,54 +31,10 @@ const clampPercent = (value: unknown, fallback: number) => {
   return Math.max(0, Math.min(100, value))
 }
 
-/** Same style as the original map-update: strict edit on the uploaded base map. */
-function buildMapEditPrompt(params: {
-  safeTitle: string
-  safeTopic: string
-  safeMapX: number
-  safeMapY: number
-  characterName: string | null
-  species: string | null
-  detailedSetting: string | null
-  detailedConflict: string | null
-  detailedGoal: string | null
-  structureType: string | null
-  extraPrompt: string
-}): string {
-  const {
-    safeTitle,
-    safeTopic,
-    safeMapX,
-    safeMapY,
-    characterName,
-    species,
-    detailedSetting,
-    detailedConflict,
-    detailedGoal,
-    structureType,
-    extraPrompt,
-  } = params
-
-  return [
-    "Edit the provided map image. Keep style, palette, hills, rivers, paths, forests, and camera angle.",
-    "Preserve at least 95% of pixels unchanged. Do NOT redraw the whole map or change zoom.",
-    `Pin at (${safeMapX}, ${safeMapY}) on a 0-100 grid (top-left origin).`,
-    "Add only tiny map-scale details in a 2–3% radius patch at the pin: small paths, plants, props, mini buildings.",
-    `Topic: ${safeTopic}. Title: ${safeTitle}.`,
-    `Hero: ${characterName || "hero"} (${species || "creature"}).`,
-    `Plot hints — place: ${detailedSetting || safeTopic}; trouble: ${detailedConflict || "—"}; wish: ${detailedGoal || "—"}.`,
-    structureType ? `Structure: ${structureType}.` : "",
-    "No text labels, logos, or UI. Rest of map nearly unchanged.",
-    extraPrompt || "Elements must stay small and subtle.",
-  ]
-    .filter(Boolean)
-    .join(" ")
-}
-
 export async function POST(request: NextRequest) {
   try {
-    if (!process.env.ARK_API_KEY && !process.env.VOLCENGINE_ARK_API_KEY) {
-      console.error("[map-update] ARK_API_KEY not configured")
+    if (!getFalKey()) {
+      console.error("[map-update] FAL_KEY not configured")
       return NextResponse.json(
         { error: "map_unavailable", message: "Map is resting. Try again later." },
         { status: 200 },
@@ -99,13 +55,9 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const baseImage = await resolveArkImageInput(previousMapImageUrl, {
-      requestHeaders: request.headers,
-      forceDataUrl: true,
-    })
-
-    if (!baseImage) {
-      console.error("[map-update] No base image for edit — refusing full regen.", { previousMapImageUrl })
+    const resolvedImageUrl = await resolveMapImageUrlForFal(request, previousMapImageUrl)
+    if (!resolvedImageUrl) {
+      console.error("[map-update] Could not resolve base map for Fal edit.", { previousMapImageUrl })
       return NextResponse.json(
         {
           error: "map_unavailable",
@@ -115,38 +67,84 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const baseKind = baseImage.startsWith("data:") ? "base64" : "url"
-    console.info("[map-update] image-to-image", {
-      previousMapImageUrl: previousMapImageUrl.slice(0, 120),
-      baseKind,
+    const characterName = storySummary?.characterName || null
+    const species = storySummary?.species || null
+    const detailedSetting = storySummary?.setting || null
+    const detailedConflict = storySummary?.conflict || null
+    const detailedGoal = storySummary?.goal || null
+    const plotSummary = storySummary?.plotSummary || null
+    const structureType = storySummary?.structureType || null
+    const extraPrompt = (mapPrompt || "").trim()
+
+    const prompt = `
+You are updating a student's personal writing adventure map using image editing.
+
+Base image:
+- Use the provided previous map image strictly as the base. Preserve its overall style, camera angle and layout.
+
+Coordinate system (very important for placement):
+- Treat the map as a 2D canvas where (0, 0) is the TOP-LEFT corner and (100, 100) is the BOTTOM-RIGHT corner.
+- The student's new step is centered near (${safeMapX}, ${safeMapY}) in this normalized coordinate system. Place the MAIN new visual focus close to this point.
+
+Student's new writing step:
+- Title: "${safeTitle}"
+- Character: "${characterName || "Unknown hero"}" (species: "${species || "unknown creature"}")
+- Topic / Setting: "${safeTopic}"
+
+Story details (for inspiration only, do not render text):
+- Setting detail: "${detailedSetting || safeTopic || "unspecified"}"
+- Conflict detail: "${detailedConflict || "unspecified"}"
+- Goal detail: "${detailedGoal || "unspecified"}"
+- Plot summary: "${plotSummary || "unspecified"}"
+- Story structure (if any): "${structureType || "unspecified"}"
+
+Task:
+- Focus your main new visual content on a **tiny local patch** centered exactly under the student's existing pin at (${safeMapX}, ${safeMapY}), roughly a circle with radius about 1.5-2% of the map width. The strongest new shapes and colors must stay inside this tiny patch.
+- Treat (${safeMapX}, ${safeMapY}) as the center of the writing marker area from the previous map. The new writing-related element should appear directly at that pin location, not in a nearby region and not shifted to another landmark.
+- Inside this small area, add or modify only compact terrain details, tiny paths, miniature buildings, small plants, tiny props, or very small environmental storytelling cues that reflect this new topic, the plot, and the character species. Keep them smaller and quieter than before.
+- Avoid oversized landmarks, giant buildings, huge forests, large terrain blocks, or any bold focal object. New elements must feel subtle and map-scale, not poster-scale.
+- Outside the local patch, the map should remain almost completely unchanged at a glance.
+
+Very important:
+- This MUST look like a natural evolution of the previous map, not a brand-new style.
+- Keep the same overall palette, camera angle, and rendering style as the base image.
+- Do NOT add UI, text labels, or logos. Leave space so the interface can overlay flags or titles later.
+- ${extraPrompt || "Do not invent a whole new region; just evolve the existing map carefully."}
+`.trim()
+
+    console.info("[map-update] fal image-to-image", {
+      model: FAL_NANO_BANANA_EDIT_MODEL,
+      baseUrl: resolvedImageUrl.slice(0, 80),
       mapX: safeMapX,
       mapY: safeMapY,
     })
 
-    const prompt = buildMapEditPrompt({
-      safeTitle,
-      safeTopic,
-      safeMapX,
-      safeMapY,
-      characterName: storySummary?.characterName || null,
-      species: storySummary?.species || null,
-      detailedSetting: storySummary?.setting || null,
-      detailedConflict: storySummary?.conflict || null,
-      detailedGoal: storySummary?.goal || null,
-      structureType: storySummary?.structureType || null,
-      extraPrompt: (mapPrompt || "").trim(),
+    const result = await fal.subscribe(FAL_NANO_BANANA_EDIT_MODEL, {
+      input: {
+        prompt,
+        image_urls: [resolvedImageUrl],
+        resolution: "1K",
+        output_format: "png",
+        num_images: 1,
+        limit_generations: true,
+        safety_tolerance: 4,
+      },
+      logs: false,
     })
 
-    const result = await generateArkImage({
-      prompt: truncateArkPrompt(prompt),
-      image: baseImage,
-      size: "2K",
-      timeoutMs: 120_000,
-    })
+    const imageUrl = extractFalImageUrl(result.data)
+    if (!imageUrl) {
+      console.error("[map-update] Fal response missing image URL", result.data)
+      return NextResponse.json(
+        { error: "map_unavailable", message: "Could not update map image." },
+        { status: 200 },
+      )
+    }
 
+    const data = result.data as { description?: string }
     return NextResponse.json({
-      imageUrl: result.imageUrl,
-      description: result.description || "",
+      imageUrl,
+      description: data?.description || "",
       topic: safeTopic,
       title: safeTitle,
       mapX: safeMapX,
@@ -157,24 +155,8 @@ export async function POST(request: NextRequest) {
     console.error("[map-update] Error:", {
       message: (error as { message?: string })?.message || "unknown",
       status: (error as { status?: number })?.status,
-      detail: (error as { detail?: string })?.detail?.slice?.(0, 500),
+      body: (error as { body?: unknown })?.body,
     })
-    if (error instanceof ArkImageError) {
-      const detail = error.detail || ""
-      const arkMsg = parseArkErrorMessage(detail)
-      const userMessage =
-        error.status === 400
-          ? `Map edit was rejected by the image API${arkMsg ? ` (${arkMsg})` : ""}. Your previous map is unchanged.`
-          : "Map update failed. Your previous map is unchanged."
-      console.error("[map-update] Ark detail:", arkMsg || detail.slice(0, 800))
-      return NextResponse.json(
-        {
-          error: "map_unavailable",
-          message: userMessage,
-        },
-        { status: 200 },
-      )
-    }
     return NextResponse.json(
       { error: "map_unavailable", message: "Something went wrong updating the map." },
       { status: 200 },
