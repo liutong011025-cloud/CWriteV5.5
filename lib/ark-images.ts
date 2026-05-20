@@ -78,7 +78,6 @@ const normalizeSingleImageInput = (value: string) => {
   return trimmed
 }
 
-/** Ark Seedream expects `images: string[]`, not `image`. */
 const normalizeImagesArray = (value?: ArkImageReference): string[] | undefined => {
   if (!value) return undefined
   if (Array.isArray(value)) {
@@ -287,7 +286,8 @@ export async function generateArkImage(options: ArkGenerateImageOptions) {
     stream: false,
     watermark: options.watermark ?? false,
     ...(options.outputFormat ? { output_format: options.outputFormat } : {}),
-    ...(images?.length ? { images } : {}),
+    // Seedream accepts reference images as `image` or `images` depending on SDK/version — send both.
+    ...(images?.length ? { image: images, images } : {}),
   }
 
   try {
