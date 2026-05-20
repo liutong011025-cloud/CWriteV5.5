@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma, isDatabaseUrlConfigured } from "@/lib/prisma"
 
+// 临时关闭新用户注册；恢复时改为 true
+const REGISTRATION_ENABLED = false
+const REGISTRATION_DISABLED_MESSAGE = "New user registration: Function is not available."
+
 // 登錄邏輯：
 // - 特殊帳號：copywriting / yinyin2948 → 文案編輯模式（不依賴資料庫）
 // - 其他帳號：走資料庫 users 表，沿用原來的錯誤處理與提示
@@ -17,6 +21,13 @@ export async function POST(request: NextRequest) {
     const { action = "login", username, password, email, name } = body
 
     if (action === "register") {
+      if (!REGISTRATION_ENABLED) {
+        return NextResponse.json(
+          { success: false, error: REGISTRATION_DISABLED_MESSAGE },
+          { status: 403 },
+        )
+      }
+
       const trimmedName = name?.trim() || ""
       const trimmedEmail = email?.trim().toLowerCase() || ""
       const trimmedPassword = password?.trim() || ""
