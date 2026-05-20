@@ -371,7 +371,7 @@ export default function JourneyTicket({
                         onClick={handleStart}
                         size="lg"
                         disabled={!selectedType || !difficulty}
-                        className="w-full pixel-btn pixel-btn-green text-lg md:text-xl xl:text-2xl font-bold py-3.5 md:py-4 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="w-full pixel-btn pixel-btn-green text-lg md:text-xl xl:text-2xl font-bold py-4 md:py-5 disabled:opacity-50 disabled:cursor-not-allowed"
                         style={{ borderRadius: 0, textShadow: "2px 2px 0 rgba(0,0,0,0.3)" }}
                       >
                         ✈️ Start
