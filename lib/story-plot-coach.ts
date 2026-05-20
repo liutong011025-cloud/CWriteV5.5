@@ -12,6 +12,7 @@ export type PlotMicroStep =
   | "ready"
 
 export interface PlotConversationProgress {
+  theme?: string
   settingBroad?: string
   conflictBroad?: string
 }
@@ -122,6 +123,74 @@ function combinePlace(broad: string | undefined, detail: string): string {
   return normalizePlotField(d || b || "")
 }
 
+/** Student picked a trouble beat while we still expected a sub-location. */
+function looksLikeConflictEvent(text: string): boolean {
+  const t = text.toLowerCase()
+  return (
+    /\b(steal|stole|steals|trips?|talking|turns? into|missing|strange|weird|scary|frog|bird|banana|locked|shadow|sound|help|trap|storm|fight|trouble|problem|silly|funny|giggle)\b/.test(
+      t,
+    ) || /\bher friend\b/.test(t)
+  )
+}
+
+function buildSettingDetailSuggestions(broad: string | undefined): string[] {
+  const b = (broad || "").toLowerCase()
+  if (b.includes("school") || b.includes("yard") || b.includes("class")) {
+    return ["Playground", "Cafeteria", "Under the slide", "Soccer field"]
+  }
+  if (b.includes("village") || b.includes("town")) {
+    return ["Town square", "Bakery corner", "River bridge", "Market path"]
+  }
+  if (b.includes("sea") || b.includes("beach") || b.includes("shore")) {
+    return ["Sandy shore", "Rocky pier", "Tide pools", "Boardwalk"]
+  }
+  if (b.includes("forest") || b.includes("woods")) {
+    return ["Mossy path", "Sunny clearing", "Old stump", "Creek side"]
+  }
+  if (b.includes("mountain") || b.includes("path") || b.includes("hill")) {
+    return ["Trail overlook", "Cabin porch", "Alpine meadow", "Cave mouth"]
+  }
+  if (b.includes("house") || b.includes("home") || b.includes("cave") || b.includes("attic")) {
+    return ["Warm kitchen", "Quiet basement", "Windy rooftop", "Dusty attic"]
+  }
+  if (b.includes("magic") || b.includes("cloud") || b.includes("crystal")) {
+    return ["Crystal hall", "Floating bridge", "Star balcony", "Glow garden"]
+  }
+  return ["Main area", "Hidden corner", "Busy path", "Quiet spot"]
+}
+
+function buildConflictHookSuggestions(theme: string | undefined, characterName: string): string[] {
+  const name = characterName || "the hero"
+  if (theme === "funny") {
+    return ["Talking slide", "Bird steals snack", "Banana peel trip", "Friend becomes frog"]
+  }
+  if (theme === "mystery") {
+    return ["Strange sound", "Missing object", "Weird shadow", "Locked door"]
+  }
+  if (theme === "magic") {
+    return ["Glowing door", "Spell gone wrong", "Floating object", "Whispering book"]
+  }
+  return ["Strange sound", "Missing object", "Weird shadow", "Someone needs help"]
+}
+
+function buildConflictDetailSuggestions(
+  setting: string | undefined,
+  conflictBroad: string | undefined,
+): string[] {
+  const place = (setting || "").toLowerCase()
+  const trouble = (conflictBroad || "").toLowerCase()
+  if (place.includes("school") || place.includes("yard")) {
+    if (trouble.includes("bird") || trouble.includes("snack") || trouble.includes("lunch")) {
+      return ["Near lunch tables", "By the bench", "On the grass", "At the fence"]
+    }
+    return ["On the playground", "By the classroom", "Near the gate", "Under a tree"]
+  }
+  if (trouble.includes("bird") || trouble.includes("snack")) {
+    return ["Near the table", "By the window", "On the path", "At the gate"]
+  }
+  return ["Right there", "Around the corner", "At the doorway", "In the open"]
+}
+
 export function applyMetaUpdateForFocus(
   plot: PlotState,
   metaUpdate: PlotState | null | undefined,
@@ -154,11 +223,19 @@ export function applyProgressivePlotTurn(
   let nextProgress = { ...progress }
 
   if (!isGenericUserReply(text) && text.length >= 3) {
-    if (microStep === "setting_place") {
+    if (microStep === "theme") {
+      nextProgress.theme = normalizePlotField(text)
+    } else if (microStep === "setting_place") {
       nextProgress.settingBroad = normalizePlotField(text)
     } else if (microStep === "setting_detail") {
-      nextPlot.setting = combinePlace(nextProgress.settingBroad, text)
-      nextProgress.settingBroad = undefined
+      if (looksLikeConflictEvent(text) && nextProgress.settingBroad?.trim()) {
+        nextPlot.setting = normalizePlotField(nextProgress.settingBroad)
+        nextProgress.conflictBroad = normalizePlotField(text)
+        nextProgress.settingBroad = undefined
+      } else {
+        nextPlot.setting = combinePlace(nextProgress.settingBroad, text)
+        nextProgress.settingBroad = undefined
+      }
     } else if (microStep === "conflict_hook") {
       nextProgress.conflictBroad = normalizePlotField(text)
     } else if (microStep === "conflict_detail") {
@@ -196,19 +273,26 @@ export function stripOptionsFromAnswer(answer: string, suggestions: string[]): s
   return text
 }
 
-function microStepPrompt(microStep: PlotMicroStep, characterName: string, plot: PlotState): string {
+function microStepPrompt(
+  microStep: PlotMicroStep,
+  characterName: string,
+  plot: PlotState,
+  progress: PlotConversationProgress = {},
+): string {
   const name = characterName || "your character"
+  const place = plot.setting?.trim() || progress.settingBroad?.trim() || "that place"
+  const trouble = progress.conflictBroad?.trim() || "the trouble"
   switch (microStep) {
     case "theme":
       return `Ask what kind of story feels fun for ${name} (one short question).`
     case "setting_place":
       return `Ask where this story could happen (general place only — not every option listed in the message).`
     case "setting_detail":
-      return `Ask one small follow-up about WHERE inside that place (room, time of day, corner of the world).`
+      return `Ask one small follow-up about WHERE inside "${place}" (a corner, room, or spot — must fit that place, not a random house room).`
     case "conflict_hook":
-      return `Ask what strange or worrying thing ${name} notices at that place (hint only, not the full problem yet).`
+      return `Ask what funny or surprising trouble happens to ${name} at "${place}" (one silly or worrying hook, not the full story yet).`
     case "conflict_detail":
-      return `Ask what the real trouble is and why it matters to ${name}.`
+      return `Ask where at "${place}" the trouble "${trouble}" happens (one specific spot only).`
     case "goal_wish":
       return `Ask what ${name} hopes to do about the trouble (one clear wish).`
     case "goal_detail":
@@ -226,6 +310,7 @@ export function buildPlotPhasePromptRules(
   lastStudentMessage: string,
   userTurnCount: number,
   microStep: PlotMicroStep,
+  progress: PlotConversationProgress = {},
 ): string {
   if (microStep === "ready") {
     return (
@@ -243,18 +328,28 @@ export function buildPlotPhasePromptRules(
     .filter(Boolean)
     .join("\n")
 
+  const pending = [
+    progress.theme?.trim() ? `Story mood: ${progress.theme}` : null,
+    progress.settingBroad?.trim() ? `General place picked: ${progress.settingBroad}` : null,
+    progress.conflictBroad?.trim() ? `Trouble hint picked: ${progress.conflictBroad}` : null,
+  ]
+    .filter(Boolean)
+    .join("\n")
+
   return (
     `\n[PLOT — gradual chat, turn ${userTurnCount}]\n` +
     (saved ? `Already saved:\n${saved}\n` : "") +
+    (pending ? `In progress:\n${pending}\n` : "") +
     `Student just said: "${lastStudentMessage.trim() || "…"}"\n` +
-    `Step now: ${microStep}. ${microStepPrompt(microStep, characterName, plot)}\n` +
+    `Step now: ${microStep}. ${microStepPrompt(microStep, characterName, plot, progress)}\n` +
     `Rules:\n` +
     `- Reply in 2-3 short sentences MAX. Echo one phrase they used.\n` +
+    `- Ask ONLY the question for step "${microStep}" — do NOT ask about kitchens/attics unless step is setting_detail AND the place is a house/home.\n` +
     `- NEVER list or repeat the suggestion button labels in your message (buttons are separate).\n` +
     `- Do NOT use bullet lists or lines starting with "-" in the reply.\n` +
     `- Ask only ONE question this turn.\n` +
     `- plot_update in META only when this step is complete (one field max).\n` +
-    `- suggestions in META only: 3-4 short answers (2-6 words), never "Tell me more" / "Help me".\n`
+    `- Leave suggestions in META empty []; the server will attach matching buttons.\n`
   )
 }
 
@@ -263,9 +358,10 @@ export function buildPlotSuggestions(
   characterName: string,
   plot: PlotState,
   themeHint?: string,
+  progress: PlotConversationProgress = {},
 ): string[] {
   const name = characterName || "the hero"
-  const theme = themeHint?.trim().toLowerCase()
+  const theme = (progress.theme || themeHint || "").trim().toLowerCase()
 
   if (microStep === "theme") {
     return ["Adventure", "Magic", "Mystery", "Funny"]
@@ -276,13 +372,13 @@ export function buildPlotSuggestions(
     return ["Sunny village", "School yard", "By the sea", "Mountain path"]
   }
   if (microStep === "setting_detail") {
-    return ["Warm kitchen", "Quiet basement", "Windy rooftop", "Dusty attic"]
+    return buildSettingDetailSuggestions(progress.settingBroad || plot.setting)
   }
   if (microStep === "conflict_hook") {
-    return ["Strange sound", "Missing object", "Weird shadow", "Locked door"]
+    return buildConflictHookSuggestions(theme, name)
   }
   if (microStep === "conflict_detail") {
-    return ["Friend needs help", "Storm is coming", "Secret was stolen", "Trap underground"]
+    return buildConflictDetailSuggestions(plot.setting, progress.conflictBroad)
   }
   if (microStep === "goal_wish" || microStep === "goal_detail") {
     return [
@@ -296,21 +392,14 @@ export function buildPlotSuggestions(
 }
 
 export function filterPlotSuggestions(
-  suggestions: string[] | undefined,
+  _suggestions: string[] | undefined,
   microStep: PlotMicroStep,
   characterName: string,
   plot: PlotState,
   themeHint?: string,
+  progress: PlotConversationProgress = {},
 ): string[] {
-  const filtered = (suggestions || [])
-    .map((s) => s.trim())
-    .filter((s) => s.length > 0 && s.length <= 48)
-    .filter((s) => !GENERIC_SUGGESTIONS.has(s.toLowerCase()))
-    .filter((s) => !GENERIC_GOAL_PHRASES.some((re) => re.test(s)))
-
-  if (filtered.length >= 2) return filtered.slice(0, 4)
-
-  return buildPlotSuggestions(microStep, characterName, plot, themeHint)
+  return buildPlotSuggestions(microStep, characterName, plot, themeHint, progress)
 }
 
 export function detectThemeFromMessages(studentMessages: string[]): string | undefined {
@@ -369,6 +458,7 @@ export function finalizePlotFromConversation(
   const userCount = studentMessages.length
   const theme = detectThemeFromMessages(studentMessages)
   let progress = { ...(progressIn || {}) }
+  if (theme && !progress.theme) progress.theme = theme
 
   const microStepBefore = getPlotMicroStep(basePlot || {}, userCount, progress)
   const { plot, progress: nextProgress } = applyProgressivePlotTurn(
@@ -390,8 +480,8 @@ export function finalizePlotFromConversation(
   else if (userCount <= 1 && !plot.setting?.trim()) phase = "explore"
 
   const suggestions = plot_complete
-    ? buildPlotSuggestions("ready", characterName, plot)
-    : filterPlotSuggestions(metaSuggestions, microStep, characterName, plot, theme)
+    ? buildPlotSuggestions("ready", characterName, plot, theme, progress)
+    : filterPlotSuggestions(metaSuggestions, microStep, characterName, plot, theme, progress)
 
   return {
     plot,
