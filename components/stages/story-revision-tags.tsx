@@ -19,11 +19,11 @@ export default function StoryRevisionTags({ tags, className }: StoryRevisionTags
   if (!tags.length) return null
 
   return (
-    <div className={cn("mt-3 space-y-2", className)}>
-      <p className="text-[11px] font-bold uppercase tracking-wide" style={{ color: "#6b5210" }}>
+    <div className={cn("mt-4 space-y-3", className)}>
+      <p className="text-sm font-bold uppercase tracking-wide" style={{ color: "#6b5210" }}>
         Tap a tag to see why · hover to preview
       </p>
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-2.5">
         {tags.map((tag, index) => {
           const styles = REVISION_TAG_COLOR_STYLES[tag.color]
           const isOpen = openIndex === index
@@ -36,15 +36,15 @@ export default function StoryRevisionTags({ tags, className }: StoryRevisionTags
               onMouseEnter={() => setHoverIndex(index)}
               onMouseLeave={() => setHoverIndex(null)}
               className={cn(
-                "rounded-lg px-3 py-2 text-left text-xs font-bold transition-all duration-200",
-                isOpen && "ring-2 ring-offset-1",
+                "rounded-xl px-4 py-2.5 text-left text-base font-extrabold transition-all duration-200",
+                isOpen && "ring-2 ring-offset-2",
               )}
               style={{
                 background: isHover || isOpen ? styles.hoverBg : styles.bg,
-                border: `2px solid ${styles.border}`,
+                border: `3px solid ${styles.border}`,
                 color: styles.text,
-                transform: isHover || isOpen ? "scale(1.06)" : "scale(1)",
-                boxShadow: isHover || isOpen ? "3px 3px 0 rgba(0,0,0,0.15)" : "2px 2px 0 rgba(0,0,0,0.1)",
+                transform: isHover || isOpen ? "scale(1.05)" : "scale(1)",
+                boxShadow: isHover || isOpen ? "4px 4px 0 rgba(0,0,0,0.18)" : "3px 3px 0 rgba(0,0,0,0.12)",
                 ringColor: styles.border,
               }}
               title={tag.rationale}
@@ -56,18 +56,18 @@ export default function StoryRevisionTags({ tags, className }: StoryRevisionTags
       </div>
       {openIndex !== null && tags[openIndex] && (
         <div
-          className="rounded-lg px-4 py-3 text-sm leading-relaxed"
+          className="rounded-xl px-5 py-4 text-base leading-relaxed"
           style={{
             background: "#fff",
-            border: `3px solid ${REVISION_TAG_COLOR_STYLES[tags[openIndex].color].border}`,
+            border: `4px solid ${REVISION_TAG_COLOR_STYLES[tags[openIndex].color].border}`,
             color: "#5a4a2a",
-            boxShadow: "3px 3px 0 rgba(0,0,0,0.12)",
+            boxShadow: "4px 4px 0 rgba(0,0,0,0.14)",
           }}
         >
-          <p className="text-xs font-extrabold uppercase tracking-wide mb-1" style={{ color: "#6b5210" }}>
+          <p className="text-sm font-extrabold uppercase tracking-wide mb-2" style={{ color: "#6b5210" }}>
             Why change this?
           </p>
-          <p>{tags[openIndex].rationale}</p>
+          <p className="text-lg">{tags[openIndex].rationale}</p>
         </div>
       )}
     </div>
