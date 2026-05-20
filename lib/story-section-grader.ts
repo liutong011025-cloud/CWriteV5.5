@@ -1,10 +1,15 @@
 import {
   buildRevisionTagsPromptRules,
+  isGenericRevisionTag,
   MIN_SECTION_WORD_COUNT,
   parseRevisionTags,
   type StoryRevisionTag,
 } from "@/lib/story-revision-tags"
-import { isIncompleteDraft, type PlotState } from "@/lib/story-section-evaluation"
+import {
+  draftHasSubstantiveStoryContent,
+  isIncompleteDraft,
+  type PlotState,
+} from "@/lib/story-section-evaluation"
 
 export type StructureType = "freytag" | "threeAct" | "fichtean" | null
 
@@ -68,26 +73,27 @@ export function buildSectionGraderSystemPrompt(params: {
     "You are a strict but kind grader for ONE section of a child's English story.\n" +
     `Hero: ${characterName}${characterAge ? `, age ${characterAge}` : ""}. Writing level ${level}.\n` +
     `Schema: ${structureLabel(structureType)}. Section ${sectionIndex + 1} of ${sectionCount}: "${sectionName}".\n` +
-    `Plot graph (same story — student need NOT mention every field in this section):\n` +
+    `Plot plan (background only — do NOT require setting + problem + goal in this one section):\n` +
     `- Setting: ${plot.setting || "?"}\n` +
     `- Problem: ${plot.conflict || "?"}\n` +
     `- Goal: ${plot.goal || "?"}\n` +
     prevBlock +
     "\nGrade using ALL dimensions:\n" +
-    "1) Content coverage — links to any plot node (place, trouble, or wish); partial is OK if clearly same story.\n" +
+    "1) Same story — PASS if the draft clearly continues the hero's adventure (action, clues, feelings, place). NEVER fail just because setting/problem/goal words from the plan are missing in this paragraph. Real stories spread these across sections.\n" +
     `2) Lexical appropriateness — vocabulary suitable for about age ${characterAge || level + 6}; register fits children's fiction.\n` +
-    "3) Coherence / connectivity — sentences connect; fits earlier plot; not a near-copy of a previous section.\n" +
-    `4) Structure / genre — fulfils the "${sectionName}" stage for ${structureLabel(structureType)}, not a different stage.\n` +
-    "5) Completeness — REJECT ONLY if the draft truly ends mid-sentence: trailing comma/semicolon, dangling word (and, the, in a low,), OR the final characters are not . ! ?. If the last sentence ends with . ! ? it is COMPLETE — do NOT fail for grammar (want→wants) or because the idea could continue.\n" +
+    "3) Coherence — sentences connect; not a near-copy of a previous section.\n" +
+    `4) Structure beat — gentle fit for "${sectionName}" only; PASS if reasonable attempt. Do NOT demand a big new disaster every section. Mystery clues, searching, and small discoveries COUNT as good rising action.\n` +
+    "5) Completeness — REJECT ONLY if the draft truly ends mid-sentence: trailing comma/semicolon, dangling word (and, the, in a low,), OR the final characters are not . ! ?. If the last sentence ends with . ! ? it is COMPLETE — do NOT fail for grammar (check→checks) or because the idea could continue.\n" +
     `6) Length — at least ${MIN_SECTION_WORD_COUNT} words AND at least 2 complete sentences.\n` +
+    "- revision_tags when false: quote something specific from THEIR draft (e.g. a vague sentence, tense, repeating word). FORBIDDEN generic tags: \"Add the problem\", \"Add setting\", \"mention the goal\" unless the draft is totally off-topic.\n" +
     "\nReply format: ONE short sentence (max 15 words) to the student, then META only.\n" +
     "---META---\n" +
-    '{"section_pass":false,"revision_tags":[{"label":"Add the problem","rationale":"This part should show trouble starting — what goes wrong or feels scary for Max?","color":"amber"}],"checks":{"complete":true,"word_count_ok":true,"plot_coverage":"partial","structure_beat":"weak","coherence":"ok","lexical_ok":true}}\n' +
+    '{"section_pass":false,"revision_tags":[{"label":"Stronger verbs","rationale":"You wrote \'She check\' — try \'She checked\' so readers feel the action clearly.","color":"sky"}],"checks":{"complete":true,"word_count_ok":true,"plot_coverage":"good","structure_beat":"good","coherence":"ok","lexical_ok":true}}\n' +
     "---END---\n" +
     "META rules:\n" +
-    '- section_pass: true ONLY if checks.complete AND word_count_ok AND plot_coverage is not "none" AND structure_beat is not "wrong" AND coherence is not "fragmented".\n' +
-    "- section_pass: false if incomplete, under 15 words, wrong story, wrong beat, or duplicate prior section.\n" +
-    "- revision_tags: 1-3 when false; [] when true. Each rationale must explain WHY (not repeat label).\n" +
+    '- section_pass: true if complete, long enough, same story (plot_coverage not "none"), coherence not "fragmented", structure_beat not "wrong". structure_beat "weak" can still PASS.\n' +
+    "- section_pass: false only for: incomplete sentence, under 15 words, totally wrong/unrelated story, duplicate prior section, or coherence fragmented.\n" +
+    "- revision_tags: 0 when true; 1-3 when false with SPECIFIC craft fixes from their text. Never punish missing plan keywords.\n" +
     '- checks (required): complete, word_count_ok, plot_coverage ("none"|"partial"|"good"), structure_beat ("wrong"|"weak"|"good"), coherence ("fragmented"|"ok"|"good"), lexical_ok (boolean).\n' +
     `When section_pass is true, include "${passLine}" in your short reply.\n` +
     buildRevisionTagsPromptRules(level, sectionName)
@@ -139,6 +145,15 @@ export function parseAiSectionGrade(
   }
 }
 
+function isForcedPlotElementTag(tag: StoryRevisionTag): boolean {
+  if (isGenericRevisionTag(tag)) return true
+  const rationale = tag.rationale.toLowerCase()
+  if (/add (the )?problem|trouble starting|what goes wrong|mention (the )?goal|include (the )?setting/.test(rationale)) {
+    return true
+  }
+  return false
+}
+
 function isSentenceCompletionTag(tag: StoryRevisionTag): boolean {
   const label = tag.label.toLowerCase()
   const rationale = tag.rationale.toLowerCase()
@@ -161,22 +176,46 @@ function derivePassFromChecks(checks: SectionGradeChecks): boolean | null {
   return null
 }
 
-/** Server sentence rules override AI false "incomplete" grades and strip bogus tags. */
-export function alignAiGradeWithDraft(sectionText: string, aiGrade: AiSectionGrade): AiSectionGrade {
-  if (isIncompleteDraft(sectionText)) return aiGrade
+/** Server rules override bogus AI tags (incomplete sentence, forced plot checklist). */
+export function alignAiGradeWithDraft(
+  sectionText: string,
+  aiGrade: AiSectionGrade,
+  options?: { characterName?: string },
+): AiSectionGrade {
+  let filteredTags = aiGrade.revision_tags.filter(
+    (t) => !isSentenceCompletionTag(t) && !isForcedPlotElementTag(t),
+  )
 
-  const filteredTags = aiGrade.revision_tags.filter((t) => !isSentenceCompletionTag(t))
-  const checks: SectionGradeChecks = {
-    ...(aiGrade.checks || {}),
-    complete: true,
+  const checks: SectionGradeChecks = { ...(aiGrade.checks || {}) }
+  if (!isIncompleteDraft(sectionText)) {
+    checks.complete = true
+  }
+
+  const substantive = draftHasSubstantiveStoryContent(sectionText, options?.characterName)
+  if (substantive) {
+    if (checks.plot_coverage === "none") checks.plot_coverage = "good"
+    if (checks.structure_beat === "wrong") checks.structure_beat = "weak"
   }
 
   let pass = aiGrade.pass
-  if (pass === false && aiGrade.checks?.complete === false) {
+  if (!isIncompleteDraft(sectionText) && pass === false && aiGrade.checks?.complete === false) {
     pass = derivePassFromChecks(checks)
   }
-  if (pass === false && filteredTags.length === 0 && aiGrade.revision_tags.some(isSentenceCompletionTag)) {
+  if (!isIncompleteDraft(sectionText) && pass === false && filteredTags.length === 0) {
+    if (aiGrade.revision_tags.some((t) => isSentenceCompletionTag(t) || isForcedPlotElementTag(t))) {
+      pass = derivePassFromChecks(checks)
+    }
+  }
+  if (substantive && pass === false && filteredTags.length === 0) {
     pass = derivePassFromChecks(checks)
+  }
+  if (substantive && pass === false) {
+    const derived = derivePassFromChecks(checks)
+    if (derived === true) pass = true
+  }
+
+  if (isIncompleteDraft(sectionText)) {
+    filteredTags = aiGrade.revision_tags.filter((t) => !isForcedPlotElementTag(t))
   }
 
   return {
@@ -187,14 +226,13 @@ export function alignAiGradeWithDraft(sectionText: string, aiGrade: AiSectionGra
   }
 }
 
-/** Final pass: server hard rules + AI grade must both agree. */
+/** Final pass: hard mechanics + AI; structure beat is advisory only (not a gate). */
 export function combineSectionPassDecision(
   mechanicalPass: boolean,
-  structureOk: boolean,
+  _structureOk: boolean,
   aiGrade: AiSectionGrade,
 ): boolean {
-  if (!mechanicalPass || !structureOk) return false
+  if (!mechanicalPass) return false
   if (aiGrade.pass === false) return false
-  if (aiGrade.pass === true) return true
-  return false
+  return true
 }
