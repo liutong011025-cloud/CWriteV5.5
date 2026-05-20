@@ -16,8 +16,12 @@ import {
 import {
   buildExplorePromptRules,
   buildPlotPhasePromptRules,
+  canCompletePlot,
   finalizePlotFromConversation,
+  getPlotMicroStep,
   isPlotComplete,
+  stripOptionsFromAnswer,
+  type PlotConversationProgress,
   type PlotState,
 } from "@/lib/story-plot-coach"
 
@@ -28,6 +32,7 @@ interface CollabRequest {
   conversation_history: Array<{ role: "user" | "assistant"; content: string }>
   character: { name: string; age: number; traits: string[]; description: string; species?: string }
   plot_state: { setting?: string; conflict?: string; goal?: string }
+  plot_progress?: PlotConversationProgress
   structure_type: "freytag" | "threeAct" | "fichtean" | null
   story_blocks: Array<{ section: string; text: string }>
   /** 0-based index of the structural section the student is writing now (Writing Pad = this part only). */
@@ -49,6 +54,7 @@ interface CollabResponse {
   section_passed?: boolean
   /** Merged plot after this turn (client should sync from this). */
   plot_state?: PlotState
+  plot_progress?: PlotConversationProgress
   plot_complete?: boolean
 }
 
@@ -193,7 +199,10 @@ function buildSystemPrompt(req: CollabRequest, phase: CollabPhase, lastStudentMe
     parts.push(buildExplorePromptRules(charName, lastStudentMessage))
   }
   if (phase === "plot" || (phase === "explore" && userTurns >= 1)) {
-    parts.push(buildPlotPhasePromptRules(req.plot_state || {}, charName, lastStudentMessage))
+    const microStep = getPlotMicroStep(req.plot_state || {}, userTurns, req.plot_progress || {})
+    parts.push(
+      buildPlotPhasePromptRules(req.plot_state || {}, charName, lastStudentMessage, userTurns, microStep),
+    )
   }
 
   // Phase-specific instructions
@@ -356,11 +365,18 @@ function finalizeWritingSectionFeedback(
   }
 
   let revision_tags = parseRevisionTags((meta as { revision_tags?: unknown }).revision_tags)
-  if (revision_tags.length < min) {
+  const weakAiTags =
+    revision_tags.length > 0 &&
+    revision_tags.every((t) => t.rationale.toLowerCase() === t.label.toLowerCase())
+  if (revision_tags.length < min || weakAiTags) {
     revision_tags = evaluation.revisionTags
   }
   if (revision_tags.length < min) {
-    revision_tags = tipsToRevisionTags(evaluation.tips.length > 0 ? evaluation.tips : evaluation.reasons, req.level)
+    revision_tags = tipsToRevisionTags(
+      evaluation.tips.length > 0 ? evaluation.tips : evaluation.reasons,
+      req.level,
+      { sectionName: section.section, characterName: req.character?.name },
+    )
   }
   revision_tags = revision_tags.slice(0, max)
 
@@ -461,6 +477,7 @@ export async function POST(request: NextRequest) {
     const plotFinal = !req.structure_type
       ? finalizePlotFromConversation(
           req.plot_state,
+          req.plot_progress,
           meta.plot_update || null,
           queryText,
           studentMessages,
@@ -471,14 +488,19 @@ export async function POST(request: NextRequest) {
 
     let plot_update = meta.plot_update || null
     let plot_state: PlotState | undefined
+    let plot_progress: PlotConversationProgress | undefined
     let plot_complete: boolean | undefined
     let finalPhase: CollabPhase = draftSubmission ? "writing" : (meta.phase as CollabPhase) || phase
     let suggestions = meta.suggestions
 
     if (plotFinal) {
       plot_state = plotFinal.plot
+      plot_progress = plotFinal.progress
       plot_complete = plotFinal.plot_complete
       if (plotFinal.plot_update) plot_update = plotFinal.plot_update
+      if (!draftSubmission && plotFinal.suggestions?.length) {
+        answer = stripOptionsFromAnswer(answer, plotFinal.suggestions)
+      }
       if (plotFinal.plot_complete && !req.structure_type) {
         finalPhase = "structure"
         if (!/structure|choose|pick/i.test(answer)) {
@@ -492,11 +514,14 @@ export async function POST(request: NextRequest) {
     }
 
     const hasStructure = !!req.structure_type
-    if (isPlotComplete(plot_state || req.plot_state) && !hasStructure) {
+    const mergedPlot = plot_state || req.plot_state
+    const plotUserTurns = studentMessages.length
+    if (canCompletePlot(mergedPlot, plotUserTurns) && !hasStructure) {
       finalPhase = "structure"
+      plot_complete = true
     }
 
-    const inPlotPhase = !req.structure_type && !isPlotComplete(plot_state || req.plot_state)
+    const inPlotPhase = !req.structure_type && !canCompletePlot(mergedPlot, plotUserTurns)
 
     const defaultSuggestions = inPlotPhase
       ? plotFinal?.suggestions || ["At school", "In a forest", "On a beach"]
@@ -520,6 +545,7 @@ export async function POST(request: NextRequest) {
       story_snippet: meta.story_snippet || null,
       plot_update,
       plot_state,
+      plot_progress,
       plot_complete,
       structure_suggestion: meta.structure_suggestion || null,
       revision_tags: finalized.revision_tags.length ? finalized.revision_tags : undefined,
