@@ -117,40 +117,56 @@ function getColorClasses(color: string, isActive: boolean) {
 function SkyCloudBackdrop() {
   return (
     <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
+      <style>
+        {`
+          @keyframes aboutCloudDriftRight {
+            0%, 100% { transform: translateX(0); }
+            50% { transform: translateX(65vw); }
+          }
+          @keyframes aboutCloudDriftLeft {
+            0%, 100% { transform: translateX(0); }
+            50% { transform: translateX(-58vw); }
+          }
+        `}
+      </style>
       <div
         className="absolute inset-0 z-0"
         style={{
-          background: "linear-gradient(180deg, #b8e4f9 0%, #87ceeb 48%, #dff6ff 100%)",
+          background: "linear-gradient(180deg, #0D47A1 0%, #1565C0 15%, #1E88E5 35%, #42A5F5 55%, #64B5F6 75%, #90CAF9 100%)",
         }}
       />
       <div
-        className="pointer-events-none absolute inset-0 z-10 opacity-20"
+        className="pointer-events-none absolute inset-0 z-10 opacity-[0.02]"
         style={{
           background:
-            "linear-gradient(90deg, rgba(255,255,255,0.32) 1px, transparent 1px), linear-gradient(180deg, rgba(255,255,255,0.22) 1px, transparent 1px)",
-          backgroundSize: "28px 28px",
+            "linear-gradient(rgba(0,0,0,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,0.5) 1px, transparent 1px)",
+          backgroundSize: "4px 4px",
         }}
       />
-      <PixelSkyCloud className="absolute left-[4%] top-[5%] z-30 w-40 opacity-95 animate-float" />
-      <PixelSkyCloud className="absolute right-[7%] top-[12%] z-30 w-52 opacity-85 animate-float-delayed" />
-      <PixelSkyCloud className="absolute left-[16%] top-[34%] z-30 w-48 opacity-75 animate-float-delayed" />
-      <PixelSkyCloud className="absolute right-[20%] top-[48%] z-30 w-44 opacity-65 animate-float" />
-      <PixelSkyCloud className="absolute left-[8%] top-[72%] z-30 w-56 opacity-70 animate-float" />
-      <PixelSkyCloud className="absolute right-[10%] top-[82%] z-30 w-48 opacity-60 animate-float-delayed" />
+      <PixelSkyCloud className="absolute left-[8vw] top-[4%] z-[5] w-40 opacity-85" style={{ animation: "aboutCloudDriftRight 35s linear infinite" }} />
+      <PixelSkyCloud className="absolute left-[68vw] top-[8%] z-[5] w-36 opacity-80" style={{ animation: "aboutCloudDriftLeft 32s linear infinite" }} />
+      <PixelSkyCloud className="absolute left-[22vw] top-[36%] z-[15] w-48 opacity-88" style={{ animation: "aboutCloudDriftRight 28s linear infinite" }} />
+      <PixelSkyCloud className="absolute left-[72vw] top-[50%] z-[15] w-40 opacity-85" style={{ animation: "aboutCloudDriftLeft 30s linear infinite" }} />
+      <PixelSkyCloud className="absolute left-[36vw] top-[74%] z-[15] w-52 opacity-90" style={{ animation: "aboutCloudDriftRight 25s linear infinite" }} />
+      <PixelSkyCloud className="absolute left-[10vw] top-[88%] z-[15] w-44 opacity-82" style={{ animation: "aboutCloudDriftRight 33s linear infinite" }} />
     </div>
   )
 }
 
-function PixelSkyCloud({ className }: { className?: string }) {
+function PixelSkyCloud({ className, style }: { className?: string; style?: React.CSSProperties }) {
   return (
-    <svg viewBox="0 0 64 32" className={className} style={{ imageRendering: "pixelated" }} aria-hidden="true">
-      <rect x="18" y="6" width="26" height="4" fill="white" />
-      <rect x="12" y="10" width="42" height="4" fill="white" />
-      <rect x="8" y="14" width="50" height="6" fill="white" />
-      <rect x="14" y="20" width="38" height="4" fill="white" />
-      <rect x="22" y="2" width="16" height="4" fill="white" opacity="0.95" />
-      <rect x="6" y="20" width="8" height="2" fill="rgba(0,0,0,0.06)" />
-      <rect x="52" y="20" width="6" height="2" fill="rgba(0,0,0,0.06)" />
+    <svg viewBox="0 0 64 32" className={className} style={{ imageRendering: "pixelated", ...style }} aria-hidden="true">
+      <rect x="20" y="4" width="16" height="2" fill="white" />
+      <rect x="16" y="6" width="26" height="2" fill="white" />
+      <rect x="12" y="8" width="34" height="2" fill="white" />
+      <rect x="8" y="10" width="42" height="2" fill="white" />
+      <rect x="6" y="12" width="48" height="2" fill="white" />
+      <rect x="6" y="14" width="50" height="2" fill="white" />
+      <rect x="8" y="16" width="46" height="2" fill="white" />
+      <rect x="12" y="18" width="38" height="2" fill="white" />
+      <rect x="18" y="20" width="28" height="2" fill="white" />
+      <rect x="6" y="16" width="2" height="2" fill="rgba(0,0,0,0.06)" />
+      <rect x="54" y="16" width="2" height="2" fill="rgba(0,0,0,0.06)" />
     </svg>
   )
 }
@@ -185,20 +201,21 @@ export default function AboutPage({
       {showVisionPage && <SkyCloudBackdrop />}
       {/* ========== Opening：花紋頂到頂部無空白，左右超出 ========== */}
       <section className={`${showVisionPage ? "" : "hidden"} min-h-screen flex items-center justify-center relative overflow-hidden`} style={{ marginTop: "-88px", paddingTop: "88px" }}>
-        <div className="relative z-20 max-w-5xl w-full mx-4 md:mx-8 px-10 md:px-24 py-12 md:py-24 shadow-[inset_5px_5px_0_rgba(255,255,255,0.75),inset_-5px_-5px_0_rgba(196,165,116,0.45),8px_8px_0_rgba(0,0,0,0.22)] border-4 border-[#6b5210] bg-[#fff8dc]/95 backdrop-blur-sm overflow-hidden group hover:shadow-xl transition-all duration-500">
-          <div className="absolute top-0 right-0 w-28 h-28 bg-[#7ec850] border-b-4 border-l-4 border-[#6b5210] group-hover:scale-110 transition-transform duration-500" />
-          <div className="absolute bottom-0 left-0 w-24 h-24 bg-[#e8c547] border-r-4 border-t-4 border-[#6b5210] group-hover:scale-110 transition-transform duration-500" />
-          <div className="absolute top-1/2 right-6 w-4 h-4 bg-accent rounded-full animate-ping" />
-          <div className="absolute top-8 left-8 w-3 h-3 bg-chart-2 rounded-full animate-pulse" />
+        <div className="relative z-20 max-w-5xl w-full mx-4 md:mx-8 px-6 md:px-16 py-12 md:py-20 overflow-visible">
           <div className="relative z-10 text-center">
-            <h1 className="text-4xl sm:text-5xl md:text-7xl font-black text-[#6b5210] mb-6 leading-[1.1] tracking-tight">
+            <h1
+              className="text-4xl sm:text-5xl md:text-7xl font-black text-white mb-6 leading-[1.1] tracking-tight"
+              style={{
+                textShadow: "0 5px 0 #1565C0, 0 10px 18px rgba(13,71,161,0.35)",
+              }}
+            >
               {t.openingH1a}
               <br />
               {t.openingH1b}
             </h1>
-            <p className="text-xl md:text-2xl text-[#5a4a2a] mb-6 font-bold">{t.openingSub}</p>
-            <div className="w-24 h-2 bg-[#7ec850] mx-auto shadow-[3px_3px_0_rgba(0,0,0,0.2)] mb-6" />
-            <p className="text-lg md:text-xl text-[#5a4a2a] leading-relaxed max-w-3xl mx-auto font-semibold">{t.openingP}</p>
+            <p className="text-xl md:text-2xl text-white mb-6 font-bold drop-shadow-[0_3px_8px_rgba(13,71,161,0.55)]">{t.openingSub}</p>
+            <div className="w-24 h-2 bg-[#E8FF72] mx-auto shadow-[3px_3px_0_rgba(13,71,161,0.45)] mb-6" />
+            <p className="text-lg md:text-xl text-white leading-relaxed max-w-3xl mx-auto font-semibold drop-shadow-[0_3px_8px_rgba(13,71,161,0.55)]">{t.openingP}</p>
           </div>
         </div>
       </section>
@@ -333,16 +350,19 @@ export default function AboutPage({
       {/* ========== Philosophy：像素藍天白雲風格 ========== */}
       <section className={`${showVisionPage ? "" : "hidden"} relative overflow-hidden px-4 py-16 md:py-20`}>
         <div className="relative z-20 mx-auto max-w-4xl text-center">
-          <div className="mb-6 inline-flex items-center border-4 border-[#6b5210] bg-[#f5e6c8] px-6 py-3 text-[#6b5210] shadow-[4px_4px_0_rgba(0,0,0,0.25)]">
+          <div className="mb-6 inline-flex items-center px-6 py-3 text-white drop-shadow-[0_4px_10px_rgba(13,71,161,0.55)]">
             <BookOpen className="mr-2 h-5 w-5 text-primary" />
             <span className="font-black uppercase tracking-[0.16em]">Philosophy</span>
             <Sparkles className="ml-2 h-5 w-5 text-secondary" />
           </div>
-          <div className="border-4 border-[#6b5210] bg-[#fff8dc]/95 px-6 py-10 shadow-[inset_4px_4px_0_rgba(255,255,255,0.8),inset_-4px_-4px_0_rgba(196,165,116,0.45),6px_6px_0_rgba(0,0,0,0.22)] md:px-12 md:py-12">
-            <h2 className="mb-5 text-4xl font-black leading-tight text-[#6b5210] md:text-6xl">{t.philosophyTitle}</h2>
-            <div className="mx-auto mb-6 h-2 w-28 bg-[#7ec850] shadow-[3px_3px_0_rgba(0,0,0,0.2)]" />
-            <p className="mx-auto max-w-2xl text-lg font-semibold leading-relaxed text-[#5a4a2a] md:text-xl">{t.philosophyText}</p>
-          </div>
+          <h2
+            className="mb-5 text-4xl font-black leading-tight text-white md:text-6xl"
+            style={{ textShadow: "0 4px 0 #1565C0, 0 9px 18px rgba(13,71,161,0.35)" }}
+          >
+            {t.philosophyTitle}
+          </h2>
+          <div className="mx-auto mb-6 h-2 w-28 bg-[#E8FF72] shadow-[3px_3px_0_rgba(13,71,161,0.45)]" />
+          <p className="mx-auto max-w-2xl text-lg font-semibold leading-relaxed text-white md:text-xl drop-shadow-[0_3px_8px_rgba(13,71,161,0.55)]">{t.philosophyText}</p>
         </div>
       </section>
 
@@ -350,51 +370,52 @@ export default function AboutPage({
       <section className={`${showVisionPage ? "" : "hidden"} relative overflow-hidden px-4 py-16`}>
         <div className="max-w-6xl mx-auto relative z-20">
           <div className="text-center mb-10">
-            <div className="inline-flex items-center border-4 border-[#6b5210] bg-[#f5e6c8] px-8 py-4 text-[#6b5210] font-black mb-8 shadow-[4px_4px_0_rgba(0,0,0,0.25)] hover:scale-105 transition-transform duration-300">
+            <div className="inline-flex items-center px-8 py-4 text-white font-black mb-8 drop-shadow-[0_4px_10px_rgba(13,71,161,0.55)] hover:scale-105 transition-transform duration-300">
               <Eye className="w-6 h-6 mr-3 text-primary animate-pulse" />
               Our Vision
               <Sparkles className="w-6 h-6 ml-3 text-accent" />
             </div>
-            <h2 className="text-5xl md:text-7xl font-black text-[#6b5210] mb-8">
+            <h2
+              className="text-5xl md:text-7xl font-black text-white mb-8"
+              style={{ textShadow: "0 5px 0 #1565C0, 0 10px 18px rgba(13,71,161,0.35)" }}
+            >
               {t.visionTitle}
             </h2>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start mb-8">
-            <div className="p-8 border-4 border-[#6b5210] bg-[#fff8dc]/95 shadow-[inset_4px_4px_0_rgba(255,255,255,0.85),inset_-4px_-4px_0_rgba(196,165,116,0.45),6px_6px_0_rgba(0,0,0,0.22)] hover:shadow-xl transition-all duration-500 group relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-24 h-24 bg-[#7ec850] border-b-4 border-l-4 border-[#6b5210] group-hover:scale-110 transition-transform duration-500" />
+            <div className="p-8 transition-all duration-500 group relative overflow-visible">
               <div className="relative z-10">
-                <div className="inline-flex items-center px-6 py-3 bg-[#d4e8b4] text-[#3d5a1f] font-black mb-6 border-4 border-[#6b5210] shadow-[3px_3px_0_rgba(0,0,0,0.22)]">
+                <div className="inline-flex items-center px-6 py-3 text-[#E8FF72] font-black mb-6 drop-shadow-[0_3px_8px_rgba(13,71,161,0.55)]">
                   <Users className="w-5 h-5 mr-2" />
                   For Writers
                 </div>
-                <p className="text-lg text-[#5a4a2a] mb-6 leading-relaxed font-semibold">{t.writersP}</p>
+                <p className="text-lg text-white mb-6 leading-relaxed font-semibold drop-shadow-[0_3px_8px_rgba(13,71,161,0.55)]">{t.writersP}</p>
                 <ul className="space-y-4">
                   {writerItems.map((item, i) => (
                     <li key={i} className="flex items-center gap-4 group/item hover:scale-105 transition-transform duration-300">
-                      <div className="w-8 h-8 bg-[#7ec850] flex items-center justify-center shadow-[2px_2px_0_rgba(0,0,0,0.22)] border-2 border-[#6b5210]">
-                        <CheckCircle className="w-4 h-4 text-[#3d5a1f]" />
+                      <div className="w-8 h-8 bg-[#E8FF72] flex items-center justify-center shadow-[2px_2px_0_rgba(13,71,161,0.45)]">
+                        <CheckCircle className="w-4 h-4 text-[#1565C0]" />
                       </div>
-                      <span className="text-[#5a4a2a] font-bold group-hover/item:text-[#3d5a1f] transition-colors duration-300">{item}</span>
+                      <span className="text-white font-bold drop-shadow-[0_3px_8px_rgba(13,71,161,0.55)]">{item}</span>
                     </li>
                   ))}
                 </ul>
               </div>
             </div>
-            <div className="p-8 border-4 border-[#6b5210] bg-[#fff8dc]/95 shadow-[inset_4px_4px_0_rgba(255,255,255,0.85),inset_-4px_-4px_0_rgba(196,165,116,0.45),6px_6px_0_rgba(0,0,0,0.22)] hover:shadow-xl transition-all duration-500 group relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-24 h-24 bg-[#e8c547] border-b-4 border-l-4 border-[#6b5210] group-hover:scale-110 transition-transform duration-500" />
+            <div className="p-8 transition-all duration-500 group relative overflow-visible">
               <div className="relative z-10">
-                <div className="inline-flex items-center px-6 py-3 bg-[#fff0b3] text-[#8b6914] font-black mb-6 border-4 border-[#6b5210] shadow-[3px_3px_0_rgba(0,0,0,0.22)]">
+                <div className="inline-flex items-center px-6 py-3 text-[#E8FF72] font-black mb-6 drop-shadow-[0_3px_8px_rgba(13,71,161,0.55)]">
                   <BookOpen className="w-5 h-5 mr-2" />
                   For Research
                 </div>
-                <p className="text-lg text-[#5a4a2a] mb-6 leading-relaxed font-semibold">{t.researchP}</p>
+                <p className="text-lg text-white mb-6 leading-relaxed font-semibold drop-shadow-[0_3px_8px_rgba(13,71,161,0.55)]">{t.researchP}</p>
                 <ul className="space-y-4">
                   {researchItems.map((item, i) => (
                     <li key={i} className="flex items-center gap-4 group/item hover:scale-105 transition-transform duration-300">
-                      <div className="w-8 h-8 bg-[#e8c547] flex items-center justify-center shadow-[2px_2px_0_rgba(0,0,0,0.22)] border-2 border-[#6b5210]">
-                        <CheckCircle className="w-4 h-4 text-[#6b5210]" />
+                      <div className="w-8 h-8 bg-[#E8FF72] flex items-center justify-center shadow-[2px_2px_0_rgba(13,71,161,0.45)]">
+                        <CheckCircle className="w-4 h-4 text-[#1565C0]" />
                       </div>
-                      <span className="text-[#5a4a2a] font-bold group-hover/item:text-[#8b6914] transition-colors duration-300">{item}</span>
+                      <span className="text-white font-bold drop-shadow-[0_3px_8px_rgba(13,71,161,0.55)]">{item}</span>
                     </li>
                   ))}
                 </ul>
