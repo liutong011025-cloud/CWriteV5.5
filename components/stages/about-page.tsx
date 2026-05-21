@@ -308,10 +308,10 @@ export default function AboutPage({
         </div>
       </section>
 
-      {/* ========== Philosophy：背景用 background.png（與 Research 的 Background.png 區分）========== */}
+      {/* ========== Philosophy：背景用 background.png（與 Research 的 Background.webp 區分）========== */}
       <section className={`${showVisionPage ? "" : "hidden"} py-0 relative overflow-hidden`}>
         <div className="relative min-h-[600px] md:min-h-[700px] flex items-center justify-center">
-          <Image src="/background.webp" alt="" fill className="object-cover object-center" />
+          <Image src="/background.png" alt="" fill className="object-cover object-center" />
           <div className="absolute inset-0 bg-black/55" />
           <div className="absolute top-6 left-6 z-20 px-4 py-2 bg-white/10 backdrop-blur-md rounded-[1rem] border border-white/20">
             <p className="text-white/90 text-xs font-semibold leading-tight">Primavera (Botticelli)</p>
@@ -332,7 +332,9 @@ export default function AboutPage({
 
       {/* ========== Vision（aboutusnewest vision-section）========== */}
       <section className={`${showVisionPage ? "" : "hidden"} py-12 px-4 bg-background relative overflow-hidden`}>
-        <div className="absolute inset-0 -z-10">
+        <div className="absolute inset-0 -z-10 overflow-hidden">
+          <Image src="/Background.webp" alt="" fill className="scale-105 object-cover object-center blur-sm" />
+          <div className="absolute inset-0 bg-background/70 backdrop-blur-[2px]" />
           <div className="absolute top-0 left-0 w-80 h-80 bg-primary/10 rounded-[2rem] -translate-x-40 -translate-y-40 animate-morphing shadow-brutal" />
           <div className="absolute bottom-0 right-0 w-64 h-64 bg-secondary/20 rounded-[2rem] translate-x-32 translate-y-32 rotate-45 animate-float shadow-brutal" />
           {[...Array(6)].map((_, i) => (
