@@ -225,10 +225,11 @@ export default function AboutPage({
       </section>
 
       {/* ========== About CWrite（aboutusnewest about-cwrite）========== */}
-      <section className={`${showVisionPage ? "" : "hidden"} py-12 px-4 relative overflow-hidden`}>
+      <section className={`${showVisionPage ? "" : "hidden"} py-12 px-4 relative overflow-visible`}>
         <div className="absolute inset-0 z-10">
           <div className="absolute top-20 right-20 w-40 h-40 bg-primary/20 rounded-[2rem] rotate-12 animate-morphing shadow-brutal" />
-          <div className="absolute bottom-40 left-20 w-32 h-32 bg-secondary/30 rounded-[2rem] -rotate-12 animate-float shadow-brutal" />
+          <div className="absolute bottom-32 left-20 w-32 h-32 bg-secondary/30 rounded-[2rem] -rotate-12 animate-float shadow-brutal" />
+          <div className="absolute left-[44%] top-[18%] h-24 w-44 rounded-[2rem] bg-white/20 rotate-6 shadow-[0_18px_40px_rgba(13,71,161,0.12)] animate-float-delayed" />
         </div>
         <div className="max-w-7xl mx-auto relative z-20">
           <div className="text-center mb-10">
@@ -270,11 +271,12 @@ export default function AboutPage({
       </section>
 
       {/* ========== How We Enhance（aboutusnewest how-we-enhance）========== */}
-      <section className={`${showVisionPage ? "" : "hidden"} py-12 px-4 relative overflow-hidden`}>
+      <section className={`${showVisionPage ? "" : "hidden"} py-16 px-4 relative overflow-visible`}>
         <div className="absolute inset-0 z-10">
-          <div className="absolute top-0 left-0 w-80 h-80 bg-primary/20 rounded-[2rem] -translate-x-40 -translate-y-40 animate-morphing shadow-brutal" />
-          <div className="absolute bottom-0 right-0 w-64 h-64 bg-secondary/30 rounded-[2rem] translate-x-32 translate-y-32 rotate-45 animate-float shadow-brutal" />
-          <div className="absolute top-1/2 left-1/4 w-48 h-48 bg-accent/25 rounded-[2rem] rotate-12 animate-pulse shadow-brutal" />
+          <div className="absolute top-8 left-8 w-56 h-40 bg-primary/20 rounded-[2rem] -rotate-6 animate-morphing shadow-brutal" />
+          <div className="absolute bottom-10 right-10 w-52 h-36 bg-secondary/30 rounded-[2rem] rotate-12 animate-float shadow-brutal" />
+          <div className="absolute top-1/2 left-1/4 w-48 h-32 bg-accent/25 rounded-[2rem] rotate-12 animate-pulse shadow-brutal" />
+          <div className="absolute right-[28%] top-[6%] h-20 w-36 rounded-[2rem] bg-white/20 -rotate-12 shadow-[0_18px_40px_rgba(13,71,161,0.12)] animate-float-delayed" />
         </div>
         <div className="max-w-7xl mx-auto relative z-20">
           <div className="flex justify-center mb-12">
@@ -330,7 +332,11 @@ export default function AboutPage({
       </section>
 
       {/* ========== Values（aboutusnewest values-education）========== */}
-      <section className={`${showVisionPage ? "" : "hidden"} py-12 px-4 relative overflow-hidden`}>
+      <section className={`${showVisionPage ? "" : "hidden"} py-12 px-4 relative overflow-visible`}>
+        <div className="absolute inset-0 z-10">
+          <div className="absolute left-[10%] top-[10%] h-20 w-40 rounded-[2rem] bg-white/20 rotate-6 shadow-[0_18px_40px_rgba(13,71,161,0.12)] animate-float" />
+          <div className="absolute bottom-[12%] right-[12%] h-24 w-44 rounded-[2rem] bg-primary/20 -rotate-6 shadow-brutal animate-float-delayed" />
+        </div>
         <div className="max-w-4xl mx-auto relative z-20">
           <div className="text-center mb-8">
             <div className="inline-flex items-center px-6 py-3 text-white font-black mb-4 drop-shadow-[0_4px_10px_rgba(13,71,161,0.55)] hover:scale-105 transition-transform duration-300">
@@ -361,7 +367,11 @@ export default function AboutPage({
       </section>
 
       {/* ========== Philosophy：像素藍天白雲風格 ========== */}
-      <section className={`${showVisionPage ? "" : "hidden"} relative overflow-hidden px-4 py-16 md:py-20`}>
+      <section className={`${showVisionPage ? "" : "hidden"} relative overflow-visible px-4 py-16 md:py-20`}>
+        <div className="absolute inset-0 z-10">
+          <div className="absolute right-[9%] top-[18%] h-24 w-48 rounded-[2rem] bg-white/20 rotate-12 shadow-[0_18px_40px_rgba(13,71,161,0.12)] animate-float" />
+          <div className="absolute bottom-[8%] left-[12%] h-20 w-36 rounded-[2rem] bg-secondary/25 -rotate-6 shadow-brutal animate-float-delayed" />
+        </div>
         <div className="relative z-20 mx-auto max-w-4xl text-center">
           <div className="mb-6 inline-flex items-center px-6 py-3 text-white drop-shadow-[0_4px_10px_rgba(13,71,161,0.55)]">
             <BookOpen className="mr-2 h-5 w-5 text-primary" />
@@ -380,7 +390,11 @@ export default function AboutPage({
       </section>
 
       {/* ========== Vision：像素藍天白雲風格 ========== */}
-      <section className={`${showVisionPage ? "" : "hidden"} relative overflow-hidden px-4 py-16`}>
+      <section className={`${showVisionPage ? "" : "hidden"} relative overflow-visible px-4 py-16`}>
+        <div className="absolute inset-0 z-10">
+          <div className="absolute left-[7%] top-[18%] h-24 w-44 rounded-[2rem] bg-white/20 -rotate-12 shadow-[0_18px_40px_rgba(13,71,161,0.12)] animate-float" />
+          <div className="absolute right-[8%] bottom-[10%] h-28 w-52 rounded-[2rem] bg-accent/20 rotate-6 shadow-brutal animate-float-delayed" />
+        </div>
         <div className="max-w-6xl mx-auto relative z-20">
           <div className="text-center mb-10">
             <div className="inline-flex items-center px-8 py-4 text-white font-black mb-8 drop-shadow-[0_4px_10px_rgba(13,71,161,0.55)] hover:scale-105 transition-transform duration-300">
