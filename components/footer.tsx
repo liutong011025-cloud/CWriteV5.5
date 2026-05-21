@@ -20,11 +20,22 @@ export default function Footer() {
 
   return (
     <footer
-      className="relative mt-auto w-full overflow-hidden border-t-2 border-white/20 text-white"
+      className="relative mt-auto w-full overflow-hidden text-white"
       style={{
         background: "linear-gradient(180deg, #123f71 0%, #103565 48%, #0b2854 100%)",
       }}
     >
+      <svg
+        className="pointer-events-none absolute inset-x-0 top-0 z-20 h-8 w-full text-white"
+        viewBox="0 0 1440 56"
+        preserveAspectRatio="none"
+        aria-hidden="true"
+      >
+        <path
+          d="M0 0H1440V18C1280 2 1180 8 1040 22C870 39 742 38 580 23C387 5 250 12 0 28Z"
+          fill="currentColor"
+        />
+      </svg>
       <svg
         className="pointer-events-none absolute inset-0 h-full w-full"
         viewBox="0 0 1440 132"
@@ -56,12 +67,12 @@ export default function Footer() {
       >
         <path
           d="M184 150C215 111 254 82 312 55C365 30 401 12 431 0H460V150Z"
-          fill="#e9b27e"
+          fill="rgb(232, 184, 140)"
         />
         <path
           d="M230 150C259 111 291 85 333 63C378 39 411 18 440 0"
           fill="none"
-          stroke="#f5cf9d"
+          stroke="rgb(246, 214, 184)"
           strokeWidth="22"
           strokeLinecap="round"
           opacity="0.35"
@@ -75,7 +86,7 @@ export default function Footer() {
         />
       </svg>
 
-      <div className="relative z-10 mx-auto flex max-w-[1600px] flex-col gap-3 px-5 py-4 sm:px-8 lg:flex-row lg:items-center lg:justify-between lg:gap-8 lg:px-12">
+      <div className="relative z-10 mx-auto flex max-w-[1600px] flex-col gap-3 px-5 pb-4 pt-6 sm:px-8 lg:flex-row lg:items-center lg:justify-between lg:gap-8 lg:px-12">
         <div className="flex shrink-0 items-center justify-center gap-4 sm:gap-7 lg:justify-start">
           <Image
             src="/EdUHK_Signature_RGBWhite@4x-1-1024x336.webp"
@@ -97,10 +108,10 @@ export default function Footer() {
         </div>
 
         <div className="ml-auto max-w-5xl text-center drop-shadow-[0_2px_3px_rgba(0,0,0,0.38)] lg:text-right">
-          <p className="text-sm font-black leading-5 text-sky-50 sm:text-base">
+          <p className="text-sm font-medium leading-5 text-sky-50 sm:text-base">
             Strategic Plan Start-up Project @EdUHK
           </p>
-          <p className="mt-0.5 text-sm font-extrabold leading-5 text-white sm:text-[15px]">
+          <p className="mt-0.5 text-sm font-medium leading-5 text-white sm:text-[15px]">
             Copyright © 2026 The Education University of Hong Kong. All Rights Reserved.
           </p>
           <p className="ml-auto mt-1 max-w-4xl text-[10px] font-medium leading-3 text-sky-50/65 sm:text-[11px]">
