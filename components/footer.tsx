@@ -23,10 +23,13 @@ export default function Footer() {
       className="w-full mt-auto border-y-4 border-[#4a2f12] text-[#fff8dc] shadow-[0_-8px_0_rgba(0,0,0,0.16)]"
       style={{
         background:
-          "repeating-linear-gradient(90deg, rgba(255,255,255,0.035) 0 2px, transparent 2px 72px), linear-gradient(180deg, #8b5a24 0%, #6f451b 48%, #4f2f13 100%)",
+          "repeating-linear-gradient(90deg, rgba(255,255,255,0.04) 0px, rgba(255,255,255,0.04) 2px, transparent 2px, transparent 72px), linear-gradient(180deg, #8b5a24 0%, #6f451b 48%, #4f2f13 100%)",
       }}
     >
-      <div className="border-y-2 border-[#b8843c]/70 bg-[#2b1a0b]/18">
+      <div
+        className="border-y-2 border-[#b8843c]/70"
+        style={{ backgroundColor: "rgba(43, 26, 11, 0.28)" }}
+      >
         <div className="mx-auto grid max-w-[1600px] gap-5 px-5 py-6 sm:px-8 lg:grid-cols-[minmax(300px,0.72fr)_1.4fr] lg:items-center lg:px-12">
           <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-4 lg:justify-start">
             <Image
@@ -48,7 +51,10 @@ export default function Footer() {
             />
           </div>
 
-          <div className="border-4 border-[#3d260f] bg-[#f7dfad] p-4 text-center text-[#3a240f] shadow-[inset_4px_4px_0_rgba(255,255,255,0.45),inset_-4px_-4px_0_rgba(92,55,18,0.18),4px_4px_0_rgba(0,0,0,0.22)] lg:text-left">
+          <div
+            className="border-4 border-[#3d260f] p-4 text-center text-[#3a240f] shadow-[inset_4px_4px_0_rgba(255,255,255,0.45),inset_-4px_-4px_0_rgba(92,55,18,0.18),4px_4px_0_rgba(0,0,0,0.22)] lg:text-left"
+            style={{ backgroundColor: "#f7dfad" }}
+          >
             <p className="mb-2 text-xs font-black uppercase tracking-[0.22em] text-[#6b3f13]">
               Disclaimer
             </p>
