@@ -89,7 +89,7 @@ export default function Footer() {
             alt="MIT logo"
             width={210}
             height={60}
-            className="h-auto w-[34vw] max-w-[178px] min-w-[108px] object-contain drop-shadow-[2px_3px_0_rgba(0,0,0,0.22)]"
+            className="h-auto w-[38vw] max-w-[205px] min-w-[122px] object-contain drop-shadow-[2px_3px_0_rgba(0,0,0,0.22)]"
             priority={false}
           />
         </div>
@@ -102,7 +102,7 @@ export default function Footer() {
             Copyright © 2026 The Education University of Hong Kong. All Rights Reserved.
           </p>
           <p className="ml-auto mt-1 max-w-[780px] break-words text-[10px] font-medium leading-3 text-sky-50/65 sm:text-[11px]">
-            <span className="font-bold uppercase tracking-[0.14em]">Disclaimer</span>
+            <span className="font-bold uppercase tracking-[0.14em]">Disclaimer:</span>
             {" "}This website uses AI to help you learn and create. Sometimes AI may make mistakes or give incorrect
             information. Please think carefully, check important information, and ask a teacher or parent if you are
             unsure. By using this website, you understand that AI is not always perfect.
