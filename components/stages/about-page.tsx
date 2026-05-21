@@ -120,15 +120,32 @@ function SkyCloudBackdrop() {
       <div
         className="absolute inset-0 z-0"
         style={{
-          background: "linear-gradient(180deg, #b8e4f9 0%, #87ceeb 52%, #dff6ff 100%)",
+          background: "linear-gradient(180deg, #b8e4f9 0%, #87ceeb 48%, #dff6ff 100%)",
         }}
       />
       <div
-        className="pointer-events-none absolute inset-0 z-30 opacity-75"
+        className="pointer-events-none absolute inset-0 z-10 opacity-20"
         style={{
           background:
-            "radial-gradient(ellipse at 8% 22%, rgba(255,255,255,0.95) 0 6%, transparent 16%), radial-gradient(ellipse at 20% 15%, rgba(255,255,255,0.8) 0 5%, transparent 14%), radial-gradient(ellipse at 82% 20%, rgba(255,255,255,0.9) 0 7%, transparent 18%), radial-gradient(ellipse at 93% 34%, rgba(255,255,255,0.72) 0 5%, transparent 15%), radial-gradient(ellipse at 14% 78%, rgba(255,255,255,0.72) 0 8%, transparent 19%), radial-gradient(ellipse at 68% 82%, rgba(255,255,255,0.65) 0 9%, transparent 21%)",
+            "linear-gradient(90deg, rgba(255,255,255,0.32) 1px, transparent 1px), linear-gradient(180deg, rgba(255,255,255,0.22) 1px, transparent 1px)",
+          backgroundSize: "28px 28px",
         }}
+      />
+      <div
+        className="pointer-events-none absolute left-[5%] top-[14%] z-30 h-8 w-20 bg-white/90"
+        style={{ boxShadow: "24px 0 0 rgba(255,255,255,0.85), 48px 0 0 rgba(255,255,255,0.72), 12px -16px 0 rgba(255,255,255,0.92), 36px -12px 0 rgba(255,255,255,0.82)" }}
+      />
+      <div
+        className="pointer-events-none absolute right-[8%] top-[20%] z-30 h-10 w-24 bg-white/85"
+        style={{ boxShadow: "-28px 0 0 rgba(255,255,255,0.72), 28px 0 0 rgba(255,255,255,0.76), -8px -18px 0 rgba(255,255,255,0.9), 36px -12px 0 rgba(255,255,255,0.72)" }}
+      />
+      <div
+        className="pointer-events-none absolute bottom-[12%] left-[14%] z-30 h-9 w-24 bg-white/70"
+        style={{ boxShadow: "28px 0 0 rgba(255,255,255,0.6), 56px 0 0 rgba(255,255,255,0.52), 18px -16px 0 rgba(255,255,255,0.68)" }}
+      />
+      <div
+        className="pointer-events-none absolute bottom-[16%] right-[24%] z-30 h-8 w-20 bg-white/60"
+        style={{ boxShadow: "-24px 0 0 rgba(255,255,255,0.52), 24px 0 0 rgba(255,255,255,0.5), 8px -14px 0 rgba(255,255,255,0.62)" }}
       />
     </>
   )
@@ -331,85 +348,73 @@ export default function AboutPage({
         </div>
       </section>
 
-      {/* ========== Philosophy：背景用 background.png（與 Research 的 Background.webp 區分）========== */}
-      <section className={`${showVisionPage ? "" : "hidden"} py-0 relative overflow-hidden`}>
-        <div className="relative min-h-[600px] md:min-h-[700px] flex items-center justify-center">
-          <Image src="/background.png" alt="" fill className="object-cover object-center" />
-          <div className="absolute inset-0 bg-black/55" />
-          <div className="absolute top-6 left-6 z-20 px-4 py-2 bg-white/10 backdrop-blur-md rounded-[1rem] border border-white/20">
-            <p className="text-white/90 text-xs font-semibold leading-tight">Primavera (Botticelli)</p>
-            <p className="text-white/65 text-[11px] leading-tight mt-0.5">Luna, the goddess of inspiration, guides creativity.</p>
+      {/* ========== Philosophy：像素藍天白雲風格 ========== */}
+      <section className={`${showVisionPage ? "" : "hidden"} relative overflow-hidden px-4 py-16 md:py-20`}>
+        <SkyCloudBackdrop />
+        <div className="relative z-20 mx-auto max-w-4xl text-center">
+          <div className="mb-6 inline-flex items-center border-4 border-[#6b5210] bg-[#f5e6c8] px-6 py-3 text-[#6b5210] shadow-[4px_4px_0_rgba(0,0,0,0.25)]">
+            <BookOpen className="mr-2 h-5 w-5 text-primary" />
+            <span className="font-black uppercase tracking-[0.16em]">Philosophy</span>
+            <Sparkles className="ml-2 h-5 w-5 text-secondary" />
           </div>
-          <div className="relative z-10 max-w-3xl w-full mx-4 md:mx-8 text-center px-6 md:px-12 py-14 md:py-20 rounded-[2rem] border-2 border-white/20 bg-white/10 backdrop-blur-md shadow-2xl">
-            <div className="inline-flex items-center gap-2 px-6 py-3 bg-white/15 backdrop-blur-md rounded-[2rem] border border-white/30 text-white font-black mb-6 hover:scale-105 transition-transform duration-300">
-              <BookOpen className="w-5 h-5 text-primary animate-bounce" />
-              Philosophy
-              <Sparkles className="w-5 h-5 text-secondary animate-pulse" />
-            </div>
-            <h2 className="text-4xl md:text-6xl font-black text-white mb-6 leading-tight drop-shadow-lg">{t.philosophyTitle}</h2>
-            <div className="w-20 h-1.5 bg-gradient-to-r from-primary to-secondary mx-auto rounded-full mb-6" />
-            <p className="text-lg md:text-xl text-white/90 leading-relaxed font-medium max-w-xl mx-auto">{t.philosophyText}</p>
+          <div className="border-4 border-[#6b5210] bg-[#fff8dc]/95 px-6 py-10 shadow-[inset_4px_4px_0_rgba(255,255,255,0.8),inset_-4px_-4px_0_rgba(196,165,116,0.45),6px_6px_0_rgba(0,0,0,0.22)] md:px-12 md:py-12">
+            <h2 className="mb-5 text-4xl font-black leading-tight text-[#6b5210] md:text-6xl">{t.philosophyTitle}</h2>
+            <div className="mx-auto mb-6 h-2 w-28 bg-[#7ec850] shadow-[3px_3px_0_rgba(0,0,0,0.2)]" />
+            <p className="mx-auto max-w-2xl text-lg font-semibold leading-relaxed text-[#5a4a2a] md:text-xl">{t.philosophyText}</p>
           </div>
         </div>
       </section>
 
-      {/* ========== Vision（aboutusnewest vision-section）========== */}
-      <section className={`${showVisionPage ? "" : "hidden"} py-12 px-4 relative overflow-hidden`}>
+      {/* ========== Vision：像素藍天白雲風格 ========== */}
+      <section className={`${showVisionPage ? "" : "hidden"} relative overflow-hidden px-4 py-16`}>
         <SkyCloudBackdrop />
-        <div className="absolute inset-0 z-10 overflow-hidden">
-          <div className="absolute top-0 left-0 w-80 h-80 bg-primary/10 rounded-[2rem] -translate-x-40 -translate-y-40 animate-morphing shadow-brutal" />
-          <div className="absolute bottom-0 right-0 w-64 h-64 bg-secondary/20 rounded-[2rem] translate-x-32 translate-y-32 rotate-45 animate-float shadow-brutal" />
-          {[...Array(6)].map((_, i) => (
-            <div key={i} className="absolute w-4 h-4 bg-accent rounded-full animate-ping" style={{ top: `${20 + (i * 10) % 60}%`, left: `${10 + (i * 15) % 80}%`, animationDelay: `${i * 0.8}s`, animationDuration: `${3 + (i % 2)}s` }} />
-          ))}
-        </div>
         <div className="max-w-6xl mx-auto relative z-20">
           <div className="text-center mb-10">
-            <div className="inline-flex items-center px-8 py-4 bg-card border-4 border-foreground rounded-[2rem] text-card-foreground font-black mb-8 shadow-brutal hover:scale-105 transition-transform duration-300">
+            <div className="inline-flex items-center border-4 border-[#6b5210] bg-[#f5e6c8] px-8 py-4 text-[#6b5210] font-black mb-8 shadow-[4px_4px_0_rgba(0,0,0,0.25)] hover:scale-105 transition-transform duration-300">
               <Eye className="w-6 h-6 mr-3 text-primary animate-pulse" />
               Our Vision
               <Sparkles className="w-6 h-6 ml-3 text-accent" />
             </div>
-            <h2 className="text-5xl md:text-7xl font-black text-foreground mb-8 bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
+            <h2 className="text-5xl md:text-7xl font-black text-[#6b5210] mb-8">
               {t.visionTitle}
             </h2>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-start mb-8">
-            <div className="p-8 rounded-[2rem] border-4 border-foreground bg-card shadow-brutal hover:shadow-xl transition-all duration-500 group relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-24 h-24 bg-primary rounded-bl-[2rem] group-hover:scale-110 transition-transform duration-500" />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start mb-8">
+            <div className="p-8 border-4 border-[#6b5210] bg-[#fff8dc]/95 shadow-[inset_4px_4px_0_rgba(255,255,255,0.85),inset_-4px_-4px_0_rgba(196,165,116,0.45),6px_6px_0_rgba(0,0,0,0.22)] hover:shadow-xl transition-all duration-500 group relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-24 h-24 bg-[#7ec850] border-b-4 border-l-4 border-[#6b5210] group-hover:scale-110 transition-transform duration-500" />
               <div className="relative z-10">
-                <div className="inline-flex items-center px-6 py-3 bg-primary/20 rounded-[1.5rem] text-primary font-black mb-6 border-4 border-foreground shadow-brutal">
+                <div className="inline-flex items-center px-6 py-3 bg-[#d4e8b4] text-[#3d5a1f] font-black mb-6 border-4 border-[#6b5210] shadow-[3px_3px_0_rgba(0,0,0,0.22)]">
                   <Users className="w-5 h-5 mr-2" />
                   For Writers
                 </div>
-                <p className="text-lg text-muted-foreground mb-6 leading-relaxed font-medium">{t.writersP}</p>
+                <p className="text-lg text-[#5a4a2a] mb-6 leading-relaxed font-semibold">{t.writersP}</p>
                 <ul className="space-y-4">
                   {writerItems.map((item, i) => (
                     <li key={i} className="flex items-center gap-4 group/item hover:scale-105 transition-transform duration-300">
-                      <div className="w-8 h-8 bg-primary rounded-[1rem] flex items-center justify-center shadow-brutal border-2 border-foreground">
-                        <CheckCircle className="w-4 h-4 text-foreground" />
+                      <div className="w-8 h-8 bg-[#7ec850] flex items-center justify-center shadow-[2px_2px_0_rgba(0,0,0,0.22)] border-2 border-[#6b5210]">
+                        <CheckCircle className="w-4 h-4 text-[#3d5a1f]" />
                       </div>
-                      <span className="text-foreground font-medium group-hover/item:text-primary transition-colors duration-300">{item}</span>
+                      <span className="text-[#5a4a2a] font-bold group-hover/item:text-[#3d5a1f] transition-colors duration-300">{item}</span>
                     </li>
                   ))}
                 </ul>
               </div>
             </div>
-            <div className="p-8 rounded-[2rem] border-4 border-foreground bg-card shadow-brutal hover:shadow-xl transition-all duration-500 group relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-24 h-24 bg-secondary rounded-bl-[2rem] group-hover:scale-110 transition-transform duration-500" />
+            <div className="p-8 border-4 border-[#6b5210] bg-[#fff8dc]/95 shadow-[inset_4px_4px_0_rgba(255,255,255,0.85),inset_-4px_-4px_0_rgba(196,165,116,0.45),6px_6px_0_rgba(0,0,0,0.22)] hover:shadow-xl transition-all duration-500 group relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-24 h-24 bg-[#e8c547] border-b-4 border-l-4 border-[#6b5210] group-hover:scale-110 transition-transform duration-500" />
               <div className="relative z-10">
-                <div className="inline-flex items-center px-6 py-3 bg-secondary/20 rounded-[1.5rem] text-secondary font-black mb-6 border-4 border-foreground shadow-brutal">
+                <div className="inline-flex items-center px-6 py-3 bg-[#fff0b3] text-[#8b6914] font-black mb-6 border-4 border-[#6b5210] shadow-[3px_3px_0_rgba(0,0,0,0.22)]">
                   <BookOpen className="w-5 h-5 mr-2" />
                   For Research
                 </div>
-                <p className="text-lg text-muted-foreground mb-6 leading-relaxed font-medium">{t.researchP}</p>
+                <p className="text-lg text-[#5a4a2a] mb-6 leading-relaxed font-semibold">{t.researchP}</p>
                 <ul className="space-y-4">
                   {researchItems.map((item, i) => (
                     <li key={i} className="flex items-center gap-4 group/item hover:scale-105 transition-transform duration-300">
-                      <div className="w-8 h-8 bg-secondary rounded-[1rem] flex items-center justify-center shadow-brutal border-2 border-foreground">
-                        <CheckCircle className="w-4 h-4 text-foreground" />
+                      <div className="w-8 h-8 bg-[#e8c547] flex items-center justify-center shadow-[2px_2px_0_rgba(0,0,0,0.22)] border-2 border-[#6b5210]">
+                        <CheckCircle className="w-4 h-4 text-[#6b5210]" />
                       </div>
-                      <span className="text-foreground font-medium group-hover/item:text-secondary transition-colors duration-300">{item}</span>
+                      <span className="text-[#5a4a2a] font-bold group-hover/item:text-[#8b6914] transition-colors duration-300">{item}</span>
                     </li>
                   ))}
                 </ul>
@@ -419,17 +424,16 @@ export default function AboutPage({
         </div>
       </section>
 
-      {/* ========== Research Team（統一藍天白雲背景）========== */}
+      {/* ========== Research Team（還原背景圖，但頂端無多餘邊距）========== */}
       <section
         ref={teamRef}
         className={`${showResearchPage ? "" : "hidden"} pb-16 md:pb-24 px-4 relative overflow-hidden`}
       >
-        <SkyCloudBackdrop />
-        <div className={`absolute inset-0 z-10 transition-opacity duration-1000 ${teamVisible ? "opacity-100" : "opacity-0"}`}>
-          <div className="absolute top-16 left-8 w-36 h-36 bg-primary/15 rounded-[2rem] rotate-12 animate-morphing shadow-brutal" />
-          <div className="absolute bottom-16 right-10 w-44 h-44 bg-secondary/20 rounded-[2rem] -rotate-12 animate-float shadow-brutal" />
+        <div className={`absolute inset-0 transition-opacity duration-1000 ${teamVisible ? "opacity-100" : "opacity-0"}`}>
+          <Image src="/Background.webp" alt="" fill className="object-cover" />
+          <div className="absolute inset-0 bg-background/40" />
         </div>
-        <div className="max-w-6xl mx-auto relative z-20">
+        <div className="max-w-6xl mx-auto relative z-10">
           <div className="text-center mb-10">
             <div className={`inline-flex items-center px-6 py-3 bg-card border-4 border-foreground rounded-[2rem] text-card-foreground font-black mb-6 shadow-brutal hover:scale-105 transition-all duration-500 ${teamVisible ? "animate-slide-up" : "opacity-0"}`}>
               <Users className="w-5 h-5 mr-2 text-primary animate-bounce" />
