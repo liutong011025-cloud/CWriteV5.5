@@ -114,6 +114,26 @@ function getColorClasses(color: string, isActive: boolean) {
   return base[color as keyof typeof base] || base.primary
 }
 
+function SkyCloudBackdrop() {
+  return (
+    <>
+      <div
+        className="absolute inset-0 z-0"
+        style={{
+          background: "linear-gradient(180deg, #b8e4f9 0%, #87ceeb 52%, #dff6ff 100%)",
+        }}
+      />
+      <div
+        className="pointer-events-none absolute inset-0 z-30 opacity-75"
+        style={{
+          background:
+            "radial-gradient(ellipse at 8% 22%, rgba(255,255,255,0.95) 0 6%, transparent 16%), radial-gradient(ellipse at 20% 15%, rgba(255,255,255,0.8) 0 5%, transparent 14%), radial-gradient(ellipse at 82% 20%, rgba(255,255,255,0.9) 0 7%, transparent 18%), radial-gradient(ellipse at 93% 34%, rgba(255,255,255,0.72) 0 5%, transparent 15%), radial-gradient(ellipse at 14% 78%, rgba(255,255,255,0.72) 0 8%, transparent 19%), radial-gradient(ellipse at 68% 82%, rgba(255,255,255,0.65) 0 9%, transparent 21%)",
+        }}
+      />
+    </>
+  )
+}
+
 export default function AboutPage({
   onBack,
   language = "en",
@@ -182,12 +202,13 @@ export default function AboutPage({
       </section>
 
       {/* ========== About CWrite（aboutusnewest about-cwrite）========== */}
-      <section className={`${showVisionPage ? "" : "hidden"} py-12 px-4 bg-background relative overflow-hidden`}>
-        <div className="absolute inset-0 -z-10">
+      <section className={`${showVisionPage ? "" : "hidden"} py-12 px-4 relative overflow-hidden`}>
+        <SkyCloudBackdrop />
+        <div className="absolute inset-0 z-10">
           <div className="absolute top-20 right-20 w-40 h-40 bg-primary/20 rounded-[2rem] rotate-12 animate-morphing shadow-brutal" />
           <div className="absolute bottom-40 left-20 w-32 h-32 bg-secondary/30 rounded-[2rem] -rotate-12 animate-float shadow-brutal" />
         </div>
-        <div className="max-w-7xl mx-auto relative z-10">
+        <div className="max-w-7xl mx-auto relative z-20">
           <div className="text-center mb-10">
             <div className="inline-flex items-center px-8 py-4 bg-card border-4 border-foreground rounded-[2rem] text-card-foreground font-black mb-8 shadow-brutal hover:scale-105 transition-transform duration-300">
               <Sparkles className="w-6 h-6 mr-3 text-primary animate-pulse" />
@@ -224,13 +245,14 @@ export default function AboutPage({
       </section>
 
       {/* ========== How We Enhance（aboutusnewest how-we-enhance）========== */}
-      <section className={`${showVisionPage ? "" : "hidden"} py-12 px-4 bg-background relative overflow-hidden`}>
-        <div className="absolute inset-0 -z-10">
+      <section className={`${showVisionPage ? "" : "hidden"} py-12 px-4 relative overflow-hidden`}>
+        <SkyCloudBackdrop />
+        <div className="absolute inset-0 z-10">
           <div className="absolute top-0 left-0 w-80 h-80 bg-primary/20 rounded-[2rem] -translate-x-40 -translate-y-40 animate-morphing shadow-brutal" />
           <div className="absolute bottom-0 right-0 w-64 h-64 bg-secondary/30 rounded-[2rem] translate-x-32 translate-y-32 rotate-45 animate-float shadow-brutal" />
           <div className="absolute top-1/2 left-1/4 w-48 h-48 bg-accent/25 rounded-[2rem] rotate-12 animate-pulse shadow-brutal" />
         </div>
-        <div className="max-w-7xl mx-auto relative z-10">
+        <div className="max-w-7xl mx-auto relative z-20">
           <div className="flex justify-center mb-12">
             <Image src="/logobig.webp" alt="CWrite" width={400} height={200} className="object-contain group-hover:scale-105 transition-transform duration-500" />
           </div>
@@ -281,8 +303,9 @@ export default function AboutPage({
       </section>
 
       {/* ========== Values（aboutusnewest values-education）========== */}
-      <section className={`${showVisionPage ? "" : "hidden"} py-12 px-4 bg-background relative overflow-hidden`}>
-        <div className="max-w-4xl mx-auto relative z-10">
+      <section className={`${showVisionPage ? "" : "hidden"} py-12 px-4 relative overflow-hidden`}>
+        <SkyCloudBackdrop />
+        <div className="max-w-4xl mx-auto relative z-20">
           <div className="text-center mb-8">
             <div className="inline-flex items-center px-6 py-3 bg-card border-4 border-foreground rounded-[2rem] text-card-foreground font-black mb-6 shadow-brutal hover:scale-105 transition-transform duration-300">
               <Heart className="w-5 h-5 mr-2 text-accent animate-pulse" />
@@ -331,17 +354,16 @@ export default function AboutPage({
       </section>
 
       {/* ========== Vision（aboutusnewest vision-section）========== */}
-      <section className={`${showVisionPage ? "" : "hidden"} py-12 px-4 bg-background relative overflow-hidden`}>
-        <div className="absolute inset-0 -z-10 overflow-hidden">
-          <Image src="/Background.webp" alt="" fill className="scale-105 object-cover object-center blur-sm" />
-          <div className="absolute inset-0 bg-background/70 backdrop-blur-[2px]" />
+      <section className={`${showVisionPage ? "" : "hidden"} py-12 px-4 relative overflow-hidden`}>
+        <SkyCloudBackdrop />
+        <div className="absolute inset-0 z-10 overflow-hidden">
           <div className="absolute top-0 left-0 w-80 h-80 bg-primary/10 rounded-[2rem] -translate-x-40 -translate-y-40 animate-morphing shadow-brutal" />
           <div className="absolute bottom-0 right-0 w-64 h-64 bg-secondary/20 rounded-[2rem] translate-x-32 translate-y-32 rotate-45 animate-float shadow-brutal" />
           {[...Array(6)].map((_, i) => (
             <div key={i} className="absolute w-4 h-4 bg-accent rounded-full animate-ping" style={{ top: `${20 + (i * 10) % 60}%`, left: `${10 + (i * 15) % 80}%`, animationDelay: `${i * 0.8}s`, animationDuration: `${3 + (i % 2)}s` }} />
           ))}
         </div>
-        <div className="max-w-6xl mx-auto relative z-10">
+        <div className="max-w-6xl mx-auto relative z-20">
           <div className="text-center mb-10">
             <div className="inline-flex items-center px-8 py-4 bg-card border-4 border-foreground rounded-[2rem] text-card-foreground font-black mb-8 shadow-brutal hover:scale-105 transition-transform duration-300">
               <Eye className="w-6 h-6 mr-3 text-primary animate-pulse" />
@@ -397,16 +419,17 @@ export default function AboutPage({
         </div>
       </section>
 
-      {/* ========== Research Team（還原背景圖，但頂端無多餘邊距）========== */}
+      {/* ========== Research Team（統一藍天白雲背景）========== */}
       <section
         ref={teamRef}
         className={`${showResearchPage ? "" : "hidden"} pb-16 md:pb-24 px-4 relative overflow-hidden`}
       >
-        <div className={`absolute inset-0 transition-opacity duration-1000 ${teamVisible ? "opacity-100" : "opacity-0"}`}>
-          <Image src="/Background.webp" alt="" fill className="object-cover" />
-          <div className="absolute inset-0 bg-background/40" />
+        <SkyCloudBackdrop />
+        <div className={`absolute inset-0 z-10 transition-opacity duration-1000 ${teamVisible ? "opacity-100" : "opacity-0"}`}>
+          <div className="absolute top-16 left-8 w-36 h-36 bg-primary/15 rounded-[2rem] rotate-12 animate-morphing shadow-brutal" />
+          <div className="absolute bottom-16 right-10 w-44 h-44 bg-secondary/20 rounded-[2rem] -rotate-12 animate-float shadow-brutal" />
         </div>
-        <div className="max-w-6xl mx-auto relative z-10">
+        <div className="max-w-6xl mx-auto relative z-20">
           <div className="text-center mb-10">
             <div className={`inline-flex items-center px-6 py-3 bg-card border-4 border-foreground rounded-[2rem] text-card-foreground font-black mb-6 shadow-brutal hover:scale-105 transition-all duration-500 ${teamVisible ? "animate-slide-up" : "opacity-0"}`}>
               <Users className="w-5 h-5 mr-2 text-primary animate-bounce" />
