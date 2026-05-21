@@ -31,13 +31,13 @@ export default function Footer() {
         style={{ backgroundColor: "rgba(43, 26, 11, 0.28)" }}
       >
         <div className="mx-auto grid max-w-[1600px] gap-4 px-5 py-3 sm:px-8 lg:grid-cols-[minmax(280px,0.62fr)_1.5fr] lg:items-center lg:px-12">
-          <div className="flex flex-wrap items-center justify-center gap-x-7 gap-y-3 lg:justify-start">
+          <div className="flex items-center justify-center gap-4 sm:gap-7 lg:justify-start">
             <Image
               src="/EdUHK_Signature_RGBWhite@4x-1-1024x336.webp"
               alt="The Education University of Hong Kong logo"
               width={280}
               height={92}
-              className="h-auto w-[205px] object-contain drop-shadow-[2px_3px_0_rgba(0,0,0,0.28)] sm:w-[245px]"
+              className="h-auto w-[48vw] max-w-[245px] min-w-[150px] object-contain drop-shadow-[2px_3px_0_rgba(0,0,0,0.28)]"
               priority={false}
             />
 
@@ -46,7 +46,7 @@ export default function Footer() {
               alt="MIT logo"
               width={210}
               height={60}
-              className="h-auto w-[152px] object-contain drop-shadow-[2px_3px_0_rgba(0,0,0,0.22)] sm:w-[178px]"
+              className="h-auto w-[34vw] max-w-[178px] min-w-[108px] object-contain drop-shadow-[2px_3px_0_rgba(0,0,0,0.22)]"
               priority={false}
             />
           </div>
