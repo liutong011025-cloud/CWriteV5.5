@@ -115,9 +115,20 @@ export default function JourneyMap({
 
   useEffect(() => {
     syncMapFrame()
+    const img = mapImageRef.current
+    if (img?.complete && img.naturalWidth) syncMapFrame()
     window.addEventListener("resize", syncMapFrame)
     return () => window.removeEventListener("resize", syncMapFrame)
   }, [syncMapFrame, effectiveMapImageUrl, chapterIndex])
+
+  const resolveMapFrame = useCallback((): MapFrame | null => {
+    if (mapFrame) return mapFrame
+    const container = mapOverlayRef.current
+    const img = mapImageRef.current
+    if (!container || !img?.naturalWidth || !img.naturalHeight) return null
+    const rect = container.getBoundingClientRect()
+    return computeMapFrame(rect.width, rect.height, img.naturalWidth, img.naturalHeight)
+  }, [mapFrame])
 
   const imagePercentToOverlayStyle = useCallback(
     (x: number, y: number) => {
@@ -215,22 +226,24 @@ export default function JourneyMap({
   }, [pin])
 
   const handleMapClick = (event: MouseEvent<HTMLDivElement>) => {
-    // 只有在手上拿著圖釘時，才能在地圖上放置起點
-    if (!isHoldingPin || !mapFrame) return
-    const rect = event.currentTarget.getBoundingClientRect()
+    if (!isHoldingPin) return
+    const container = mapOverlayRef.current
+    if (!container) return
+    const frame = resolveMapFrame()
+    if (!frame) return
+    const rect = container.getBoundingClientRect()
     const localX = event.clientX - rect.left
     const localY = event.clientY - rect.top
-    const x = localX - mapFrame.left
-    const y = localY - mapFrame.top
-    if (x < 0 || y < 0 || x > mapFrame.width || y > mapFrame.height) return
+    const x = localX - frame.left
+    const y = localY - frame.top
+    if (x < 0 || y < 0 || x > frame.width || y > frame.height) return
     const nextPin = {
-      x: (x / mapFrame.width) * 100,
-      y: (y / mapFrame.height) * 100,
+      x: (x / frame.width) * 100,
+      y: (y / frame.height) * 100,
     }
     if (onPinChange) onPinChange(nextPin)
     else setInternalPin(nextPin)
 
-    // 放下圖釘之後，變成「已放置但還沒開始寫作」狀態
     setIsHoldingPin(false)
     setIsPlacingPin(true)
   }
@@ -258,7 +271,6 @@ export default function JourneyMap({
       <div
         ref={mapOverlayRef}
         className="fixed inset-0 z-0"
-        onClick={handleMapClick}
       >
         <img
           ref={mapImageRef}
@@ -467,6 +479,16 @@ export default function JourneyMap({
           {/* 右側原說明面板已移除，保留空間以後可放其它內容 */}
         </div>
       </div>
+
+      {/* Transparent capture layer while holding pin — sits above UI so clicks register */}
+      {isHoldingPin && (
+        <div
+          className="fixed inset-0 z-[25]"
+          style={{ cursor: 'url("/pin.webp") 16 32, pointer' }}
+          onClick={handleMapClick}
+          aria-label="Click to drop pin on map"
+        />
+      )}
 
       {/* Article detail modal: click flag → show full text, edit and save */}
       {selectedFlag && (
