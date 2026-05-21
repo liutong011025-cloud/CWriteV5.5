@@ -116,7 +116,7 @@ function getColorClasses(color: string, isActive: boolean) {
 
 function SkyCloudBackdrop() {
   return (
-    <>
+    <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
       <div
         className="absolute inset-0 z-0"
         style={{
@@ -131,23 +131,27 @@ function SkyCloudBackdrop() {
           backgroundSize: "28px 28px",
         }}
       />
-      <div
-        className="pointer-events-none absolute left-[5%] top-[14%] z-30 h-8 w-20 bg-white/90"
-        style={{ boxShadow: "24px 0 0 rgba(255,255,255,0.85), 48px 0 0 rgba(255,255,255,0.72), 12px -16px 0 rgba(255,255,255,0.92), 36px -12px 0 rgba(255,255,255,0.82)" }}
-      />
-      <div
-        className="pointer-events-none absolute right-[8%] top-[20%] z-30 h-10 w-24 bg-white/85"
-        style={{ boxShadow: "-28px 0 0 rgba(255,255,255,0.72), 28px 0 0 rgba(255,255,255,0.76), -8px -18px 0 rgba(255,255,255,0.9), 36px -12px 0 rgba(255,255,255,0.72)" }}
-      />
-      <div
-        className="pointer-events-none absolute bottom-[12%] left-[14%] z-30 h-9 w-24 bg-white/70"
-        style={{ boxShadow: "28px 0 0 rgba(255,255,255,0.6), 56px 0 0 rgba(255,255,255,0.52), 18px -16px 0 rgba(255,255,255,0.68)" }}
-      />
-      <div
-        className="pointer-events-none absolute bottom-[16%] right-[24%] z-30 h-8 w-20 bg-white/60"
-        style={{ boxShadow: "-24px 0 0 rgba(255,255,255,0.52), 24px 0 0 rgba(255,255,255,0.5), 8px -14px 0 rgba(255,255,255,0.62)" }}
-      />
-    </>
+      <PixelSkyCloud className="absolute left-[4%] top-[5%] z-30 w-40 opacity-95 animate-float" />
+      <PixelSkyCloud className="absolute right-[7%] top-[12%] z-30 w-52 opacity-85 animate-float-delayed" />
+      <PixelSkyCloud className="absolute left-[16%] top-[34%] z-30 w-48 opacity-75 animate-float-delayed" />
+      <PixelSkyCloud className="absolute right-[20%] top-[48%] z-30 w-44 opacity-65 animate-float" />
+      <PixelSkyCloud className="absolute left-[8%] top-[72%] z-30 w-56 opacity-70 animate-float" />
+      <PixelSkyCloud className="absolute right-[10%] top-[82%] z-30 w-48 opacity-60 animate-float-delayed" />
+    </div>
+  )
+}
+
+function PixelSkyCloud({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 64 32" className={className} style={{ imageRendering: "pixelated" }} aria-hidden="true">
+      <rect x="18" y="6" width="26" height="4" fill="white" />
+      <rect x="12" y="10" width="42" height="4" fill="white" />
+      <rect x="8" y="14" width="50" height="6" fill="white" />
+      <rect x="14" y="20" width="38" height="4" fill="white" />
+      <rect x="22" y="2" width="16" height="4" fill="white" opacity="0.95" />
+      <rect x="6" y="20" width="8" height="2" fill="rgba(0,0,0,0.06)" />
+      <rect x="52" y="20" width="6" height="2" fill="rgba(0,0,0,0.06)" />
+    </svg>
   )
 }
 
@@ -177,50 +181,30 @@ export default function AboutPage({
   }, [])
 
   return (
-    <div className="about-new-theme min-h-screen bg-background" style={{ paddingTop: "88px", paddingBottom: "0" }}>
+    <div className="about-new-theme relative min-h-screen overflow-hidden bg-background" style={{ paddingTop: "88px", paddingBottom: "0" }}>
+      {showVisionPage && <SkyCloudBackdrop />}
       {/* ========== Opening：花紋頂到頂部無空白，左右超出 ========== */}
       <section className={`${showVisionPage ? "" : "hidden"} min-h-screen flex items-center justify-center relative overflow-hidden`} style={{ marginTop: "-88px", paddingTop: "88px" }}>
-        {/* flower 花紋：從頂部鋪滿、左右超出，無上下空白 */}
-        <div
-          className="absolute left-1/2 -translate-x-1/2 z-0"
-          style={{
-            top: 0,
-            width: "120vw",
-            height: "100%",
-            minHeight: "calc(100vh + 88px)",
-            backgroundImage: "url(/flower.webp)",
-            backgroundRepeat: "repeat",
-            backgroundSize: "420px",
-            backgroundPosition: "center",
-            opacity: 0.75,
-          }}
-        />
-        <div className="absolute top-16 left-10 w-32 h-32 bg-primary rounded-[2rem] rotate-12 animate-float shadow-brutal z-[1]" />
-        <div className="absolute bottom-20 right-12 w-24 h-24 bg-secondary rounded-[2rem] -rotate-6 animate-morphing shadow-brutal z-[1]" />
-        <div className="absolute top-1/3 right-8 w-16 h-16 bg-accent rounded-[1.5rem] rotate-45 animate-pulse shadow-brutal z-[1]" />
-        <div className="absolute bottom-1/3 left-8 w-20 h-20 bg-chart-2 rounded-[2rem] -rotate-12 animate-float shadow-brutal z-[1]" style={{ animationDelay: "1s" }} />
-
-        <div className="relative z-10 max-w-5xl w-full mx-4 md:mx-8 px-10 md:px-24 py-12 md:py-24 rounded-[2.5rem] shadow-brutal border-4 border-foreground bg-card/95 backdrop-blur-sm overflow-hidden group hover:shadow-xl transition-all duration-500">
-          <div className="absolute top-0 right-0 w-28 h-28 bg-primary rounded-bl-[2rem] group-hover:scale-110 transition-transform duration-500 shadow-brutal" />
-          <div className="absolute bottom-0 left-0 w-24 h-24 bg-secondary rounded-tr-[2rem] group-hover:scale-110 transition-transform duration-500 shadow-brutal" />
+        <div className="relative z-20 max-w-5xl w-full mx-4 md:mx-8 px-10 md:px-24 py-12 md:py-24 shadow-[inset_5px_5px_0_rgba(255,255,255,0.75),inset_-5px_-5px_0_rgba(196,165,116,0.45),8px_8px_0_rgba(0,0,0,0.22)] border-4 border-[#6b5210] bg-[#fff8dc]/95 backdrop-blur-sm overflow-hidden group hover:shadow-xl transition-all duration-500">
+          <div className="absolute top-0 right-0 w-28 h-28 bg-[#7ec850] border-b-4 border-l-4 border-[#6b5210] group-hover:scale-110 transition-transform duration-500" />
+          <div className="absolute bottom-0 left-0 w-24 h-24 bg-[#e8c547] border-r-4 border-t-4 border-[#6b5210] group-hover:scale-110 transition-transform duration-500" />
           <div className="absolute top-1/2 right-6 w-4 h-4 bg-accent rounded-full animate-ping" />
           <div className="absolute top-8 left-8 w-3 h-3 bg-chart-2 rounded-full animate-pulse" />
           <div className="relative z-10 text-center">
-            <h1 className="text-4xl sm:text-5xl md:text-7xl font-black text-foreground mb-6 leading-[1.1] tracking-tight">
+            <h1 className="text-4xl sm:text-5xl md:text-7xl font-black text-[#6b5210] mb-6 leading-[1.1] tracking-tight">
               {t.openingH1a}
               <br />
               {t.openingH1b}
             </h1>
-            <p className="text-xl md:text-2xl text-muted-foreground mb-6 font-semibold">{t.openingSub}</p>
-            <div className="w-24 h-2 bg-gradient-to-r from-primary to-secondary mx-auto rounded-full shadow-brutal mb-6" />
-            <p className="text-lg md:text-xl text-muted-foreground leading-relaxed max-w-3xl mx-auto">{t.openingP}</p>
+            <p className="text-xl md:text-2xl text-[#5a4a2a] mb-6 font-bold">{t.openingSub}</p>
+            <div className="w-24 h-2 bg-[#7ec850] mx-auto shadow-[3px_3px_0_rgba(0,0,0,0.2)] mb-6" />
+            <p className="text-lg md:text-xl text-[#5a4a2a] leading-relaxed max-w-3xl mx-auto font-semibold">{t.openingP}</p>
           </div>
         </div>
       </section>
 
       {/* ========== About CWrite（aboutusnewest about-cwrite）========== */}
       <section className={`${showVisionPage ? "" : "hidden"} py-12 px-4 relative overflow-hidden`}>
-        <SkyCloudBackdrop />
         <div className="absolute inset-0 z-10">
           <div className="absolute top-20 right-20 w-40 h-40 bg-primary/20 rounded-[2rem] rotate-12 animate-morphing shadow-brutal" />
           <div className="absolute bottom-40 left-20 w-32 h-32 bg-secondary/30 rounded-[2rem] -rotate-12 animate-float shadow-brutal" />
@@ -263,7 +247,6 @@ export default function AboutPage({
 
       {/* ========== How We Enhance（aboutusnewest how-we-enhance）========== */}
       <section className={`${showVisionPage ? "" : "hidden"} py-12 px-4 relative overflow-hidden`}>
-        <SkyCloudBackdrop />
         <div className="absolute inset-0 z-10">
           <div className="absolute top-0 left-0 w-80 h-80 bg-primary/20 rounded-[2rem] -translate-x-40 -translate-y-40 animate-morphing shadow-brutal" />
           <div className="absolute bottom-0 right-0 w-64 h-64 bg-secondary/30 rounded-[2rem] translate-x-32 translate-y-32 rotate-45 animate-float shadow-brutal" />
@@ -321,7 +304,6 @@ export default function AboutPage({
 
       {/* ========== Values（aboutusnewest values-education）========== */}
       <section className={`${showVisionPage ? "" : "hidden"} py-12 px-4 relative overflow-hidden`}>
-        <SkyCloudBackdrop />
         <div className="max-w-4xl mx-auto relative z-20">
           <div className="text-center mb-8">
             <div className="inline-flex items-center px-6 py-3 bg-card border-4 border-foreground rounded-[2rem] text-card-foreground font-black mb-6 shadow-brutal hover:scale-105 transition-transform duration-300">
@@ -350,7 +332,6 @@ export default function AboutPage({
 
       {/* ========== Philosophy：像素藍天白雲風格 ========== */}
       <section className={`${showVisionPage ? "" : "hidden"} relative overflow-hidden px-4 py-16 md:py-20`}>
-        <SkyCloudBackdrop />
         <div className="relative z-20 mx-auto max-w-4xl text-center">
           <div className="mb-6 inline-flex items-center border-4 border-[#6b5210] bg-[#f5e6c8] px-6 py-3 text-[#6b5210] shadow-[4px_4px_0_rgba(0,0,0,0.25)]">
             <BookOpen className="mr-2 h-5 w-5 text-primary" />
@@ -367,7 +348,6 @@ export default function AboutPage({
 
       {/* ========== Vision：像素藍天白雲風格 ========== */}
       <section className={`${showVisionPage ? "" : "hidden"} relative overflow-hidden px-4 py-16`}>
-        <SkyCloudBackdrop />
         <div className="max-w-6xl mx-auto relative z-20">
           <div className="text-center mb-10">
             <div className="inline-flex items-center border-4 border-[#6b5210] bg-[#f5e6c8] px-8 py-4 text-[#6b5210] font-black mb-8 shadow-[4px_4px_0_rgba(0,0,0,0.25)] hover:scale-105 transition-transform duration-300">
