@@ -35,7 +35,8 @@ const computeMapFrame = (
   imageWidth: number,
   imageHeight: number,
 ): MapFrame => {
-  const scale = Math.min(containerWidth / imageWidth, containerHeight / imageHeight)
+  // Match CSS object-cover: image fills container, excess is cropped
+  const scale = Math.max(containerWidth / imageWidth, containerHeight / imageHeight)
   const width = imageWidth * scale
   const height = imageHeight * scale
   return {
@@ -253,7 +254,91 @@ export default function JourneyMap({
           : "default",
       }}
     >
-      <div className="absolute inset-0 opacity-60 pointer-events-none">
+      {/* Full-screen map layer — object-cover fills viewport; pins use image-normalized coords */}
+      <div
+        ref={mapOverlayRef}
+        className="fixed inset-0 z-0"
+        onClick={handleMapClick}
+      >
+        <img
+          ref={mapImageRef}
+          src={effectiveMapImageUrl}
+          alt="Journey Map"
+          className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none"
+          onLoad={syncMapFrame}
+          draggable={false}
+          style={{ imageRendering: "auto" as const }}
+        />
+        {pinPosition && (
+          <button
+            type="button"
+            onClick={handleStartJourney}
+            className="absolute z-10 -translate-x-1/2 -translate-y-full group pointer-events-auto"
+            style={imagePercentToOverlayStyle(pinPosition.x, pinPosition.y)}
+            aria-label="Start writing from here"
+          >
+            <div className="flex flex-col items-center gap-1">
+              <Image
+                src="/pin.webp"
+                alt="Writing start pin"
+                width={52}
+                height={52}
+                className="drop-shadow-lg group-hover:scale-110 transition-transform"
+              />
+              <span className="inline-flex items-center gap-1 rounded-full bg-white/95 px-3 py-1 text-xs font-semibold text-purple-700 shadow">
+                <Flag className="w-3 h-3 text-purple-500" />
+                Start
+              </span>
+              {isPlacingPin && (
+                <span className="mt-1 text-[11px] text-white bg-purple-500/80 rounded-full px-3 py-0.5 shadow">
+                  Click the START flag to begin!
+                </span>
+              )}
+            </div>
+          </button>
+        )}
+
+        {flags.map((flag, idx) => {
+          const colors = [
+            "from-pink-100 to-pink-200 border-pink-300 text-pink-800",
+            "from-purple-100 to-purple-200 border-purple-300 text-purple-800",
+            "from-emerald-100 to-emerald-200 border-emerald-300 text-emerald-800",
+            "from-sky-100 to-sky-200 border-sky-300 text-sky-800",
+            "from-amber-100 to-amber-200 border-amber-300 text-amber-800",
+          ]
+          const colorClass = colors[idx % colors.length]
+          return (
+            <button
+              key={flag.id}
+              type="button"
+              onClick={() => {
+                if (onFlagUpdate) {
+                  setSelectedFlag(flag)
+                  setEditTitle(flag.title)
+                  setEditContent(flag.content ?? "")
+                  setIsEditingFlag(false)
+                } else {
+                  onNavigate("review")
+                }
+              }}
+              className="absolute z-10 -translate-x-1/2 -translate-y-full group pointer-events-auto"
+              style={imagePercentToOverlayStyle(flag.x, flag.y)}
+              aria-label={flag.title}
+            >
+              <div
+                className={`max-w-[110px] rounded-xl bg-gradient-to-r ${colorClass} px-2 py-1 shadow-lg flex items-center gap-1.5 group-hover:brightness-110 transition`}
+              >
+                <Flag className="h-2.5 w-2.5 shrink-0 text-slate-800 drop-shadow" />
+                <span className="font-hand text-[10px] font-extrabold leading-tight text-slate-900 break-words [overflow-wrap:anywhere] drop-shadow-[0_1px_1px_rgba(255,255,255,0.9)]">
+                  {flag.title}
+                </span>
+              </div>
+            </button>
+          )
+        })}
+      </div>
+
+      <div className="fixed inset-0 opacity-60 pointer-events-none z-[1]">
         <Antigravity
           count={300}
           magnetRadius={6}
@@ -272,7 +357,7 @@ export default function JourneyMap({
           fieldStrength={10}
         />
       </div>
-      <div className="absolute inset-0 opacity-100 pointer-events-none">
+      <div className="fixed inset-0 opacity-100 pointer-events-none z-[1]">
         <Particles
           particleColors={["#fff7bd", "#ffe78a", "#ffd8a8", "#ffc7d8", "#ffb7cf", "#ffd1f0"]}
           particleCount={360}
@@ -286,9 +371,11 @@ export default function JourneyMap({
         />
       </div>
 
-      <div className="relative z-10 min-h-screen">
+      <div className="relative z-10 min-h-screen pointer-events-none">
         {onBack && (
-          <BackButton onClick={onBack} variant="amber" />
+          <div className="pointer-events-auto">
+            <BackButton onClick={onBack} variant="amber" />
+          </div>
         )}
         <div className="p-6 pt-6 flex items-center justify-between gap-3">
           <div />
@@ -300,7 +387,7 @@ export default function JourneyMap({
             <button
               type="button"
               onClick={onPrevChapter}
-              className="rounded-2xl border-2 border-amber-100/90 bg-gradient-to-r from-[#c4a574] via-[#a87f52] to-[#8b6914] px-6 py-3 text-base md:text-lg font-hand font-extrabold text-white shadow-2xl hover:scale-105 hover:brightness-110 transition-all drop-shadow-[0_3px_4px_rgba(0,0,0,0.45)]"
+              className="pointer-events-auto rounded-2xl border-2 border-amber-100/90 bg-gradient-to-r from-[#c4a574] via-[#a87f52] to-[#8b6914] px-6 py-3 text-base md:text-lg font-hand font-extrabold text-white shadow-2xl hover:scale-105 hover:brightness-110 transition-all drop-shadow-[0_3px_4px_rgba(0,0,0,0.45)]"
             >
               ← Move to Last Chapter
             </button>
@@ -316,7 +403,7 @@ export default function JourneyMap({
             <button
               type="button"
               onClick={onGoProfile}
-              className="absolute left-10 top-6 z-20 rounded-2xl bg-white/0 hover:bg-white/10 transition-transform duration-200 text-center"
+              className="pointer-events-auto absolute left-10 top-6 z-20 rounded-2xl bg-white/0 hover:bg-white/10 transition-transform duration-200 text-center"
               aria-label="Go to My Farm"
             >
               <img
@@ -336,7 +423,7 @@ export default function JourneyMap({
               type="button"
               variant="ghost"
               onClick={onNextChapter}
-              className="absolute right-8 top-6 z-20 rounded-2xl border-2 border-yellow-200/90 bg-gradient-to-r from-amber-500 via-orange-500 to-pink-500 px-5 py-4 text-sm font-extrabold text-white shadow-2xl animate-pulse hover:scale-105 hover:from-amber-600 hover:via-orange-600 hover:to-pink-600"
+              className="pointer-events-auto absolute right-8 top-6 z-20 rounded-2xl border-2 border-yellow-200/90 bg-gradient-to-r from-amber-500 via-orange-500 to-pink-500 px-5 py-4 text-sm font-extrabold text-white shadow-2xl animate-pulse hover:scale-105 hover:from-amber-600 hover:via-orange-600 hover:to-pink-600"
             >
               ✨ Move to Next Chapter →
             </Button>
@@ -344,7 +431,7 @@ export default function JourneyMap({
 
           {/* 右下角：圖釘盒 box，點擊後拿起圖釘 */}
           {!pinBoxHidden && (
-            <div className="absolute right-5 bottom-12 z-20 flex flex-col items-center gap-2">
+            <div className="pointer-events-auto absolute right-5 bottom-12 z-20 flex flex-col items-center gap-2">
               <p className="mb-2 max-w-[980px] text-[20px] md:text-2xl leading-tight font-hand font-extrabold text-center text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] atlas-jitter-sm">
                 Drop a pin on the map to start your writing adventure!
               </p>
@@ -374,88 +461,8 @@ export default function JourneyMap({
             </div>
           )}
 
-          <div
-            ref={mapOverlayRef}
-            className="relative flex-1 h-full"
-            onClick={handleMapClick}
-          >
-            <img
-              ref={mapImageRef}
-              src={effectiveMapImageUrl}
-              alt="Journey Map"
-              className="absolute inset-0 w-full h-full object-contain pointer-events-none select-none"
-              onLoad={syncMapFrame}
-              draggable={false}
-              style={{ imageRendering: "auto" as const }}
-            />
-            {pinPosition && (
-              <button
-                type="button"
-                onClick={handleStartJourney}
-                className="absolute z-10 -translate-x-1/2 -translate-y-full group"
-                style={imagePercentToOverlayStyle(pinPosition.x, pinPosition.y)}
-                aria-label="Start writing from here"
-              >
-                <div className="flex flex-col items-center gap-1">
-                  <Image
-                    src="/pin.webp"
-                    alt="Writing start pin"
-                    width={52}
-                    height={52}
-                    className="drop-shadow-lg group-hover:scale-110 transition-transform"
-                  />
-                  <span className="inline-flex items-center gap-1 rounded-full bg-white/95 px-3 py-1 text-xs font-semibold text-purple-700 shadow">
-                    <Flag className="w-3 h-3 text-purple-500" />
-                    Start
-                  </span>
-                  {isPlacingPin && (
-                    <span className="mt-1 text-[11px] text-white bg-purple-500/80 rounded-full px-3 py-0.5 shadow">
-                      Click the START flag to begin!
-                    </span>
-                  )}
-                </div>
-              </button>
-            )}
-
-            {flags.map((flag, idx) => {
-              const colors = [
-                "from-pink-100 to-pink-200 border-pink-300 text-pink-800",
-                "from-purple-100 to-purple-200 border-purple-300 text-purple-800",
-                "from-emerald-100 to-emerald-200 border-emerald-300 text-emerald-800",
-                "from-sky-100 to-sky-200 border-sky-300 text-sky-800",
-                "from-amber-100 to-amber-200 border-amber-300 text-amber-800",
-              ]
-              const colorClass = colors[idx % colors.length]
-              return (
-                <button
-                  key={flag.id}
-                  type="button"
-                  onClick={() => {
-                    if (onFlagUpdate) {
-                      setSelectedFlag(flag)
-                      setEditTitle(flag.title)
-                      setEditContent(flag.content ?? "")
-                      setIsEditingFlag(false)
-                    } else {
-                      onNavigate("review")
-                    }
-                  }}
-                  className="absolute z-10 -translate-x-1/2 -translate-y-full group"
-                  style={imagePercentToOverlayStyle(flag.x, flag.y)}
-                  aria-label={flag.title}
-                >
-                  <div
-                    className={`max-w-[110px] rounded-xl bg-gradient-to-r ${colorClass} px-2 py-1 shadow-lg flex items-center gap-1.5 group-hover:brightness-110 transition`}
-                  >
-                    <Flag className="h-2.5 w-2.5 shrink-0 text-slate-800 drop-shadow" />
-                    <span className="font-hand text-[10px] font-extrabold leading-tight text-slate-900 break-words [overflow-wrap:anywhere] drop-shadow-[0_1px_1px_rgba(255,255,255,0.9)]">
-                      {flag.title}
-                    </span>
-                  </div>
-                </button>
-              )
-            })}
-          </div>
+          {/* Map interaction layer is full-screen behind this UI shell */}
+          <div className="flex-1 h-full" aria-hidden />
 
           {/* 右側原說明面板已移除，保留空間以後可放其它內容 */}
         </div>
