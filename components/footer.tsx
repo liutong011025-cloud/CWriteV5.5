@@ -21,21 +21,8 @@ export default function Footer() {
   return (
     <footer
       className="relative mt-auto w-full overflow-hidden text-white"
-      style={{
-        background: "linear-gradient(180deg, #123f71 0%, #103565 48%, #0b2854 100%)",
-      }}
+      style={{ background: "transparent" }}
     >
-      <svg
-        className="pointer-events-none absolute inset-x-0 top-0 z-20 h-8 w-full text-white"
-        viewBox="0 0 1440 56"
-        preserveAspectRatio="none"
-        aria-hidden="true"
-      >
-        <path
-          d="M0 0H1440V18C1280 2 1180 8 1040 22C870 39 742 38 580 23C387 5 250 12 0 28Z"
-          fill="currentColor"
-        />
-      </svg>
       <svg
         className="pointer-events-none absolute inset-0 h-full w-full"
         viewBox="0 0 1440 132"
@@ -43,7 +30,7 @@ export default function Footer() {
         aria-hidden="true"
       >
         <path
-          d="M0 28C180 58 314 12 520 35C726 58 810 86 990 72C1158 59 1267 16 1440 37V132H0Z"
+          d="M0 24C184 55 315 9 523 32C728 55 814 85 994 70C1162 56 1268 13 1440 34V132H0Z"
           fill="#123f71"
         />
         <path
@@ -53,32 +40,32 @@ export default function Footer() {
         />
       </svg>
       <div
-        className="pointer-events-none absolute inset-0 opacity-70"
+        className="pointer-events-none absolute inset-0 opacity-80"
         style={{
           background:
-            "radial-gradient(circle at 6% 54%, rgba(255,255,255,0.7) 0px, rgba(255,255,255,0.7) 1px, transparent 2px), radial-gradient(circle at 15% 32%, rgba(255,229,166,0.9) 0px, rgba(255,229,166,0.9) 1.5px, transparent 3px), radial-gradient(circle at 28% 62%, rgba(255,255,255,0.55) 0px, rgba(255,255,255,0.55) 1px, transparent 2px), radial-gradient(circle at 52% 42%, rgba(255,229,166,0.7) 0px, rgba(255,229,166,0.7) 1.5px, transparent 3px), radial-gradient(circle at 72% 35%, rgba(255,255,255,0.65) 0px, rgba(255,255,255,0.65) 1px, transparent 2px), radial-gradient(circle at 88% 58%, rgba(255,229,166,0.85) 0px, rgba(255,229,166,0.85) 1.5px, transparent 3px)",
+            "radial-gradient(circle at 5% 56%, rgba(255,255,255,0.72) 0px, rgba(255,255,255,0.72) 1px, transparent 2px), radial-gradient(circle at 10% 38%, rgba(255,229,166,0.86) 0px, rgba(255,229,166,0.86) 1.5px, transparent 3px), radial-gradient(circle at 17% 68%, rgba(255,255,255,0.55) 0px, rgba(255,255,255,0.55) 1px, transparent 2px), radial-gradient(circle at 24% 30%, rgba(255,229,166,0.75) 0px, rgba(255,229,166,0.75) 1px, transparent 2px), radial-gradient(circle at 31% 62%, rgba(255,255,255,0.58) 0px, rgba(255,255,255,0.58) 1px, transparent 2px), radial-gradient(circle at 43% 48%, rgba(255,255,255,0.46) 0px, rgba(255,255,255,0.46) 1px, transparent 2px), radial-gradient(circle at 52% 42%, rgba(255,229,166,0.76) 0px, rgba(255,229,166,0.76) 1.5px, transparent 3px), radial-gradient(circle at 61% 66%, rgba(255,255,255,0.55) 0px, rgba(255,255,255,0.55) 1px, transparent 2px), radial-gradient(circle at 72% 35%, rgba(255,255,255,0.68) 0px, rgba(255,255,255,0.68) 1px, transparent 2px), radial-gradient(circle at 80% 58%, rgba(255,229,166,0.72) 0px, rgba(255,229,166,0.72) 1px, transparent 2px), radial-gradient(circle at 89% 62%, rgba(255,229,166,0.86) 0px, rgba(255,229,166,0.86) 1.5px, transparent 3px), radial-gradient(circle at 96% 42%, rgba(255,255,255,0.58) 0px, rgba(255,255,255,0.58) 1px, transparent 2px)",
         }}
       />
       <svg
-        className="pointer-events-none absolute bottom-0 right-0 h-auto w-[38vw] min-w-[250px] max-w-[520px] opacity-45 lg:opacity-55"
-        viewBox="0 0 460 150"
+        className="pointer-events-none absolute bottom-0 right-0 h-auto w-[40vw] min-w-[270px] max-w-[560px] opacity-85"
+        viewBox="0 0 520 150"
         preserveAspectRatio="xMidYMid meet"
         aria-hidden="true"
       >
         <path
-          d="M184 150C215 111 254 82 312 55C365 30 401 12 431 0H460V150Z"
+          d="M218 150C247 109 286 80 345 54C405 28 461 9 520 0V150Z"
           fill="rgb(232, 184, 140)"
         />
         <path
-          d="M230 150C259 111 291 85 333 63C378 39 411 18 440 0"
+          d="M280 150C306 113 336 88 382 66C428 44 471 21 512 2"
           fill="none"
-          stroke="rgb(246, 214, 184)"
-          strokeWidth="22"
+          stroke="rgb(247, 215, 186)"
+          strokeWidth="24"
           strokeLinecap="round"
-          opacity="0.35"
+          opacity="0.28"
         />
         <path
-          d="M266 143C279 125 292 109 309 96M327 84C345 70 363 59 383 48M400 36C415 27 426 19 438 10"
+          d="M318 142C332 124 346 108 365 94M385 81C404 68 423 57 445 45M464 34C482 24 497 15 512 8"
           fill="none"
           stroke="rgba(255,255,255,0.86)"
           strokeWidth="5"
