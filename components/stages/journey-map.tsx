@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, type MouseEvent } from "react"
+import { useCallback, useEffect, useRef, useState, type MouseEvent } from "react"
 import { Button } from "@/components/ui/button"
 import { BackButton } from "@/components/ui/back-button"
 import { Flag, PencilLine } from "lucide-react"
@@ -20,6 +20,30 @@ export interface PoetryProgress {
   hasTopic: boolean
   hasLines: boolean
   phase: "choose-form" | "setup-topic" | "editor" | "review"
+}
+
+interface MapFrame {
+  left: number
+  top: number
+  width: number
+  height: number
+}
+
+const computeMapFrame = (
+  containerWidth: number,
+  containerHeight: number,
+  imageWidth: number,
+  imageHeight: number,
+): MapFrame => {
+  const scale = Math.min(containerWidth / imageWidth, containerHeight / imageHeight)
+  const width = imageWidth * scale
+  const height = imageHeight * scale
+  return {
+    left: (containerWidth - width) / 2,
+    top: (containerHeight - height) / 2,
+    width,
+    height,
+  }
 }
 
 interface JourneyMapProps {
@@ -72,10 +96,42 @@ export default function JourneyMap({
   const [editContent, setEditContent] = useState("")
   const [editTitle, setEditTitle] = useState("")
   const [isEditingFlag, setIsEditingFlag] = useState(false)
+  const [mapFrame, setMapFrame] = useState<MapFrame | null>(null)
+  const mapOverlayRef = useRef<HTMLDivElement>(null)
+  const mapImageRef = useRef<HTMLImageElement>(null)
   const flags = mapFlags ?? []
 
   const pinPosition = pin ?? internalPin
   const effectiveMapImageUrl = mapImageUrl || (chapterIndex > 0 ? "/secondmap.webp" : "/firstmap.webp")
+
+  const syncMapFrame = useCallback(() => {
+    const container = mapOverlayRef.current
+    const img = mapImageRef.current
+    if (!container || !img?.naturalWidth || !img.naturalHeight) return
+    const rect = container.getBoundingClientRect()
+    setMapFrame(computeMapFrame(rect.width, rect.height, img.naturalWidth, img.naturalHeight))
+  }, [])
+
+  useEffect(() => {
+    syncMapFrame()
+    window.addEventListener("resize", syncMapFrame)
+    return () => window.removeEventListener("resize", syncMapFrame)
+  }, [syncMapFrame, effectiveMapImageUrl, chapterIndex])
+
+  const imagePercentToOverlayStyle = useCallback(
+    (x: number, y: number) => {
+      const container = mapOverlayRef.current
+      if (!mapFrame || !container) return { left: `${x}%`, top: `${y}%` }
+      const rect = container.getBoundingClientRect()
+      const leftPx = mapFrame.left + (x / 100) * mapFrame.width
+      const topPx = mapFrame.top + (y / 100) * mapFrame.height
+      return {
+        left: `${(leftPx / rect.width) * 100}%`,
+        top: `${(topPx / rect.height) * 100}%`,
+      }
+    },
+    [mapFrame],
+  )
 
   // 设置data-no-header属性，隐藏header
   useEffect(() => {
@@ -159,11 +215,17 @@ export default function JourneyMap({
 
   const handleMapClick = (event: MouseEvent<HTMLDivElement>) => {
     // 只有在手上拿著圖釘時，才能在地圖上放置起點
-    if (!isHoldingPin) return
+    if (!isHoldingPin || !mapFrame) return
     const rect = event.currentTarget.getBoundingClientRect()
-    const xPercent = ((event.clientX - rect.left) / rect.width) * 100
-    const yPercent = ((event.clientY - rect.top) / rect.height) * 100
-    const nextPin = { x: xPercent, y: yPercent }
+    const localX = event.clientX - rect.left
+    const localY = event.clientY - rect.top
+    const x = localX - mapFrame.left
+    const y = localY - mapFrame.top
+    if (x < 0 || y < 0 || x > mapFrame.width || y > mapFrame.height) return
+    const nextPin = {
+      x: (x / mapFrame.width) * 100,
+      y: (y / mapFrame.height) * 100,
+    }
     if (onPinChange) onPinChange(nextPin)
     else setInternalPin(nextPin)
 
@@ -191,15 +253,7 @@ export default function JourneyMap({
           : "default",
       }}
     >
-      <img
-        src={effectiveMapImageUrl}
-        alt="Journey Map"
-        className="absolute inset-0 w-full h-full object-cover"
-        style={{
-          imageRendering: "auto" as const,
-        }}
-      />
-      <div className="absolute inset-0 opacity-60">
+      <div className="absolute inset-0 opacity-60 pointer-events-none">
         <Antigravity
           count={300}
           magnetRadius={6}
@@ -321,15 +375,25 @@ export default function JourneyMap({
           )}
 
           <div
+            ref={mapOverlayRef}
             className="relative flex-1 h-full"
             onClick={handleMapClick}
           >
+            <img
+              ref={mapImageRef}
+              src={effectiveMapImageUrl}
+              alt="Journey Map"
+              className="absolute inset-0 w-full h-full object-contain pointer-events-none select-none"
+              onLoad={syncMapFrame}
+              draggable={false}
+              style={{ imageRendering: "auto" as const }}
+            />
             {pinPosition && (
               <button
                 type="button"
                 onClick={handleStartJourney}
-                className="absolute -translate-x-1/2 -translate-y-full group"
-                style={{ left: `${pinPosition.x}%`, top: `${pinPosition.y}%` }}
+                className="absolute z-10 -translate-x-1/2 -translate-y-full group"
+                style={imagePercentToOverlayStyle(pinPosition.x, pinPosition.y)}
                 aria-label="Start writing from here"
               >
                 <div className="flex flex-col items-center gap-1">
@@ -376,8 +440,8 @@ export default function JourneyMap({
                       onNavigate("review")
                     }
                   }}
-                  className="absolute -translate-x-1/2 -translate-y-full group"
-                  style={{ left: `${flag.x}%`, top: `${flag.y}%` }}
+                  className="absolute z-10 -translate-x-1/2 -translate-y-full group"
+                  style={imagePercentToOverlayStyle(flag.x, flag.y)}
                   aria-label={flag.title}
                 >
                   <div
