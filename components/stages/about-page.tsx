@@ -201,21 +201,21 @@ export default function AboutPage({
       {showVisionPage && <SkyCloudBackdrop />}
       {/* ========== Opening：花紋頂到頂部無空白，左右超出 ========== */}
       <section className={`${showVisionPage ? "" : "hidden"} min-h-screen flex items-center justify-center relative overflow-hidden`} style={{ marginTop: "-88px", paddingTop: "88px" }}>
-        <div className="relative z-20 max-w-5xl w-full mx-4 md:mx-8 px-6 md:px-16 py-12 md:py-20 overflow-visible">
-          <div className="relative z-10 text-center">
+        <div className="relative z-20 max-w-5xl w-full mx-4 md:mx-8 rounded-[2rem] border border-white/70 bg-white/90 px-8 py-12 text-center shadow-[0_18px_40px_rgba(13,71,161,0.18)] backdrop-blur-sm md:px-16 md:py-16">
+          <div className="relative z-10">
             <h1
-              className="text-4xl sm:text-5xl md:text-7xl font-black text-white mb-6 leading-[1.1] tracking-tight"
+              className="text-4xl sm:text-5xl md:text-7xl font-black text-[#0D47A1] mb-6 leading-[1.1] tracking-tight"
               style={{
-                textShadow: "0 5px 0 #1565C0, 0 10px 18px rgba(13,71,161,0.35)",
+                textShadow: "0 3px 0 rgba(144,202,249,0.85), 0 8px 18px rgba(13,71,161,0.16)",
               }}
             >
               {t.openingH1a}
               <br />
               {t.openingH1b}
             </h1>
-            <p className="text-xl md:text-2xl text-white mb-6 font-bold drop-shadow-[0_3px_8px_rgba(13,71,161,0.55)]">{t.openingSub}</p>
-            <div className="w-24 h-2 bg-[#E8FF72] mx-auto shadow-[3px_3px_0_rgba(13,71,161,0.45)] mb-6" />
-            <p className="text-lg md:text-xl text-white leading-relaxed max-w-3xl mx-auto font-semibold drop-shadow-[0_3px_8px_rgba(13,71,161,0.55)]">{t.openingP}</p>
+            <p className="text-xl md:text-2xl text-[#1565C0] mb-6 font-bold">{t.openingSub}</p>
+            <div className="w-24 h-2 bg-[#E8FF72] mx-auto shadow-[3px_3px_0_rgba(13,71,161,0.16)] mb-6" />
+            <p className="text-lg md:text-xl text-slate-700 leading-relaxed max-w-3xl mx-auto font-semibold">{t.openingP}</p>
           </div>
         </div>
       </section>
@@ -392,39 +392,39 @@ export default function AboutPage({
             </h2>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start mb-8">
-            <div className="p-8 transition-all duration-500 group relative overflow-visible">
+            <div className="rounded-[2rem] border border-white/70 bg-white/90 p-8 shadow-[0_18px_40px_rgba(13,71,161,0.18)] backdrop-blur-sm transition-all duration-500 group relative overflow-hidden">
               <div className="relative z-10">
-                <div className="inline-flex items-center px-6 py-3 text-[#E8FF72] font-black mb-6 drop-shadow-[0_3px_8px_rgba(13,71,161,0.55)]">
+                <div className="inline-flex items-center px-6 py-3 text-[#1565C0] font-black mb-6">
                   <Users className="w-5 h-5 mr-2" />
                   For Writers
                 </div>
-                <p className="text-lg text-white mb-6 leading-relaxed font-semibold drop-shadow-[0_3px_8px_rgba(13,71,161,0.55)]">{t.writersP}</p>
+                <p className="text-lg text-slate-700 mb-6 leading-relaxed font-semibold">{t.writersP}</p>
                 <ul className="space-y-4">
                   {writerItems.map((item, i) => (
                     <li key={i} className="flex items-center gap-4 group/item hover:scale-105 transition-transform duration-300">
                       <div className="w-8 h-8 bg-[#E8FF72] flex items-center justify-center shadow-[2px_2px_0_rgba(13,71,161,0.45)]">
                         <CheckCircle className="w-4 h-4 text-[#1565C0]" />
                       </div>
-                      <span className="text-white font-bold drop-shadow-[0_3px_8px_rgba(13,71,161,0.55)]">{item}</span>
+                      <span className="text-slate-700 font-bold">{item}</span>
                     </li>
                   ))}
                 </ul>
               </div>
             </div>
-            <div className="p-8 transition-all duration-500 group relative overflow-visible">
+            <div className="rounded-[2rem] border border-white/70 bg-white/90 p-8 shadow-[0_18px_40px_rgba(13,71,161,0.18)] backdrop-blur-sm transition-all duration-500 group relative overflow-hidden">
               <div className="relative z-10">
-                <div className="inline-flex items-center px-6 py-3 text-[#E8FF72] font-black mb-6 drop-shadow-[0_3px_8px_rgba(13,71,161,0.55)]">
+                <div className="inline-flex items-center px-6 py-3 text-[#1565C0] font-black mb-6">
                   <BookOpen className="w-5 h-5 mr-2" />
                   For Research
                 </div>
-                <p className="text-lg text-white mb-6 leading-relaxed font-semibold drop-shadow-[0_3px_8px_rgba(13,71,161,0.55)]">{t.researchP}</p>
+                <p className="text-lg text-slate-700 mb-6 leading-relaxed font-semibold">{t.researchP}</p>
                 <ul className="space-y-4">
                   {researchItems.map((item, i) => (
                     <li key={i} className="flex items-center gap-4 group/item hover:scale-105 transition-transform duration-300">
                       <div className="w-8 h-8 bg-[#E8FF72] flex items-center justify-center shadow-[2px_2px_0_rgba(13,71,161,0.45)]">
                         <CheckCircle className="w-4 h-4 text-[#1565C0]" />
                       </div>
-                      <span className="text-white font-bold drop-shadow-[0_3px_8px_rgba(13,71,161,0.55)]">{item}</span>
+                      <span className="text-slate-700 font-bold">{item}</span>
                     </li>
                   ))}
                 </ul>
