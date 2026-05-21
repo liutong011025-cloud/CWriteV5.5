@@ -21,10 +21,10 @@ export default function Footer() {
   return (
     <footer
       className="relative mt-auto w-full overflow-hidden text-white"
-      style={{ background: "transparent" }}
+      style={{ background: "linear-gradient(180deg, #123f71 0%, #103565 52%, #0b2854 100%)" }}
     >
       <svg
-        className="pointer-events-none absolute inset-0 h-full w-full"
+        className="pointer-events-none absolute inset-0 h-full w-full opacity-55"
         viewBox="0 0 1440 132"
         preserveAspectRatio="none"
         aria-hidden="true"
@@ -47,7 +47,7 @@ export default function Footer() {
         }}
       />
       <svg
-        className="pointer-events-none absolute bottom-0 right-0 h-auto w-[40vw] min-w-[270px] max-w-[560px] opacity-85"
+        className="pointer-events-none absolute bottom-0 right-0 z-[1] h-auto w-[40vw] min-w-[270px] max-w-[560px] opacity-100"
         viewBox="0 0 520 150"
         preserveAspectRatio="xMidYMid meet"
         aria-hidden="true"
@@ -73,7 +73,7 @@ export default function Footer() {
         />
       </svg>
 
-      <div className="relative z-10 mx-auto flex max-w-[1600px] flex-col gap-3 px-5 pb-4 pt-6 sm:px-8 lg:flex-row lg:items-center lg:justify-between lg:gap-8 lg:px-12">
+      <div className="relative z-10 mx-auto flex max-w-[1600px] flex-col gap-3 px-5 py-4 sm:px-8 lg:flex-row lg:items-center lg:justify-between lg:gap-8 lg:px-12">
         <div className="flex shrink-0 items-center justify-center gap-4 sm:gap-7 lg:justify-start">
           <Image
             src="/EdUHK_Signature_RGBWhite@4x-1-1024x336.webp"
@@ -94,14 +94,14 @@ export default function Footer() {
           />
         </div>
 
-        <div className="ml-auto max-w-5xl text-center drop-shadow-[0_2px_3px_rgba(0,0,0,0.38)] lg:text-right">
+        <div className="ml-auto w-full min-w-0 max-w-[860px] text-center drop-shadow-[0_2px_3px_rgba(0,0,0,0.38)] lg:text-right">
           <p className="text-sm font-medium leading-5 text-sky-50 sm:text-base">
             Strategic Plan Start-up Project @EdUHK
           </p>
-          <p className="mt-0.5 text-sm font-medium leading-5 text-white sm:text-[15px]">
+          <p className="mt-0.5 break-words text-sm font-medium leading-5 text-white sm:text-[15px]">
             Copyright © 2026 The Education University of Hong Kong. All Rights Reserved.
           </p>
-          <p className="ml-auto mt-1 max-w-4xl text-[10px] font-medium leading-3 text-sky-50/65 sm:text-[11px]">
+          <p className="ml-auto mt-1 max-w-[780px] break-words text-[10px] font-medium leading-3 text-sky-50/65 sm:text-[11px]">
             <span className="font-bold uppercase tracking-[0.14em]">Disclaimer</span>
             {" "}This website uses AI to help you learn and create. Sometimes AI may make mistakes or give incorrect
             information. Please think carefully, check important information, and ask a teacher or parent if you are
