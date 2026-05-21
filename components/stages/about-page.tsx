@@ -107,9 +107,9 @@ const translations = {
 
 function getColorClasses(color: string, isActive: boolean) {
   const base = {
-    primary: isActive ? "bg-primary scale-110 rotate-3" : "bg-primary/80 hover:bg-primary",
-    secondary: isActive ? "bg-secondary scale-110 -rotate-3" : "bg-secondary/80 hover:bg-secondary",
-    accent: isActive ? "bg-accent scale-110 rotate-2" : "bg-accent/80 hover:bg-accent",
+    primary: isActive ? "bg-white scale-110 rotate-3 text-primary" : "bg-white/85 hover:bg-white text-primary",
+    secondary: isActive ? "bg-white scale-110 -rotate-3 text-secondary" : "bg-white/85 hover:bg-white text-secondary",
+    accent: isActive ? "bg-white scale-110 rotate-2 text-accent" : "bg-white/85 hover:bg-white text-accent",
   }
   return base[color as keyof typeof base] || base.primary
 }
@@ -228,11 +228,14 @@ export default function AboutPage({
         </div>
         <div className="max-w-7xl mx-auto relative z-20">
           <div className="text-center mb-10">
-            <div className="inline-flex items-center px-8 py-4 bg-card border-4 border-foreground rounded-[2rem] text-card-foreground font-black mb-8 shadow-brutal hover:scale-105 transition-transform duration-300">
+            <div className="inline-flex items-center px-8 py-4 text-white font-black mb-4 drop-shadow-[0_4px_10px_rgba(13,71,161,0.55)] hover:scale-105 transition-transform duration-300">
               <Sparkles className="w-6 h-6 mr-3 text-primary animate-pulse" />
               About Us
             </div>
-            <h2 className="text-5xl md:text-7xl font-black text-foreground mb-8 bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
+            <h2
+              className="text-5xl md:text-7xl font-black text-white mb-8"
+              style={{ textShadow: "0 5px 0 #1565C0, 0 10px 18px rgba(13,71,161,0.35)" }}
+            >
               {t.aboutTitle}
             </h2>
           </div>
@@ -242,7 +245,7 @@ export default function AboutPage({
               return (
                 <div
                   key={index}
-                  className="p-8 rounded-[2rem] border-4 border-foreground bg-card hover:bg-muted/50 transition-all duration-500 cursor-pointer group hover:scale-105 hover:-rotate-1 shadow-brutal hover:shadow-xl relative overflow-hidden"
+                  className="p-8 rounded-[2rem] border border-white/70 bg-white/90 backdrop-blur-sm transition-all duration-500 cursor-pointer group hover:scale-105 hover:-rotate-1 shadow-[0_18px_40px_rgba(13,71,161,0.18)] hover:shadow-xl relative overflow-hidden"
                   onMouseEnter={() => setHoveredFeature(index)}
                   onMouseLeave={() => setHoveredFeature(null)}
                 >
@@ -274,15 +277,18 @@ export default function AboutPage({
             <Image src="/logobig.webp" alt="CWrite" width={400} height={200} className="object-contain group-hover:scale-105 transition-transform duration-500" />
           </div>
           <div className="text-center mb-10">
-            <div className="inline-flex items-center px-8 py-4 bg-card border-4 border-foreground rounded-[2rem] text-card-foreground font-black mb-8 shadow-brutal hover:scale-105 transition-transform duration-300">
+            <div className="inline-flex items-center px-8 py-4 text-white font-black mb-4 drop-shadow-[0_4px_10px_rgba(13,71,161,0.55)] hover:scale-105 transition-transform duration-300">
               <Sparkles className="w-6 h-6 mr-3 text-primary animate-spin" />
               Creative Writing
               <Zap className="w-6 h-6 ml-3 text-accent" />
             </div>
-            <h2 className="text-5xl md:text-7xl font-black text-foreground mb-8 bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
+            <h2
+              className="text-5xl md:text-7xl font-black text-white mb-8"
+              style={{ textShadow: "0 5px 0 #1565C0, 0 10px 18px rgba(13,71,161,0.35)" }}
+            >
               {t.enhanceTitle}
             </h2>
-            <p className="text-xl text-muted-foreground max-w-2xl mx-auto font-medium">{t.enhancePillar}</p>
+            <p className="text-xl text-white max-w-2xl mx-auto font-semibold drop-shadow-[0_3px_8px_rgba(13,71,161,0.55)]">{t.enhancePillar}</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {methods.map((method, index) => {
@@ -290,7 +296,7 @@ export default function AboutPage({
               return (
                 <div
                   key={index}
-                  className="p-8 rounded-[2rem] border-4 border-foreground bg-card hover:bg-muted/50 transition-all duration-500 cursor-pointer group hover:scale-105 hover:-rotate-1 shadow-brutal hover:shadow-xl relative overflow-hidden"
+                  className="p-8 rounded-[2rem] border border-white/70 bg-white/90 backdrop-blur-sm transition-all duration-500 cursor-pointer group hover:scale-105 hover:-rotate-1 shadow-[0_18px_40px_rgba(13,71,161,0.18)] hover:shadow-xl relative overflow-hidden"
                   onMouseEnter={() => setHoveredMethod(index)}
                   onMouseLeave={() => setHoveredMethod(null)}
                 >
@@ -323,11 +329,14 @@ export default function AboutPage({
       <section className={`${showVisionPage ? "" : "hidden"} py-12 px-4 relative overflow-hidden`}>
         <div className="max-w-4xl mx-auto relative z-20">
           <div className="text-center mb-8">
-            <div className="inline-flex items-center px-6 py-3 bg-card border-4 border-foreground rounded-[2rem] text-card-foreground font-black mb-6 shadow-brutal hover:scale-105 transition-transform duration-300">
+            <div className="inline-flex items-center px-6 py-3 text-white font-black mb-4 drop-shadow-[0_4px_10px_rgba(13,71,161,0.55)] hover:scale-105 transition-transform duration-300">
               <Heart className="w-5 h-5 mr-2 text-accent animate-pulse" />
               Core Values
             </div>
-            <h2 className="text-4xl md:text-5xl font-black text-foreground mb-4 bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
+            <h2
+              className="text-4xl md:text-5xl font-black text-white mb-4"
+              style={{ textShadow: "0 4px 0 #1565C0, 0 9px 18px rgba(13,71,161,0.35)" }}
+            >
               {t.valuesTitle}
             </h2>
           </div>
@@ -335,7 +344,7 @@ export default function AboutPage({
             {valuesList.map((value, index) => (
               <div
                 key={index}
-                className={`px-4 py-2 rounded-full border-[3px] border-foreground cursor-pointer font-bold text-sm text-foreground shadow-brutal transition-all duration-300 ease-out hover:shadow-xl hover:-translate-y-1 ${getColorClasses(value.color, activeValueIndex === index)}`}
+                className={`px-4 py-2 rounded-full border border-white/75 cursor-pointer font-bold text-sm shadow-[0_8px_18px_rgba(13,71,161,0.16)] transition-all duration-300 ease-out hover:shadow-xl hover:-translate-y-1 ${getColorClasses(value.color, activeValueIndex === index)}`}
                 onClick={() => setActiveValueIndex(activeValueIndex === index ? null : index)}
                 onMouseEnter={() => setActiveValueIndex(index)}
                 onMouseLeave={() => setActiveValueIndex(null)}
