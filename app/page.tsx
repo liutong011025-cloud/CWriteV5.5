@@ -142,6 +142,8 @@ interface PersistedMapState {
   mapImageUrl?: string
   mapFlags: MapFlagItem[]
   currentPin: { x: number; y: number } | null
+  /** First pin placement for this chapter — kept after map updates clear currentPin */
+  journeyStartPin?: { x: number; y: number } | null
   journeySelection: { type: JourneyType; difficulty: number } | null
   journeyActive: boolean
   levelBadgeUnlocked: boolean
@@ -177,6 +179,24 @@ interface PersistedMapChaptersState {
   chapters?: PersistedMapState[]
 }
 
+const pickJourneyStartPin = (state: Partial<PersistedMapState>): { x: number; y: number } | null => {
+  if (
+    state.journeyStartPin &&
+    typeof state.journeyStartPin.x === "number" &&
+    typeof state.journeyStartPin.y === "number"
+  ) {
+    return state.journeyStartPin
+  }
+  if (state.currentPin && typeof state.currentPin.x === "number" && typeof state.currentPin.y === "number") {
+    return state.currentPin
+  }
+  const first = state.mapFlags?.[0]
+  if (first && typeof first.x === "number" && typeof first.y === "number") {
+    return { x: first.x, y: first.y }
+  }
+  return null
+}
+
 const normalizeMapState = (raw: unknown): Partial<PersistedMapState> => {
   if (!raw || typeof raw !== "object") return {}
   const parsed = raw as Partial<PersistedMapState>
@@ -206,6 +226,13 @@ const normalizeMapState = (raw: unknown): Partial<PersistedMapState> => {
     safe.currentPin = parsed.currentPin
   }
   if (
+    parsed.journeyStartPin &&
+    typeof parsed.journeyStartPin.x === "number" &&
+    typeof parsed.journeyStartPin.y === "number"
+  ) {
+    safe.journeyStartPin = parsed.journeyStartPin
+  }
+  if (
     parsed.journeySelection &&
     typeof parsed.journeySelection.difficulty === "number" &&
     typeof parsed.journeySelection.type === "string"
@@ -231,6 +258,7 @@ const normalizeMapChaptersState = (
     mapImageUrl: getChapterBaseMapImageUrl(0),
     mapFlags: [],
     currentPin: null,
+    journeyStartPin: null,
     journeySelection: null,
     journeyActive: false,
     levelBadgeUnlocked: false,
@@ -250,6 +278,7 @@ const normalizeMapChaptersState = (
         mapImageUrl: typeof safe.mapImageUrl === "string" ? safe.mapImageUrl : getChapterBaseMapImageUrl(idx),
         mapFlags: safe.mapFlags ?? [],
         currentPin: safe.currentPin ?? null,
+        journeyStartPin: pickJourneyStartPin(safe),
         journeySelection: safe.journeySelection ?? null,
         journeyActive: typeof safe.journeyActive === "boolean" ? safe.journeyActive : false,
         levelBadgeUnlocked: typeof safe.levelBadgeUnlocked === "boolean" ? safe.levelBadgeUnlocked : false,
@@ -267,6 +296,7 @@ const normalizeMapChaptersState = (
     mapImageUrl: typeof safe.mapImageUrl === "string" ? safe.mapImageUrl : getChapterBaseMapImageUrl(0),
     mapFlags: safe.mapFlags ?? [],
     currentPin: safe.currentPin ?? null,
+    journeyStartPin: pickJourneyStartPin(safe),
     journeySelection: safe.journeySelection ?? null,
     journeyActive: typeof safe.journeyActive === "boolean" ? safe.journeyActive : false,
     levelBadgeUnlocked: typeof safe.levelBadgeUnlocked === "boolean" ? safe.levelBadgeUnlocked : false,
@@ -617,6 +647,7 @@ export default function Home() {
   const [levelBadgeUnlocked, setLevelBadgeUnlocked] = useState(false)
   const [journeyActive, setJourneyActive] = useState(false)
   const [currentPin, setCurrentPin] = useState<{ x: number; y: number } | null>(null)
+  const [journeyStartPin, setJourneyStartPin] = useState<{ x: number; y: number } | null>(null)
   const [mapFlags, setMapFlags] = useState<MapFlagItem[]>([])
   const [mapImageUrl, setMapImageUrl] = useState<string | undefined>(undefined)
   const [activeMapChapterIndex, setActiveMapChapterIndex] = useState(0)
@@ -1130,6 +1161,33 @@ export default function Home() {
     if (currentPin) lastJourneyPinRef.current = currentPin
   }, [currentPin])
 
+  const syncJourneyStartPin = useCallback((pin: { x: number; y: number } | null) => {
+    if (!pin) return
+    setJourneyStartPin(pin)
+    lastJourneyPinRef.current = pin
+  }, [])
+
+  const resolveJourneyPin = useCallback((): { x: number; y: number } => {
+    return (
+      journeyStartPin ??
+      currentPin ??
+      lastJourneyPinRef.current ??
+      (pendingStoryMapPinRef.current
+        ? { x: pendingStoryMapPinRef.current.x, y: pendingStoryMapPinRef.current.y }
+        : null) ??
+      pickJourneyStartPin({ mapFlags }) ??
+      { x: 50, y: 50 }
+    )
+  }, [journeyStartPin, currentPin, mapFlags])
+
+  const handlePinChange = useCallback(
+    (pin: { x: number; y: number } | null) => {
+      setCurrentPin(pin)
+      if (pin) syncJourneyStartPin(pin)
+    },
+    [syncJourneyStartPin],
+  )
+
   // Load planTestResult from localStorage
   useEffect(() => {
     if (!user?.username || typeof window === "undefined") return
@@ -1162,6 +1220,7 @@ export default function Home() {
     setMapImageUrl(undefined)
     setMapFlags([])
     setCurrentPin(null)
+    setJourneyStartPin(null)
     lastJourneyPinRef.current = null
     setJourneySelection(null)
     setJourneyActive(false)
@@ -1185,6 +1244,10 @@ export default function Home() {
             mapImageUrlRef.current = hydratedMapUrl
             setMapFlags(active?.mapFlags ?? [])
             setCurrentPin(active?.currentPin ?? null)
+            const restoredPin = active?.journeyStartPin ?? pickJourneyStartPin(active ?? {})
+            setJourneyStartPin(restoredPin)
+            if (restoredPin) lastJourneyPinRef.current = restoredPin
+            else if (active?.currentPin) lastJourneyPinRef.current = active.currentPin
             setJourneySelection(active?.journeySelection ?? null)
             setJourneyActive(typeof active?.journeyActive === "boolean" ? active?.journeyActive : false)
             setLevelBadgeUnlocked(typeof active?.levelBadgeUnlocked === "boolean" ? active?.levelBadgeUnlocked : false)
@@ -1208,6 +1271,10 @@ export default function Home() {
             mapImageUrlRef.current = hydratedMapUrl
             setMapFlags(active?.mapFlags ?? [])
             setCurrentPin(active?.currentPin ?? null)
+            const restoredPin = active?.journeyStartPin ?? pickJourneyStartPin(active ?? {})
+            setJourneyStartPin(restoredPin)
+            if (restoredPin) lastJourneyPinRef.current = restoredPin
+            else if (active?.currentPin) lastJourneyPinRef.current = active.currentPin
             setJourneySelection(active?.journeySelection ?? null)
             setJourneyActive(typeof active?.journeyActive === "boolean" ? active?.journeyActive : false)
             setLevelBadgeUnlocked(typeof active?.levelBadgeUnlocked === "boolean" ? active?.levelBadgeUnlocked : false)
@@ -1238,6 +1305,10 @@ export default function Home() {
       setMapImageUrl(active?.mapImageUrl || getChapterBaseMapImageUrl(normalized.activeChapterIndex))
       setMapFlags(active?.mapFlags ?? [])
       setCurrentPin(active?.currentPin ?? null)
+      const restoredPin = active?.journeyStartPin ?? pickJourneyStartPin(active ?? {})
+      setJourneyStartPin(restoredPin)
+      if (restoredPin) lastJourneyPinRef.current = restoredPin
+      else if (active?.currentPin) lastJourneyPinRef.current = active.currentPin
       setJourneySelection(active?.journeySelection ?? null)
       setJourneyActive(typeof active?.journeyActive === "boolean" ? active?.journeyActive : false)
       setLevelBadgeUnlocked(typeof active?.levelBadgeUnlocked === "boolean" ? active?.levelBadgeUnlocked : false)
@@ -1260,6 +1331,7 @@ export default function Home() {
         mapImageUrl: override?.mapImageUrl ?? mapImageUrl,
         mapFlags: override?.mapFlags ?? mapFlags,
         currentPin: override?.currentPin ?? currentPin,
+        journeyStartPin: override?.journeyStartPin ?? journeyStartPin ?? pickJourneyStartPin({ mapFlags, currentPin }),
         journeySelection: override?.journeySelection ?? journeySelection,
         journeyActive: override?.journeyActive ?? journeyActive,
         levelBadgeUnlocked: override?.levelBadgeUnlocked ?? levelBadgeUnlocked,
@@ -1271,6 +1343,7 @@ export default function Home() {
           mapImageUrl: getChapterBaseMapImageUrl(i),
           mapFlags: [],
           currentPin: null,
+          journeyStartPin: null,
           journeySelection: null,
           journeyActive: false,
           levelBadgeUnlocked: false,
@@ -1297,6 +1370,7 @@ export default function Home() {
       mapImageUrl,
       mapFlags,
       currentPin,
+      journeyStartPin,
       journeySelection,
       journeyActive,
       levelBadgeUnlocked,
@@ -1323,7 +1397,7 @@ export default function Home() {
         pendingMapUpdateRef.current = params
         return
       }
-      const pinSnapshot = currentPin ?? lastJourneyPinRef.current ?? { x: 50, y: 50 }
+      const pinSnapshot = resolveJourneyPin()
       lastJourneyPinRef.current = pinSnapshot
       const chapterSnapshot = mapChapters[activeMapChapterIndex]
       const previousMapImageUrl = pickBestPreviousMapImageUrl(
@@ -1371,8 +1445,8 @@ export default function Home() {
                   ...prev,
                   {
                     id: mapJson.userId && mapJson.title ? `${mapJson.userId}-${mapJson.title}-${Date.now()}` : `${Date.now()}`,
-                    x: mapJson.mapX ?? pinSnapshot.x,
-                    y: mapJson.mapY ?? pinSnapshot.y,
+                    x: pinSnapshot.x,
+                    y: pinSnapshot.y,
                     title: pendingStoryFinal?.title || mapJson.title || params.title,
                     content: pendingStoryFinal?.content || params.content,
                     workType: params.workType,
@@ -1406,7 +1480,7 @@ export default function Home() {
         }
       })()
     },
-    [journeyActive, user, currentPin, mapImageUrl, mapChapters, activeMapChapterIndex, persistMapStateNow],
+    [journeyActive, user, resolveJourneyPin, mapImageUrl, mapChapters, activeMapChapterIndex, persistMapStateNow],
   )
 
   const runStoryJourneyMapAtStructureSelect = useCallback(
@@ -1419,7 +1493,7 @@ export default function Home() {
       const storyTitle = getStoryWritingMapTitle(character)
       const topic = plot.setting || character?.name || storyTitle
       const plotSummary = buildStoryPlotSummary(character, plot)
-      const pinSnapshot = lastJourneyPinRef.current ?? { x: 50, y: 50 }
+      const pinSnapshot = resolveJourneyPin()
       pendingStoryFlagFinalizationRef.current = null
       pendingStoryMapPinRef.current = { x: pinSnapshot.x, y: pinSnapshot.y, title: storyTitle }
       toast.info("Updating your writing map in the background…", { duration: 3500 })
@@ -1443,7 +1517,7 @@ export default function Home() {
         },
       })
     },
-    [journeyActive, user, queueJourneyMapUpdate],
+    [journeyActive, user, queueJourneyMapUpdate, resolveJourneyPin],
   )
 
   /** Fire map edit immediately when the student picks a structure (not when opening Writing Map). */
@@ -1522,6 +1596,7 @@ export default function Home() {
         mapImageUrl,
         mapFlags,
         currentPin,
+        journeyStartPin,
         journeySelection,
         journeyActive,
         levelBadgeUnlocked,
@@ -1536,6 +1611,7 @@ export default function Home() {
             mapImageUrl: getChapterBaseMapImageUrl(i),
             mapFlags: [],
             currentPin: null,
+            journeyStartPin: null,
             journeySelection,
             journeyActive,
             levelBadgeUnlocked,
@@ -1547,6 +1623,7 @@ export default function Home() {
             mapImageUrl: getChapterBaseMapImageUrl(targetChapterIndex),
             mapFlags: [],
             currentPin: null,
+            journeyStartPin: null,
             journeySelection,
             journeyActive,
             levelBadgeUnlocked,
@@ -1563,8 +1640,11 @@ export default function Home() {
       setMapImageUrl(target?.mapImageUrl || getChapterBaseMapImageUrl(targetChapterIndex))
       setMapFlags(target?.mapFlags ?? [])
       setCurrentPin(null)
+      const targetStartPin = target?.journeyStartPin ?? pickJourneyStartPin(target ?? {})
+      setJourneyStartPin(targetStartPin)
+      lastJourneyPinRef.current = targetStartPin
     },
-    [activeMapChapterIndex, currentPin, journeyActive, journeySelection, levelBadgeUnlocked, mapChapters, mapFlags, mapImageUrl, user?.username],
+    [activeMapChapterIndex, currentPin, journeyStartPin, journeyActive, journeySelection, levelBadgeUnlocked, mapChapters, mapFlags, mapImageUrl, user?.username],
   )
 
   // Save map state to localStorage + DB
@@ -1575,6 +1655,7 @@ export default function Home() {
       mapImageUrl,
       mapFlags,
       currentPin,
+      journeyStartPin,
       journeySelection,
       journeyActive,
       levelBadgeUnlocked,
@@ -1587,6 +1668,7 @@ export default function Home() {
         mapImageUrl: getChapterBaseMapImageUrl(i),
         mapFlags: [],
         currentPin: null,
+        journeyStartPin: null,
         journeySelection: null,
         journeyActive: false,
         levelBadgeUnlocked: false,
@@ -1610,7 +1692,7 @@ export default function Home() {
     }).catch(() => {
       // ignore network errors
     })
-  }, [user?.username, activeMapChapterIndex, mapChapters, mapImageUrl, mapFlags, currentPin, journeySelection, journeyActive, levelBadgeUnlocked])
+  }, [user?.username, activeMapChapterIndex, mapChapters, mapImageUrl, mapFlags, currentPin, journeyStartPin, journeySelection, journeyActive, levelBadgeUnlocked])
 
   // Notify header of current user + profile + unread reviews count
   const [headerUserInfo, setHeaderUserInfo] = useState<{ username: string; avatarUrl?: string | null; avatarEmoji?: string | null; unreadCount: number } | null>(null)
@@ -1717,11 +1799,7 @@ export default function Home() {
     (title: string, fullStory: string) => {
       const body = fullStory.trim()
       if (!body) return false
-      const pin =
-        lastJourneyPinRef.current ??
-        (pendingStoryMapPinRef.current
-          ? { x: pendingStoryMapPinRef.current.x, y: pendingStoryMapPinRef.current.y }
-          : { x: 50, y: 50 })
+      const pin = resolveJourneyPin()
       const safeTitle = title.trim() || pendingStoryMapPinRef.current?.title || "My Story"
 
       setMapFlags((prev: MapFlagItem[]) => {
@@ -1732,7 +1810,7 @@ export default function Home() {
         let next: MapFlagItem[]
         if (reverseIdx !== undefined) {
           next = prev.map((flag, index) =>
-            index === reverseIdx ? { ...flag, title: safeTitle, content: body } : flag,
+            index === reverseIdx ? { ...flag, title: safeTitle, content: body, x: pin.x, y: pin.y } : flag,
           )
         } else {
           next = [
@@ -1753,7 +1831,7 @@ export default function Home() {
       pendingStoryMapPinRef.current = null
       return true
     },
-    [persistMapStateNow],
+    [resolveJourneyPin, persistMapStateNow],
   )
 
   // Refetch and update header when profile/reviews change (e.g. after marking reviews read)
@@ -2115,7 +2193,7 @@ export default function Home() {
           mapImageUrl={mapImageUrl}
           mapFlags={mapFlags}
           pin={currentPin}
-          onPinChange={setCurrentPin}
+          onPinChange={handlePinChange}
           chapterIndex={activeMapChapterIndex}
           onPrevChapter={activeMapChapterIndex > 0 ? () => handleMoveToChapter(activeMapChapterIndex - 1) : undefined}
           onNextChapter={canMoveToNextChapter ? () => handleMoveToChapter(activeMapChapterIndex + 1) : undefined}
