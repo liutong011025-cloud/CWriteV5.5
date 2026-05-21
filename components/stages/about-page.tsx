@@ -204,8 +204,12 @@ export default function AboutPage({
         <div className="relative z-20 max-w-5xl w-full mx-4 md:mx-8 rounded-[2rem] border border-white/70 bg-white/90 px-8 py-12 text-center shadow-[0_18px_40px_rgba(13,71,161,0.18)] backdrop-blur-sm md:px-16 md:py-16">
           <div className="relative z-10">
             <h1
-              className="text-4xl sm:text-5xl md:text-7xl font-black text-[#0D47A1] mb-6 leading-[1.1] tracking-tight"
+              className="mb-7 text-5xl font-black leading-[1.05] tracking-tight sm:text-6xl md:text-8xl"
               style={{
+                background: "linear-gradient(180deg, #0D47A1 0%, #1E88E5 52%, #00A86B 100%)",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+                backgroundClip: "text",
                 textShadow: "0 3px 0 rgba(144,202,249,0.85), 0 8px 18px rgba(13,71,161,0.16)",
               }}
             >
@@ -213,9 +217,9 @@ export default function AboutPage({
               <br />
               {t.openingH1b}
             </h1>
-            <p className="text-xl md:text-2xl text-[#1565C0] mb-6 font-bold">{t.openingSub}</p>
-            <div className="w-24 h-2 bg-[#E8FF72] mx-auto shadow-[3px_3px_0_rgba(13,71,161,0.16)] mb-6" />
-            <p className="text-lg md:text-xl text-slate-700 leading-relaxed max-w-3xl mx-auto font-semibold">{t.openingP}</p>
+            <p className="mb-6 text-2xl font-black text-[#1565C0] md:text-3xl">{t.openingSub}</p>
+            <div className="w-28 h-2 bg-[#E8FF72] mx-auto shadow-[3px_3px_0_rgba(13,71,161,0.16)] mb-7" />
+            <p className="mx-auto max-w-4xl text-xl font-semibold leading-9 text-slate-700 md:text-2xl md:leading-10">{t.openingP}</p>
           </div>
         </div>
       </section>
@@ -371,7 +375,7 @@ export default function AboutPage({
             {t.philosophyTitle}
           </h2>
           <div className="mx-auto mb-6 h-2 w-28 bg-[#E8FF72] shadow-[3px_3px_0_rgba(13,71,161,0.45)]" />
-          <p className="mx-auto max-w-2xl text-lg font-semibold leading-relaxed text-white md:text-xl drop-shadow-[0_3px_8px_rgba(13,71,161,0.55)]">{t.philosophyText}</p>
+          <p className="mx-auto max-w-3xl text-2xl font-semibold leading-10 text-white drop-shadow-[0_3px_8px_rgba(13,71,161,0.55)] md:text-3xl md:leading-[3rem]">{t.philosophyText}</p>
         </div>
       </section>
 
@@ -394,18 +398,18 @@ export default function AboutPage({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start mb-8">
             <div className="rounded-[2rem] border border-white/70 bg-white/90 p-8 shadow-[0_18px_40px_rgba(13,71,161,0.18)] backdrop-blur-sm transition-all duration-500 group relative overflow-hidden">
               <div className="relative z-10">
-                <div className="inline-flex items-center px-6 py-3 text-[#1565C0] font-black mb-6">
-                  <Users className="w-5 h-5 mr-2" />
+                <div className="mb-6 inline-flex items-center bg-gradient-to-r from-[#0D47A1] to-[#00A86B] bg-clip-text px-6 py-3 text-3xl font-black text-transparent">
+                  <Users className="w-7 h-7 mr-3 text-[#00A86B]" />
                   For Writers
                 </div>
-                <p className="text-lg text-slate-700 mb-6 leading-relaxed font-semibold">{t.writersP}</p>
-                <ul className="space-y-4">
+                <p className="mb-7 text-xl font-semibold leading-8 text-slate-700 md:text-2xl md:leading-9">{t.writersP}</p>
+                <ul className="space-y-5">
                   {writerItems.map((item, i) => (
                     <li key={i} className="flex items-center gap-4 group/item hover:scale-105 transition-transform duration-300">
-                      <div className="w-8 h-8 bg-[#E8FF72] flex items-center justify-center shadow-[2px_2px_0_rgba(13,71,161,0.45)]">
-                        <CheckCircle className="w-4 h-4 text-[#1565C0]" />
+                      <div className="w-10 h-10 bg-[#E8FF72] flex items-center justify-center shadow-[2px_2px_0_rgba(13,71,161,0.45)]">
+                        <CheckCircle className="w-5 h-5 text-[#1565C0]" />
                       </div>
-                      <span className="text-slate-700 font-bold">{item}</span>
+                      <span className="text-lg font-bold text-slate-700 md:text-xl">{item}</span>
                     </li>
                   ))}
                 </ul>
@@ -413,18 +417,18 @@ export default function AboutPage({
             </div>
             <div className="rounded-[2rem] border border-white/70 bg-white/90 p-8 shadow-[0_18px_40px_rgba(13,71,161,0.18)] backdrop-blur-sm transition-all duration-500 group relative overflow-hidden">
               <div className="relative z-10">
-                <div className="inline-flex items-center px-6 py-3 text-[#1565C0] font-black mb-6">
-                  <BookOpen className="w-5 h-5 mr-2" />
+                <div className="mb-6 inline-flex items-center bg-gradient-to-r from-[#0D47A1] to-[#7C3AED] bg-clip-text px-6 py-3 text-3xl font-black text-transparent">
+                  <BookOpen className="w-7 h-7 mr-3 text-[#7C3AED]" />
                   For Research
                 </div>
-                <p className="text-lg text-slate-700 mb-6 leading-relaxed font-semibold">{t.researchP}</p>
-                <ul className="space-y-4">
+                <p className="mb-7 text-xl font-semibold leading-8 text-slate-700 md:text-2xl md:leading-9">{t.researchP}</p>
+                <ul className="space-y-5">
                   {researchItems.map((item, i) => (
                     <li key={i} className="flex items-center gap-4 group/item hover:scale-105 transition-transform duration-300">
-                      <div className="w-8 h-8 bg-[#E8FF72] flex items-center justify-center shadow-[2px_2px_0_rgba(13,71,161,0.45)]">
-                        <CheckCircle className="w-4 h-4 text-[#1565C0]" />
+                      <div className="w-10 h-10 bg-[#E8FF72] flex items-center justify-center shadow-[2px_2px_0_rgba(13,71,161,0.45)]">
+                        <CheckCircle className="w-5 h-5 text-[#1565C0]" />
                       </div>
-                      <span className="text-slate-700 font-bold">{item}</span>
+                      <span className="text-lg font-bold text-slate-700 md:text-xl">{item}</span>
                     </li>
                   ))}
                 </ul>
