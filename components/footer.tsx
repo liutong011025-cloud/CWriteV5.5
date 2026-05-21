@@ -23,22 +23,6 @@ export default function Footer() {
       className="relative mt-auto w-full overflow-hidden text-white"
       style={{ background: "linear-gradient(180deg, #123f71 0%, #103565 52%, #0b2854 100%)" }}
     >
-      <svg
-        className="pointer-events-none absolute inset-0 h-full w-full opacity-55"
-        viewBox="0 0 1440 132"
-        preserveAspectRatio="none"
-        aria-hidden="true"
-      >
-        <path
-          d="M0 24C184 55 315 9 523 32C728 55 814 85 994 70C1162 56 1268 13 1440 34V132H0Z"
-          fill="#123f71"
-        />
-        <path
-          d="M0 50C220 28 376 40 568 70C761 101 945 107 1148 63C1260 39 1348 36 1440 50V132H0Z"
-          fill="#0f3563"
-          opacity="0.82"
-        />
-      </svg>
       <div
         className="pointer-events-none absolute inset-0 opacity-80"
         style={{
@@ -89,12 +73,12 @@ export default function Footer() {
             alt="MIT logo"
             width={210}
             height={60}
-            className="h-auto w-[38vw] max-w-[205px] min-w-[122px] object-contain drop-shadow-[2px_3px_0_rgba(0,0,0,0.22)]"
+            className="h-auto w-[40vw] max-w-[225px] min-w-[132px] object-contain drop-shadow-[2px_3px_0_rgba(0,0,0,0.22)]"
             priority={false}
           />
         </div>
 
-        <div className="ml-auto w-full min-w-0 max-w-[860px] text-center drop-shadow-[0_2px_3px_rgba(0,0,0,0.38)] lg:text-right">
+        <div className="relative z-20 ml-auto w-full min-w-0 max-w-[860px] text-center drop-shadow-[0_2px_3px_rgba(0,0,0,0.38)] lg:text-right">
           <p className="text-sm font-medium leading-5 text-sky-50 sm:text-base">
             Strategic Plan Start-up Project @EdUHK
           </p>
