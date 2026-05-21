@@ -20,52 +20,65 @@ export default function Footer() {
 
   return (
     <footer
-      className="w-full mt-auto"
+      className="w-full mt-auto px-4 pb-4 pt-2 sm:px-6 lg:px-8"
       style={{
-        background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.98) 0%, rgba(30, 58, 138, 0.95) 50%, rgba(15, 23, 42, 0.98) 100%)',
-        backdropFilter: 'blur(12px) saturate(180%)',
-        borderTop: '1px solid rgba(59, 130, 246, 0.3)',
+        background:
+          "linear-gradient(180deg, rgba(255,255,255,0) 0%, rgba(15,23,42,0.18) 34%, rgba(15,23,42,0.38) 100%)",
       }}
     >
-      <div className="max-w-7xl mx-auto px-8 lg:px-12 py-8">
-        <div className="flex flex-col lg:flex-row items-center justify-between gap-8">
-          {/* Logo区域 */}
-          <div className="flex items-center gap-10 lg:gap-12">
-            {/* EdUHK Logo - 大一些 */}
-            <div className="flex-shrink-0">
-              <Image
-                src="/EdUHK_Signature_RGBWhite@4x-1-1024x336.webp"
-                alt="EdUHK Logo"
-                width={300}
-                height={98}
-                className="object-contain"
-              />
-            </div>
-            
-            {/* MIT Logo - 小一些 */}
-            <div className="flex-shrink-0">
-              <Image
-                src="/MIT_Logo2-1024x290.webp"
-                alt="MIT Logo"
-                width={180}
-                height={51}
-                className="object-contain opacity-90"
-              />
+      <div className="mx-auto max-w-7xl overflow-hidden rounded-[2rem] border border-white/25 bg-slate-950/[0.88] shadow-[0_24px_70px_rgba(15,23,42,0.35)] backdrop-blur-xl">
+        <div className="h-1 w-full bg-gradient-to-r from-sky-300 via-violet-300 to-amber-200" />
+
+        <div className="grid gap-6 px-5 py-6 sm:px-8 lg:grid-cols-[minmax(320px,0.92fr)_1.35fr] lg:items-center lg:px-10 lg:py-7">
+          <div className="flex flex-col gap-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-sky-100/75">
+              In collaboration with
+            </p>
+            <div className="flex flex-wrap items-center gap-3 sm:gap-4">
+              <div className="flex h-20 min-w-[230px] items-center justify-center rounded-2xl border border-white/15 bg-white/[0.08] px-5 shadow-inner shadow-white/5">
+                <Image
+                  src="/EdUHK_Signature_RGBWhite@4x-1-1024x336.webp"
+                  alt="The Education University of Hong Kong logo"
+                  width={260}
+                  height={85}
+                  className="h-auto w-[230px] object-contain sm:w-[250px]"
+                  priority={false}
+                />
+              </div>
+
+              <div className="flex h-[4.25rem] min-w-[176px] items-center justify-center rounded-2xl border border-white/70 bg-white px-5 shadow-sm shadow-slate-950/10">
+                <Image
+                  src="/MIT_Logo2-1024x290.webp"
+                  alt="MIT logo"
+                  width={190}
+                  height={54}
+                  className="h-auto w-[168px] object-contain sm:w-[178px]"
+                  priority={false}
+                />
+              </div>
             </div>
           </div>
-          
-          {/* 文本信息 */}
-          <div className="flex-1 text-center lg:text-right space-y-3 max-w-md lg:max-w-none">
-            <p className="text-blue-100 text-base leading-relaxed">
-              Strategic Plan Start-up Support @EdUHK
+
+          <div className="rounded-3xl border border-white/[0.12] bg-white/[0.07] p-5 text-center shadow-inner shadow-white/5 lg:text-left">
+            <p className="mb-2 text-xs font-bold uppercase tracking-[0.24em] text-amber-100">
+              Disclaimer
             </p>
-            <p className="text-blue-100 text-base leading-relaxed">
-              Department of Mathematics and Information Technology
+            <p className="text-sm leading-6 text-slate-100/90 sm:text-[15px]">
+              This website uses AI to help you learn and create. Sometimes AI may make mistakes or give incorrect
+              information. Please think carefully, check important information, and ask a teacher or parent if you are
+              unsure. By using this website, you understand that AI is not always perfect.
             </p>
-            <p className="text-blue-200 text-base font-semibold mt-3">
-              © EdUHK
-            </p>
+
+            <div className="mt-5 flex flex-col gap-2 border-t border-white/[0.12] pt-4 text-xs font-medium leading-5 text-slate-200/80 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+              <p>Strategic Plan Start-up Project @EdUHK</p>
+              <p>Copyright © 2026 The Education University of Hong Kong. All Rights Reserved.</p>
+            </div>
           </div>
+        </div>
+
+        <div className="flex items-center justify-center gap-2 border-t border-white/10 bg-white/[0.04] px-6 py-3 text-center text-[11px] tracking-wide text-slate-300/75">
+          <span className="h-1.5 w-1.5 rounded-full bg-sky-300/80" />
+          <p>AI-assisted creative writing for thoughtful young learners</p>
         </div>
       </div>
     </footer>
