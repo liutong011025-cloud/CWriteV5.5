@@ -19,6 +19,10 @@ interface LoginPageProps {
   onLogin: (user: LoginUser, showContinueDialog?: boolean) => void
 }
 
+// 新用户注册开关
+const REGISTRATION_ENABLED = true
+const REGISTRATION_DISABLED_MESSAGE = "New user registration: Function is not available."
+
 export default function LoginPage({ onLogin }: LoginPageProps) {
   const [mode, setMode] = useState<"login" | "register">("login")
   const [entryStep, setEntryStep] = useState<"role" | "auth">("role")
@@ -54,8 +58,8 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
       return () => window.cancelIdleCallback(idleId)
     }
 
-    const timeoutId = window.setTimeout(warmAudioCache, 300)
-    return () => window.clearTimeout(timeoutId)
+    const timeoutId = globalThis.setTimeout(warmAudioCache, 300)
+    return () => globalThis.clearTimeout(timeoutId)
   }, [])
 
   const handleLogin = async () => {
@@ -108,6 +112,11 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
   }
 
   const handleRegister = async () => {
+    if (!REGISTRATION_ENABLED) {
+      toast.error(REGISTRATION_DISABLED_MESSAGE)
+      return
+    }
+
     if (!registerName.trim() || !registerEmail.trim() || !password.trim()) {
       toast.error("Please enter your name, email, and password")
       return
@@ -277,16 +286,22 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
                   {isLoading ? "Logging in..." : "🚀 Login"}
                 </Button>
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    setMode("register")
-                    setPassword("")
-                  }}
-                  className="w-full rounded-xl border border-white/40 bg-white/10 py-3 text-sm font-bold text-white backdrop-blur-md transition hover:bg-white/20"
-                >
-                  Create a new account
-                </button>
+                {REGISTRATION_ENABLED ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMode("register")
+                      setPassword("")
+                    }}
+                    className="w-full rounded-xl border border-white/40 bg-white/10 py-3 text-sm font-bold text-white backdrop-blur-md transition hover:bg-white/20"
+                  >
+                    Create a new account
+                  </button>
+                ) : (
+                  <p className="w-full rounded-xl border border-white/30 bg-white/10 py-3 px-4 text-center text-sm text-white/90 backdrop-blur-md">
+                    {REGISTRATION_DISABLED_MESSAGE}
+                  </p>
+                )}
                   </>
                 ) : (
                   <>
