@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma, isDatabaseUrlConfigured } from "@/lib/prisma"
 
-// 临时关闭新用户注册；恢复时改为 true
-const REGISTRATION_ENABLED = false
+// 新用户注册开关
+const REGISTRATION_ENABLED = true
 const REGISTRATION_DISABLED_MESSAGE = "New user registration: Function is not available."
 
 // 登錄邏輯：
