@@ -210,13 +210,8 @@ export default function DashboardV2({ user, onBack }: DashboardProps) {
   useEffect(() => {
     if (!selected) return
     void loadStudent(selected)
-  }, [selected])
-
-  /** Load AI summary only after a writing kind is chosen (saves API calls; confirms kind-gate UI). */
-  useEffect(() => {
-    if (!selected || writingKind === null) return
     void loadSummary(selected)
-  }, [selected, writingKind])
+  }, [selected])
 
   async function refresh() {
     setLoadingDashboard(true)
@@ -242,6 +237,7 @@ export default function DashboardV2({ user, onBack }: DashboardProps) {
 
   async function loadStudent(username: string) {
     const requestId = ++detailRequestRef.current
+    setSummary("")
     setLoadingDetail(true)
     setDetail(null)
     setPanel("writings")
@@ -541,12 +537,20 @@ export default function DashboardV2({ user, onBack }: DashboardProps) {
                       <p className="pixel-text text-sm font-bold text-[#5a4a2a]">
                         {detail.user.username} · grade {detail.user.grade ?? "N/A"} · {detail.user.totalWorks} works
                       </p>
-                      {writingKind !== null ? (
-                        <Button className="pixel-btn pixel-btn-blue h-8 text-xs font-bold" size="sm" onClick={() => void loadSummary(detail.user.username)}>
-                          <Bot className="mr-2 h-4 w-4" />
-                          Refresh Summary
-                        </Button>
-                      ) : null}
+                      <Button className="pixel-btn pixel-btn-blue h-8 text-xs font-bold" size="sm" onClick={() => void loadSummary(detail.user.username)}>
+                        <Bot className="mr-2 h-4 w-4" />
+                        Refresh summary
+                      </Button>
+                    </div>
+
+                    <div className="pixel-panel rounded-lg border-2 border-[#6b5210] bg-[#5a4a32]/90 p-5 shadow-[4px_4px_0_rgba(0,0,0,0.2)]">
+                      <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-[#f5e6c8]/90">Overall AI diagnosis · all types</p>
+                      <p
+                        className="whitespace-pre-wrap text-base font-semibold leading-relaxed text-[#fffef8] sm:text-lg md:text-xl"
+                        style={{ textShadow: "1px 1px 0 #2a1810" }}
+                      >
+                        {loadingSummary ? "Generating overall diagnosis…" : summary || "No summary yet for this student."}
+                      </p>
                     </div>
 
                     {writingKind === null ? (
@@ -555,9 +559,10 @@ export default function DashboardV2({ user, onBack }: DashboardProps) {
                           Step 1 · Choose a writing type
                         </p>
                         <p className="mx-auto mb-6 max-w-xl text-center text-[10px] leading-relaxed text-[#fffaf0]/95 sm:text-[11px]">
-                          Pick <strong className="text-[#e8c547]">Story</strong>, <strong className="text-[#e8c547]">Book Review</strong>, <strong className="text-[#e8c547]">Letter</strong>,{" "}
-                          <strong className="text-[#e8c547]">Drama</strong>, or <strong className="text-[#e8c547]">Poetry</strong> — then only that type&apos;s{" "}
-                          <strong className="text-[#e8c547]">writings</strong> and <strong className="text-[#e8c547]">AI logs</strong> are shown.
+                          Below is an <strong className="text-[#e8c547]">overall</strong> diagnosis for this student. Then pick{" "}
+                          <strong className="text-[#e8c547]">Story</strong>, <strong className="text-[#e8c547]">Book Review</strong>,{" "}
+                          <strong className="text-[#e8c547]">Letter</strong>, <strong className="text-[#e8c547]">Drama</strong>, or{" "}
+                          <strong className="text-[#e8c547]">Poetry</strong> to view only that type&apos;s writings and AI logs.
                         </p>
                         {detail.degraded && (
                           <div className="mb-4 rounded-lg border-2 border-[#c94b4b] bg-black/25 px-4 py-3 text-center text-[11px] text-[#ffcccc]">
@@ -620,16 +625,6 @@ export default function DashboardV2({ user, onBack }: DashboardProps) {
                           <span className="rounded border-2 border-[#5a9a32] bg-[#7ec850] px-3 py-1.5 text-[10px] font-black uppercase text-white shadow-[2px_2px_0_rgba(0,0,0,0.2)]">
                             {(TYPE_META[writingKind] ?? defaultTypeMeta(writingKind)).labelEn}
                           </span>
-                        </div>
-
-                        <div className="pixel-panel rounded-lg border-2 border-[#6b5210] bg-[#5a4a32]/90 p-5 shadow-[4px_4px_0_rgba(0,0,0,0.2)]">
-                          <p className="mb-3 text-sm font-black uppercase tracking-wide text-[#f5e6c8]">AI diagnosis</p>
-                          <p
-                            className="whitespace-pre-wrap text-base font-semibold leading-relaxed text-[#fffef8] sm:text-lg md:text-xl"
-                            style={{ textShadow: "1px 1px 0 #2a1810" }}
-                          >
-                            {loadingSummary ? "Generating diagnosis…" : summary || "No summary yet for this student."}
-                          </p>
                         </div>
 
                         <div className="flex flex-wrap gap-2">
@@ -917,9 +912,11 @@ function ChartCard({ title, children }: { title: string; children: ReactNode }) 
 }
 
 function getUserHeatClass(totalWorks: number, maxWorks: number) {
+  if (totalWorks <= 0) return "bg-[#f7fff2] text-[#42623a] hover:bg-[#ecf8e6]"
   const ratio = maxWorks <= 0 ? 0 : totalWorks / maxWorks
-  if (ratio >= 0.75) return "bg-[#2f6b24] text-[#f4fff0] hover:brightness-110"
-  if (ratio >= 0.5) return "bg-[#4d9438] text-[#0f1f0c] hover:brightness-105"
+  if (ratio >= 0.85) return "bg-[#24551c] text-[#f4fff0] hover:brightness-110"
+  if (ratio >= 0.65) return "bg-[#367a29] text-[#f4fff0] hover:brightness-110"
+  if (ratio >= 0.45) return "bg-[#58a43c] text-[#10240c] hover:brightness-105"
   if (ratio >= 0.25) return "bg-[#8fd06a] text-[#1e2e14] hover:brightness-105"
-  return "bg-[#faf6ee] text-[#5a4a2a] hover:bg-[#ebe4d4]"
+  return "bg-[#c8eeb4] text-[#24401c] hover:brightness-105"
 }
