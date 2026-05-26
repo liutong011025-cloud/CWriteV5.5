@@ -31,7 +31,7 @@ export default function Footer() {
         }}
       />
       <svg
-        className="pointer-events-none absolute bottom-0 right-0 z-[1] h-[108px] w-[170px] opacity-100 sm:h-[104px] sm:w-[200px] md:w-[225px] lg:w-[250px] xl:w-[285px]"
+        className="pointer-events-none absolute bottom-0 right-[-18px] z-[1] h-[108px] w-[220px] opacity-100 sm:h-[104px] sm:w-[260px] md:right-[-12px] md:w-[295px] lg:w-[330px] xl:w-[385px]"
         viewBox="0 0 520 150"
         preserveAspectRatio="xMidYMid meet"
         aria-hidden="true"
@@ -57,7 +57,7 @@ export default function Footer() {
         />
       </svg>
 
-      <div className="relative z-10 mx-auto flex h-full max-w-[1900px] items-center gap-6 px-3 pr-[178px] sm:px-5 sm:pr-[210px] md:pr-[238px] lg:gap-12 lg:px-8 lg:pr-[265px] xl:pr-[300px]">
+      <div className="relative z-10 mx-auto flex h-full max-w-[1900px] items-center gap-6 px-3 pr-[218px] sm:px-5 sm:pr-[258px] md:pr-[295px] lg:gap-12 lg:px-8 lg:pr-[335px] xl:pr-[390px]">
         <div className="flex shrink-0 items-center justify-start gap-8">
           <Image
             src="/EdUHK_Signature_RGBWhite@4x-1-1024x336.webp"
