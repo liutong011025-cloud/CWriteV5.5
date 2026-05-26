@@ -57,7 +57,7 @@ export default function Footer() {
         />
       </svg>
 
-      <div className="relative z-10 mx-auto flex h-full max-w-[1900px] items-center gap-6 px-3 pr-[266px] sm:px-5 sm:pr-[310px] md:pr-[360px] lg:gap-12 lg:px-8 lg:pr-[415px] xl:pr-[490px]">
+      <div className="relative z-10 mx-auto flex h-full max-w-[1900px] items-center gap-6 px-3 pr-[158px] sm:px-5 sm:pr-[194px] md:pr-[228px] lg:gap-12 lg:px-8 lg:pr-[266px] xl:pr-[320px]">
         <div className="flex shrink-0 items-center justify-start gap-8">
           <Image
             src="/EdUHK_Signature_RGBWhite@4x-1-1024x336.webp"
