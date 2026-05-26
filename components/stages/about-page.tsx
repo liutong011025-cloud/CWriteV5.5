@@ -185,6 +185,7 @@ const valuesList = [
 
 const writerItems = ["Express ideas freely", "Receive meaningful feedback", "Grow continuously", "Build confidence"]
 const researchItems = ["Evidence-based design", "Open research", "Real-world impact", "Innovation"]
+const ABOUT_BGM_LOOP = "/yoshiyuki_tatsuya-pixel-hearts-foreverwav-427383.mp3"
 
 const translations = {
   en: {
@@ -314,6 +315,36 @@ export default function AboutPage({
     const observer = new IntersectionObserver(([e]) => e.isIntersecting && setTeamVisible(true), { threshold: 0.1 })
     teamRef.current && observer.observe(teamRef.current)
     return () => observer.disconnect()
+  }, [])
+
+  useEffect(() => {
+    const bgm = new Audio(ABOUT_BGM_LOOP)
+    bgm.loop = true
+    bgm.volume = 0.3
+    bgm.preload = "auto"
+    bgm.load?.()
+
+    const tryPlay = () => void bgm.play().catch(() => {})
+    const onFirstGesture = () => {
+      tryPlay()
+      window.removeEventListener("pointerdown", onFirstGesture)
+      window.removeEventListener("keydown", onFirstGesture)
+      window.removeEventListener("touchstart", onFirstGesture)
+    }
+
+    tryPlay()
+    window.addEventListener("pointerdown", onFirstGesture, { passive: true })
+    window.addEventListener("keydown", onFirstGesture)
+    window.addEventListener("touchstart", onFirstGesture, { passive: true })
+
+    return () => {
+      window.removeEventListener("pointerdown", onFirstGesture)
+      window.removeEventListener("keydown", onFirstGesture)
+      window.removeEventListener("touchstart", onFirstGesture)
+      bgm.pause()
+      bgm.currentTime = 0
+      bgm.src = ""
+    }
   }, [])
 
   return (
@@ -581,8 +612,8 @@ export default function AboutPage({
           <Image src="/Background.webp" alt="" fill className="object-cover" />
           <div className="absolute inset-0 bg-background/40" />
         </div>
-        <div className="max-w-6xl mx-auto relative z-10">
-          <div className="text-center mb-10">
+        <div className="max-w-[1500px] mx-auto relative z-10">
+          <div className="text-center mb-12">
             <div className={`inline-flex items-center px-6 py-3 bg-card border-4 border-foreground rounded-[2rem] text-card-foreground font-black mb-6 shadow-brutal hover:scale-105 transition-all duration-500 ${teamVisible ? "animate-slide-up" : "opacity-0"}`}>
               <Users className="w-5 h-5 mr-2 text-primary animate-bounce" />
               Our Team
@@ -595,7 +626,7 @@ export default function AboutPage({
               {t.researchSub}
             </p>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-10 max-w-5xl mx-auto mb-10">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-14 max-w-6xl mx-auto mb-14">
             {topRow.map((member, index) => (
               <div
                 key={member.id}
@@ -604,24 +635,24 @@ export default function AboutPage({
                 onMouseEnter={() => setHoveredTeamId(member.id)}
                 onMouseLeave={() => setHoveredTeamId(null)}
               >
-                <div className="relative h-64 flex items-center justify-center overflow-hidden bg-card">
+                <div className="relative h-80 flex items-center justify-center overflow-hidden bg-card">
                   <Image src={member.image} alt={member.name} fill className="object-contain object-top group-hover:scale-105 transition-transform duration-500" />
                   <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                   <div className={`absolute inset-0 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 transition-all duration-500 ${hoveredTeamId === member.id ? "opacity-100" : "opacity-0"}`}>
-                    <div className="max-h-full overflow-y-auto pr-1 text-left text-[11px] leading-relaxed text-white [scrollbar-width:thin]">{member.bio}</div>
+                    <div className="max-h-full overflow-y-auto pr-1 text-left text-sm leading-relaxed text-white [scrollbar-width:thin]">{member.bio}</div>
                   </div>
                 </div>
-                <div className="p-4 relative">
+                <div className="p-5 relative">
                   <div className="absolute top-0 right-0 w-12 h-12 bg-accent rounded-bl-[1rem] border-l-[3px] border-b-[3px] border-foreground group-hover:scale-110 transition-transform duration-500" />
-                  <h3 className="text-sm font-black text-foreground mb-1 group-hover:text-primary transition-colors duration-300 pr-12">{member.name}</h3>
-                  <p className="text-xs font-bold text-primary mb-0.5">{member.role}</p>
-                  <p className="text-xs text-muted-foreground">{member.subtitle}</p>
+                  <h3 className="text-lg font-black text-foreground mb-1 group-hover:text-primary transition-colors duration-300 pr-12">{member.name}</h3>
+                  <p className="text-sm font-bold text-primary mb-1">{member.role}</p>
+                  <p className="text-sm text-muted-foreground">{member.subtitle}</p>
                 </div>
                 <div className="absolute bottom-0 left-0 h-1.5 w-0 group-hover:w-full transition-all duration-500 bg-gradient-to-r from-primary via-secondary to-accent" />
               </div>
             ))}
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-10">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-12 gap-y-14">
             {bottomRow.map((member, index) => (
               <div
                 key={member.id}
@@ -630,18 +661,18 @@ export default function AboutPage({
                 onMouseEnter={() => setHoveredTeamId(member.id)}
                 onMouseLeave={() => setHoveredTeamId(null)}
               >
-                <div className="relative h-72 flex items-center justify-center overflow-hidden bg-card">
+                <div className="relative h-80 flex items-center justify-center overflow-hidden bg-card">
                   <Image src={member.image} alt={member.name} fill className="object-contain object-top group-hover:scale-105 transition-transform duration-500" />
                   <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                   <div className={`absolute inset-0 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 transition-all duration-500 ${hoveredTeamId === member.id ? "opacity-100" : "opacity-0"}`}>
-                    <div className="max-h-full overflow-y-auto pr-1 text-left text-[11px] leading-relaxed text-white [scrollbar-width:thin]">{member.bio}</div>
+                    <div className="max-h-full overflow-y-auto pr-1 text-left text-xs leading-relaxed text-white [scrollbar-width:thin]">{member.bio}</div>
                   </div>
                 </div>
-                <div className="p-4 relative">
+                <div className="p-5 relative">
                   <div className="absolute top-0 right-0 w-12 h-12 bg-accent rounded-bl-[1rem] border-l-[3px] border-b-[3px] border-foreground group-hover:scale-110 transition-transform duration-500" />
-                  <h3 className="text-sm font-black text-foreground mb-1 group-hover:text-primary transition-colors duration-300 pr-12">{member.name}</h3>
-                  <p className="text-xs font-bold text-primary mb-0.5">{member.role}</p>
-                  <p className="text-xs text-muted-foreground">{member.subtitle}</p>
+                  <h3 className="text-base font-black text-foreground mb-1 group-hover:text-primary transition-colors duration-300 pr-12">{member.name}</h3>
+                  <p className="text-sm font-bold text-primary mb-1">{member.role}</p>
+                  <p className="text-sm text-muted-foreground">{member.subtitle}</p>
                 </div>
                 <div className="absolute bottom-0 left-0 h-1.5 w-0 group-hover:w-full transition-all duration-500 bg-gradient-to-r from-primary via-secondary to-accent" />
               </div>
