@@ -19,7 +19,7 @@ export default function Footer() {
   }
 
   return (
-    <footer className="mt-auto w-full overflow-hidden bg-[#103565]">
+    <footer className="mt-auto w-full overflow-hidden bg-transparent">
       <Image
         src="/footer.png"
         alt="Strategic Plan Start-up Project @EdUHK footer"
