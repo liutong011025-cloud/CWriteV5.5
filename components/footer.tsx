@@ -19,13 +19,16 @@ export default function Footer() {
   }
 
   return (
-    <footer className="mt-auto w-full overflow-hidden bg-transparent">
+    <footer
+      className="relative mt-auto w-full overflow-hidden"
+      style={{ height: "clamp(82px, 8vw, 128px)" }}
+    >
       <Image
         src="/footer.png"
         alt="Strategic Plan Start-up Project @EdUHK footer"
         width={12000}
         height={1444}
-        className="block h-auto w-full"
+        className="absolute bottom-0 left-0 block h-auto w-full"
         priority={false}
       />
     </footer>
