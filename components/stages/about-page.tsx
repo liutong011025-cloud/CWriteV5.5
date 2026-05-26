@@ -88,7 +88,7 @@ const bottomRow: TeamMember[] = [
   },
   {
     id: 5,
-    name: "Prof. Wen Yun (PhD)",
+    name: "Prof. WEN Yun (PhD)",
     role: "Co-Investigator",
     subtitle: "Associate Professor, National Institute of Education Nanyang Technological University, Singapore",
     image: "/Wen Yun.png",
