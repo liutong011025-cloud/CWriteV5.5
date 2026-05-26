@@ -34,7 +34,7 @@ export default function Footer() {
         alt="Strategic Plan Start-up Project @EdUHK footer"
         width={12000}
         height={1444}
-        className="block h-full w-full"
+        className="block h-auto w-full"
         priority={false}
       />
       <div className="absolute inset-0 z-10 flex items-center px-[1.4vw] pr-[13vw]">
