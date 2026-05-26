@@ -18,12 +18,12 @@ export default function Footer() {
     return null
   }
 
-  const footerHeight = "calc(100vw * 1040 / 12000)"
+  const footerHeight = "calc(100vw * 760 / 12000)"
   const overlapsMain = stage === "login"
 
   return (
     <footer
-      className="relative z-20 mt-auto w-full overflow-hidden bg-transparent"
+      className="relative z-20 mt-auto w-full overflow-hidden bg-[#173b69]"
       style={{
         height: footerHeight,
         marginTop: overlapsMain ? `calc(${footerHeight} * -0.18)` : undefined,
@@ -34,7 +34,7 @@ export default function Footer() {
         alt="Strategic Plan Start-up Project @EdUHK footer"
         width={12000}
         height={1444}
-        className="absolute bottom-0 left-0 block h-auto w-full"
+        className="absolute inset-x-[-1px] bottom-[-1px] block h-full w-[calc(100%+2px)]"
         priority={false}
       />
       <div className="absolute inset-0 z-10 flex items-center px-[1.45vw]">
