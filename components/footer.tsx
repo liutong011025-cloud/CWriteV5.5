@@ -26,7 +26,7 @@ export default function Footer() {
       className="relative z-20 mt-auto w-full overflow-hidden bg-transparent"
       style={{
         height: footerHeight,
-        marginTop: overlapsMain ? `calc(${footerHeight} * -1)` : undefined,
+        marginTop: overlapsMain ? `calc(${footerHeight} * -0.72)` : undefined,
       }}
     >
       <Image
