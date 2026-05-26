@@ -22,17 +22,137 @@ interface TeamMember {
   role: string
   subtitle: string
   image: string
-  bio: string
+  bio: React.ReactNode
 }
 
+const bio = (...paragraphs: React.ReactNode[]) => (
+  <div className="space-y-3">
+    {paragraphs.map((paragraph, index) => (
+      <p key={index}>{paragraph}</p>
+    ))}
+  </div>
+)
+
 const topRow: TeamMember[] = [
-  { id: 1, name: "Dr. YANG, Yin Nicole (PhD)", role: "Principal Investigator", subtitle: "Research Assistant Professor", image: "/Nicole.webp", bio: "Dr. Yang earned her Ph.D. in education from the Education University of Hong Kong, focusing on self-regulated learning in computer-assisted learning environments (e.g., language education). She also holds an MSc in Information Technology in Education from the University of Hong Kong, as well as a bachelor's degree in English education and linguistics. She is a visiting scholar of Paris-Saclay University in 2025, and the University of Munich in 2024." },
-  { id: 2, name: "Prof. LEE, Chi Kin John, JP (PhD)", role: "Co-Principal Investigator & Advisor", subtitle: "Chair Professor of Curriculum and Instruction", image: "/john.webp", bio: "Professor Lee graduated from The University of Hong Kong and subsequently received an MSc degree from the University of Oxford, and an MA (Education), PhD and Diploma in Education (with distinction) from CUHK. His research interests focus on curriculum and instruction, geographical and environmental education, life and values education, and teacher development and school improvement. Professor Lee was named among the top 1% most-cited scientists in the world (Stanford University)." },
+  {
+    id: 1,
+    name: "Dr. YANG, Yin Nicole (PhD)",
+    role: "Principal Investigator",
+    subtitle: "Research Assistant Professor",
+    image: "/Nicole.webp",
+    bio: bio(
+      "Dr Yang is an interdisciplinary researcher of cognitive science, language education, and educational technology. Her work bridges multiple disciplines, leveraging her diverse academic background to explore innovative approaches to teaching and learning in technology-enhanced environments. Drawing upon contemporary cognitive science and learning theories, her research explores the intersection of human cognition, AI, and instructional design to understand and enhance how people learn.",
+      "Her interdisciplinary research advances emerging technology-driven education, with a focus on (1) AI-powered creative language learning systems that support metacognitive strategies through emerging technologies. (2) cognitive mechanisms that drive human-computer collaboration; and (3) innovative learning design that integrates insights from cognition and technology to optimize learning outcomes. Her work investigates how people learn language and other complex skills in technology-enhanced environments, with a special focus on the cognitive and metacognitive processes underlying such learning. She is particularly interested in how humans interact with AI, and emerging technologies to support self-regulated, and higher-order thinking."
+    ),
+  },
+  {
+    id: 2,
+    name: "Prof. LEE, Chi Kin John, JP (PhD)",
+    role: "Co-Principal Investigator & Advisor",
+    subtitle: "Chair Professor of Curriculum and Instruction",
+    image: "/john.webp",
+    bio: bio(
+      "Professor John Lee Chi-Kin, President and Chair Professor of Curriculum and Instruction, joined The Education University of Hong Kong (the then Hong Kong Institute of Education) in 2010. He was Vice President (Academic) from 2010 to 2019, and Vice President (Academic) and Provost from 2019 to 2023.",
+      <>
+        His research expertise spans curriculum and instruction, teacher development, school improvement, life and values education, geographical and environmental education, educational leadership, sustainability education, and policy-oriented educational innovation. Professor Lee has served as Editor of the <em>International Journal of Children&apos;s Spirituality</em>, Executive Editor of <em>Teaching and Teacher Education</em> and editorial board member of <em>Teachers and Teaching</em>, as well as an editorial board members or advisory editor of many local, regional and international journals. He is also a prolific writer, having edited and written more than 25 books, and published over 175 journal articles and book chapters. He is the leading co-editor of the Springer book series, <em>Curriculum and School Development in Asia</em> and <em>Education for Sustainability</em>, as well as <em>The Routledge Series on Life and Values Education</em> and <em>The Routledge Series on Chinese Language Education</em>.
+      </>,
+      "Professor Lee has actively participated in education and social service in Hong Kong, Chinese Mainland and overseas."
+    ),
+  },
 ]
 const bottomRow: TeamMember[] = [
-  { id: 3, name: "Prof. GU, Ming Yue Michelle (PhD)", role: "Co-Investigator", subtitle: "Professor, Assistant Vice President (Research)", image: "/apple.webp", bio: "Michelle Gu Mingyue was Assistant Professor at The Chinese University of Hong Kong (CUHK) from 2012 to 2017. As a researcher in sociolinguistics, Professor Gu adopts multi-disciplinary approaches to explore the individual-context interplay mediated by languages and semiotics. She has theorised the concept of Digital Trans-literacies and has developed theoretical frameworks to advance the areas of language and identity, multilingualism and mobility, and family language policy." },
-  { id: 4, name: "Dr. WONG, Ming Har Ruth (PhD)", role: "Co-Investigator", subtitle: "Associate Head of Department, Assistant Professor", image: "/ruth.webp", bio: "Dr. Ruth Wong is an assistant professor at the Department of English Language Education. She joined the university in 2004 and has published research articles in international journals as well as several textbooks and teaching resources for schools in Hong Kong." },
-  { id: 5, name: "Mr. LIU, Tong Tony", role: "Research Assistant", subtitle: "Graduate of AI & Educational Technology, EdUHK", image: "/Tony.webp", bio: "Graduate of AI & Educational Technology, EdUHK. Research interests in AI and design, robotics automation, and STEM." },
+  {
+    id: 3,
+    name: "Prof. GU, Ming Yue Michelle (PhD)",
+    role: "Co-Investigator",
+    subtitle: "Professor, Assistant Vice President (Research)",
+    image: "/apple.webp",
+    bio: bio(
+      "Professor Michelle Gu Mingyue is Assistant Vice President (Research) and Professor in the Department of English Language Education at The Education University of Hong Kong. She is a distinguished scholar in sociolinguistics and language education, internationally recognised for her interdisciplinary research on language, identity, multilingualism, and digital literacies.",
+      "As a researcher in sociolinguistics, Professor Gu adopts multi-disciplinary approaches to explore the individual-context interplay mediated by languages and semiotics. Her research integrates theories and methods from sociolinguistics, critical inquiry, discourse studies and psychology. She has theorised the concept of Digital Trans-literacies to understand identity exploration and self-concept clarity among youths in a digital world; and has developed theoretical frameworks to advance the areas of language and identity, multilingualism and mobility, family language policy, and the interaction between language, culture and ethnicity.",
+      "Professor Gu is a prolific scholar with many publications in top academic journals in the fields of linguistics and languages. She is an active researcher with a strong record in securing external research grants such as the General Research Grant (5 as PI; 7 as co-I), PICO-Funded Public Policy Research (1 as PI; 3 as co-I), and the Standing Committee on Language Education and Research (research and development) projects (2 as PI; 1 as co-I). She has worked on two World University Network projects and collaborated extensively with scholars across the world.",
+      "At the policy level, Professor Gu's publications have received policy citations across four countries/regions, including policy documents from UNESCO, World Bank, OECD, etc, showcasing the social impact of her research."
+    ),
+  },
+  {
+    id: 4,
+    name: "Prof. CHIU, Ming Ming (PhD)",
+    role: "Co-Investigator",
+    subtitle: "Chair Professor of Analytics and Diversity",
+    image: "/CHIU, Ming Ming.png",
+    bio: bio(
+      <>
+        Professor Chiu is an analytics expert, integrating statistics, computer science and mathematics to develop theories and test them in diverse fields, including education, psychology, sociology, linguistics, criminology, economics, and management. Professor Chiu is a prolific researcher with 175 publications (97 refereed journal articles). He invented an artificial intelligence expert system, <em>Statistician</em>, and two statistical methods, <em>Multilevel Diffusion Analysis</em> and <em>Statistical Discourse Analysis</em>, which was recognised as one of the best 50 learning science ideas by the <em>International Society for the Learning Sciences</em>. He is also an outstanding academic leader; as Associate Chair of the Department of Learning and Instruction in University at Buffalo, he helped nearly triple his colleagues&apos; publications from 0.5 to 1.4 per year.
+      </>
+    ),
+  },
+  {
+    id: 5,
+    name: "Prof. Wen Yun (PhD)",
+    role: "Co-Investigator",
+    subtitle: "Associate Professor, National Institute of Education Nanyang Technological University, Singapore",
+    image: "/Wen Yun.png",
+    bio: bio(
+      "Dr Wen Yun is a learning sciences researcher advancing technology-enhanced learning innovations in schools. Her research investigates how people learn through interaction and conversations in multimodal environments, and how to use emerging technologies, such as Augmented Reality (AR) or Artificial Intelligence (AI), to spark productive interactions and enhance learning. She leads interdisciplinary teams of researchers, developers, and educational practitioners, to make a profound impact on teaching and learning practice and shed light on theoretical perspectives on integrating emerging technologies into learning."
+    ),
+  },
+  {
+    id: 6,
+    name: "Prof. MA, Qing Angel (PhD)",
+    role: "Co-Investigator",
+    subtitle: "Professor of Department of Linguistics and Modern Language Studies",
+    image: "/MA, Qing Ange.png",
+    bio: bio(
+      "Professor Angel Ma Qing currently serves as Associate Dean (Research and Postgraduate Studies) at the Faculty of Humanities, EdUHK. Her main research interests include second language vocabulary acquisition, corpus linguistics, corpus-based literature studies, corpus-based language pedagogy (CBLP), computer-assisted language learning (CALL), mobile-assisted language learning (MALL), and AI in language education.",
+      <>
+        Professor Ma has made significant contributions to local, regional and international communities through a wide range of professional activities. Her work includes shaping language policy and reviewing Master of Arts programmes, as well as serving as a panel judge for many school-based competitions. She has conducted numerous seminars and has held roles as associate editor for five international journals, including <em>Computer Assisted Language Learning</em> and <em>Language Learning &amp; Technology</em>, <em>International Journal of Computer Assisted Language Learning and Teaching</em>, etc. Furthermore, she has reviewed articles for more than 50 international journals. Her commitment to advancing the field is further demonstrated by her leadership in organising over 18 international conferences. Through these diverse roles, she has had a sustained and far-reaching impact on language education and research communities worldwide.
+      </>
+    ),
+  },
+  {
+    id: 7,
+    name: "Prof. KONG, Siu Cheung (PhD)",
+    role: "Co-Investigator",
+    subtitle: "Chair Professor of Department of Mathematics and Information Technology",
+    image: "/kongsiucheung.png",
+    bio: bio(
+      "Professor Kong Siu-cheung is Chair Professor at the Department of Mathematics and Information Technology and Director of the Artificial Intelligence and Digital Competency Education Centre at The Education University of Hong Kong (EdUHK).",
+      <>
+        Professor Kong serves as Editor-in-Chief of international journals <em>Research and Practice in Technology Enhanced Learning</em> and <em>Journal of Computers in Education</em>. He was President of the Asia-Pacific Society for Computers in Education from 2014 to 2015 and the Global Chinese Society for Computers in Education from July 2023 to June 2025.
+      </>,
+      "Professor Kong has been named on the Stanford list of the world's Top 2% Scientists in Education since 2019. His accolades include the 2019-2020 HKSAR University Grants Council Teaching Award (Team Award); the EdUHK President's Awards for Outstanding Performance in Knowledge Transfer (Team Award) in 2020 and for Outstanding Performance in Administration (Team Award) in 2021 and 2024; and the National Teaching Achievement Award 2022 (Higher Education - Undergraduate, Tier-Two Team Award) of the People's Republic of China. Currently, he is a member of the 7th Academic Committee of the China Association for Educational Technology and the National Expert Committee on Science Education for Primary and Secondary Schools."
+    ),
+  },
+  {
+    id: 8,
+    name: "Dr. Ling Man Ho Alpha (PhD)",
+    role: "Co-Investigator",
+    subtitle: "Assistant Professor of Department of Mathematics and Information Technology",
+    image: "/Ling Man Ho Alpha.png",
+    bio: bio(
+      "Dr. Alpha Ling Man Ho is Associate Professor and Chairperson of the Departmental Management Committee (DMC) and Departmental Research Committee (DRC) in the Department of Mathematics and Information Technology at The Education University of Hong Kong. He is a distinguished scholar in statistics and reliability engineering, internationally recognized for his specialized research on one-shot device testing, degradation data analysis, and statistical inference under censoring.",
+      'As a researcher in mathematical statistics, Dr. Ling develops advanced probabilistic models to evaluate the reliability and lifetime of complex systems. His work is characterized by the integration of Bayesian inference, EM algorithms, and copula models to address real-world engineering challenges. He has pioneered methodologies for analyzing "one-shot" devices-components that can be tested only once-and has significantly advanced the field of accelerated life testing.',
+      "Dr. Ling is a prolific scholar with an extensive publication record in premier journals such as IEEE Transactions on Reliability and Reliability Engineering & System Safety. He is a highly active researcher with a strong track record of securing research grants, serving as Principal Investigator on numerous projects involving big data analytics, STEM education, and AI-enhanced learning. His innovative work in assessment automation has earned him international acclaim, including a Silver Medal and Special Award at the International Invention Innovation Competition (iCAN). Beyond his research, he contributes to the global academic community as an Editorial Board Member for several international statistical journals."
+    ),
+  },
+  {
+    id: 9,
+    name: "Dr. WONG, Ming Har Ruth (PhD)",
+    role: "Co-Investigator",
+    subtitle: "Associate Head of Department, Assistant Professor",
+    image: "/ruth.webp",
+    bio: bio(
+      "Dr. Wong Ming Har (Ruth) is an Assistant Professor and Associate Head of the Department of English Language Education at The Education University of Hong Kong (EdUHK). Her research focuses on EFL (English as a Foreign Language) learning motivation, learner autonomy, and teacher training."
+    ),
+  },
+  {
+    id: 10,
+    name: "Mr. LIU, Tong Tony",
+    role: "Research Assistant",
+    subtitle: "Graduate of AI & Educational Technology, EdUHK",
+    image: "/Tony.webp",
+    bio: bio("Graduate of AI & Educational Technology, EdUHK. Research interests in AI and design, robotics automation, and STEM."),
+  },
 ]
 
 const methods = [
@@ -197,7 +317,7 @@ export default function AboutPage({
   }, [])
 
   return (
-    <div className="about-new-theme relative min-h-screen overflow-hidden bg-background" style={{ paddingTop: "88px", paddingBottom: "0" }}>
+    <div className="about-new-theme relative min-h-screen overflow-hidden bg-background" style={{ paddingTop: showVisionPage ? "88px" : "0", paddingBottom: "0" }}>
       {showVisionPage && <SkyCloudBackdrop />}
       {/* ========== Opening：花紋頂到頂部無空白，左右超出 ========== */}
       <section className={`${showVisionPage ? "" : "hidden"} min-h-screen flex items-center justify-center relative overflow-hidden`} style={{ marginTop: "-88px", paddingTop: "88px" }}>
@@ -455,7 +575,7 @@ export default function AboutPage({
       {/* ========== Research Team（還原背景圖，但頂端無多餘邊距）========== */}
       <section
         ref={teamRef}
-        className={`${showResearchPage ? "" : "hidden"} pb-16 md:pb-24 px-4 relative overflow-hidden`}
+        className={`${showResearchPage ? "" : "hidden"} pt-24 md:pt-28 pb-16 md:pb-24 px-4 relative overflow-hidden`}
       >
         <div className={`absolute inset-0 transition-opacity duration-1000 ${teamVisible ? "opacity-100" : "opacity-0"}`}>
           <Image src="/Background.webp" alt="" fill className="object-cover" />
@@ -488,7 +608,7 @@ export default function AboutPage({
                   <Image src={member.image} alt={member.name} fill className="object-contain object-top group-hover:scale-105 transition-transform duration-500" />
                   <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                   <div className={`absolute inset-0 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 transition-all duration-500 ${hoveredTeamId === member.id ? "opacity-100" : "opacity-0"}`}>
-                    <p className="text-white text-xs leading-relaxed text-center">{member.bio}</p>
+                    <div className="max-h-full overflow-y-auto pr-1 text-left text-[11px] leading-relaxed text-white [scrollbar-width:thin]">{member.bio}</div>
                   </div>
                 </div>
                 <div className="p-4 relative">
@@ -501,7 +621,7 @@ export default function AboutPage({
               </div>
             ))}
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-10">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-10">
             {bottomRow.map((member, index) => (
               <div
                 key={member.id}
@@ -514,7 +634,7 @@ export default function AboutPage({
                   <Image src={member.image} alt={member.name} fill className="object-contain object-top group-hover:scale-105 transition-transform duration-500" />
                   <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                   <div className={`absolute inset-0 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 transition-all duration-500 ${hoveredTeamId === member.id ? "opacity-100" : "opacity-0"}`}>
-                    <p className="text-white text-xs leading-relaxed text-center">{member.bio}</p>
+                    <div className="max-h-full overflow-y-auto pr-1 text-left text-[11px] leading-relaxed text-white [scrollbar-width:thin]">{member.bio}</div>
                   </div>
                 </div>
                 <div className="p-4 relative">
