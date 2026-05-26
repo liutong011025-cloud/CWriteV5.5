@@ -20,7 +20,7 @@ export default function Footer() {
 
   return (
     <footer
-      className="relative mt-auto h-[96px] w-full overflow-hidden text-white sm:h-[94px]"
+      className="relative mt-auto h-[108px] w-full overflow-hidden text-white sm:h-[104px]"
       style={{ background: "linear-gradient(180deg, #123f71 0%, #103565 52%, #0b2854 100%)" }}
     >
       <div
@@ -31,7 +31,7 @@ export default function Footer() {
         }}
       />
       <svg
-        className="pointer-events-none absolute bottom-0 right-0 z-[1] h-[96px] w-[190px] opacity-100 sm:h-[94px] sm:w-[230px] md:w-[260px] lg:w-[300px] xl:w-[350px]"
+        className="pointer-events-none absolute bottom-0 right-0 z-[1] h-[108px] w-[170px] opacity-100 sm:h-[104px] sm:w-[200px] md:w-[225px] lg:w-[250px] xl:w-[285px]"
         viewBox="0 0 520 150"
         preserveAspectRatio="xMidYMid meet"
         aria-hidden="true"
@@ -57,14 +57,14 @@ export default function Footer() {
         />
       </svg>
 
-      <div className="relative z-10 mx-auto flex h-full max-w-[1600px] items-center gap-5 px-4 pr-[200px] sm:px-8 sm:pr-[245px] md:pr-[275px] lg:gap-10 lg:px-12 lg:pr-[325px] xl:pr-[380px]">
-        <div className="flex shrink-0 items-center justify-start gap-6">
+      <div className="relative z-10 mx-auto flex h-full max-w-[1900px] items-center gap-6 px-3 pr-[178px] sm:px-5 sm:pr-[210px] md:pr-[238px] lg:gap-12 lg:px-8 lg:pr-[265px] xl:pr-[300px]">
+        <div className="flex shrink-0 items-center justify-start gap-8">
           <Image
             src="/EdUHK_Signature_RGBWhite@4x-1-1024x336.webp"
             alt="The Education University of Hong Kong logo"
             width={280}
             height={92}
-            className="h-auto w-[140px] object-contain drop-shadow-[2px_3px_0_rgba(0,0,0,0.28)] sm:w-[170px] md:w-[195px] xl:w-[230px]"
+            className="h-auto w-[160px] object-contain drop-shadow-[2px_3px_0_rgba(0,0,0,0.28)] sm:w-[195px] md:w-[225px] xl:w-[270px]"
             priority={false}
           />
 
@@ -73,19 +73,19 @@ export default function Footer() {
             alt="MIT logo"
             width={210}
             height={60}
-            className="h-auto w-[120px] object-contain drop-shadow-[2px_3px_0_rgba(0,0,0,0.22)] sm:w-[145px] md:w-[170px] xl:w-[198px]"
+            className="h-auto w-[138px] object-contain drop-shadow-[2px_3px_0_rgba(0,0,0,0.22)] sm:w-[168px] md:w-[195px] xl:w-[230px]"
             priority={false}
           />
         </div>
 
-        <div className="relative z-20 ml-auto hidden min-w-0 max-w-[820px] flex-1 text-right drop-shadow-[0_2px_3px_rgba(0,0,0,0.38)] lg:block">
-          <p className="text-[15px] font-medium leading-5 text-sky-50">
+        <div className="relative z-20 ml-auto hidden min-w-0 max-w-[980px] flex-1 text-right drop-shadow-[0_2px_3px_rgba(0,0,0,0.38)] lg:block">
+          <p className="text-[17px] font-semibold leading-6 text-sky-50">
             Strategic Plan Start-up Project @EdUHK
           </p>
-          <p className="mt-0.5 break-words text-[15px] font-medium leading-5 text-white">
+          <p className="mt-0.5 break-words text-[17px] font-semibold leading-6 text-white">
             Copyright © 2026 The Education University of Hong Kong. All Rights Reserved.
           </p>
-          <p className="ml-auto mt-1 max-w-[800px] break-words text-[11px] font-medium leading-[13px] text-sky-50/75">
+          <p className="ml-auto mt-1 max-w-[930px] break-words text-[12px] font-medium leading-[14px] text-sky-50/80">
             <span className="font-bold uppercase tracking-[0.14em]">Disclaimer:</span>
             {" "}This website uses AI to help you learn and create. Sometimes AI may make mistakes or give incorrect
             information. Please think carefully, check important information, and ask a teacher or parent if you are
