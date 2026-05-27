@@ -55,7 +55,7 @@ export default function Footer() {
           />
         </div>
 
-        <div className="ml-auto mr-[1.8vw] w-[62vw] text-right text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.55)]">
+        <div className="ml-auto mr-[3.2vw] w-[62vw] text-right text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.55)]">
           <p className="text-[clamp(8px,0.82vw,16px)] font-bold leading-tight">
             Strategic Plan Start-up Project @EdUHK
           </p>
