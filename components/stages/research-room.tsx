@@ -4,8 +4,10 @@ import { useCallback, useEffect, useRef, useState, type CSSProperties } from "re
 import { BackButton } from "@/components/ui/back-button"
 import {
   RESOURCE_DETAIL_EXIT,
+  RESOURCE_DETAIL_LINKS,
   RESOURCE_DETAIL_SRC,
   RESOURCE_MAIN_HOTSPOTS,
+  type ResourceDetailLinkKey,
   type ResourceImageRect,
   type ResourceMainKey,
 } from "@/lib/resource-hotspots"
@@ -20,6 +22,7 @@ const BGM_LOOP = "/yoshiyuki_tatsuya-pixel-hearts-foreverwav-427383.mp3"
 const FORCE_RESOURCE_HOTSPOT_CALIBRATION = true
 
 const MAIN_ORDER: ResourceMainKey[] = ["cefr", "srl"]
+const DETAIL_LINK_ORDER: ResourceDetailLinkKey[] = ["cefrLevels", "srlEef", "srlArticle"]
 
 /** 與 object-cover 背景對齊的 overlay 矩形（px），同 My Farm / navigation */
 interface CoverOverlayRect {
@@ -35,6 +38,14 @@ function cloneMain(
   return {
     cefr: { ...m.cefr },
     srl: { ...m.srl },
+  }
+}
+
+function cloneDetailLinks(): Record<ResourceDetailLinkKey, ResourceImageRect> {
+  return {
+    cefrLevels: { ...RESOURCE_DETAIL_LINKS.cefrLevels.rect },
+    srlEef: { ...RESOURCE_DETAIL_LINKS.srlEef.rect },
+    srlArticle: { ...RESOURCE_DETAIL_LINKS.srlArticle.rect },
   }
 }
 
@@ -92,6 +103,7 @@ export default function ResearchRoom({ onBack }: ResearchRoomProps) {
   const [exitRect, setExitRect] = useState<ResourceImageRect>(() => ({
     ...RESOURCE_DETAIL_EXIT,
   }))
+  const [detailLinkRects, setDetailLinkRects] = useState(() => cloneDetailLinks())
   const hoverAudioRef = useRef<HTMLAudioElement | null>(null)
 
   const mainContainerRef = useRef<HTMLDivElement | null>(null)
@@ -193,6 +205,7 @@ export default function ResearchRoom({ onBack }: ResearchRoomProps) {
 
   const copyCalibrationSnippet = useCallback(() => {
     const { cefr, srl } = mainRects
+    const { cefrLevels, srlEef, srlArticle } = detailLinkRects
     const snippet = `// 貼到 lib/resource-hotspots.ts，覆蓋同名常數即可
 
 export const RESOURCE_MAIN_HOTSPOTS: Record<ResourceMainKey, ResourceImageRect> = {
@@ -203,9 +216,30 @@ export const RESOURCE_MAIN_HOTSPOTS: Record<ResourceMainKey, ResourceImageRect> 
 export const RESOURCE_DETAIL_EXIT: ResourceImageRect = {
   left: ${exitRect.left}, top: ${exitRect.top}, width: ${exitRect.width}, height: ${exitRect.height},
 }
+
+export const RESOURCE_DETAIL_LINKS: Record<ResourceDetailLinkKey, ResourceDetailLink> = {
+  cefrLevels: {
+    owner: "cefr",
+    label: "CEFR Level Descriptions",
+    href: "https://www.coe.int/en/web/common-european-framework-reference-languages/level-descriptions",
+    rect: { left: ${cefrLevels.left}, top: ${cefrLevels.top}, width: ${cefrLevels.width}, height: ${cefrLevels.height} },
+  },
+  srlEef: {
+    owner: "srl",
+    label: "Education Endowment Foundation",
+    href: "https://educationendowmentfoundation.org.uk/",
+    rect: { left: ${srlEef.left}, top: ${srlEef.top}, width: ${srlEef.width}, height: ${srlEef.height} },
+  },
+  srlArticle: {
+    owner: "srl",
+    label: "Self-Regulated Learning Article",
+    href: "https://www.tandfonline.com/doi/abs/10.1207/s15430421tip4102_2",
+    rect: { left: ${srlArticle.left}, top: ${srlArticle.top}, width: ${srlArticle.width}, height: ${srlArticle.height} },
+  },
+}
 `
     void navigator.clipboard.writeText(snippet)
-  }, [mainRects, exitRect])
+  }, [mainRects, exitRect, detailLinkRects])
 
   const overlayBoxStyle = (rect: CoverOverlayRect | null): CSSProperties =>
     rect
@@ -293,6 +327,26 @@ export const RESOURCE_DETAIL_EXIT: ResourceImageRect = {
               style={rectStyle(exitRect)}
               onClick={() => setDetail(null)}
             />
+            {DETAIL_LINK_ORDER.filter((key) => RESOURCE_DETAIL_LINKS[key].owner === detail).map(
+              (key) => {
+                const link = RESOURCE_DETAIL_LINKS[key]
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    aria-label={link.label}
+                    title={link.label}
+                    className={`absolute z-20 cursor-pointer border-0 bg-transparent p-0 outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 ${
+                      calibrate
+                        ? "border-2 border-dashed border-emerald-400/80 bg-emerald-500/20"
+                        : ""
+                    }`}
+                    style={rectStyle(detailLinkRects[key])}
+                    onClick={() => window.open(link.href, "_blank", "noopener,noreferrer")}
+                  />
+                )
+              }
+            )}
           </div>
         </div>
       )}
@@ -302,8 +356,7 @@ export const RESOURCE_DETAIL_EXIT: ResourceImageRect = {
           <div className="mb-2 font-bold text-amber-300">Resource 熱區校準</div>
           <p className="mb-2 text-[10px] leading-snug text-slate-300">
             拖曳視窗對齊後，調整數值；完成後點「複製」把結果貼給開發者更新{" "}
-            <code className="text-amber-200/90">lib/resource-hotspots.ts</code>。移除此模式：去掉網址{" "}
-            <code className="text-amber-200/90">?calibrateResources=1</code>。
+            <code className="text-amber-200/90">lib/resource-hotspots.ts</code>。紅框是主入口，青框是關閉鈕，綠框是外鏈。
           </p>
           <div className="flex flex-col gap-2">
             {MAIN_ORDER.map((key) => (
@@ -320,6 +373,19 @@ export const RESOURCE_DETAIL_EXIT: ResourceImageRect = {
               />
             ))}
             <RectFields label="詳情頁退出鈕 (X)" value={exitRect} onChange={setExitRect} />
+            {DETAIL_LINK_ORDER.map((key) => (
+              <RectFields
+                key={key}
+                label={`外鏈：${RESOURCE_DETAIL_LINKS[key].label}`}
+                value={detailLinkRects[key]}
+                onChange={(next) =>
+                  setDetailLinkRects((prev) => ({
+                    ...prev,
+                    [key]: next,
+                  }))
+                }
+              />
+            ))}
           </div>
           <div className="mt-3 flex flex-wrap gap-2">
             <button
@@ -335,6 +401,7 @@ export const RESOURCE_DETAIL_EXIT: ResourceImageRect = {
               onClick={() => {
                 setMainRects(cloneMain(RESOURCE_MAIN_HOTSPOTS))
                 setExitRect({ ...RESOURCE_DETAIL_EXIT })
+                setDetailLinkRects(cloneDetailLinks())
               }}
             >
               還原預設
