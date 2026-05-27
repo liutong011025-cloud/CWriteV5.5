@@ -44,18 +44,18 @@ export const RESOURCE_DETAIL_LINKS: Record<ResourceDetailLinkKey, ResourceDetail
     owner: "cefr",
     label: "CEFR Level Descriptions",
     href: "https://www.coe.int/en/web/common-european-framework-reference-languages/level-descriptions",
-    rect: { left: 8, top: 78, width: 84, height: 12 },
+    rect: { left: 30.1, top: 88.9, width: 41.2, height: 3.7 },
   },
   srlEef: {
     owner: "srl",
     label: "Education Endowment Foundation",
     href: "https://educationendowmentfoundation.org.uk/",
-    rect: { left: 8, top: 70, width: 38, height: 12 },
+    rect: { left: 62.8, top: 78.3, width: 28.4, height: 6 },
   },
   srlArticle: {
     owner: "srl",
     label: "Self-Regulated Learning Article",
     href: "https://www.tandfonline.com/doi/abs/10.1207/s15430421tip4102_2",
-    rect: { left: 54, top: 70, width: 38, height: 12 },
+    rect: { left: 62.9, top: 88.2, width: 18.9, height: 3.1 },
   },
 }
