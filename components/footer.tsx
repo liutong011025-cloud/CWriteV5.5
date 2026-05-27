@@ -55,14 +55,14 @@ export default function Footer() {
           />
         </div>
 
-        <div className="ml-auto mr-[14vw] w-[55vw] text-right text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.55)]">
+        <div className="ml-auto mr-[1.8vw] w-[62vw] text-right text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.55)]">
           <p className="text-[clamp(8px,0.82vw,16px)] font-bold leading-tight">
             Strategic Plan Start-up Project @EdUHK
           </p>
           <p className="mt-[0.16vw] text-[clamp(8px,0.78vw,15px)] font-bold leading-tight">
             Copyright © 2026 The Education University of Hong Kong. All Rights Reserved.
           </p>
-          <p className="ml-auto mt-[0.34vw] max-w-[50vw] text-[clamp(6px,0.46vw,9.5px)] font-medium leading-tight text-white/90">
+          <p className="ml-auto mt-[0.34vw] max-w-[60vw] text-[clamp(6px,0.46vw,9.5px)] font-medium leading-tight text-white/90">
             <span className="font-bold">Disclaimer:</span>
             {" "}This website uses AI to help you learn and create. Sometimes AI may make mistakes or give incorrect information.
             Please think carefully, check important information, and ask a teacher or parent if you are unsure.
