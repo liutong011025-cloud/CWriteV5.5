@@ -17,8 +17,9 @@ interface ResearchRoomProps {
 const RESOURCE_BG = "/resources.png"
 const HOVER_SOUND = "/soundreality-finger-snap-179180.mp3"
 const BGM_LOOP = "/yoshiyuki_tatsuya-pixel-hearts-foreverwav-427383.mp3"
+const FORCE_RESOURCE_HOTSPOT_CALIBRATION = true
 
-const MAIN_ORDER: ResourceMainKey[] = ["cefr", "longman", "srl"]
+const MAIN_ORDER: ResourceMainKey[] = ["cefr", "srl"]
 
 /** 與 object-cover 背景對齊的 overlay 矩形（px），同 My Farm / navigation */
 interface CoverOverlayRect {
@@ -33,7 +34,6 @@ function cloneMain(
 ): Record<ResourceMainKey, ResourceImageRect> {
   return {
     cefr: { ...m.cefr },
-    longman: { ...m.longman },
     srl: { ...m.srl },
   }
 }
@@ -118,11 +118,12 @@ export default function ResearchRoom({ onBack }: ResearchRoomProps) {
   useEffect(() => {
     try {
       setCalibrate(
-        typeof window !== "undefined" &&
-          new URLSearchParams(window.location.search).get("calibrateResources") === "1"
+        FORCE_RESOURCE_HOTSPOT_CALIBRATION ||
+          (typeof window !== "undefined" &&
+            new URLSearchParams(window.location.search).get("calibrateResources") === "1")
       )
     } catch {
-      setCalibrate(false)
+      setCalibrate(FORCE_RESOURCE_HOTSPOT_CALIBRATION)
     }
   }, [])
 
@@ -191,12 +192,11 @@ export default function ResearchRoom({ onBack }: ResearchRoomProps) {
   }, [detail])
 
   const copyCalibrationSnippet = useCallback(() => {
-    const { cefr, longman, srl } = mainRects
+    const { cefr, srl } = mainRects
     const snippet = `// 貼到 lib/resource-hotspots.ts，覆蓋同名常數即可
 
 export const RESOURCE_MAIN_HOTSPOTS: Record<ResourceMainKey, ResourceImageRect> = {
   cefr: { left: ${cefr.left}, top: ${cefr.top}, width: ${cefr.width}, height: ${cefr.height} },
-  longman: { left: ${longman.left}, top: ${longman.top}, width: ${longman.width}, height: ${longman.height} },
   srl: { left: ${srl.left}, top: ${srl.top}, width: ${srl.width}, height: ${srl.height} },
 }
 
@@ -256,7 +256,7 @@ export const RESOURCE_DETAIL_EXIT: ResourceImageRect = {
             <button
               key={key}
               type="button"
-              aria-label={key === "cefr" ? "CEFR" : key === "longman" ? "Longman" : "SRL"}
+              aria-label={key === "cefr" ? "CEFR resources" : "SRL resources"}
               className={`absolute z-20 cursor-pointer border-0 bg-transparent p-0 outline-none transition-transform hover:scale-[1.02] focus-visible:ring-2 focus-visible:ring-amber-300 ${
                 calibrate ? "border-2 border-dashed border-red-400/80 bg-red-500/20" : ""
               }`}
