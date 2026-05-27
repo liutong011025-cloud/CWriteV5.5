@@ -19,7 +19,6 @@ interface ResearchRoomProps {
 const RESOURCE_BG = "/resources.png"
 const HOVER_SOUND = "/soundreality-finger-snap-179180.mp3"
 const BGM_LOOP = "/yoshiyuki_tatsuya-pixel-hearts-foreverwav-427383.mp3"
-const FORCE_RESOURCE_HOTSPOT_CALIBRATION = true
 
 const MAIN_ORDER: ResourceMainKey[] = ["cefr", "srl"]
 const DETAIL_LINK_ORDER: ResourceDetailLinkKey[] = ["cefrLevels", "srlEef", "srlArticle"]
@@ -130,12 +129,11 @@ export default function ResearchRoom({ onBack }: ResearchRoomProps) {
   useEffect(() => {
     try {
       setCalibrate(
-        FORCE_RESOURCE_HOTSPOT_CALIBRATION ||
-          (typeof window !== "undefined" &&
-            new URLSearchParams(window.location.search).get("calibrateResources") === "1")
+        typeof window !== "undefined" &&
+          new URLSearchParams(window.location.search).get("calibrateResources") === "1"
       )
     } catch {
-      setCalibrate(FORCE_RESOURCE_HOTSPOT_CALIBRATION)
+      setCalibrate(false)
     }
   }, [])
 
