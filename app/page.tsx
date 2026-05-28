@@ -105,8 +105,6 @@ export interface LetterState {
   letter: string
 }
 
-type TreeGrowthDimension = "vocab" | "detail" | "logic"
-
 interface WritingMetricsSnapshot {
   vocabRichness: number
   descriptiveAccuracy: number
@@ -679,8 +677,8 @@ export default function Home() {
   const [trees, setTrees] = useState<{ id: number; stage: number }[] | null>(null)
   // 上一次写作三指标，用于判断哪一项提升最大
   const [lastMetrics, setLastMetrics] = useState<WritingMetricsSnapshot | null>(null)
-  // 最近一次长高的树 + 对应维度，供 Profile 页面做施法特效
-  const [lastGrownTree, setLastGrownTree] = useState<{ treeId: number; dimension: TreeGrowthDimension } | null>(null)
+  // 最近一次长高的树，供 Profile 页面把所有实际成长的小树一起闪光
+  const [lastGrownTreeIds, setLastGrownTreeIds] = useState<number[]>([])
   // 每棵樹的成長記錄（哪篇文章、哪句話讓它長高）
   const [treeGrowthDetails, setTreeGrowthDetails] = useState<Record<number, TreeGrowthDetail[]>>({})
   // 进入 farm 的次数：用于强制“闪光长大”动画每次都能重新触发
@@ -1911,30 +1909,30 @@ export default function Home() {
       if (evidenceMatchedDimensions.length === 0) return
 
       const currentTrees = normalizeValuesTrees(trees)
-      const growthCounter = new Map<number, number>()
-      evidenceMatchedDimensions
-        .map((n) => Number(n))
-        .filter((n) => Number.isFinite(n) && n >= 1 && n <= VALUES_DIMENSION_COUNT)
-        .map((n) => Math.round(n))
-        .forEach((id) => {
-          const current = growthCounter.get(id) || 0
-          growthCounter.set(id, Math.min(2, current + 1))
-        })
+      const matchedIds = Array.from(
+        new Set(
+          evidenceMatchedDimensions
+            .map((n) => Number(n))
+            .filter((n) => Number.isFinite(n) && n >= 1 && n <= VALUES_DIMENSION_COUNT)
+            .map((n) => Math.round(n))
+        )
+      )
+      if (matchedIds.length === 0) return
 
-      const matchedIds = Array.from(growthCounter.keys())
-      let grownTreeId = matchedIds[0] || 1
+      const grownTreeIds: number[] = []
       const nextTrees = currentTrees.map((tree) => {
-        const growthLevel = growthCounter.get(tree.id) || 0
-        if (growthLevel <= 0) return tree
-        grownTreeId = tree.id
-        return { ...tree, stage: Math.min(4, tree.stage + growthLevel) }
+        if (!matchedIds.includes(tree.id)) return tree
+        const nextStage = Math.min(4, tree.stage + 1)
+        if (nextStage > tree.stage) grownTreeIds.push(tree.id)
+        return { ...tree, stage: nextStage }
       })
 
+      if (grownTreeIds.length === 0) return
       setTrees(nextTrees)
       writeLocalTrees(user.username, nextTrees)
-      setLastGrownTree({ treeId: grownTreeId, dimension: "vocab" })
+      setLastGrownTreeIds(grownTreeIds)
       const nextTreeGrowthDetails = payload
-        ? mergeTreeGrowthDetails(treeGrowthDetails, matchedIds, payload)
+        ? mergeTreeGrowthDetails(treeGrowthDetails, grownTreeIds, payload)
         : treeGrowthDetails
 
       if (payload) {
@@ -1997,10 +1995,20 @@ export default function Home() {
         const matchedDimensions = Array.isArray(valuesJson?.matchedDimensions)
           ? valuesJson.matchedDimensions
           : []
-        const evidenceByDimension =
+        const rawEvidenceByDimension =
           valuesJson?.evidenceByDimension && typeof valuesJson.evidenceByDimension === "object"
-            ? (valuesJson.evidenceByDimension as Record<number, { sentence?: string; overallEvidence?: string; reason?: string }>)
+            ? (valuesJson.evidenceByDimension as Record<string, { sentence?: string; overallEvidence?: string; overall_evidence?: string; reason?: string }>)
             : {}
+        const evidenceByDimension = Object.fromEntries(
+          Object.entries(rawEvidenceByDimension).map(([id, evidence]) => [
+            Number(id),
+            {
+              sentence: evidence?.sentence,
+              overallEvidence: evidence?.overallEvidence || evidence?.overall_evidence,
+              reason: evidence?.reason,
+            },
+          ])
+        ) as Record<number, { sentence?: string; overallEvidence?: string; reason?: string }>
         await applyTreeGrowthFromMetrics(matchedDimensions, {
           workTitle: title,
           workType: type,
@@ -2823,8 +2831,7 @@ export default function Home() {
           onOpenSettings={() => setStage("userSettings")}
           trees={trees ?? undefined}
           treeGrowthDetails={treeGrowthDetails}
-          recentGrowthTreeId={lastGrownTree?.treeId ?? null}
-          recentGrowthDimension={lastGrownTree?.dimension ?? null}
+          recentGrowthTreeIds={lastGrownTreeIds}
           farmEntryNonce={farmEntryNonce}
           onVisitOthersFarm={() => setStage("navigation")}
         />
