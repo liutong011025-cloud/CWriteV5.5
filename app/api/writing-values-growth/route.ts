@@ -69,19 +69,19 @@ const clampDimensionId = (value: unknown) => {
   return id
 }
 
-const VALUES_KEYWORDS: Record<number, string[]> = {
-  1: ["keep", "never give up", "try again", "persevere", "persist", "brave"],
-  2: ["respect", "polite", "thank you", "listen", "kind words"],
-  3: ["responsible", "duty", "promise", "must", "should", "help my people"],
-  4: ["country", "nation", "flag", "heroes", "love my country", "national song"],
-  5: ["commit", "dedicate", "devote", "promise to", "carry on"],
-  6: ["honest", "truth", "integrity", "sincere"],
-  7: ["care", "help others", "kind", "kindness", "support", "protect"],
-  8: ["law", "rule", "obey", "follow rules", "law-abiding"],
-  9: ["empathy", "understand feelings", "cry", "comfort", "hold my hand"],
-  10: ["study hard", "work hard", "diligent", "practice", "effort"],
-  11: ["grandpa", "grandma", "parents", "filial", "family respect"],
-  12: ["together", "team", "unity", "friends", "we"],
+const VALUES_PATTERNS: Record<number, RegExp[]> = {
+  1: [/\bnever gave up\b/i, /\bdid not give up\b/i, /\bkept trying\b/i, /\btried again\b/i, /\bpersever/i, /\bpersist/i],
+  2: [/\brespect(ed|s|ful)?\b/i, /\bpolite(ly)?\b/i, /\bthank(ed)?\s+you\b/i, /\blisten(ed)?\s+to\b/i, /\bkind words\b/i],
+  3: [/\bresponsib/i, /\bduty\b/i, /\bmy job\b/i, /\btook care of\b/i, /\bkept my promise\b/i],
+  4: [/\bmy country\b/i, /\bour country\b/i, /\bnational identity\b/i, /\bnational flag\b/i, /\blove my country\b/i, /\bnational anthem\b/i],
+  5: [/\bcommit(ted|ment)?\b/i, /\bdedicat/i, /\bdevot/i, /\bpromised to\b/i, /\bwas determined to\b/i],
+  6: [/\bhonest(y)?\b/i, /\btold the truth\b/i, /\btruthful\b/i, /\bintegrity\b/i, /\bsincere(ly)?\b/i],
+  7: [/\bhelp(ed|s|ing)?\s+(others|people|friends?|someone|classmates?|family)\b/i, /\bcare(d|s|ing)?\s+for\b/i, /\bkindness\b/i, /\bsupport(ed|s|ing)?\b/i, /\bprotect(ed|s|ing)?\s+(others|people|friends?|someone|family)\b/i],
+  8: [/\bfollow(ed|s|ing)?\s+(the\s+)?rules\b/i, /\bobey(ed|s|ing)?\s+(the\s+)?(law|rules)\b/i, /\blaw-abiding\b/i, /\brespect(ed|s|ing)?\s+(the\s+)?law\b/i],
+  9: [/\bempathy\b/i, /\bunderstood\s+.*feelings?\b/i, /\bfelt\s+(sad|sorry)\s+for\b/i, /\bcomfort(ed|s|ing)?\b/i, /\bheld\s+.*hand\b/i],
+  10: [/\bstud(y|ied|ies|ying)\s+hard\b/i, /\bwork(ed|s|ing)?\s+hard\b/i, /\bdiligent(ly)?\b/i, /\bpractic(ed|es|ing)?\b/i, /\beffort\b/i],
+  11: [/\bfilial\b/i, /\bgrandpa\b/i, /\bgrandma\b/i, /\bgrandmother\b/i, /\bgrandfather\b/i, /\bparents?\b.*\b(respect|help|care)\b/i, /\b(respect|help|care).*\bparents?\b/i],
+  12: [/\btogether\b/i, /\bteam(work)?\b/i, /\bunity\b/i, /\bunited\b/i, /\bcooperat/i, /\bworked\s+as\s+a\s+team\b/i],
 }
 
 const VALUES_REASONS: Record<number, string> = {
@@ -114,8 +114,8 @@ const localHeuristicValues = (text: string) => {
     const lower = sentence.toLowerCase()
     for (let id = 1; id <= 12; id++) {
       if (matchedDimensions.includes(id)) continue
-      const keywords = VALUES_KEYWORDS[id] || []
-      const hit = keywords.some((k) => lower.includes(k))
+      const patterns = VALUES_PATTERNS[id] || []
+      const hit = patterns.some((pattern) => pattern.test(sentence) || pattern.test(lower))
       if (!hit) continue
       matchedDimensions.push(id)
       evidenceByDimension[id] = {
@@ -201,14 +201,20 @@ Rules:
   }
 }
 - Each number must be 1..12.
-- If one dimension is strongly demonstrated, you may repeat that dimension once (e.g. [3,3,9]) to indicate two growth steps for that tree.
-- Keep the list short (2 to 6 entries typically).
+- Each matched dimension may appear ONCE only. Do not repeat a number. Each matching tree can grow only one stage per finished work.
+- Keep the list short and accurate (1 to 4 entries typically). It is better to return fewer dimensions than weak or guessed matches.
 - Evidence rules:
   - Only include a dimension if the writing has clear support in the text.
+  - The evidence must directly show the value, not just mention a vague related word.
   - Prefer "sentence" when possible (quoted/copied from writing).
   - If no single sentence is enough, you may use "overall_evidence" to explain how the whole passage supports the value.
   - "reason" must explain why this evidence supports that specific value.
-  - If support is weak/unclear, DO NOT include that dimension.`
+  - If support is weak/unclear, DO NOT include that dimension.
+- Avoid common mix-ups:
+  - Responsibility is doing one's duty or taking care of a task; not every "should/must" sentence.
+  - Benevolence is active caring/helping; Empathy is understanding or comforting feelings.
+  - Unity requires teamwork/cooperation; the word "we" alone is not enough.
+  - Perseverance requires continuing after difficulty; "brave" alone is not enough.`
 
     const userPrompt = `Writing type: ${type}
 Student writing:
@@ -281,10 +287,13 @@ ${text.slice(0, 6000)}`
     }
 
     const matchedDimensions = Array.isArray(parsed.matched_dimensions)
-      ? parsed.matched_dimensions
-          .map((item) => clampDimensionId(item))
-          .filter((id): id is number => id !== null)
-          .slice(0, 12)
+      ? Array.from(
+          new Set(
+            parsed.matched_dimensions
+              .map((item) => clampDimensionId(item))
+              .filter((id): id is number => id !== null)
+          )
+        ).slice(0, 4)
       : []
 
     const evidenceByDimension: Record<number, EvidenceItem> = {}
