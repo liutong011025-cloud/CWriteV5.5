@@ -53,6 +53,9 @@ const GENERIC_RATIONALE_SNIPPETS = [
   "you do not need every detail",
   "trouble starting",
   "what goes wrong, scares someone",
+  "give some examples",
+  "suggestion on revision",
+  "add a little more action",
 ]
 
 const GENERIC_LABELS = new Set([
@@ -66,6 +69,13 @@ const GENERIC_LABELS = new Set([
   "write something new",
   "more action here",
   "name your hero",
+  "cut-off",
+  "cut off",
+  "give some examples",
+  "give some suggestions",
+  "suggestion on revision",
+  "add a little more action",
+  "add more action",
 ])
 
 /** Minimum words per structural section (Setup, Confrontation, etc.). */
@@ -143,41 +153,44 @@ function findSentenceWith(text: string, needle: RegExp): string | null {
 
 type DraftIssue = StoryRevisionTag
 
+const THIRD_PERSON_FIXES: Record<string, { present: string; past: string }> = {
+  check: { present: "checks", past: "checked" },
+  look: { present: "looks", past: "looked" },
+  see: { present: "sees", past: "saw" },
+  find: { present: "finds", past: "found" },
+  want: { present: "wants", past: "wanted" },
+  go: { present: "goes", past: "went" },
+  walk: { present: "walks", past: "walked" },
+}
+
 function detectDraftGrammarIssues(draft: string, hero?: string): DraftIssue[] {
   const issues: DraftIssue[] = []
   const heroName = (hero || "").trim()
 
-  const presentAfterPast = draft.match(
-    /\b(when|after|then)\b[^.!?]{0,80}\b(she|he|they|it)\s+(check|look|see|find|go|walk)\b/gi,
-  )
+  const presentAfterPast = draft.match(/\b(when|after|then)\b[^.!?]{0,80}\b(she|he|it)\s+(check|look|see|find|go|walk)\b/gi)
   if (presentAfterPast?.[0]) {
-    const snippet = findSentenceWith(draft, /\b(she|he|they)\s+(check|look|see|find)\b/i)
+    const snippet = findSentenceWith(draft, /\b(she|he|it)\s+(check|look|see|find|go|walk)\b/i)
+    const word = presentAfterPast[0].match(/\b(check|look|see|find|go|walk)\b/i)?.[1]?.toLowerCase() || "verb"
+    const fixes = THIRD_PERSON_FIXES[word]
     issues.push({
-      label: "Match verb tense",
+      label: "Fix verb form",
       rationale: snippet
-        ? `In “${snippet}”, the time words suggest past — try checked / looked / saw / found instead of the present form.`
-        : "When you use when/after/then, verbs often shift to past (checked, looked) so the timeline feels clear.",
+        ? `In “${snippet}”, “${word}” needs a story form: use “${fixes?.present || `${word}s`}” for now, or “${fixes?.past || `${word}ed`}” for something that already happened.`
+        : `Check the verb after she/he/it: use “${fixes?.present || `${word}s`}” for now, or “${fixes?.past || `${word}ed`}” for past story action.`,
       color: "sky",
     })
   }
 
-  const barePresent = draft.match(/\b(she|he|they)\s+(check|look|see|find|want|go)\b/gi)
+  const barePresent = draft.match(/\b(she|he|it)\s+(check|look|see|find|want|go|walk)\b/gi)
   if (barePresent?.[0] && issues.length < 3) {
-    const snippet = findSentenceWith(draft, /\b(she|he|they)\s+(check|look|see|find|want)\b/i)
+    const snippet = findSentenceWith(draft, /\b(she|he|it)\s+(check|look|see|find|want|go|walk)\b/i)
     const word = barePresent[0].split(/\s+/)[1]?.toLowerCase() || "verb"
-    const fixes: Record<string, string> = {
-      check: "checked",
-      look: "looked",
-      see: "saw",
-      find: "found",
-      want: "wanted",
-      go: "went",
-    }
+    const fixes = THIRD_PERSON_FIXES[word]
     issues.push({
-      label: "Past tense verb",
+      label: "Fix verb form",
       rationale: snippet
-        ? `You wrote “${snippet}”. Try “${fixes[word] || word + "ed"}” if this already happened in the story.`
-        : `Try past tense (${fixes[word] || "…ed"}) so readers feel the action happened in story time.`,
+        ? `You wrote “${snippet}”. Try “${fixes?.present || `${word}s`}” for present tense, or “${fixes?.past || `${word}ed`}” if it already happened.`
+        : `After she/he/it, “${word}” needs a clearer form: “${fixes?.present || `${word}s`}” now, or “${fixes?.past || `${word}ed`}” in past tense.`,
       color: "sky",
     })
   }
@@ -229,11 +242,16 @@ function tipToDraftTag(
     }
   }
 
-  if (lower.includes("finish") && lower.includes("sentence")) {
+  if (
+    (lower.includes("finish") && lower.includes("sentence")) ||
+    lower.includes("cut-off") ||
+    lower.includes("cut off") ||
+    (lower.includes("complete") && lower.includes("sentence"))
+  ) {
     const tail = draftText.trim().slice(-60) || trimmed
     return {
-      label: "Finish the sentence",
-      rationale: `Your ending “${tail}” looks cut off — complete the idea, then use . ! or ?`,
+      label: "Complete the ending",
+      rationale: `Your ending “${tail}” stops before the idea is complete. Add the missing words, then end with . ! or ?`,
       color: "amber",
     }
   }
@@ -243,6 +261,16 @@ function tipToDraftTag(
     return {
       label: "Add more detail",
       rationale: `This “${sectionName}” part has about ${wc} words — add one more sentence about what ${characterName} does, sees, or feels.`,
+      color: "emerald",
+    }
+  }
+
+  if (lower.includes("action") || lower.includes("detail")) {
+    const firstSentence = draftText.split(/(?<=[.!?])\s+/).find((s) => s.trim().length > 8)?.trim()
+    const quote = firstSentence ? `After “${firstSentence.length > 90 ? `${firstSentence.slice(0, 87)}…` : firstSentence}”,` : ""
+    return {
+      label: `Show ${characterName}'s next move`,
+      rationale: `${quote || "In this section,"} add one specific action, sound, or feeling. For example: “${characterName} tiptoed closer because the noise made them nervous.”`,
       color: "emerald",
     }
   }
@@ -430,9 +458,9 @@ export function buildRevisionTagsPromptRules(
     `\n[SECTION REVISION TAGS — level ${level}]\n` +
     `When the student submits a draft for "${sectionName}" (Finish!):\n` +
     `- revision_tags: ${min}-${max} items. Each must be DIFFERENT (not the same label every time).\n` +
-    `- label: 3–6 words, unique (e.g. "Past tense verb", "Name MoMo", "Clearer ending") — NOT "Revise this part" / "Add the problem" / "Same story".\n` +
+    `- label: 3–6 words, unique (e.g. "Fix verb form", "Name MoMo", "Complete the ending") — NOT "Cut-off" / "Give some examples" / "Add a little more action" / "Revise this part" / "Add the problem".\n` +
     `- rationale: 2–3 sentences (40–280 chars). MUST quote their exact words in “…” from the draft, then say what to change and why.\n` +
-    `- Example rationale: You wrote “She check the stone” — try “She checked” so the action feels finished.\n` +
+    `- Grammar must be correct: only mark a verb if it is truly wrong. Example: “She check” needs “She checks” (present) or “She checked” (past); “They check” can already be correct.\n` +
     `- If the section PASSES: revision_tags = [].\n`
   )
 }
