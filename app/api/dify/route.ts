@@ -114,11 +114,17 @@ ${modifiedScript}
 
 Please:
 1. Identify what the student changed and praise their creative choices
-2. Offer 2-3 gentle, encouraging suggestions to make the script even better
+2. Offer 2-3 gentle, encouraging suggestions that refer to the MODIFIED script only
 3. If there are grammar/spelling issues, note them kindly
 4. Give the script a brief rating using stars (1-5)
 
-Reply in a friendly, encouraging tone suitable for kids. Use simple language. Keep your response concise (under 200 words).${levelSuffix}`
+Format your response EXACTLY like this:
+---FEEDBACK---
+(friendly feedback under 150 words)
+---SUGGESTIONS---
+(each current suggestion on a new line; make each one concrete and tied to the modified script)
+
+Do not repeat old suggestions that no longer match the modified script. Use simple language.${levelSuffix}`
         break
       }
 
@@ -314,6 +320,7 @@ Give brief, encouraging feedback (2-3 sentences) about what they changed and how
       return NextResponse.json(parseDramaResponse(answer, body))
     }
     if (action === "drama_revise" || action === "poetry_revise") {
+      if (action === "drama_revise") return NextResponse.json(parseDramaRevisionResponse(answer))
       return NextResponse.json({ feedback: answer || "Great work! Keep it up!" })
     }
 
@@ -355,6 +362,21 @@ function parseDramaResponse(
     : ["Try adding more dialogue!", "What feelings do your characters have?", "Can you add stage directions?"]
 
   return { summary, script, suggestions }
+}
+
+function parseDramaRevisionResponse(answer: string) {
+  const feedbackMatch = answer.match(/---FEEDBACK---([\s\S]*?)(?=---SUGGESTIONS---|$)/)
+  const suggestionsMatch = answer.match(/---SUGGESTIONS---([\s\S]*?)$/)
+  const feedback = (feedbackMatch ? feedbackMatch[1] : answer).trim() || "Great edits! Keep writing and improving."
+  const suggestionsText = suggestionsMatch ? suggestionsMatch[1].trim() : ""
+  const suggestions = suggestionsText
+    ? suggestionsText
+        .split("\n")
+        .map((s: string) => s.trim())
+        .filter((s: string) => s.length > 0)
+    : []
+
+  return { feedback, suggestions }
 }
 
 function generateFallbackScript(
