@@ -378,7 +378,6 @@ export function PlacedCharacterComponent({
             <img
               src={character.imageUrl || "/placeholder.svg"}
               alt={character.name}
-              crossOrigin="anonymous"
               className="object-contain drop-shadow-[0_10px_26px_rgba(0,0,0,0.50)]"
               style={{ width: size, height: size }}
               draggable={false}
