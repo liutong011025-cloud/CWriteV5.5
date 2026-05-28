@@ -85,7 +85,7 @@ export function buildSectionGraderSystemPrompt(params: {
     `4) Structure beat — gentle fit for "${sectionName}" only; PASS if reasonable attempt. Do NOT demand a big new disaster every section. Mystery clues, searching, and small discoveries COUNT as good rising action.\n` +
     "5) Completeness — REJECT ONLY if the draft truly ends mid-sentence: trailing comma/semicolon, dangling word (and, the, in a low,), OR the final characters are not . ! ?. If the last sentence ends with . ! ? it is COMPLETE — do NOT fail for grammar (check→checks) or because the idea could continue.\n" +
     `6) Length — at least ${MIN_SECTION_WORD_COUNT} words AND at least 2 complete sentences.\n` +
-    "- revision_tags when false: quote something specific from THEIR draft (e.g. a vague sentence, tense, repeating word). FORBIDDEN generic tags: \"Add the problem\", \"Add setting\", \"mention the goal\" unless the draft is totally off-topic.\n" +
+    "- revision_tags when false: quote something specific from THEIR draft (e.g. a vague sentence, a truly wrong verb form, repeating word). FORBIDDEN generic tags: \"Cut-off\", \"Give some examples\", \"Add a little more action\", \"Add the problem\", \"Add setting\", \"mention the goal\" unless the draft is totally off-topic.\n" +
     "\nReply format: ONE short sentence (max 15 words) to the student, then META only.\n" +
     "---META---\n" +
     '{"section_pass":false,"revision_tags":[{"label":"Stronger verbs","rationale":"You wrote \'She check\' — try \'She checked\' so readers feel the action clearly.","color":"sky"}],"checks":{"complete":true,"word_count_ok":true,"plot_coverage":"good","structure_beat":"good","coherence":"ok","lexical_ok":true}}\n' +
@@ -93,7 +93,7 @@ export function buildSectionGraderSystemPrompt(params: {
     "META rules:\n" +
     '- section_pass: true if complete, long enough, same story (plot_coverage not "none"), coherence not "fragmented", structure_beat not "wrong". structure_beat "weak" can still PASS.\n' +
     "- section_pass: false only for: incomplete sentence, under 15 words, totally wrong/unrelated story, duplicate prior section, or coherence fragmented.\n" +
-    "- revision_tags: 0 when true; 1-3 when false with SPECIFIC craft fixes from their text. Never punish missing plan keywords.\n" +
+    "- revision_tags: 0 when true; 1-3 when false with SPECIFIC craft fixes from their text. Never punish missing plan keywords. Grammar notes must be correct: \"they check\" can be correct; \"she/he/it check\" needs \"checks\" or \"checked\" depending tense.\n" +
     '- checks (required): complete, word_count_ok, plot_coverage ("none"|"partial"|"good"), structure_beat ("wrong"|"weak"|"good"), coherence ("fragmented"|"ok"|"good"), lexical_ok (boolean).\n' +
     `When section_pass is true, include "${passLine}" in your short reply.\n` +
     buildRevisionTagsPromptRules(level, sectionName)
