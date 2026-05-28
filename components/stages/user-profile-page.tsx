@@ -94,7 +94,7 @@ interface UserProfilePageProps {
   trees?: { id: number; stage: number }[] | null
   treeGrowthDetails?: Record<number, TreeGrowthDetailRecord[]>
   recentGrowthTreeId?: number | null
-  recentGrowthDimension?: "vocab" | "detail" | "logic" | null
+  recentGrowthTreeIds?: number[]
   farmEntryNonce?: number
   onVisitOthersFarm?: () => void
   isOtherFarm?: boolean
@@ -234,7 +234,7 @@ export default function UserProfilePage({
   trees,
   treeGrowthDetails,
   recentGrowthTreeId,
-  recentGrowthDimension,
+  recentGrowthTreeIds,
   farmEntryNonce = 0,
   onVisitOthersFarm,
   isOtherFarm = false,
@@ -265,7 +265,7 @@ export default function UserProfilePage({
   const [savingWorkId, setSavingWorkId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [forest, setForest] = useState<{ id: number; stage: number }[]>([])
-  const [highlightTreeId, setHighlightTreeId] = useState<number | null>(null)
+  const [highlightTreeIds, setHighlightTreeIds] = useState<number[]>([])
   const [selectedTreeId, setSelectedTreeId] = useState<number | null>(null)
   const [hoveredTreeId, setHoveredTreeId] = useState<number | null>(null)
   const farmContainerRef = useRef<HTMLDivElement | null>(null)
@@ -492,17 +492,23 @@ export default function UserProfilePage({
   }, [isOtherFarm, userId])
 
   useEffect(() => {
-    if (recentGrowthTreeId && trees && trees.some((t) => t.id === recentGrowthTreeId)) {
+    const requestedIds = recentGrowthTreeIds?.length
+      ? recentGrowthTreeIds
+      : recentGrowthTreeId
+        ? [recentGrowthTreeId]
+        : []
+    const validIds = Array.from(new Set(requestedIds)).filter((id) => trees?.some((t) => t.id === id))
+    if (validIds.length > 0) {
       // 强制“重新触发闪光”：
-      // 如果这次进入 farm 的 recentGrowthTreeId 和上次相同，React 可能不会触发重新动画，
+      // 如果这次进入 farm 的高亮树和上次相同，React 可能不会触发重新动画，
       // 所以先清空，再立刻设回去让 span 重新挂载/动画重新开始。
-      setHighlightTreeId(null)
+      setHighlightTreeIds([])
       const restart = window.setTimeout(() => {
-        setHighlightTreeId(recentGrowthTreeId)
+        setHighlightTreeIds(validIds)
       }, 30)
 
       const timer = window.setTimeout(() => {
-        setHighlightTreeId(null)
+        setHighlightTreeIds([])
       }, 4030)
 
       return () => {
@@ -510,7 +516,7 @@ export default function UserProfilePage({
         clearTimeout(timer)
       }
     }
-  }, [recentGrowthTreeId, trees, farmEntryNonce, farmViewNonce])
+  }, [recentGrowthTreeId, recentGrowthTreeIds, trees, farmEntryNonce, farmViewNonce])
 
   const teacherReviews = reviews.filter((r) => r.reviewerRole === "teacher")
   const peerReviews = reviews.filter((r) => r.reviewerRole === "student")
@@ -1069,7 +1075,7 @@ export default function UserProfilePage({
                 const treeState = farmTreeStates[index] || DEFAULT_TREE_LAYOUT[index]
                 const slotTreeId = FARM_SLOT_TREE_IDS[index] ?? index + 1
                 const treeData = forestById.get(slotTreeId)
-                const isHighlightedTree = treeData && highlightTreeId === treeData.id
+                const isHighlightedTree = !!treeData && highlightTreeIds.includes(treeData.id)
                 const isHoveredTree = treeData && hoveredTreeId === treeData.id
                 const treeStage = Math.max(2, Math.min(4, Number(treeData?.stage ?? 2)))
                 const treeImageSrc = treeStage >= 4 ? "/tree4.webp" : treeStage >= 3 ? "/tree3.webp" : "/tree2.webp"
