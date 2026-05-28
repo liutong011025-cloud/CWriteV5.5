@@ -427,7 +427,6 @@ export function CharacterPanel() {
                   <img
                     src={char.imageUrl || "/placeholder.svg"}
                     alt={char.name}
-                    crossOrigin="anonymous"
                     className="h-12 w-12 shrink-0 rounded-xl border border-border bg-muted/30 object-contain"
                   />
                 ) : (
