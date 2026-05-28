@@ -67,6 +67,7 @@ export function DramaBook({ onBack, onBackToMap, onSave }: DramaBookProps) {
   const dramaBook = useDramaStore((s) => s.dramaBook);
   const title = useDramaStore((s) => s.title);
   const isGeneratingBook = useDramaStore((s) => s.isGeneratingBook);
+  const setDramaBook = useDramaStore((s) => s.setDramaBook);
 
   const [currentPage, setCurrentPage] = useState(0);
   const [isEditingScript, setIsEditingScript] = useState(false);
@@ -76,11 +77,18 @@ export function DramaBook({ onBack, onBackToMap, onSave }: DramaBookProps) {
   const [originalScript] = useState(() =>
     stripCharactersRoleDescriptions(dramaBook?.script || ""),
   );
+  const [lastReviewedScript, setLastReviewedScript] = useState(() =>
+    stripCharactersRoleDescriptions(dramaBook?.script || ""),
+  );
+  const [currentSuggestions, setCurrentSuggestions] = useState<string[]>(
+    () => dramaBook?.suggestions || [],
+  );
   const [aiFeedback, setAiFeedback] = useState<string | null>(null);
   const [isSendingRevision, setIsSendingRevision] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const totalPages = scenes.length + 2;
+  const hasUnreviewedChanges = editedScript.trim() !== lastReviewedScript.trim();
 
   const nextPage = () =>
     setCurrentPage((p) => Math.min(p + 1, totalPages - 1));
@@ -102,12 +110,22 @@ export function DramaBook({ onBack, onBackToMap, onSave }: DramaBookProps) {
       });
       const data = await res.json();
       setAiFeedback(data.feedback || "Great changes! Keep up the creative work!");
+      const nextSuggestions = Array.isArray(data.suggestions) ? data.suggestions : [];
+      setCurrentSuggestions(nextSuggestions);
+      setLastReviewedScript(editedScript);
+      if (dramaBook) {
+        setDramaBook({
+          ...dramaBook,
+          script: editedScript,
+          suggestions: nextSuggestions.length > 0 ? nextSuggestions : dramaBook.suggestions,
+        });
+      }
     } catch {
       setAiFeedback("Wonderful effort on your revisions! Keep writing!");
     } finally {
       setIsSendingRevision(false);
     }
-  }, [editedScript, originalScript, title]);
+  }, [dramaBook, editedScript, originalScript, setDramaBook, title]);
 
   if (isGeneratingBook) {
     return (
@@ -255,7 +273,6 @@ export function DramaBook({ onBack, onBackToMap, onSave }: DramaBookProps) {
               <img
                 src={char.imageUrl || "/placeholder.svg"}
                 alt={char.name}
-                crossOrigin="anonymous"
                 className="object-contain drop-shadow-lg"
                 style={{ width: charSize, height: charSize }}
               />
@@ -355,7 +372,6 @@ export function DramaBook({ onBack, onBackToMap, onSave }: DramaBookProps) {
                               <img
                                 src={c.imageUrl || "/placeholder.svg"}
                                 alt={c.name}
-                                crossOrigin="anonymous"
                                 className="h-full w-full object-contain"
                               />
                             ) : (
@@ -401,7 +417,6 @@ export function DramaBook({ onBack, onBackToMap, onSave }: DramaBookProps) {
                           <img
                             src={scene.backgroundImageUrl || "/placeholder.svg"}
                             alt="Scene"
-                            crossOrigin="anonymous"
                             className="h-full w-full object-cover"
                           />
                         ) : (
@@ -455,8 +470,8 @@ export function DramaBook({ onBack, onBackToMap, onSave }: DramaBookProps) {
                             size="sm"
                             variant="outline"
                             onClick={sendRevisionToDify}
-                            disabled={isSendingRevision || editedScript === originalScript}
-                            title={editedScript === originalScript ? "Make some changes to your script first" : "Send your changes to the AI teacher"}
+                            disabled={isSendingRevision || !hasUnreviewedChanges}
+                            title={!hasUnreviewedChanges ? "Make new changes to your script first" : "Send your latest changes to the AI teacher"}
                             className="gap-1.5 rounded-xl border-secondary/40 font-hand text-xs text-secondary-foreground hover:bg-secondary/10 bg-transparent disabled:opacity-40"
                           >
                             {isSendingRevision ? (
@@ -521,8 +536,7 @@ export function DramaBook({ onBack, onBackToMap, onSave }: DramaBookProps) {
                       </p>
                     )}
 
-                    {dramaBook.suggestions &&
-                      dramaBook.suggestions.length > 0 && (
+                    {(currentSuggestions.length > 0 || hasUnreviewedChanges || onSave || onBackToMap) && (
                         <div className="mt-6 rounded-2xl border-2 border-secondary/20 bg-secondary/5 p-5">
                           <div className="mb-3 flex items-center gap-2">
                             <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-secondary/20 shadow-sm">
@@ -533,26 +547,38 @@ export function DramaBook({ onBack, onBackToMap, onSave }: DramaBookProps) {
                                 Tips to Make It Even Better
                               </h4>
                               <p className="font-hand text-[11px] text-muted-foreground">
-                                Ideas from our AI teacher to level up your story
+                                {hasUnreviewedChanges
+                                  ? "You changed the script. Get AI Feedback to refresh these tips."
+                                  : "Ideas from our AI teacher for this version"}
                               </p>
                             </div>
                           </div>
-                          <div className="space-y-2">
-                            {dramaBook.suggestions.map((s, i) => (
-                              <div
-                                key={`sug-${i}`}
-                                className="flex items-start gap-2.5 rounded-xl border border-border/60 bg-card/80 px-3.5 py-2.5 shadow-sm animate-fade-in-up"
-                                style={{ animationDelay: `${i * 0.08}s` }}
-                              >
-                                <div className="flex h-5.5 w-5.5 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-                                  <Star className="h-3 w-3 text-primary" />
+                          {hasUnreviewedChanges ? (
+                            <div className="rounded-xl border border-amber-200 bg-amber-50/80 px-3.5 py-3 font-hand text-sm leading-relaxed text-amber-900">
+                              These tips are from the previous version. Click <span className="font-bold">Get AI Feedback</span> so the advice matches your latest edits.
+                            </div>
+                          ) : currentSuggestions.length > 0 ? (
+                            <div className="space-y-2">
+                              {currentSuggestions.map((s, i) => (
+                                <div
+                                  key={`sug-${i}`}
+                                  className="flex items-start gap-2.5 rounded-xl border border-border/60 bg-card/80 px-3.5 py-2.5 shadow-sm animate-fade-in-up"
+                                  style={{ animationDelay: `${i * 0.08}s` }}
+                                >
+                                  <div className="flex h-5.5 w-5.5 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                                    <Star className="h-3 w-3 text-primary" />
+                                  </div>
+                                  <p className="font-hand text-sm leading-relaxed text-foreground">
+                                    {s}
+                                  </p>
                                 </div>
-                                <p className="font-hand text-sm leading-relaxed text-foreground">
-                                  {s}
-                                </p>
-                              </div>
-                            ))}
-                          </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="rounded-xl border border-emerald-200 bg-emerald-50/80 px-3.5 py-3 font-hand text-sm leading-relaxed text-emerald-900">
+                              No extra tips for this version. Your latest script looks ready to save.
+                            </div>
+                          )}
                           <div className="mt-4 flex justify-center gap-2">
                             <Button
                               onClick={onSave || (() => {})}
