@@ -36,6 +36,10 @@ interface StoryCollabProps {
   onBack: () => void
   userId?: string
   onDraftChange?: (text: string) => void
+  /** 自定义 API 端点，默认 /api/story-collab */
+  apiEndpoint?: string
+  /** 提示词测试模式：显示横幅，不写库 */
+  promptTestMode?: boolean
 }
 
 interface CollabMessage {
@@ -201,6 +205,8 @@ export default function StoryCollab({
   onBack,
   userId,
   onDraftChange,
+  apiEndpoint = "/api/story-collab",
+  promptTestMode = false,
 }: StoryCollabProps) {
   const levelForApi = writingLevelProp ?? getCurrentLevel()
 
@@ -443,7 +449,7 @@ export default function StoryCollab({
       const newHistory = [...conversationHistory, { role: "user", content: text }]
 
       try {
-        const res = await fetch("/api/story-collab", {
+        const res = await fetch(apiEndpoint, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -457,7 +463,7 @@ export default function StoryCollab({
             current_writing_section_index:
               selectedStructure && storyBlocks.length > 0 ? currentWritingSection : null,
             current_phase: phase,
-            user_id: userId || "anonymous",
+            user_id: promptTestMode ? undefined : userId || "anonymous",
             level: levelForApi,
             action: action || "chat",
           }),
@@ -589,6 +595,8 @@ export default function StoryCollab({
       currentWritingSection,
       chatInput,
       mode,
+      apiEndpoint,
+      promptTestMode,
     ],
   )
 
@@ -948,7 +956,14 @@ export default function StoryCollab({
           onBack={onBack}
           character={storyState.character?.name || undefined}
         />
-        {testMode && (
+        {promptTestMode && (
+          <div className="mt-4 pixel-panel p-3" style={{ background: "#e8c547", border: "4px solid #c4a020" }}>
+            <p className="text-sm font-extrabold" style={{ color: "#5a4a2a" }}>
+              提示词测试模式 — 使用 lib/story-test-prompts.ts 中的提示词，数据不会写入数据库
+            </p>
+          </div>
+        )}
+        {testMode && !promptTestMode && (
           <div className="mt-4 pixel-panel p-3" style={{ background: "#e8c547", border: "4px solid #c4a020" }}>
             <p className="text-sm font-extrabold" style={{ color: "#5a4a2a" }}>
               TEST MODE: 已跳过 plot / structure / writing
