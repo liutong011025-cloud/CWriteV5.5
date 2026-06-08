@@ -180,6 +180,17 @@ export function isVirtualClassId(classId: string): boolean {
   return classId === UNASSIGNED_CLASS_ID
 }
 
+function buildUnassignedOnlyGroup(
+  students: StudentDashboardRow[],
+  latestActivityMap: Map<string, Date>,
+): TeacherClassGroup[] {
+  const users = students
+    .map((s) => toClassUserSummary(s, latestActivityMap))
+    .sort((a, b) => a.username.localeCompare(b.username))
+  if (users.length === 0) return []
+  return [{ id: UNASSIGNED_CLASS_ID, name: UNASSIGNED_CLASS_NAME, users }]
+}
+
 export async function resolveClassGroupsForTeacher(
   teacherUsername: string | null,
   students: StudentDashboardRow[],
@@ -191,9 +202,12 @@ export async function resolveClassGroupsForTeacher(
       try {
         return await buildTeacherClassGroups(teacher.id, students, latestActivityMap)
       } catch (error) {
-        console.warn("[teacher-classes] TeacherClass query failed, falling back to grade groups:", error)
+        console.warn("[teacher-classes] TeacherClass query failed:", error)
+        // Teacher exists — do not fall back to grade buckets (would hide TeacherClass roster).
+        return buildUnassignedOnlyGroup(students, latestActivityMap)
       }
     }
+    console.warn(`[teacher-classes] Teacher not found for roster: ${teacherUsername}`)
   }
   return buildGradeClassGroups(students, latestActivityMap)
 }
