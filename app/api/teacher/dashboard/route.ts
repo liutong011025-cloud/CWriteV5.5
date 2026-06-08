@@ -214,10 +214,6 @@ async function resolveClassGroups(
     const teacher = await resolveTeacher(teacherUsername)
     if (teacher) {
       try {
-        const classCount = await prisma.teacherClass.count({ where: { teacherId: teacher.id } })
-        if (classCount === 0) {
-          return buildGradeClassGroups(users, latestActivityMap)
-        }
         return await buildTeacherClassGroups(teacher.id, users, latestActivityMap)
       } catch (error) {
         console.warn("[teacher dashboard] TeacherClass query failed, falling back to grade groups:", error)
