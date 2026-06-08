@@ -137,7 +137,7 @@ export async function buildTeacherClassGroups(
     .sort((a, b) => a.username.localeCompare(b.username))
 
   if (unassigned.length > 0) {
-    groups.unshift({
+    groups.push({
       id: UNASSIGNED_CLASS_ID,
       name: UNASSIGNED_CLASS_NAME,
       users: unassigned,
@@ -178,4 +178,68 @@ export function buildGradeClassGroups(
 
 export function isVirtualClassId(classId: string): boolean {
   return classId === UNASSIGNED_CLASS_ID
+}
+
+export async function resolveClassGroupsForTeacher(
+  teacherUsername: string | null,
+  students: StudentDashboardRow[],
+  latestActivityMap: Map<string, Date>,
+): Promise<TeacherClassGroup[]> {
+  if (teacherUsername) {
+    const teacher = await resolveTeacher(teacherUsername)
+    if (teacher) {
+      try {
+        return await buildTeacherClassGroups(teacher.id, students, latestActivityMap)
+      } catch (error) {
+        console.warn("[teacher-classes] TeacherClass query failed, falling back to grade groups:", error)
+      }
+    }
+  }
+  return buildGradeClassGroups(students, latestActivityMap)
+}
+
+/** Fresh classGroups after roster changes — same logic as dashboard GET. */
+export async function fetchDashboardClassGroups(teacherUsername: string): Promise<TeacherClassGroup[]> {
+  const [students, interactions] = await Promise.all([
+    prisma.user.findMany({
+      where: { role: "student" },
+      orderBy: { createdAt: "asc" },
+      select: {
+        id: true,
+        username: true,
+        role: true,
+        createdAt: true,
+        profile: {
+          select: {
+            avatarUrl: true,
+            avatarEmoji: true,
+            grade: true,
+          },
+        },
+        _count: {
+          select: {
+            stories: true,
+            reviews: true,
+            letters: true,
+            dramas: true,
+            poetries: true,
+          },
+        },
+      },
+    }),
+    prisma.interaction.findMany({
+      select: { userId: true, timestamp: true },
+      orderBy: { timestamp: "desc" },
+    }),
+  ])
+
+  const latestActivityMap = new Map<string, Date>()
+  for (const interaction of interactions) {
+    const previous = latestActivityMap.get(interaction.userId)
+    if (!previous || interaction.timestamp > previous) {
+      latestActivityMap.set(interaction.userId, interaction.timestamp)
+    }
+  }
+
+  return resolveClassGroupsForTeacher(teacherUsername, students, latestActivityMap)
 }
