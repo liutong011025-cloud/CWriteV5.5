@@ -56,7 +56,7 @@ export async function resolveTeacher(username: string) {
   if (teacher) return teacher
 
   // Legacy hardcoded teacher login — ensure DB row exists
-  if (normalized === "Nicole") {
+  if (normalized.toLowerCase() === "nicole") {
     return prisma.user.upsert({
       where: { username: "Nicole" },
       create: {
@@ -178,6 +178,19 @@ export function buildGradeClassGroups(
 
 export function isVirtualClassId(classId: string): boolean {
   return classId === UNASSIGNED_CLASS_ID
+}
+
+/** Guarantee a TeacherClass row appears in the API payload (e.g. right after create). */
+export function injectClassIntoGroups(
+  groups: TeacherClassGroup[],
+  cls: { id: string; name: string },
+): TeacherClassGroup[] {
+  if (!cls.id) return groups
+  if (groups.some((g) => g.id === cls.id)) return groups
+  const unassigned = groups.find((g) => g.id === UNASSIGNED_CLASS_ID)
+  const real = groups.filter((g) => g.id !== UNASSIGNED_CLASS_ID)
+  const newGroup: TeacherClassGroup = { id: cls.id, name: cls.name, users: [] }
+  return unassigned ? [...real, newGroup, unassigned] : [...real, newGroup]
 }
 
 function buildUnassignedOnlyGroup(
