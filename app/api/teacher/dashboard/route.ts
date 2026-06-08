@@ -124,6 +124,8 @@ export async function GET() {
       }
     })
 
+    const classGroups = buildClassGroups(users, latestActivityMap)
+
     return NextResponse.json({
       metrics: {
         registeredUsers: users.length,
@@ -146,29 +148,7 @@ export async function GET() {
           tokens,
         })),
       },
-      classGroups: [
-        {
-          id: "class1",
-          name: "Class 1",
-          users: users
-            .map((item: DashboardUser) => ({
-              id: item.id,
-              username: item.username,
-              role: item.role,
-              avatarUrl: item.profile?.avatarUrl ?? null,
-              avatarEmoji: item.profile?.avatarEmoji ?? null,
-              grade: item.profile?.grade ?? null,
-              totalWorks:
-                item._count.stories +
-                item._count.reviews +
-                item._count.letters +
-                item._count.dramas +
-                item._count.poetries,
-              latestActiveAt: latestActivityMap.get(item.id)?.toISOString() ?? null,
-            }))
-            .sort((a: DashboardUserSummary, b: DashboardUserSummary) => a.username.localeCompare(b.username)),
-        },
-      ],
+      classGroups,
       updatedAt: now.toISOString(),
     })
   } catch (error) {
@@ -245,4 +225,56 @@ interface DashboardUserSummary {
   grade: string | null
   totalWorks: number
   latestActiveAt: string | null
+}
+
+const UNASSIGNED_CLASS = "Unassigned"
+
+function toUserSummary(
+  item: DashboardUser,
+  latestActivityMap: Map<string, Date>,
+): DashboardUserSummary {
+  return {
+    id: item.id,
+    username: item.username,
+    role: item.role,
+    avatarUrl: item.profile?.avatarUrl ?? null,
+    avatarEmoji: item.profile?.avatarEmoji ?? null,
+    grade: item.profile?.grade ?? null,
+    totalWorks:
+      item._count.stories +
+      item._count.reviews +
+      item._count.letters +
+      item._count.dramas +
+      item._count.poetries,
+    latestActiveAt: latestActivityMap.get(item.id)?.toISOString() ?? null,
+  }
+}
+
+function buildClassGroups(
+  users: DashboardUser[],
+  latestActivityMap: Map<string, Date>,
+): Array<{ id: string; name: string; users: DashboardUserSummary[] }> {
+  const buckets = new Map<string, DashboardUserSummary[]>()
+
+  for (const item of users) {
+    const className = item.profile?.grade?.trim() || UNASSIGNED_CLASS
+    const summary = toUserSummary(item, latestActivityMap)
+    const list = buckets.get(className) ?? []
+    list.push(summary)
+    buckets.set(className, list)
+  }
+
+  const classNames = Array.from(buckets.keys()).sort((a, b) => {
+    if (a === "JCPS") return -1
+    if (b === "JCPS") return 1
+    if (a === UNASSIGNED_CLASS) return 1
+    if (b === UNASSIGNED_CLASS) return -1
+    return a.localeCompare(b)
+  })
+
+  return classNames.map((name) => ({
+    id: name.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
+    name,
+    users: (buckets.get(name) ?? []).sort((a, b) => a.username.localeCompare(b.username)),
+  }))
 }
