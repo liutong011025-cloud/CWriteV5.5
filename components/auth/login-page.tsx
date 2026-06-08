@@ -19,8 +19,9 @@ interface LoginPageProps {
   onLogin: (user: LoginUser, showContinueDialog?: boolean) => void
 }
 
-// 新用户注册开关
+// 新用户注册开关（学生 + 教师）
 const REGISTRATION_ENABLED = true
+const TEACHER_REGISTRATION_ENABLED = true
 const REGISTRATION_DISABLED_MESSAGE = "New user registration: Function is not available."
 
 export default function LoginPage({ onLogin }: LoginPageProps) {
@@ -111,9 +112,22 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
     }
   }
 
+  const registrationAllowed =
+    REGISTRATION_ENABLED && (selectedRole !== "teacher" || TEACHER_REGISTRATION_ENABLED)
+
   const handleRegister = async () => {
     if (!REGISTRATION_ENABLED) {
       toast.error(REGISTRATION_DISABLED_MESSAGE)
+      return
+    }
+
+    if (selectedRole === "teacher" && !TEACHER_REGISTRATION_ENABLED) {
+      toast.error("Teacher registration is not available.")
+      return
+    }
+
+    if (!selectedRole) {
+      toast.error("Please choose Teacher or Student first")
       return
     }
 
@@ -134,6 +148,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
           name: registerName,
           email: registerEmail,
           password,
+          role: selectedRole,
         }),
       })
 
@@ -144,8 +159,12 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
         return
       }
 
-      if (selectedRole === "teacher" && data.user.role !== "teacher") {
-        toast.error("Teacher registration is not enabled in this flow.")
+      if (data.user.role !== selectedRole) {
+        toast.error(
+          selectedRole === "teacher"
+            ? "This account was not created as a teacher account."
+            : "This account was not created as a student account.",
+        )
         return
       }
 
@@ -286,7 +305,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
                   {isLoading ? "Logging in..." : "🚀 Login"}
                 </Button>
 
-                {REGISTRATION_ENABLED ? (
+                {registrationAllowed ? (
                   <button
                     type="button"
                     onClick={() => {
@@ -295,11 +314,11 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
                     }}
                     className="w-full rounded-xl border border-white/40 bg-white/10 py-3 text-sm font-bold text-white backdrop-blur-md transition hover:bg-white/20"
                   >
-                    Create a new account
+                    Create a new {selectedRole === "teacher" ? "teacher" : "student"} account
                   </button>
                 ) : (
                   <p className="w-full rounded-xl border border-white/30 bg-white/10 py-3 px-4 text-center text-sm text-white/90 backdrop-blur-md">
-                    {REGISTRATION_DISABLED_MESSAGE}
+                    {!REGISTRATION_ENABLED ? REGISTRATION_DISABLED_MESSAGE : "Teacher registration is not available."}
                   </p>
                 )}
                   </>
