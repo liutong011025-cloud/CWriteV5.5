@@ -34,8 +34,47 @@ interface DashboardData {
 
 const UNASSIGNED_CLASS_ID = "__unassigned__"
 
+type ClassGroup = DashboardData["classGroups"][number]
+
+type ClassActionResponse = {
+  error?: string
+  class?: { id: string; name: string }
+  classGroups?: ClassGroup[]
+}
+
 function isEditableClass(classId: string | null): boolean {
   return !!classId && classId !== UNASSIGNED_CLASS_ID
+}
+
+/** Prisma cuid — distinguishes TeacherClass rows from legacy grade slug ids. */
+function isTeacherRosterClassId(classId: string): boolean {
+  return classId !== UNASSIGNED_CLASS_ID && /^c[a-z0-9]{20,}$/i.test(classId)
+}
+
+function mergeClassGroups(prev: ClassGroup[], incoming: ClassGroup[]): ClassGroup[] {
+  if (!prev.length) return incoming
+  const prevTeacher = prev.filter((g) => isTeacherRosterClassId(g.id))
+  if (!prevTeacher.length) return incoming
+
+  const incomingById = new Map(incoming.map((g) => [g.id, g]))
+  const keptTeacher = prevTeacher.map((g) => incomingById.get(g.id) ?? g)
+  const incomingTeacherIds = new Set(incoming.filter((g) => isTeacherRosterClassId(g.id)).map((g) => g.id))
+  const newFromIncoming = incoming.filter(
+    (g) => isTeacherRosterClassId(g.id) && !prevTeacher.some((p) => p.id === g.id),
+  )
+
+  const unassigned = incoming.find((g) => g.id === UNASSIGNED_CLASS_ID)
+    ?? prev.find((g) => g.id === UNASSIGNED_CLASS_ID)
+
+  const teacherGroups = [...keptTeacher, ...newFromIncoming].sort((a, b) => a.name.localeCompare(b.name))
+  if (unassigned) return [...teacherGroups, unassigned]
+  return teacherGroups.length ? teacherGroups : incoming
+}
+
+function mergeDashboardPayload(prev: DashboardData | null, incoming: DashboardData): DashboardData {
+  if (!prev?.classGroups?.length) return incoming
+  const mergedGroups = mergeClassGroups(prev.classGroups, incoming.classGroups ?? [])
+  return { ...incoming, classGroups: mergedGroups }
 }
 
 type DashboardUserListItem = DashboardData["classGroups"][number]["users"][number]
@@ -206,6 +245,7 @@ export default function DashboardV2({ user, onBack }: DashboardProps) {
   const selectedRef = useRef<string | null>(null)
   const detailRequestRef = useRef(0)
   const summaryRequestRef = useRef(0)
+  const refreshSeqRef = useRef(0)
 
   useEffect(() => {
     document.documentElement.classList.add("teacher-dashboard-active")
@@ -235,27 +275,49 @@ export default function DashboardV2({ user, onBack }: DashboardProps) {
     void loadSummary(selected)
   }, [selected])
 
-  async function refresh() {
+  function applyClassGroupsUpdate(classGroups: ClassGroup[] | undefined, preferClassId?: string | null) {
+    if (!classGroups?.length) return
+    setData((prev) => (prev ? { ...prev, classGroups } : prev))
+    setSelectedClassId((current) => {
+      const nextId = preferClassId ?? current
+      if (nextId && classGroups.some((g) => g.id === nextId)) return nextId
+      const firstReal = classGroups.find((g) => g.id !== UNASSIGNED_CLASS_ID)
+      if (firstReal) return firstReal.id
+      return classGroups[0]?.id ?? null
+    })
+  }
+
+  async function refresh(preferClassId?: string | null) {
     if (!user?.username) return
+    const seq = ++refreshSeqRef.current
     setLoadingDashboard(true)
     try {
       const res = await fetch(
-        `/api/teacher/dashboard?teacher=${encodeURIComponent(user.username)}`,
+        `/api/teacher/dashboard?teacher=${encodeURIComponent(user.username)}&t=${Date.now()}`,
         { cache: "no-store" },
       )
+      if (seq !== refreshSeqRef.current) return
       if (!res.ok) {
         toast.error("Failed to load dashboard data.")
         return
       }
       const json = (await res.json()) as DashboardData
-      setData(json)
-      const groups = json.classGroups ?? []
+      if (seq !== refreshSeqRef.current) return
+      let mergedGroups = json.classGroups ?? []
+      setData((prev) => {
+        const merged = mergeDashboardPayload(prev, json)
+        mergedGroups = merged.classGroups ?? mergedGroups
+        return merged
+      })
       setSelectedClassId((current) => {
-        if (current && groups.some((g) => g.id === current)) return current
-        return groups[0]?.id ?? null
+        const nextId = preferClassId ?? current
+        if (nextId && mergedGroups.some((g) => g.id === nextId)) return nextId
+        const firstReal = mergedGroups.find((g) => g.id !== UNASSIGNED_CLASS_ID)
+        if (firstReal) return firstReal.id
+        return mergedGroups[0]?.id ?? null
       })
     } finally {
-      setLoadingDashboard(false)
+      if (seq === refreshSeqRef.current) setLoadingDashboard(false)
     }
   }
 
@@ -285,7 +347,7 @@ export default function DashboardV2({ user, onBack }: DashboardProps) {
       body: JSON.stringify(body),
     })
     const json = await res.json().catch(() => ({}))
-    return { res, json: json as { error?: string; class?: { id: string; name: string } } }
+    return { res, json: json as ClassActionResponse }
   }
 
   async function createClass() {
@@ -308,8 +370,7 @@ export default function DashboardV2({ user, onBack }: DashboardProps) {
       toast.success(`Class "${name}" created.`)
       setNewClassName("")
       setShowNewClassForm(false)
-      if (json.class?.id) setSelectedClassId(json.class.id)
-      await refresh()
+      applyClassGroupsUpdate(json.classGroups, json.class?.id)
     } catch {
       toast.error("Failed to create class.")
     }
@@ -335,7 +396,7 @@ export default function DashboardV2({ user, onBack }: DashboardProps) {
       }
       toast.success("Class renamed.")
       setShowRenameForm(false)
-      await refresh()
+      applyClassGroupsUpdate(json.classGroups, selectedClassId)
     } catch {
       toast.error("Failed to rename class.")
     }
@@ -356,8 +417,7 @@ export default function DashboardV2({ user, onBack }: DashboardProps) {
         return
       }
       toast.success("Class deleted.")
-      setSelectedClassId(null)
-      await refresh()
+      applyClassGroupsUpdate(json.classGroups)
     } catch {
       toast.error("Failed to delete class.")
     }
@@ -390,7 +450,7 @@ export default function DashboardV2({ user, onBack }: DashboardProps) {
 
       toast.success("Class roster updated.")
       setManageRosterOpen(false)
-      await refresh()
+      applyClassGroupsUpdate(json.classGroups, selectedClassId)
     } catch {
       toast.error("Failed to update roster.")
     } finally {
