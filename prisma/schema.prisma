@@ -24,6 +24,8 @@ model User {
   profile      UserProfile?
   reviewsReceived WorkReview[] @relation("AuthorReviews")
   reviewsGiven   WorkReview[] @relation("ReviewerReviews")
+  teacherClasses TeacherClass[] @relation("TeacherOwnedClasses")
+  classMemberships ClassMember[] @relation("StudentClassMemberships")
 
   @@map("users")
 }
@@ -194,6 +196,35 @@ model WritingEditRevision {
   @@unique([workType, workId, version])
   @@index([workType, workId])
   @@map("writing_edit_revisions")
+}
+
+// ─── TEACHER CLASS ROSTER ───────────────────────────────────────────────────
+
+model TeacherClass {
+  id        String        @id @default(cuid())
+  name      String
+  teacherId String
+  teacher   User          @relation("TeacherOwnedClasses", fields: [teacherId], references: [id], onDelete: Cascade)
+  members   ClassMember[]
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @default(now()) @updatedAt
+
+  @@unique([teacherId, name])
+  @@index([teacherId])
+  @@map("teacher_classes")
+}
+
+model ClassMember {
+  id        String       @id @default(cuid())
+  classId   String
+  class     TeacherClass @relation(fields: [classId], references: [id], onDelete: Cascade)
+  studentId String
+  student   User         @relation("StudentClassMemberships", fields: [studentId], references: [id], onDelete: Cascade)
+  createdAt DateTime     @default(now())
+
+  @@unique([classId, studentId])
+  @@index([studentId])
+  @@map("class_members")
 }
 
 // ─── ADMIN MODELS ───────────────────────────────────────────────────────────
