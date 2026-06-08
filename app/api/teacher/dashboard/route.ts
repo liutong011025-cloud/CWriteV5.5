@@ -1,26 +1,15 @@
-import { NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
 import { format, startOfDay, subDays, subHours } from "date-fns"
 import { prisma } from "@/lib/prisma"
 import { isDatabaseConnectionError } from "@/lib/prisma-errors"
+import {
+  buildGradeClassGroups,
+  buildTeacherClassGroups,
+  resolveTeacher,
+  type StudentDashboardRow,
+} from "@/lib/teacher-classes"
 
-interface DashboardUser {
-  id: string
-  username: string
-  role: string
-  createdAt: Date
-  profile: {
-    avatarUrl: string | null
-    avatarEmoji: string | null
-    grade: string | null
-  } | null
-  _count: {
-    stories: number
-    reviews: number
-    letters: number
-    dramas: number
-    poetries: number
-  }
-}
+interface DashboardUser extends StudentDashboardRow {}
 
 interface DashboardInteraction {
   userId: string
@@ -28,8 +17,9 @@ interface DashboardInteraction {
   apiCalls: unknown
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const teacherUsername = new URL(request.url).searchParams.get("teacher")?.trim() ?? null
     const [users, interactions] = (await prisma.$transaction([
       prisma.user.findMany({
         where: { role: "student" },
@@ -124,7 +114,10 @@ export async function GET() {
       }
     })
 
-    const classGroups = buildClassGroups(users, latestActivityMap)
+    const classGroups = await resolveClassGroups(teacherUsername, users, latestActivityMap)
+    const allStudents = users
+      .map((item) => toUserSummary(item, latestActivityMap))
+      .sort((a, b) => a.username.localeCompare(b.username))
 
     return NextResponse.json({
       metrics: {
@@ -149,6 +142,7 @@ export async function GET() {
         })),
       },
       classGroups,
+      allStudents,
       updatedAt: now.toISOString(),
     })
   } catch (error) {
@@ -204,16 +198,33 @@ function buildEmptyDashboardPayload(now: Date, degraded = false) {
         tokens: 0,
       })),
     },
-    classGroups: [
-      {
-        id: "class1",
-        name: "Class 1",
-        users: [],
-      },
-    ],
+    classGroups: [],
+    allStudents: [],
     degraded,
     updatedAt: now.toISOString(),
   }
+}
+
+async function resolveClassGroups(
+  teacherUsername: string | null,
+  users: DashboardUser[],
+  latestActivityMap: Map<string, Date>,
+) {
+  if (teacherUsername) {
+    const teacher = await resolveTeacher(teacherUsername)
+    if (teacher) {
+      try {
+        const classCount = await prisma.teacherClass.count({ where: { teacherId: teacher.id } })
+        if (classCount === 0) {
+          return buildGradeClassGroups(users, latestActivityMap)
+        }
+        return await buildTeacherClassGroups(teacher.id, users, latestActivityMap)
+      } catch (error) {
+        console.warn("[teacher dashboard] TeacherClass query failed, falling back to grade groups:", error)
+      }
+    }
+  }
+  return buildGradeClassGroups(users, latestActivityMap)
 }
 
 interface DashboardUserSummary {
@@ -226,8 +237,6 @@ interface DashboardUserSummary {
   totalWorks: number
   latestActiveAt: string | null
 }
-
-const UNASSIGNED_CLASS = "Unassigned"
 
 function toUserSummary(
   item: DashboardUser,
@@ -248,33 +257,4 @@ function toUserSummary(
       item._count.poetries,
     latestActiveAt: latestActivityMap.get(item.id)?.toISOString() ?? null,
   }
-}
-
-function buildClassGroups(
-  users: DashboardUser[],
-  latestActivityMap: Map<string, Date>,
-): Array<{ id: string; name: string; users: DashboardUserSummary[] }> {
-  const buckets = new Map<string, DashboardUserSummary[]>()
-
-  for (const item of users) {
-    const className = item.profile?.grade?.trim() || UNASSIGNED_CLASS
-    const summary = toUserSummary(item, latestActivityMap)
-    const list = buckets.get(className) ?? []
-    list.push(summary)
-    buckets.set(className, list)
-  }
-
-  const classNames = Array.from(buckets.keys()).sort((a, b) => {
-    if (a === "JCPS") return -1
-    if (b === "JCPS") return 1
-    if (a === UNASSIGNED_CLASS) return 1
-    if (b === UNASSIGNED_CLASS) return -1
-    return a.localeCompare(b)
-  })
-
-  return classNames.map((name) => ({
-    id: name.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
-    name,
-    users: (buckets.get(name) ?? []).sort((a, b) => a.username.localeCompare(b.username)),
-  }))
 }
