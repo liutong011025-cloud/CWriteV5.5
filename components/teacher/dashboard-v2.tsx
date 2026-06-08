@@ -278,6 +278,16 @@ export default function DashboardV2({ user, onBack }: DashboardProps) {
     })
   }, [activeClassGroup])
 
+  async function classDashboardPost(body: Record<string, unknown>) {
+    const res = await fetch("/api/teacher/dashboard", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    })
+    const json = await res.json().catch(() => ({}))
+    return { res, json: json as { error?: string; class?: { id: string; name: string } } }
+  }
+
   async function createClass() {
     if (!user?.username) return
     const name = newClassName.trim()
@@ -286,19 +296,13 @@ export default function DashboardV2({ user, onBack }: DashboardProps) {
       return
     }
     try {
-      const res = await fetch("/api/teacher/classes", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ teacherUsername: user.username, name }),
+      const { res, json } = await classDashboardPost({
+        action: "createClass",
+        teacherUsername: user.username,
+        name,
       })
-      const json = await res.json().catch(() => ({}))
       if (!res.ok) {
-        toast.error(
-          json.error ||
-            (res.status === 500
-              ? "Failed to create class. If tables are missing, run: npm run db:push"
-              : "Failed to create class."),
-        )
+        toast.error(json.error || "Failed to create class.")
         return
       }
       toast.success(`Class "${name}" created.`)
@@ -319,12 +323,12 @@ export default function DashboardV2({ user, onBack }: DashboardProps) {
       return
     }
     try {
-      const res = await fetch(`/api/teacher/classes/${encodeURIComponent(selectedClassId)}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ teacherUsername: user.username, name }),
+      const { res, json } = await classDashboardPost({
+        action: "renameClass",
+        teacherUsername: user.username,
+        classId: selectedClassId,
+        name,
       })
-      const json = await res.json().catch(() => ({}))
       if (!res.ok) {
         toast.error(json.error || "Failed to rename class.")
         return
@@ -342,11 +346,11 @@ export default function DashboardV2({ user, onBack }: DashboardProps) {
     const cls = classGroups.find((g) => g.id === selectedClassId)
     if (!window.confirm(`Delete class "${cls?.name ?? ""}"? Students will move to Unassigned.`)) return
     try {
-      const res = await fetch(
-        `/api/teacher/classes/${encodeURIComponent(selectedClassId)}?teacher=${encodeURIComponent(user.username)}`,
-        { method: "DELETE" },
-      )
-      const json = await res.json().catch(() => ({}))
+      const { res, json } = await classDashboardPost({
+        action: "deleteClass",
+        teacherUsername: user.username,
+        classId: selectedClassId,
+      })
       if (!res.ok) {
         toast.error(json.error || "Failed to delete class.")
         return
@@ -372,30 +376,16 @@ export default function DashboardV2({ user, onBack }: DashboardProps) {
     if (!user?.username || !selectedClassId || !isEditableClass(selectedClassId) || !activeClassGroup) return
     setSavingRoster(true)
     try {
-      const current = new Set(activeClassGroup.users.map((u) => u.username))
-      const desired = rosterPick
-      const toAdd = [...desired].filter((u) => !current.has(u))
-      const toRemove = [...current].filter((u) => !desired.has(u))
-
-      if (toAdd.length > 0) {
-        const res = await fetch(`/api/teacher/classes/${encodeURIComponent(selectedClassId)}/members`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ teacherUsername: user.username, studentUsernames: toAdd }),
-        })
-        const json = await res.json().catch(() => ({}))
-        if (!res.ok) {
-          toast.error(json.error || "Failed to add students.")
-          return
-        }
-      }
-
-      for (const studentUsername of toRemove) {
-        await fetch(`/api/teacher/classes/${encodeURIComponent(selectedClassId)}/members`, {
-          method: "DELETE",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ teacherUsername: user.username, studentUsername }),
-        })
+      const { res, json } = await classDashboardPost({
+        action: "updateRoster",
+        teacherUsername: user.username,
+        classId: selectedClassId,
+        studentUsernames: [...rosterPick],
+        currentUsernames: activeClassGroup.users.map((u) => u.username),
+      })
+      if (!res.ok) {
+        toast.error(json.error || "Failed to update roster.")
+        return
       }
 
       toast.success("Class roster updated.")
@@ -708,7 +698,7 @@ export default function DashboardV2({ user, onBack }: DashboardProps) {
 
               {!hasRealClasses && (
                 <p className="text-xs font-semibold text-[#6b5210]">
-                  No custom classes yet — click <strong>New class</strong> above (e.g. JCPS), then use{" "}
+                  No custom classes yet — click <strong>New class</strong> above, then use{" "}
                   <strong>Manage students</strong> to add students from Unassigned.
                 </p>
               )}
@@ -716,7 +706,7 @@ export default function DashboardV2({ user, onBack }: DashboardProps) {
               {showNewClassForm && (
                 <div className="flex flex-wrap items-center gap-2 rounded-lg border-2 border-dashed border-[#5a9a32] bg-white/60 p-3">
                   <Input
-                    placeholder="Class name (e.g. JCPS, P3A)"
+                    placeholder="Class name"
                     value={newClassName}
                     onChange={(e) => setNewClassName(e.target.value)}
                     className="min-w-[200px] flex-1 border-2 border-[#8b6914]"
