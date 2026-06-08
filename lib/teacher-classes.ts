@@ -40,9 +40,36 @@ export interface StudentDashboardRow {
 }
 
 export async function resolveTeacher(username: string) {
-  const teacher = await prisma.user.findUnique({ where: { username } })
-  if (!teacher || teacher.role !== "teacher") return null
-  return teacher
+  const normalized = username.trim()
+  if (!normalized) return null
+
+  let teacher = await prisma.user.findUnique({ where: { username: normalized } })
+  if (teacher?.role === "teacher") return teacher
+
+  // Case-insensitive match (e.g. Nicole vs nicole)
+  teacher = await prisma.user.findFirst({
+    where: {
+      role: "teacher",
+      username: { equals: normalized, mode: "insensitive" },
+    },
+  })
+  if (teacher) return teacher
+
+  // Legacy hardcoded teacher login — ensure DB row exists
+  if (normalized === "Nicole") {
+    return prisma.user.upsert({
+      where: { username: "Nicole" },
+      create: {
+        username: "Nicole",
+        password: "yinyin2948",
+        role: "teacher",
+        noAi: false,
+      },
+      update: { role: "teacher" },
+    })
+  }
+
+  return null
 }
 
 export function toClassUserSummary(
