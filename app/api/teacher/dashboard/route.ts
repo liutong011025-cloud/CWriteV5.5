@@ -154,6 +154,92 @@ export async function GET(request: NextRequest) {
   }
 }
 
+type DashboardClassAction =
+  | "createClass"
+  | "renameClass"
+  | "deleteClass"
+  | "updateRoster"
+  | "removeStudent"
+
+/** Class management via same route — avoids 404 when /api/teacher/classes is not deployed yet */
+export async function POST(request: NextRequest) {
+  try {
+    const body = (await request.json()) as {
+      action?: DashboardClassAction
+      teacherUsername?: string
+      name?: string
+      classId?: string
+      studentUsernames?: string[]
+      studentUsername?: string
+      currentUsernames?: string[]
+    }
+
+    const teacherUsername = body.teacherUsername?.trim()
+    if (!teacherUsername) {
+      return NextResponse.json({ error: "teacherUsername is required" }, { status: 400 })
+    }
+
+    const {
+      createTeacherClass,
+      renameTeacherClass,
+      deleteTeacherClass,
+      updateClassRoster,
+      removeStudentFromClass,
+    } = await import("@/lib/teacher-class-actions")
+
+    switch (body.action) {
+      case "createClass": {
+        const result = await createTeacherClass(teacherUsername, body.name || "")
+        if (!result.ok) return NextResponse.json({ error: result.error }, { status: result.status })
+        return NextResponse.json({ success: true, class: result.class }, { status: 201 })
+      }
+      case "renameClass": {
+        if (!body.classId) return NextResponse.json({ error: "classId is required" }, { status: 400 })
+        const result = await renameTeacherClass(teacherUsername, body.classId, body.name || "")
+        if (!result.ok) return NextResponse.json({ error: result.error }, { status: result.status })
+        return NextResponse.json({ success: true, class: result.class })
+      }
+      case "deleteClass": {
+        if (!body.classId) return NextResponse.json({ error: "classId is required" }, { status: 400 })
+        const result = await deleteTeacherClass(teacherUsername, body.classId)
+        if (!result.ok) return NextResponse.json({ error: result.error }, { status: result.status })
+        return NextResponse.json({ success: true })
+      }
+      case "updateRoster": {
+        if (!body.classId) return NextResponse.json({ error: "classId is required" }, { status: 400 })
+        const result = await updateClassRoster(
+          teacherUsername,
+          body.classId,
+          body.studentUsernames || [],
+          body.currentUsernames || [],
+        )
+        if (!result.ok) return NextResponse.json({ error: result.error }, { status: result.status })
+        return NextResponse.json({ success: true })
+      }
+      case "removeStudent": {
+        if (!body.classId || !body.studentUsername) {
+          return NextResponse.json({ error: "classId and studentUsername are required" }, { status: 400 })
+        }
+        const result = await removeStudentFromClass(teacherUsername, body.classId, body.studentUsername)
+        if (!result.ok) return NextResponse.json({ error: result.error }, { status: result.status })
+        return NextResponse.json({ success: true })
+      }
+      default:
+        return NextResponse.json({ error: "Unknown action" }, { status: 400 })
+    }
+  } catch (error) {
+    console.error("[teacher dashboard] POST failed:", error)
+    const message = error instanceof Error ? error.message : String(error)
+    if (message.includes("teacher_classes") || message.includes("does not exist")) {
+      return NextResponse.json(
+        { error: "Database tables missing. Run: npm run db:push" },
+        { status: 503 },
+      )
+    }
+    return NextResponse.json({ error: "Class action failed" }, { status: 500 })
+  }
+}
+
 function addDays(date: Date, days: number) {
   const next = new Date(date)
   next.setDate(next.getDate() + days)
