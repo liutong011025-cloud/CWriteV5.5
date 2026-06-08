@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react"
 import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
-import { ArrowLeft, Bot, ChevronDown, ChevronRight, LogOut, RefreshCw, Upload } from "lucide-react"
+import { ArrowLeft, Bot, ChevronDown, ChevronRight, LogOut, Plus, RefreshCw, Trash2, Upload, UserPlus } from "lucide-react"
 import { Button } from "@/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/ui/avatar"
@@ -29,6 +29,13 @@ interface DashboardData {
     name: string
     users: Array<{ id: string; username: string; avatarUrl: string | null; avatarEmoji: string | null; grade: string | null; totalWorks: number; latestActiveAt: string | null }>
   }>
+  allStudents?: Array<{ id: string; username: string; avatarUrl: string | null; avatarEmoji: string | null; grade: string | null; totalWorks: number; latestActiveAt: string | null }>
+}
+
+const UNASSIGNED_CLASS_ID = "__unassigned__"
+
+function isEditableClass(classId: string | null): boolean {
+  return !!classId && classId !== UNASSIGNED_CLASS_ID
 }
 
 type DashboardUserListItem = DashboardData["classGroups"][number]["users"][number]
@@ -188,6 +195,13 @@ export default function DashboardV2({ user, onBack }: DashboardProps) {
   const [classFileName, setClassFileName] = useState("")
   const [classPreview, setClassPreview] = useState<string[]>([])
   const [selectedClassId, setSelectedClassId] = useState<string | null>(null)
+  const [newClassName, setNewClassName] = useState("")
+  const [showNewClassForm, setShowNewClassForm] = useState(false)
+  const [renameClassName, setRenameClassName] = useState("")
+  const [showRenameForm, setShowRenameForm] = useState(false)
+  const [manageRosterOpen, setManageRosterOpen] = useState(false)
+  const [rosterPick, setRosterPick] = useState<Set<string>>(new Set())
+  const [savingRoster, setSavingRoster] = useState(false)
   const fileRef = useRef<HTMLInputElement | null>(null)
   const selectedRef = useRef<string | null>(null)
   const detailRequestRef = useRef(0)
@@ -203,10 +217,17 @@ export default function DashboardV2({ user, onBack }: DashboardProps) {
   }, [selected])
 
   useEffect(() => {
+    if (!user?.username) return
     void refresh()
     const timer = window.setInterval(() => void refresh(), 15000)
     return () => window.clearInterval(timer)
-  }, [])
+  }, [user?.username])
+
+  useEffect(() => {
+    setManageRosterOpen(false)
+    setShowRenameForm(false)
+    setShowNewClassForm(false)
+  }, [selectedClassId])
 
   useEffect(() => {
     if (!selected) return
@@ -215,9 +236,13 @@ export default function DashboardV2({ user, onBack }: DashboardProps) {
   }, [selected])
 
   async function refresh() {
+    if (!user?.username) return
     setLoadingDashboard(true)
     try {
-      const res = await fetch("/api/teacher/dashboard", { cache: "no-store" })
+      const res = await fetch(
+        `/api/teacher/dashboard?teacher=${encodeURIComponent(user.username)}`,
+        { cache: "no-store" },
+      )
       if (!res.ok) {
         toast.error("Failed to load dashboard data.")
         return
@@ -252,6 +277,136 @@ export default function DashboardV2({ user, onBack }: DashboardProps) {
       return availableUsers[0]?.username ?? null
     })
   }, [activeClassGroup])
+
+  async function createClass() {
+    if (!user?.username) return
+    const name = newClassName.trim()
+    if (!name) {
+      toast.error("Please enter a class name.")
+      return
+    }
+    try {
+      const res = await fetch("/api/teacher/classes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ teacherUsername: user.username, name }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        toast.error(
+          json.error ||
+            (res.status === 500
+              ? "Failed to create class. If tables are missing, run: npm run db:push"
+              : "Failed to create class."),
+        )
+        return
+      }
+      toast.success(`Class "${name}" created.`)
+      setNewClassName("")
+      setShowNewClassForm(false)
+      if (json.class?.id) setSelectedClassId(json.class.id)
+      await refresh()
+    } catch {
+      toast.error("Failed to create class.")
+    }
+  }
+
+  async function renameClass() {
+    if (!user?.username || !selectedClassId || !isEditableClass(selectedClassId)) return
+    const name = renameClassName.trim()
+    if (!name) {
+      toast.error("Please enter a class name.")
+      return
+    }
+    try {
+      const res = await fetch(`/api/teacher/classes/${encodeURIComponent(selectedClassId)}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ teacherUsername: user.username, name }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        toast.error(json.error || "Failed to rename class.")
+        return
+      }
+      toast.success("Class renamed.")
+      setShowRenameForm(false)
+      await refresh()
+    } catch {
+      toast.error("Failed to rename class.")
+    }
+  }
+
+  async function deleteClass() {
+    if (!user?.username || !selectedClassId || !isEditableClass(selectedClassId)) return
+    const cls = classGroups.find((g) => g.id === selectedClassId)
+    if (!window.confirm(`Delete class "${cls?.name ?? ""}"? Students will move to Unassigned.`)) return
+    try {
+      const res = await fetch(
+        `/api/teacher/classes/${encodeURIComponent(selectedClassId)}?teacher=${encodeURIComponent(user.username)}`,
+        { method: "DELETE" },
+      )
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        toast.error(json.error || "Failed to delete class.")
+        return
+      }
+      toast.success("Class deleted.")
+      setSelectedClassId(null)
+      await refresh()
+    } catch {
+      toast.error("Failed to delete class.")
+    }
+  }
+
+  function openRosterManager() {
+    if (!activeClassGroup || !isEditableClass(selectedClassId)) return
+    const current = new Set(
+      activeClassGroup.users.map((u) => u.username).filter((name) => getSafeUsername(name)),
+    )
+    setRosterPick(current)
+    setManageRosterOpen(true)
+  }
+
+  async function saveRoster() {
+    if (!user?.username || !selectedClassId || !isEditableClass(selectedClassId) || !activeClassGroup) return
+    setSavingRoster(true)
+    try {
+      const current = new Set(activeClassGroup.users.map((u) => u.username))
+      const desired = rosterPick
+      const toAdd = [...desired].filter((u) => !current.has(u))
+      const toRemove = [...current].filter((u) => !desired.has(u))
+
+      if (toAdd.length > 0) {
+        const res = await fetch(`/api/teacher/classes/${encodeURIComponent(selectedClassId)}/members`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ teacherUsername: user.username, studentUsernames: toAdd }),
+        })
+        const json = await res.json().catch(() => ({}))
+        if (!res.ok) {
+          toast.error(json.error || "Failed to add students.")
+          return
+        }
+      }
+
+      for (const studentUsername of toRemove) {
+        await fetch(`/api/teacher/classes/${encodeURIComponent(selectedClassId)}/members`, {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ teacherUsername: user.username, studentUsername }),
+        })
+      }
+
+      toast.success("Class roster updated.")
+      setManageRosterOpen(false)
+      await refresh()
+    } catch {
+      toast.error("Failed to update roster.")
+    } finally {
+      setSavingRoster(false)
+    }
+  }
 
   async function loadStudent(username: string) {
     const requestId = ++detailRequestRef.current
@@ -427,6 +582,11 @@ export default function DashboardV2({ user, onBack }: DashboardProps) {
   const users = activeClassGroup?.users ?? []
   const maxWorks = Math.max(...users.map((item) => item.totalWorks), 1)
   const classGroups = data?.classGroups ?? []
+  const allStudents = data?.allStudents ?? []
+  const editableSelectedClass = isEditableClass(selectedClassId)
+  const hasRealClasses = classGroups.some((g) => g.id !== UNASSIGNED_CLASS_ID)
+  const realClassGroups = classGroups.filter((g) => g.id !== UNASSIGNED_CLASS_ID)
+  const unassignedGroup = classGroups.find((g) => g.id === UNASSIGNED_CLASS_ID)
 
   return (
     <PixelPage
@@ -500,30 +660,205 @@ export default function DashboardV2({ user, onBack }: DashboardProps) {
         </div>
 
         <Card className="pixel-card border-[#6b5210] shadow-[6px_6px_0_rgba(0,0,0,0.2)]">
-          <CardHeader>
-            <CardTitle className="pixel-text text-lg font-bold text-[#5a4a2a]">Class file manager</CardTitle>
-            <p className="mt-1 text-[11px] font-semibold leading-snug text-[#6b5210] sm:text-xs">
-              Tile shade vs class max: more saved pieces → darker green (same roster heat map idea).
-            </p>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex flex-wrap items-center gap-2">
-              {classGroups.length > 0 ? (
-                classGroups.map((group) => (
+          <CardHeader className="space-y-3">
+            <div>
+              <CardTitle className="pixel-text text-lg font-bold text-[#5a4a2a]">Class file manager</CardTitle>
+              <p className="mt-1 text-[11px] font-semibold leading-snug text-[#6b5210] sm:text-xs">
+                Tile shade vs class max: more saved pieces → darker green (same roster heat map idea).
+              </p>
+            </div>
+
+            {/* 班级选择栏 — 始终在热力图上方 */}
+            <div className="rounded-lg border-[3px] border-[#8b6914] bg-[#f5e6c8]/95 p-3 space-y-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-xs font-black uppercase tracking-wide text-[#5a4a2a] mr-1">Classes</span>
+                <Button
+                  type="button"
+                  className="pixel-btn pixel-btn-green font-bold shrink-0"
+                  onClick={() => {
+                    setShowNewClassForm(true)
+                    setShowRenameForm(false)
+                  }}
+                >
+                  <Plus className="mr-1 h-4 w-4" />
+                  New class
+                </Button>
+                {realClassGroups.map((group) => (
                   <Button
                     key={group.id}
+                    type="button"
                     className={`pixel-btn font-bold ${selectedClassId === group.id ? "pixel-btn-green" : "pixel-btn-wood"}`}
                     variant={selectedClassId === group.id ? "default" : "outline"}
                     onClick={() => setSelectedClassId(group.id)}
                   >
                     {group.name} ({group.users.length})
                   </Button>
-                ))
-              ) : (
-                <Button className="pixel-btn pixel-btn-green font-bold" disabled>
-                  No classes
-                </Button>
+                ))}
+                {unassignedGroup && (
+                  <Button
+                    type="button"
+                    className={`pixel-btn font-bold ${selectedClassId === unassignedGroup.id ? "pixel-btn-green" : "pixel-btn-wood"}`}
+                    variant={selectedClassId === unassignedGroup.id ? "default" : "outline"}
+                    onClick={() => setSelectedClassId(unassignedGroup.id)}
+                  >
+                    {unassignedGroup.name} ({unassignedGroup.users.length})
+                  </Button>
+                )}
+              </div>
+
+              {!hasRealClasses && (
+                <p className="text-xs font-semibold text-[#6b5210]">
+                  No custom classes yet — click <strong>New class</strong> above (e.g. JCPS), then use{" "}
+                  <strong>Manage students</strong> to add students from Unassigned.
+                </p>
               )}
+
+              {showNewClassForm && (
+                <div className="flex flex-wrap items-center gap-2 rounded-lg border-2 border-dashed border-[#5a9a32] bg-white/60 p-3">
+                  <Input
+                    placeholder="Class name (e.g. JCPS, P3A)"
+                    value={newClassName}
+                    onChange={(e) => setNewClassName(e.target.value)}
+                    className="min-w-[200px] flex-1 border-2 border-[#8b6914]"
+                    autoFocus
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") void createClass()
+                    }}
+                  />
+                  <Button type="button" className="pixel-btn pixel-btn-green font-bold" onClick={() => void createClass()}>
+                    Create class
+                  </Button>
+                  <Button
+                    type="button"
+                    className="pixel-btn pixel-btn-wood font-bold"
+                    variant="outline"
+                    onClick={() => {
+                      setShowNewClassForm(false)
+                      setNewClassName("")
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              )}
+
+              {editableSelectedClass && activeClassGroup && (
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button type="button" className="pixel-btn pixel-btn-green font-bold" onClick={openRosterManager}>
+                    <UserPlus className="mr-2 h-4 w-4" />
+                    Manage students
+                  </Button>
+                  <Button
+                    type="button"
+                    className="pixel-btn pixel-btn-wood font-bold"
+                    variant="outline"
+                    onClick={() => {
+                      setRenameClassName(activeClassGroup.name)
+                      setShowRenameForm((v) => !v)
+                      setShowNewClassForm(false)
+                    }}
+                  >
+                    Rename
+                  </Button>
+                  <Button
+                    type="button"
+                    className="pixel-btn pixel-btn-wood font-bold text-red-900"
+                    variant="outline"
+                    onClick={() => void deleteClass()}
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Delete class
+                  </Button>
+                </div>
+              )}
+
+              {showRenameForm && editableSelectedClass && (
+                <div className="flex flex-wrap items-center gap-2 rounded-lg border-2 border-[#8b6914] bg-white/60 p-3">
+                  <Input
+                    placeholder="New class name"
+                    value={renameClassName}
+                    onChange={(e) => setRenameClassName(e.target.value)}
+                    className="min-w-[200px] max-w-xs border-2 border-[#8b6914]"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") void renameClass()
+                    }}
+                  />
+                  <Button type="button" className="pixel-btn pixel-btn-green font-bold" onClick={() => void renameClass()}>
+                    Save name
+                  </Button>
+                  <Button
+                    type="button"
+                    className="pixel-btn pixel-btn-wood font-bold"
+                    variant="outline"
+                    onClick={() => setShowRenameForm(false)}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              )}
+
+              {manageRosterOpen && editableSelectedClass && (
+                <div className="space-y-3 rounded-lg border-[3px] border-[#5a9a32] bg-white/70 p-4">
+                  <p className="text-sm font-bold text-[#5a4a2a]">
+                    Select students for <span className="text-[#3d5a1f]">{activeClassGroup?.name}</span>
+                  </p>
+                  <div className="grid max-h-56 grid-cols-2 gap-2 overflow-y-auto sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+                    {allStudents.map((student) => {
+                      const safe = getSafeUsername(student.username)
+                      if (!safe) return null
+                      const checked = rosterPick.has(student.username)
+                      return (
+                        <label
+                          key={student.id}
+                          className={`flex cursor-pointer items-center gap-2 rounded-lg border-2 px-2 py-2 text-xs font-semibold ${
+                            checked ? "border-[#5a9a32] bg-[#d4f5b8]" : "border-[#8b6914] bg-white/80"
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => {
+                              setRosterPick((prev) => {
+                                const next = new Set(prev)
+                                if (next.has(student.username)) next.delete(student.username)
+                                else next.add(student.username)
+                                return next
+                              })
+                            }}
+                          />
+                          <span className="truncate">{getUserDisplayName(student.username)}</span>
+                        </label>
+                      )
+                    })}
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      type="button"
+                      className="pixel-btn pixel-btn-green font-bold"
+                      disabled={savingRoster}
+                      onClick={() => void saveRoster()}
+                    >
+                      {savingRoster ? "Saving…" : "Save roster"}
+                    </Button>
+                    <Button
+                      type="button"
+                      className="pixel-btn pixel-btn-wood font-bold"
+                      variant="outline"
+                      onClick={() => setManageRosterOpen(false)}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              <p className="text-[11px] font-semibold text-[#6b5210]">
+                Viewing roster: <strong className="text-[#3d5a1f]">{activeClassGroup?.name ?? "—"}</strong>
+              </p>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex flex-wrap items-center gap-2">
               <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadDemo(f); e.currentTarget.value = "" }} />
               <Button className="pixel-btn pixel-btn-blue ml-auto font-bold" variant="outline" onClick={() => fileRef.current?.click()}><Upload className="mr-2 h-4 w-4" />Upload Class List (Demo)</Button>
             </div>
