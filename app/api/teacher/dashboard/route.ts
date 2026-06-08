@@ -5,6 +5,7 @@ import { isDatabaseConnectionError } from "@/lib/prisma-errors"
 import {
   resolveClassGroupsForTeacher,
   fetchDashboardClassGroups,
+  injectClassIntoGroups,
   type StudentDashboardRow,
 } from "@/lib/teacher-classes"
 
@@ -193,7 +194,13 @@ export async function POST(request: NextRequest) {
       case "createClass": {
         const result = await createTeacherClass(teacherUsername, body.name || "")
         if (!result.ok) return NextResponse.json({ error: result.error }, { status: result.status })
-        const classGroups = await fetchDashboardClassGroups(teacherUsername)
+        let classGroups: Awaited<ReturnType<typeof fetchDashboardClassGroups>> = []
+        try {
+          classGroups = await fetchDashboardClassGroups(teacherUsername)
+        } catch (loadError) {
+          console.warn("[teacher dashboard] classGroups reload failed after create:", loadError)
+        }
+        classGroups = injectClassIntoGroups(classGroups, result.class)
         return NextResponse.json({ success: true, class: result.class, classGroups }, { status: 201 })
       }
       case "renameClass": {
