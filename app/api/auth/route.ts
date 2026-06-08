@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma, isDatabaseUrlConfigured } from "@/lib/prisma"
 
-// 新用户注册开关
+// 新用户注册开关（学生 + 教师）
 const REGISTRATION_ENABLED = true
+const TEACHER_REGISTRATION_ENABLED = true
 const REGISTRATION_DISABLED_MESSAGE = "New user registration: Function is not available."
+const TEACHER_REGISTRATION_DISABLED_MESSAGE = "Teacher registration is not available."
 
 // 登錄邏輯：
 // - 特殊帳號：copywriting / yinyin2948 → 文案編輯模式（不依賴資料庫）
@@ -17,8 +19,9 @@ export async function POST(request: NextRequest) {
       password?: string
       email?: string
       name?: string
+      role?: "teacher" | "student"
     }
-    const { action = "login", username, password, email, name } = body
+    const { action = "login", username, password, email, name, role } = body
 
     if (action === "register") {
       if (!REGISTRATION_ENABLED) {
@@ -83,12 +86,23 @@ export async function POST(request: NextRequest) {
         )
       }
 
+      const requestedRole = role === "teacher" ? "teacher" : "student"
+      if (requestedRole === "teacher" && !TEACHER_REGISTRATION_ENABLED) {
+        return NextResponse.json(
+          { success: false, error: TEACHER_REGISTRATION_DISABLED_MESSAGE },
+          { status: 403 },
+        )
+      }
+
       const createdUser = await prisma.user.create({
         data: {
           username: trimmedName,
           password: trimmedPassword,
-          role: "student",
+          role: requestedRole,
           noAi: false,
+          profile: {
+            create: { email: trimmedEmail },
+          },
         },
       })
 
