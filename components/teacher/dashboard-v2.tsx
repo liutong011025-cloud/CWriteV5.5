@@ -187,6 +187,7 @@ export default function DashboardV2({ user, onBack }: DashboardProps) {
   const [revisionTab, setRevisionTab] = useState<Record<string, number>>({})
   const [classFileName, setClassFileName] = useState("")
   const [classPreview, setClassPreview] = useState<string[]>([])
+  const [selectedClassId, setSelectedClassId] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement | null>(null)
   const selectedRef = useRef<string | null>(null)
   const detailRequestRef = useRef(0)
@@ -223,17 +224,34 @@ export default function DashboardV2({ user, onBack }: DashboardProps) {
       }
       const json = (await res.json()) as DashboardData
       setData(json)
-      const availableUsers: DashboardUserListItem[] = (json.classGroups[0]?.users ?? []).filter(
-        (item) => getSafeUsername(item.username).length > 0,
-      )
-      setSelected((current: string | null) => {
-        if (current && availableUsers.some((item: DashboardUserListItem) => item.username === current)) return current
-        return availableUsers[0]?.username ?? null
+      const groups = json.classGroups ?? []
+      setSelectedClassId((current) => {
+        if (current && groups.some((g) => g.id === current)) return current
+        return groups[0]?.id ?? null
       })
     } finally {
       setLoadingDashboard(false)
     }
   }
+
+  const activeClassGroup = useMemo(() => {
+    if (!data?.classGroups?.length) return null
+    if (selectedClassId && data.classGroups.some((g) => g.id === selectedClassId)) {
+      return data.classGroups.find((g) => g.id === selectedClassId) ?? data.classGroups[0]
+    }
+    return data.classGroups[0]
+  }, [data, selectedClassId])
+
+  useEffect(() => {
+    if (!activeClassGroup) return
+    const availableUsers = activeClassGroup.users.filter(
+      (item) => getSafeUsername(item.username).length > 0,
+    )
+    setSelected((current) => {
+      if (current && availableUsers.some((item) => item.username === current)) return current
+      return availableUsers[0]?.username ?? null
+    })
+  }, [activeClassGroup])
 
   async function loadStudent(username: string) {
     const requestId = ++detailRequestRef.current
@@ -406,8 +424,9 @@ export default function DashboardV2({ user, onBack }: DashboardProps) {
     r.readAsText(file)
   }
 
-  const users = data?.classGroups[0]?.users ?? []
+  const users = activeClassGroup?.users ?? []
   const maxWorks = Math.max(...users.map((item) => item.totalWorks), 1)
+  const classGroups = data?.classGroups ?? []
 
   return (
     <PixelPage
@@ -489,13 +508,22 @@ export default function DashboardV2({ user, onBack }: DashboardProps) {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex flex-wrap items-center gap-2">
-              <Button className="pixel-btn pixel-btn-green font-bold">Class 1</Button>
-              <Button className="pixel-btn pixel-btn-wood font-bold" variant="outline" disabled>
-                Class 2
-              </Button>
-              <Button className="pixel-btn pixel-btn-wood font-bold" variant="outline" disabled>
-                Class 3
-              </Button>
+              {classGroups.length > 0 ? (
+                classGroups.map((group) => (
+                  <Button
+                    key={group.id}
+                    className={`pixel-btn font-bold ${selectedClassId === group.id ? "pixel-btn-green" : "pixel-btn-wood"}`}
+                    variant={selectedClassId === group.id ? "default" : "outline"}
+                    onClick={() => setSelectedClassId(group.id)}
+                  >
+                    {group.name} ({group.users.length})
+                  </Button>
+                ))
+              ) : (
+                <Button className="pixel-btn pixel-btn-green font-bold" disabled>
+                  No classes
+                </Button>
+              )}
               <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadDemo(f); e.currentTarget.value = "" }} />
               <Button className="pixel-btn pixel-btn-blue ml-auto font-bold" variant="outline" onClick={() => fileRef.current?.click()}><Upload className="mr-2 h-4 w-4" />Upload Class List (Demo)</Button>
             </div>
