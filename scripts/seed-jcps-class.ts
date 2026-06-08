@@ -75,7 +75,29 @@ async function createTeacher(
     })
   }
 
-  console.log(`  ✅ 教师 ${username} (${email}) — 密码: ${password}`)
+  const teacherClass = await prisma.teacherClass.upsert({
+    where: { teacherId_name: { teacherId: user.id, name: JCPS_CLASS } },
+    update: {},
+    create: { teacherId: user.id, name: JCPS_CLASS },
+  })
+
+  const studentIds: string[] = []
+  for (const studentName of JCPS_STUDENTS) {
+    const student = await prisma.user.findUnique({ where: { username: studentName } })
+    if (student) studentIds.push(student.id)
+  }
+
+  if (studentIds.length > 0) {
+    await prisma.classMember.deleteMany({
+      where: { classId: teacherClass.id },
+    })
+    await prisma.classMember.createMany({
+      data: studentIds.map((studentId) => ({ classId: teacherClass.id, studentId })),
+      skipDuplicates: true,
+    })
+  }
+
+  console.log(`  ✅ 教师 ${username} (${email}) — 密码: ${password} · 班级 ${JCPS_CLASS}`)
 }
 
 async function main() {
