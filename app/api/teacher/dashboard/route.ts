@@ -3,11 +3,13 @@ import { format, startOfDay, subDays, subHours } from "date-fns"
 import { prisma } from "@/lib/prisma"
 import { isDatabaseConnectionError } from "@/lib/prisma-errors"
 import {
-  buildGradeClassGroups,
-  buildTeacherClassGroups,
-  resolveTeacher,
+  resolveClassGroupsForTeacher,
+  fetchDashboardClassGroups,
   type StudentDashboardRow,
 } from "@/lib/teacher-classes"
+
+export const dynamic = "force-dynamic"
+export const revalidate = 0
 
 interface DashboardUser extends StudentDashboardRow {}
 
@@ -114,7 +116,7 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    const classGroups = await resolveClassGroups(teacherUsername, users, latestActivityMap)
+    const classGroups = await resolveClassGroupsForTeacher(teacherUsername, users, latestActivityMap)
     const allStudents = users
       .map((item) => toUserSummary(item, latestActivityMap))
       .sort((a, b) => a.username.localeCompare(b.username))
@@ -191,19 +193,22 @@ export async function POST(request: NextRequest) {
       case "createClass": {
         const result = await createTeacherClass(teacherUsername, body.name || "")
         if (!result.ok) return NextResponse.json({ error: result.error }, { status: result.status })
-        return NextResponse.json({ success: true, class: result.class }, { status: 201 })
+        const classGroups = await fetchDashboardClassGroups(teacherUsername)
+        return NextResponse.json({ success: true, class: result.class, classGroups }, { status: 201 })
       }
       case "renameClass": {
         if (!body.classId) return NextResponse.json({ error: "classId is required" }, { status: 400 })
         const result = await renameTeacherClass(teacherUsername, body.classId, body.name || "")
         if (!result.ok) return NextResponse.json({ error: result.error }, { status: result.status })
-        return NextResponse.json({ success: true, class: result.class })
+        const classGroups = await fetchDashboardClassGroups(teacherUsername)
+        return NextResponse.json({ success: true, class: result.class, classGroups })
       }
       case "deleteClass": {
         if (!body.classId) return NextResponse.json({ error: "classId is required" }, { status: 400 })
         const result = await deleteTeacherClass(teacherUsername, body.classId)
         if (!result.ok) return NextResponse.json({ error: result.error }, { status: result.status })
-        return NextResponse.json({ success: true })
+        const classGroups = await fetchDashboardClassGroups(teacherUsername)
+        return NextResponse.json({ success: true, classGroups })
       }
       case "updateRoster": {
         if (!body.classId) return NextResponse.json({ error: "classId is required" }, { status: 400 })
@@ -214,7 +219,8 @@ export async function POST(request: NextRequest) {
           body.currentUsernames || [],
         )
         if (!result.ok) return NextResponse.json({ error: result.error }, { status: result.status })
-        return NextResponse.json({ success: true })
+        const classGroups = await fetchDashboardClassGroups(teacherUsername)
+        return NextResponse.json({ success: true, classGroups })
       }
       case "removeStudent": {
         if (!body.classId || !body.studentUsername) {
@@ -222,7 +228,8 @@ export async function POST(request: NextRequest) {
         }
         const result = await removeStudentFromClass(teacherUsername, body.classId, body.studentUsername)
         if (!result.ok) return NextResponse.json({ error: result.error }, { status: result.status })
-        return NextResponse.json({ success: true })
+        const classGroups = await fetchDashboardClassGroups(teacherUsername)
+        return NextResponse.json({ success: true, classGroups })
       }
       default:
         return NextResponse.json({ error: "Unknown action" }, { status: 400 })
@@ -289,24 +296,6 @@ function buildEmptyDashboardPayload(now: Date, degraded = false) {
     degraded,
     updatedAt: now.toISOString(),
   }
-}
-
-async function resolveClassGroups(
-  teacherUsername: string | null,
-  users: DashboardUser[],
-  latestActivityMap: Map<string, Date>,
-) {
-  if (teacherUsername) {
-    const teacher = await resolveTeacher(teacherUsername)
-    if (teacher) {
-      try {
-        return await buildTeacherClassGroups(teacher.id, users, latestActivityMap)
-      } catch (error) {
-        console.warn("[teacher dashboard] TeacherClass query failed, falling back to grade groups:", error)
-      }
-    }
-  }
-  return buildGradeClassGroups(users, latestActivityMap)
 }
 
 interface DashboardUserSummary {
