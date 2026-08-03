@@ -8,8 +8,18 @@ export default function HeaderWrapper() {
   const pathname = usePathname()
   const [shouldShowHeader, setShouldShowHeader] = useState(true)
 
-  // Hide header on admin routes
-  if (pathname?.startsWith('/admin')) {
+  // Hide marketing header on login / teacher / student app (student shell owns nav)
+  const isStudentApp =
+    pathname?.startsWith("/my-farm") ||
+    pathname?.startsWith("/writing") ||
+    pathname?.startsWith("/library")
+
+  if (
+    pathname?.startsWith("/admin") ||
+    pathname === "/" ||
+    pathname?.startsWith("/teacher") ||
+    isStudentApp
+  ) {
     return null
   }
 
@@ -23,6 +33,17 @@ export default function HeaderWrapper() {
         const loginPage = document.querySelector('.login-page, #login-page')
         // 检查是否有no-header属性（library界面）
         const noHeaderElements = document.querySelectorAll('[data-no-header]')
+
+        if (
+          pathname === "/" ||
+          pathname?.startsWith("/teacher") ||
+          pathname?.startsWith("/my-farm") ||
+          pathname?.startsWith("/writing") ||
+          pathname?.startsWith("/library")
+        ) {
+          setShouldShowHeader(false)
+          return
+        }
         
         // 更严格的检查：如果main元素的data-stage属性是"login"，则不显示header
         if (stage === 'login') {
@@ -76,7 +97,7 @@ export default function HeaderWrapper() {
       clearInterval(intervalId)
       observer.disconnect()
     }
-  }, [])
+  }, [pathname])
 
   if (!shouldShowHeader) {
     return null
