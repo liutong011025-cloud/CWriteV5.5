@@ -8,101 +8,80 @@ export default function HeaderWrapper() {
   const pathname = usePathname()
   const [shouldShowHeader, setShouldShowHeader] = useState(true)
 
-  // Hide marketing header on login / teacher / student app (student shell owns nav)
-  const isStudentApp =
-    pathname?.startsWith("/my-farm") ||
-    pathname?.startsWith("/writing") ||
-    pathname?.startsWith("/library")
-
-  if (
+  // 一律先跑完 hooks，再决定是否渲染（避免条件 return 导致 hooks 数量不一致、Header 整页崩掉）
+  const hideByPath =
     pathname?.startsWith("/admin") ||
     pathname === "/" ||
-    pathname?.startsWith("/teacher") ||
-    isStudentApp
-  ) {
-    return null
-  }
+    pathname?.startsWith("/teacher")
 
-    useEffect(() => {
-      const checkLoginStage = () => {
-        // 检查是否有登录页面的特定元素或data属性
-        const mainElement = document.querySelector('main[data-stage]')
-        const stage = mainElement?.getAttribute('data-stage')
-        const loginElements = document.querySelectorAll('[data-login-page]')
-        // 检查是否有登录页面的类名或ID
-        const loginPage = document.querySelector('.login-page, #login-page')
-        // 检查是否有no-header属性（library界面）
-        const noHeaderElements = document.querySelectorAll('[data-no-header]')
+  // 学生主区始终显示全局 Header（journey 沉浸页用 data-no-header 临时关掉）
+  const forceShowStudentNav =
+    pathname === "/my-farm" ||
+    pathname === "/writing" ||
+    pathname === "/library" ||
+    pathname === "/write" ||
+    pathname === "/gallery"
 
-        if (
-          pathname === "/" ||
-          pathname?.startsWith("/teacher") ||
-          pathname?.startsWith("/my-farm") ||
-          pathname?.startsWith("/writing") ||
-          pathname?.startsWith("/library")
-        ) {
-          setShouldShowHeader(false)
-          return
-        }
-        
-        // 更严格的检查：如果main元素的data-stage属性是"login"，则不显示header
-        if (stage === 'login') {
-          setShouldShowHeader(false)
-          return
-        }
-
-        if (stage === 'dashboard') {
-          setShouldShowHeader(false)
-          return
-        }
-        
-        // 检查是否有data-login-page属性
-        if (loginElements.length > 0) {
-          setShouldShowHeader(false)
-          return
-        }
-        
-        // 检查是否有data-no-header属性（library界面）
-        if (noHeaderElements.length > 0) {
-          setShouldShowHeader(false)
-          return
-        }
-        
-        setShouldShowHeader(true)
-      }
-
-    // 初始检查（延迟一下确保DOM已渲染）
-    const timeoutId = setTimeout(checkLoginStage, 50)
-    checkLoginStage()
-
-    // 使用 MutationObserver 监听 DOM 变化
-    const observer = new MutationObserver(() => {
-      checkLoginStage()
-    })
-    
-    if (typeof window !== 'undefined' && document.body) {
-      observer.observe(document.body, { 
-        childList: true, 
-        subtree: true,
-        attributes: true,
-        attributeFilter: ['data-stage', 'data-login-page', 'data-no-header', 'class', 'id']
-      })
+  useEffect(() => {
+    if (hideByPath) {
+      setShouldShowHeader(false)
+      return
     }
 
-    // 定期检查（作为备用方案）
-    const intervalId = setInterval(checkLoginStage, 300)
+    const check = () => {
+      if (forceShowStudentNav) {
+        const noHeader = document.querySelector("[data-no-header]")
+        // writing 流程里 journey / book-selection 可临时隐藏；farm / library 始终显示
+        if (pathname === "/writing" || pathname === "/write") {
+          setShouldShowHeader(!noHeader)
+          return
+        }
+        setShouldShowHeader(true)
+        return
+      }
+
+      const mainElement = document.querySelector("main[data-stage]")
+      const stage = mainElement?.getAttribute("data-stage")
+      const loginElements = document.querySelectorAll("[data-login-page]")
+      const noHeaderElements = document.querySelectorAll("[data-no-header]")
+
+      if (stage === "login" || stage === "dashboard") {
+        setShouldShowHeader(false)
+        return
+      }
+
+      if (loginElements.length > 0 || noHeaderElements.length > 0) {
+        setShouldShowHeader(false)
+        return
+      }
+
+      setShouldShowHeader(true)
+    }
+
+    check()
+    const timeoutId = setTimeout(check, 50)
+    const intervalId = setInterval(check, 400)
+
+    const observer = new MutationObserver(check)
+    if (typeof document !== "undefined" && document.body) {
+      observer.observe(document.body, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: ["data-stage", "data-login-page", "data-no-header"],
+      })
+    }
 
     return () => {
       clearTimeout(timeoutId)
       clearInterval(intervalId)
       observer.disconnect()
     }
-  }, [pathname])
+  }, [pathname, hideByPath, forceShowStudentNav])
 
-  if (!shouldShowHeader) {
+  if (hideByPath || !shouldShowHeader) {
     return null
   }
 
   return <Header />
 }
-
