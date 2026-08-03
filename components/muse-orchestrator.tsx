@@ -2,8 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback, useRef } from "react"
 import { useRouter } from "next/navigation"
-import { getStoredUser, setStoredUser } from "@/lib/client-auth"
-import HomePage from "@/components/stages/home-page"
+import { getPostLoginPath, getStoredUser, setStoredUser } from "@/lib/client-auth"
 import WelcomePage from "@/components/stages/welcome-page"
 import BookReviewWelcome from "@/components/stages/book-review-welcome"
 import CharacterCreation from "@/components/stages/character-creation"
@@ -662,6 +661,14 @@ export default function MuseOrchestrator({
     setLevelBadgeUnlocked(false)
     setStage("writeTypeSelection")
   }, [])
+
+  // 旧 home stage 不再渲染营销首页，一律回 My Farm
+  useEffect(() => {
+    if (stage === "home") {
+      goMyFarm()
+    }
+  }, [stage, goMyFarm])
+
   const [journeyActive, setJourneyActive] = useState(false)
   const [currentPin, setCurrentPin] = useState<{ x: number; y: number } | null>(null)
   const [journeyStartPin, setJourneyStartPin] = useState<{ x: number; y: number } | null>(null)
@@ -2086,11 +2093,7 @@ export default function MuseOrchestrator({
           onLogin={(userData) => {
             setUser(userData)
             setStoredUser(userData)
-            if (userData.username === "copywriting" || userData.role !== "teacher") {
-              router.replace("/my-farm")
-            } else {
-              router.replace("/teacher/dashboard")
-            }
+            window.location.replace(getPostLoginPath(userData))
           }}
         />
       )}
@@ -2484,7 +2487,8 @@ export default function MuseOrchestrator({
               bookCoverUrl: undefined,
               bookSummary: undefined,
             })
-            setStage(journeyActive ? "journeyMap" : "home")
+            if (journeyActive) setStage("journeyMap")
+            else goMyFarm()
           }}
           onBack={async () => {
             // 如果正在编辑已保存的作品，加载之前的内容
@@ -2543,7 +2547,8 @@ export default function MuseOrchestrator({
               bookCoverUrl: undefined,
               bookSummary: undefined,
             })
-            setStage(journeyActive ? "journeyMap" : "home")
+            if (journeyActive) setStage("journeyMap")
+            else goMyFarm()
           }}
           onBack={() => setStage("bookReviewWritingNoAi")}
           userId={user.username}
@@ -2731,7 +2736,8 @@ export default function MuseOrchestrator({
             })
 
             setStoryState({ character: null, plot: null, structure: null, story: "" })
-            setStage(journeyActive ? "journeyMap" : "home")
+            if (journeyActive) setStage("journeyMap")
+            else goMyFarm()
           }}
           onEdit={async (editStage) => {
             // 如果正在编辑已保存的作品，加载之前的内容
@@ -2937,7 +2943,8 @@ export default function MuseOrchestrator({
               sections: [],
               letter: "",
             })
-            setStage(journeyActive ? "journeyMap" : "home")
+            if (journeyActive) setStage("journeyMap")
+            else goMyFarm()
           }}
           onBack={async () => {
             // 如果正在编辑已保存的作品，加载之前的内容
@@ -3108,7 +3115,8 @@ export default function MuseOrchestrator({
             const title = `Poetry: ${topic}`
             evaluateValuesGrowth(poetryLinesText, "story", title)
             void queueJourneyMapUpdate({ title, topic, content: poetryLinesText, workType: "poetry", source: "poetry" })
-            setStage(journeyActive ? "journeyMap" : "home")
+            if (journeyActive) setStage("journeyMap")
+            else goMyFarm()
           }}
         />
       )}
@@ -3124,7 +3132,8 @@ export default function MuseOrchestrator({
             const title = `Poetry: ${topic}`
             evaluateValuesGrowth(poetryLinesText, "story", title)
             void queueJourneyMapUpdate({ title, topic, content: poetryLinesText, workType: "poetry", source: "poetry" })
-            setStage(journeyActive ? "journeyMap" : "home")
+            if (journeyActive) setStage("journeyMap")
+            else goMyFarm()
           }}
         />
       )}
@@ -3140,7 +3149,8 @@ export default function MuseOrchestrator({
             const title = `Poetry: ${topic}`
             evaluateValuesGrowth(poetryLinesText, "story", title)
             void queueJourneyMapUpdate({ title, topic, content: poetryLinesText, workType: "poetry", source: "poetry" })
-            setStage(journeyActive ? "journeyMap" : "home")
+            if (journeyActive) setStage("journeyMap")
+            else goMyFarm()
           }}
         />
       )}
@@ -3156,7 +3166,8 @@ export default function MuseOrchestrator({
             const title = `Poetry: ${topic}`
             evaluateValuesGrowth(poetryLinesText, "story", title)
             void queueJourneyMapUpdate({ title, topic, content: poetryLinesText, workType: "poetry", source: "poetry" })
-            setStage(journeyActive ? "journeyMap" : "home")
+            if (journeyActive) setStage("journeyMap")
+            else goMyFarm()
           }}
         />
       )}
@@ -3172,7 +3183,8 @@ export default function MuseOrchestrator({
             const title = `Poetry: ${topic}`
             evaluateValuesGrowth(poetryLinesText, "story", title)
             void queueJourneyMapUpdate({ title, topic, content: poetryLinesText, workType: "poetry", source: "poetry" })
-            setStage(journeyActive ? "journeyMap" : "home")
+            if (journeyActive) setStage("journeyMap")
+            else goMyFarm()
           }}
         />
       )}
