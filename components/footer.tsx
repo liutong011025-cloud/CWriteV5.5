@@ -8,13 +8,18 @@ export default function Footer() {
   const pathname = usePathname()
   const stage = useMainStage()
 
-  // Hide footer on admin routes
-  if (pathname?.startsWith('/admin')) {
+  // Hide footer on admin / login / teacher / immersive farm
+  if (
+    pathname?.startsWith("/admin") ||
+    pathname === "/" ||
+    pathname?.startsWith("/teacher") ||
+    pathname?.startsWith("/my-farm")
+  ) {
     return null
   }
 
   // Login / 教师工作台：与沉浸式页面一致，隐藏底部 EdUHK 横条
-  if (stage === "login" || stage === "dashboard") {
+  if (stage === "login" || stage === "dashboard" || stage === "userProfile") {
     return null
   }
 
