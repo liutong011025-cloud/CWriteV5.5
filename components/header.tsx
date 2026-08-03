@@ -175,7 +175,7 @@ export default function Header() {
   // 3. 顶部时，文字为黑色；滚动后，文字根据背景调整
   const isHomePage = currentStage === 'home' || pathname === '/'
   const isAboutPage = currentStage?.startsWith('about') || false
-  const isGalleryPage = currentStage === 'gallery' || pathname === '/gallery' || pathname?.includes('gallery')
+  const isGalleryPage = currentStage === 'gallery' || pathname === '/gallery' || pathname?.includes('gallery') || pathname === '/library'
   const showBackground = isScrolled || isAboutPage || isGalleryPage // About 和 Gallery 页面始终显示背景
   const showLogo = isHomePage && isAtTop && !isHovering && !isAboutPage && !isGalleryPage // 只在首页顶部且未悬停时显示logo
 
@@ -185,25 +185,36 @@ export default function Header() {
     item.action()
   }
 
-  return (
+    // 学生主区（农场/写作/图书馆）始终用实色顶栏，避免被全屏农场盖住或透明看不见
+    const isStudentAppRoute =
+      pathname === "/my-farm" ||
+      pathname === "/writing" ||
+      pathname === "/library" ||
+      pathname === "/write" ||
+      pathname === "/gallery" ||
+      currentStage === "userProfile" ||
+      currentStage === "writeTypeSelection"
+    const useSolidHeader = showBackground || isStudentAppRoute
+
+    return (
     <header
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        isAboutPage || isGalleryPage
-          ? 'h-14 md:h-[52px] xl:h-16 shadow-xl' // About 和 Gallery 页面使用中等高度的header
+      className={`fixed top-0 left-0 right-0 z-[200] transition-all duration-300 ${
+        isAboutPage || isGalleryPage || isStudentAppRoute
+          ? 'h-14 md:h-[52px] xl:h-16 shadow-xl'
           : isHomePage 
           ? (isScrolled ? 'h-12 md:h-[54px] xl:h-14 shadow-xl' : 'h-24 md:h-[92px] xl:h-32')
-          : 'h-12 md:h-[50px] xl:h-12 shadow-lg' // 非首页始终保持窄的header
+          : 'h-12 md:h-[50px] xl:h-12 shadow-lg'
       }`}
       onMouseEnter={() => setIsHovering(true)}
       onMouseLeave={() => setIsHovering(false)}
       style={{
         overflow: 'visible',
-        background: showBackground
+        background: useSolidHeader
           ? 'linear-gradient(135deg, rgba(15, 23, 42, 0.98) 0%, rgba(30, 58, 138, 0.95) 50%, rgba(15, 23, 42, 0.98) 100%)'
           : 'transparent',
-        backdropFilter: showBackground ? 'blur(12px) saturate(180%)' : 'none',
-        borderBottom: showBackground ? '1px solid rgba(59, 130, 246, 0.3)' : 'none',
-        boxShadow: showBackground 
+        backdropFilter: useSolidHeader ? 'blur(12px) saturate(180%)' : 'none',
+        borderBottom: useSolidHeader ? '1px solid rgba(59, 130, 246, 0.3)' : 'none',
+        boxShadow: useSolidHeader 
           ? '0 4px 20px rgba(15, 23, 42, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1)' 
           : 'none',
       }}
@@ -298,17 +309,17 @@ export default function Header() {
                        href={item.href}
                        onClick={(e) => handleNavClick(item, e)}
                        className={`px-2.5 py-1.5 md:px-2.5 md:py-1.5 xl:px-6 xl:py-3 rounded-lg font-semibold text-xs md:text-[12px] xl:text-lg transition-all duration-200 whitespace-nowrap ${
-                         isGalleryPage
+                         isGalleryPage || isStudentAppRoute
                            ? isActive
-                             ? 'text-yellow-200 hover:text-yellow-100' // Gallery 页面激活时显示黄色
-                             : 'text-white hover:text-yellow-200' // Gallery 页面未激活按钮显示白色，hover 时变黄色
+                             ? 'text-yellow-200 hover:text-yellow-100'
+                             : 'text-white hover:text-yellow-200'
                            : isActive
-                           ? showBackground
-                             ? 'text-yellow-200' // 其他页面在滚动后显示低饱和度黄色，不显示按钮背景
-                             : 'text-black' // 顶部时不显示背景，只显示文字
-                           : showBackground
-                           ? 'text-blue-100 hover:text-white' // 其他页面未激活按钮
-                           : 'text-black drop-shadow-sm hover:text-gray-700' // 顶部时显示黑色文字
+                           ? useSolidHeader
+                             ? 'text-yellow-200'
+                             : 'text-black'
+                           : useSolidHeader
+                           ? 'text-blue-100 hover:text-white'
+                           : 'text-black drop-shadow-sm hover:text-gray-700'
                        }`}
                      >
                        {item.label}
