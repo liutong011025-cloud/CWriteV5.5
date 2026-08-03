@@ -127,25 +127,9 @@ export default function Header() {
   }, [])
 
   const navItems = [
-    { label: "Home", href: "/", action: () => {
-      // 触发自定义事件来通知主页面切换到home
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('navigateToHome'))
-      }
-      // 滚动到顶部
-      window.scrollTo({ top: 0, behavior: 'smooth' })
-    } },
-    { label: "New Writing", href: "/write", action: () => {
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('navigateToWriteTypeSelection'))
-      }
-    } },
-    { label: "Luminai Library", href: "/gallery", action: () => {
-      // 触发自定义事件来通知主页面切换到gallery
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('navigateToGallery'))
-      }
-    } },
+    { label: "My Farm", href: "/my-farm", action: () => router.push("/my-farm") },
+    { label: "Writing", href: "/writing", action: () => router.push("/writing") },
+    { label: "Library", href: "/library", action: () => router.push("/library") },
     { label: "Resource", href: "/research", action: () => {
       if (typeof window !== "undefined") {
         window.dispatchEvent(new CustomEvent("navigateToResearch"))
@@ -299,10 +283,14 @@ export default function Header() {
                  <div className="flex items-center gap-1.5 md:gap-1.5 xl:gap-3 min-w-0 justify-end">
                  {navItems.map((item) => {
                    // 检查是否激活
-                  const isHomePageActive = (currentStage === 'home' || pathname === '/') && item.href === "/"
+                  const isHomePageActive = (pathname === "/my-farm" || currentStage === "userProfile") && item.href === "/my-farm"
                   const isAboutPageActive = false
-                  const isWritePageActive = currentStage === 'writeTypeSelection' && item.href === "/write"
-                  const isGalleryPageActive = isGalleryPage && (item.href === "/gallery" || item.label === "Luminai Library")
+                  const isWritePageActive =
+                    (pathname === "/writing" || pathname === "/write" || currentStage === "writeTypeSelection") &&
+                    item.href === "/writing"
+                  const isGalleryPageActive =
+                    (isGalleryPage || pathname === "/library") &&
+                    (item.href === "/library" || item.label === "Library")
                   const isActive = isHomePageActive || isAboutPageActive || isWritePageActive || isGalleryPageActive
                    return (
                      <Link
@@ -383,11 +371,11 @@ export default function Header() {
                  </div>
                  </div>
                  
-                {/* My Farm 文字按钮 - 登录后显示，点击进入农场 */}
+                {/* Avatar shortcut → My Farm */}
                  {userInfo && (
                    <button
                      type="button"
-                     onClick={() => window.dispatchEvent(new CustomEvent("navigateToUserProfile"))}
+                     onClick={() => router.push("/my-farm")}
                     className={`relative flex-shrink-0 ml-0.5 xl:ml-1 px-2.5 py-1.5 md:px-2.5 md:py-1.5 xl:px-6 xl:py-3 rounded-lg font-semibold text-xs md:text-[12px] xl:text-lg transition-all duration-200 whitespace-nowrap ${
                       showBackground
                         ? "text-blue-100 hover:text-white"
@@ -395,7 +383,7 @@ export default function Header() {
                     } focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:ring-offset-2 focus:ring-offset-slate-900/50`}
                      aria-label="Go to My Farm"
                    >
-                    My Farm
+                    {userInfo.username}
                      {userInfo.unreadCount > 0 && (
                        <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
                          {userInfo.unreadCount > 99 ? "99+" : userInfo.unreadCount}
