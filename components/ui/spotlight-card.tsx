@@ -7,12 +7,17 @@ interface Position {
 
 interface SpotlightCardProps extends React.PropsWithChildren {
   className?: string
+  style?: React.CSSProperties
+  /** 磨砂玻璃底色不透明度，0–1，默认 0.1 */
+  glassOpacity?: number
   spotlightColor?: `rgba(${number}, ${number}, ${number}, ${number})`
 }
 
 const SpotlightCard: React.FC<SpotlightCardProps> = ({
   children,
   className = "",
+  style,
+  glassOpacity = 0.1,
   spotlightColor = "rgba(255, 255, 255, 0.25)",
 }) => {
   const divRef = useRef<HTMLDivElement>(null)
@@ -53,7 +58,11 @@ const SpotlightCard: React.FC<SpotlightCardProps> = ({
       onBlur={handleBlur}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
-      className={`relative rounded-3xl border border-white/40 bg-white/10 backdrop-blur-2xl overflow-hidden ${className}`}
+      className={`relative rounded-3xl border border-white/40 backdrop-blur-2xl overflow-hidden ${className}`}
+      style={{
+        backgroundColor: `rgba(255, 255, 255, ${glassOpacity})`,
+        ...style,
+      }}
     >
       <div
         className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-500 ease-in-out"
