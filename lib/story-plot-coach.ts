@@ -133,6 +133,19 @@ function looksLikeConflictEvent(text: string): boolean {
   )
 }
 
+function looksLikeGoalIntent(text: string): boolean {
+  const t = text.trim().toLowerCase()
+  if (!t || /\b(?:was|were|got|gets?|getting|is|are|be|been)\s+(?:cut|hurt|hit|trapped|lost)\b/.test(t)) {
+    return false
+  }
+  return (
+    /\b(?:want|wants|hope|hopes|plan|plans|try|tries|decide|decides)\s+to\b/.test(t) ||
+    /\b(?:rescue|save|help|find|fix|solve|protect|escape|return|stop|bring|get|reach|win|sing|comfort|warn|tell|ask|take|move)\w*\b/.test(
+      t,
+    )
+  )
+}
+
 function buildSettingDetailSuggestions(broad: string | undefined): string[] {
   const b = (broad || "").toLowerCase()
   if (b.includes("school") || b.includes("yard") || b.includes("class")) {
@@ -179,7 +192,7 @@ function buildConflictDetailSuggestions(
 ): string[] {
   const place = (setting || "").toLowerCase()
   const trouble = (conflictBroad || "").toLowerCase()
-  if (place.includes("school") || place.includes("yard")) {
+  if (place.includes("school") || place.includes("yard") || place.includes("class")) {
     if (trouble.includes("bird") || trouble.includes("snack") || trouble.includes("lunch")) {
       return ["Near lunch tables", "By the bench", "On the grass", "At the fence"]
     }
@@ -241,15 +254,19 @@ export function applyProgressivePlotTurn(
     } else if (microStep === "conflict_detail") {
       nextPlot.conflict = combinePlace(nextProgress.conflictBroad, text)
       nextProgress.conflictBroad = undefined
-    } else if (microStep === "goal_wish" || microStep === "goal_detail") {
+    } else if (microStep === "goal_wish" && looksLikeGoalIntent(text)) {
       const goalText = text.replace(/^the hero wants to\s+/i, `${characterName} wants to `)
       nextPlot.goal = normalizePlotField(goalText)
+    } else if (microStep === "goal_detail" && nextPlot.goal?.trim()) {
+      const existing = nextPlot.goal.trim()
+      if (!existing.toLowerCase().includes(text.toLowerCase())) {
+        nextPlot.goal = normalizePlotField(`${existing} — ${text}`)
+      }
     }
   }
 
   const focus = getPlotFocus(nextPlot)
   if (focus !== "done") {
-    nextPlot = applyMetaUpdateForFocus(nextPlot, metaUpdate, focus)
     if (focus === "setting" && !nextPlot.setting && microStep === "setting_detail") {
       nextPlot.setting = combinePlace(nextProgress.settingBroad, text)
     }
@@ -348,7 +365,7 @@ export function buildPlotPhasePromptRules(
     `- NEVER list or repeat the suggestion button labels in your message (buttons are separate).\n` +
     `- Do NOT use bullet lists or lines starting with "-" in the reply.\n` +
     `- Ask only ONE question this turn.\n` +
-    `- plot_update in META only when this step is complete (one field max).\n` +
+    `- Always return plot_update as null; the server already saved the student's answer.\n` +
     `- Leave suggestions in META empty []; the server will attach matching buttons.\n`
   )
 }
@@ -381,6 +398,18 @@ export function buildPlotSuggestions(
     return buildConflictDetailSuggestions(plot.setting, progress.conflictBroad)
   }
   if (microStep === "goal_wish" || microStep === "goal_detail") {
+    const trouble = `${plot.conflict || ""} ${progress.conflictBroad || ""}`.toLowerCase()
+    if (/\b(help|hurt|injur|scared|cry|danger)\w*\b/.test(trouble)) {
+      return [
+        "Sing a brave song together",
+        "Find a trusted teacher",
+        "Help them feel safe",
+        "Get help quickly",
+      ]
+    }
+    if (/\b(missing|lost|stole|steal|clue)\w*\b/.test(trouble)) {
+      return ["Find the missing item", "Follow the clues", "Ask a friend for help", "Search every corner"]
+    }
     return [
       `${name} wants to rescue`,
       `${name} wants to find clues`,
@@ -442,7 +471,7 @@ export function finalizePlotFromConversation(
   progressIn: PlotConversationProgress | undefined,
   metaUpdate: PlotState | null | undefined,
   queryText: string,
-  studentMessages: string[],
+  studentMessagesBeforeTurn: string[],
   characterName: string,
   metaSuggestions?: string[],
 ): {
@@ -455,12 +484,13 @@ export function finalizePlotFromConversation(
   phase: "explore" | "plot" | "structure"
   microStep: PlotMicroStep
 } {
+  const studentMessages = [...studentMessagesBeforeTurn, queryText]
   const userCount = studentMessages.length
-  const theme = detectThemeFromMessages(studentMessages)
   let progress = { ...(progressIn || {}) }
-  if (theme && !progress.theme) progress.theme = theme
+  const priorTheme = detectThemeFromMessages(studentMessagesBeforeTurn)
+  if (priorTheme && !progress.theme) progress.theme = priorTheme
 
-  const microStepBefore = getPlotMicroStep(basePlot || {}, userCount, progress)
+  const microStepBefore = getPlotMicroStep(basePlot || {}, studentMessagesBeforeTurn.length, progress)
   const { plot, progress: nextProgress } = applyProgressivePlotTurn(
     mergePlotState(basePlot, {}),
     progress,
@@ -470,6 +500,8 @@ export function finalizePlotFromConversation(
     characterName,
   )
   progress = nextProgress
+  const theme = detectThemeFromMessages(studentMessages)
+  if (theme && !progress.theme) progress.theme = theme
 
   const microStep = getPlotMicroStep(plot, userCount, progress)
   const plot_complete = canCompletePlot(plot, userCount)
