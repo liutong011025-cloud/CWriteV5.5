@@ -454,7 +454,8 @@ export default function StoryCollab({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             message: text,
-            conversation_history: newHistory.slice(-20),
+            // The current message is sent separately in `message`; do not duplicate it in history.
+            conversation_history: conversationHistory.slice(-20),
             character: storyState.character,
             plot_state: plotData,
             plot_progress: plotProgress,
