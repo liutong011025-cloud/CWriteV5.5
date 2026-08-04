@@ -1,0 +1,195 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { prisma } from '@/lib/prisma'
+import { isMissingDatabaseTableError } from '@/lib/prisma-errors'
+import { appendWritingEditRevision } from '@/lib/writing-revisions'
+
+export async function GET(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url)
+    const userId = searchParams.get('user_id')
+    const type = searchParams.get('type') // 'story', 'review', 'letter', or 'all'
+
+    if (!userId) {
+      return NextResponse.json(
+        { error: 'user_id is required' },
+        { status: 400 }
+      )
+    }
+
+    // 查找用户
+    const user = await prisma.user.findUnique({
+      where: { username: userId },
+    })
+
+    if (!user) {
+      return NextResponse.json(
+        { error: 'User not found' },
+        { status: 404 }
+      )
+    }
+
+    const result: {
+      stories?: any[]
+      reviews?: any[]
+      letters?: any[]
+    } = {}
+
+    // 获取故事
+    if (!type || type === 'all' || type === 'story') {
+      const stories = await prisma.story.findMany({
+        where: { userId: user.id },
+        orderBy: { updatedAt: 'desc' },
+        include: {
+          interactions: {
+            select: {
+              id: true,
+              timestamp: true,
+            },
+          },
+        },
+      })
+      result.stories = stories.map(story => ({
+        id: story.id,
+        interactionId: story.interactionId,
+        character: story.character,
+        plot: story.plot,
+        structure: story.structure,
+        content: story.content,
+        createdAt: story.createdAt,
+        updatedAt: story.updatedAt,
+        timestamp: story.interactions?.timestamp,
+      }))
+    }
+
+    // 获取书评
+    if (!type || type === 'all' || type === 'review') {
+      const reviews = await prisma.review.findMany({
+        where: { userId: user.id },
+        orderBy: { updatedAt: 'desc' },
+        include: {
+          interactions: {
+            select: {
+              id: true,
+              timestamp: true,
+            },
+          },
+        },
+      })
+      result.reviews = reviews.map(review => ({
+        id: review.id,
+        interactionId: review.interactionId,
+        reviewType: review.reviewType,
+        bookTitle: review.bookTitle,
+        bookCoverUrl: review.bookCoverUrl,
+        bookSummary: review.bookSummary,
+        structure: review.structure,
+        content: review.content,
+        createdAt: review.createdAt,
+        updatedAt: review.updatedAt,
+        timestamp: review.interactions?.timestamp,
+      }))
+    }
+
+    // 获取信件
+    if (!type || type === 'all' || type === 'letter') {
+      const letters = await prisma.letter.findMany({
+        where: { userId: user.id },
+        orderBy: { updatedAt: 'desc' },
+        include: {
+          interactions: {
+            select: {
+              id: true,
+              timestamp: true,
+            },
+          },
+        },
+      })
+      result.letters = letters.map(letter => ({
+        id: letter.id,
+        interactionId: letter.interactionId,
+        recipient: letter.recipient,
+        occasion: letter.occasion,
+        guidance: letter.guidance,
+        readerImageUrl: letter.readerImageUrl,
+        sections: letter.sections,
+        content: letter.content,
+        createdAt: letter.createdAt,
+        updatedAt: letter.updatedAt,
+        timestamp: letter.interactions?.timestamp,
+      }))
+    }
+
+    return NextResponse.json({
+      success: true,
+      ...result,
+    })
+  } catch (error) {
+    console.error('Get user works error:', error)
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    )
+  }
+}
+
+export async function PATCH(request: NextRequest) {
+  try {
+    const body = (await request.json()) as {
+      user_id?: string
+      work_type?: "story" | "review" | "letter"
+      work_id?: string
+      content?: string
+    }
+    const { user_id, work_type, work_id, content } = body
+
+    if (!user_id || !work_type || !work_id || typeof content !== "string") {
+      return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { username: user_id },
+      select: { id: true },
+    })
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 })
+    }
+
+    const data = { content, updatedAt: new Date() }
+
+    let affected = 0
+    if (work_type === "story") {
+      const r = await prisma.story.updateMany({
+        where: { id: work_id, userId: user.id },
+        data,
+      })
+      affected = r.count
+    } else if (work_type === "review") {
+      const r = await prisma.review.updateMany({
+        where: { id: work_id, userId: user.id },
+        data,
+      })
+      affected = r.count
+    } else {
+      const r = await prisma.letter.updateMany({
+        where: { id: work_id, userId: user.id },
+        data,
+      })
+      affected = r.count
+    }
+
+    if (affected > 0) {
+      try {
+        await appendWritingEditRevision(work_type, work_id, content)
+      } catch (revisionError) {
+        if (!isMissingDatabaseTableError(revisionError)) throw revisionError
+        console.warn("[user-works PATCH] writing_edit_revisions missing; work saved without revision row.")
+      }
+    }
+
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error("Patch user works error:", error)
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+  }
+}
+
