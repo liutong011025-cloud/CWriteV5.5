@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { logApiCall } from '@/lib/log-api-call'
-import { ArkImageError, generateArkImage, getImageSizeFromAspectRatio } from '@/lib/ark-images'
+import { FalImageError, generateFalImage, normalizeFalAspectRatio } from '@/lib/fal-images'
 
 export async function POST(request: NextRequest) {
   try {
@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
 
     // 根据场景选择输出格式：角色图优先 PNG，背景图保持 JPEG
     const outputFormat = stage === 'dramaCharacter' ? 'png' : 'jpeg'
-    const size = getImageSizeFromAspectRatio(aspectRatio)
+    const normalizedAspectRatio = normalizeFalAspectRatio(aspectRatio)
     
     // 角色图尽量保持干净背景，方便在剧情场景中复用。
     let finalPrompt = prompt.trim()
@@ -39,21 +39,22 @@ export async function POST(request: NextRequest) {
       finalPrompt = `${finalPrompt}, painterly semi-realistic background art, photorealistic texture, more realistic lighting, natural materials, subtle depth of field, cinematic atmosphere, detailed environment, background only, no people, no characters, no persons, landscape or setting only, empty scene background, composition with clear negative space in the center for character placement, keep the exact center area relatively plain and soft-blurred (no major objects/silhouettes/text), avoid foreground elements covering the middle, if any ground/terrain exists place it mostly at the bottom only, avoid cartoon, avoid anime, avoid sticker, avoid illustration, avoid flat vector`
     }
 
-    console.log('Sending request to Ark image API:')
-    console.log('Size:', size)
+    console.log('Sending request to Fal image API:')
+    console.log('Aspect ratio:', normalizedAspectRatio)
     console.log('Output format:', outputFormat)
 
-    const result = await generateArkImage({
+    const result = await generateFalImage({
       prompt: finalPrompt,
-      size,
+      aspectRatio: normalizedAspectRatio,
       outputFormat,
+      resolution: '1K',
     })
 
     await logApiCall(
       userId,
       stage,
-      '/api/generate-image (Volcengine Ark)',
-      { prompt, aspect_ratio: aspectRatio, size },
+      '/api/generate-image (Fal Nano Banana 2)',
+      { prompt, aspect_ratio: normalizedAspectRatio },
       { imageUrl: result.imageUrl, description: result.description }
     )
 
@@ -64,7 +65,7 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('Error generating image:', error)
-    if (error instanceof ArkImageError) {
+    if (error instanceof FalImageError) {
       return NextResponse.json(
         { error: error.detail ? `${error.message} ${error.detail}` : error.message },
         { status: error.status || 500 }
