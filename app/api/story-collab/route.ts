@@ -22,6 +22,7 @@ import {
 } from "@/lib/story-revision-tags"
 import {
   buildExplorePromptRules,
+  buildFallbackPlotAnswer,
   buildPlotPhasePromptRules,
   canCompletePlot,
   detectThemeFromMessages,
@@ -94,9 +95,11 @@ function determinePhase(req: CollabRequest): CollabPhase {
   const plot = req.plot_state
   const hasPlot = isPlotComplete(plot)
   const hasStructure = !!req.structure_type
-  const userTurns = req.conversation_history.filter((m) => m.role === "user").length
-  const totalWords = req.story_blocks.reduce((sum, b) => {
-    const text = b.text || ""
+  const history = Array.isArray(req.conversation_history) ? req.conversation_history : []
+  const blocks = Array.isArray(req.story_blocks) ? req.story_blocks : []
+  const userTurns = history.filter((m) => m.role === "user").length
+  const totalWords = blocks.reduce((sum, b) => {
+    const text = b?.text || ""
     const cn = (text.match(/[\u4e00-\u9fff]/g) || []).length
     const en = text.replace(/[\u4e00-\u9fff]/g, " ").trim().split(/\s+/).filter(Boolean).length
     return sum + cn + en
@@ -121,10 +124,11 @@ function buildSystemPrompt(req: CollabRequest, phase: CollabPhase, lastStudentMe
   // Character context
   const c = req.character
   if (c) {
+    const traits = Array.isArray(c.traits) ? c.traits.join(", ") : "friendly"
     parts.push(
-      `\nThe student's character: ${c.name}, age ${c.age}. ` +
-      `Traits: ${c.traits.join(", ")}. ` +
-      `Description: ${c.description}.` +
+      `\nThe student's character: ${c.name || "the hero"}, age ${c.age ?? "?"}. ` +
+      `Traits: ${traits}. ` +
+      `Description: ${c.description || "a creative character"}.` +
       (c.species ? ` Species: ${c.species}.` : "")
     )
   }
@@ -201,10 +205,9 @@ function buildSystemPrompt(req: CollabRequest, phase: CollabPhase, lastStudentMe
   }
 
   const charName = req.character?.name || "the hero"
-  const userTurns = req.conversation_history.filter((m) => m.role === "user").length
-  const studentMessages = req.conversation_history
-    .filter((m) => m.role === "user")
-    .map((m) => m.content)
+  const history = Array.isArray(req.conversation_history) ? req.conversation_history : []
+  const userTurns = history.filter((m) => m.role === "user").length
+  const studentMessages = history.filter((m) => m.role === "user").map((m) => m.content)
 
   if (phase === "explore") {
     parts.push(buildExplorePromptRules(charName, lastStudentMessage))
@@ -459,17 +462,65 @@ function finalizeWritingSectionFeedback(
   }
 }
 
-export async function POST(request: NextRequest) {
-  try {
-    const req = (await request.json()) as CollabRequest
+function buildDeterministicPlotResponse(
+  req: CollabRequest,
+  queryText: string,
+): CollabResponse {
+  const charName = req.character?.name || "the hero"
+  const studentMessages = (req.conversation_history || [])
+    .filter((m) => m.role === "user")
+    .map((m) => m.content)
+  const userTurns = studentMessages.length || 1
+  const plotProgressIn = { ...(req.plot_progress || {}) }
+  const theme = detectThemeFromMessages(studentMessages)
+  if (theme && !plotProgressIn.theme) plotProgressIn.theme = theme
 
-    const queryText = typeof req.message === "string" ? req.message.trim() : ""
+  const plotFinal = finalizePlotFromConversation(
+    req.plot_state,
+    plotProgressIn,
+    null,
+    queryText,
+    studentMessages.length ? studentMessages : [queryText],
+    charName,
+  )
+
+  const answer = buildFallbackPlotAnswer(
+    plotFinal.microStep,
+    charName,
+    queryText,
+    plotFinal.plot,
+    plotFinal.plot_progress,
+  )
+
+  return {
+    answer,
+    phase: plotFinal.plot_complete ? "structure" : plotFinal.phase,
+    suggestions: plotFinal.suggestions,
+    story_snippet: null,
+    plot_update: plotFinal.plot_update,
+    plot_state: plotFinal.plot,
+    plot_progress: plotFinal.plot_progress,
+    plot_complete: plotFinal.plot_complete,
+    structure_suggestion: null,
+  }
+}
+
+export async function POST(request: NextRequest) {
+  let req: CollabRequest | null = null
+  let queryText = ""
+
+  try {
+    req = (await request.json()) as CollabRequest
+    queryText = typeof req.message === "string" ? req.message.trim() : ""
     if (!queryText) {
       return NextResponse.json({ error: "message is required" }, { status: 400 })
     }
 
-    if (!isConfigured()) {
-      return NextResponse.json({ error: "DeepSeek API not configured" }, { status: 500 })
+    // Normalize fragile fields so missing client payloads never crash the route.
+    req.conversation_history = Array.isArray(req.conversation_history) ? req.conversation_history : []
+    req.story_blocks = Array.isArray(req.story_blocks) ? req.story_blocks : []
+    if (req.character && !Array.isArray(req.character.traits)) {
+      req.character.traits = []
     }
 
     const phase = determinePhase(req)
@@ -482,9 +533,19 @@ export async function POST(request: NextRequest) {
 
     const draftSubmission = inWritingSection && isSectionDraftSubmission(req, queryText)
 
+    // Plot/explore can continue with deterministic coach if DeepSeek is down.
+    const canUsePlotFallback = !req.structure_type && !draftSubmission
+    if (!isConfigured() && !canUsePlotFallback) {
+      return NextResponse.json(
+        { error: "DeepSeek API not configured", message: "DeepSeek API not configured" },
+        { status: 500 },
+      )
+    }
+
     let parsedAnswer = ""
     let meta: Partial<CollabResponse> = {}
     let rawAnswer = ""
+    let usedPlotFallback = false
 
     if (draftSubmission) {
       const idx = req.current_writing_section_index as number
@@ -518,24 +579,52 @@ export async function POST(request: NextRequest) {
       const parsed = parseResponse(rawAnswer)
       parsedAnswer = parsed.answer
       meta = parsed.meta
-    } else {
-      const phase = determinePhase(req)
-      const systemPrompt = buildSystemPrompt(req, phase, queryText)
-      const messages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
-        { role: "system", content: systemPrompt },
-      ]
-      const history = req.conversation_history || []
-      const recentHistory = history.slice(-20)
-      for (const msg of recentHistory) {
-        if (msg.role === "user" || msg.role === "assistant") {
-          messages.push({ role: msg.role, content: msg.content })
+    } else if (isConfigured()) {
+      try {
+        const phaseForPrompt = determinePhase(req)
+        const systemPrompt = buildSystemPrompt(req, phaseForPrompt, queryText)
+        const messages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
+          { role: "system", content: systemPrompt },
+        ]
+        const history = req.conversation_history || []
+        // History already includes the current user turn — do not append it twice.
+        const recentHistory = history.slice(-20)
+        for (const msg of recentHistory) {
+          if (msg.role === "user" || msg.role === "assistant") {
+            messages.push({ role: msg.role, content: msg.content })
+          }
         }
+        const lastHist = recentHistory[recentHistory.length - 1]
+        if (!(lastHist?.role === "user" && lastHist.content === queryText)) {
+          messages.push({ role: "user", content: queryText })
+        }
+        rawAnswer = await chat({ messages, timeout: 60_000 })
+        const parsed = parseResponse(rawAnswer)
+        parsedAnswer = parsed.answer
+        meta = parsed.meta
+      } catch (llmError) {
+        if (!canUsePlotFallback) throw llmError
+        console.error("[story-collab] LLM failed; using plot fallback:", llmError)
+        usedPlotFallback = true
       }
-      messages.push({ role: "user", content: queryText })
-      rawAnswer = await chat({ messages, timeout: 60_000 })
-      const parsed = parseResponse(rawAnswer)
-      parsedAnswer = parsed.answer
-      meta = parsed.meta
+    } else {
+      usedPlotFallback = true
+    }
+
+    if (usedPlotFallback) {
+      const response = buildDeterministicPlotResponse(req, queryText)
+      try {
+        await logApiCall(
+          req.user_id,
+          "story-collab",
+          "/api/story-collab",
+          { message: queryText, current_phase: phase, fallback: true },
+          { answer: response.answer },
+        )
+      } catch {
+        /* ignore logging failures */
+      }
+      return NextResponse.json(response)
     }
 
     const finalized = draftSubmission
@@ -544,7 +633,7 @@ export async function POST(request: NextRequest) {
 
     let answer = finalized.answer
 
-    const studentMessages = req.conversation_history
+    const studentMessages = (req.conversation_history || [])
       .filter((m) => m.role === "user")
       .map((m) => m.content)
     const charName = req.character?.name || "the hero"
@@ -598,7 +687,7 @@ export async function POST(request: NextRequest) {
     const inPlotPhase = !req.structure_type && !canCompletePlot(mergedPlot, plotUserTurns)
 
     const defaultSuggestions = inPlotPhase
-      ? plotFinal?.suggestions || ["At school", "In a forest", "On a beach"]
+      ? plotFinal?.suggestions || ["Sunny village", "School yard", "By the sea"]
       : draftSubmission && !finalized.section_passed
         ? []
         : draftSubmission && finalized.section_passed
@@ -626,23 +715,44 @@ export async function POST(request: NextRequest) {
       section_passed: finalized.section_passed || undefined,
     }
 
-    await logApiCall(
-      req.user_id,
-      "story-collab",
-      "/api/story-collab",
-      { message: queryText, current_phase: phase },
-      { answer: response.answer }
-    )
+    try {
+      await logApiCall(
+        req.user_id,
+        "story-collab",
+        "/api/story-collab",
+        { message: queryText, current_phase: phase, fallback: usedPlotFallback },
+        { answer: response.answer },
+      )
+    } catch {
+      /* ignore logging failures */
+    }
 
     return NextResponse.json(response)
   } catch (error) {
     console.error("Error in story-collab API:", error)
+
+    // Last resort: keep plot chat alive instead of returning a hard 500.
+    if (req && !req.structure_type && queryText) {
+      try {
+        const fallback = buildDeterministicPlotResponse(req, queryText)
+        return NextResponse.json(fallback)
+      } catch (fallbackError) {
+        console.error("[story-collab] fallback also failed:", fallbackError)
+      }
+    }
+
     if (error instanceof DeepSeekError && error.isTimeout) {
       return NextResponse.json(
         { error: "timeout", message: "Request timed out. Please try again." },
-        { status: 504 }
+        { status: 504 },
       )
     }
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    return NextResponse.json(
+      {
+        error: "Internal server error",
+        message: error instanceof Error ? error.message : "Internal server error",
+      },
+      { status: 500 },
+    )
   }
 }
