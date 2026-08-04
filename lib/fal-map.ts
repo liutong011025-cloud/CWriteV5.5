@@ -2,13 +2,18 @@ import { readFile } from "node:fs/promises"
 import path from "node:path"
 import type { NextRequest } from "next/server"
 import { fal } from "@fal-ai/client"
+import {
+  FAL_IMAGE_EDIT_MODEL,
+  FAL_IMAGE_MODEL,
+  getFalKey,
+} from "@/lib/fal-images"
 
-export const FAL_NANO_BANANA_MODEL = "fal-ai/nano-banana"
-export const FAL_NANO_BANANA_EDIT_MODEL = "fal-ai/nano-banana-2/edit"
+export const FAL_NANO_BANANA_MODEL = FAL_IMAGE_MODEL
+export const FAL_NANO_BANANA_EDIT_MODEL = FAL_IMAGE_EDIT_MODEL
 
 type FalUploadResult = string | { url?: string } | null | undefined
 
-export const getFalKey = () => process.env.FAL_KEY || null
+export { getFalKey }
 
 const normalizeUploadedUrl = (value: FalUploadResult) => {
   if (typeof value === "string") return value
@@ -30,7 +35,7 @@ const mimeFromPathname = (pathname: string) => {
 }
 
 async function uploadBufferToFal(buffer: Buffer, mime: string): Promise<string | null> {
-  const blob = new Blob([buffer], { type: mime })
+  const blob = new Blob([new Uint8Array(buffer)], { type: mime })
   const uploadResult = (await fal.storage.upload(blob as Blob)) as FalUploadResult
   const url = normalizeUploadedUrl(uploadResult)
   return url && /^https?:\/\//i.test(url) ? url : null
