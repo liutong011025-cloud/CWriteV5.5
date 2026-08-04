@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { ArkImageError, generateArkImage, getImageSizeFromAspectRatio } from '@/lib/ark-images'
+import { FalImageError, generateFalImage } from '@/lib/fal-images'
 
 export async function POST(request: NextRequest) {
   try {
@@ -20,21 +20,21 @@ export async function POST(request: NextRequest) {
 
     // 生成收信人读信的照片，读信人必须是学生自定义的 recipient
     const prompt = `${recipient} reading a letter, occasion: ${occasion}, realistic photo, sharp focus`
-    const size = getImageSizeFromAspectRatio('1:1')
 
     console.log('Prompt:', prompt)
-    console.log('Ark image size:', size)
+    console.log('Fal aspect ratio: 1:1')
 
-    const result = await generateArkImage({
+    const result = await generateFalImage({
       prompt,
-      size,
+      aspectRatio: '1:1',
       outputFormat: 'jpeg',
+      resolution: '1K',
     })
 
     return NextResponse.json({ imageUrl: result.imageUrl })
   } catch (error) {
     console.error('Error generating letter reader image:', error)
-    if (error instanceof ArkImageError) {
+    if (error instanceof FalImageError) {
       return NextResponse.json(
         { error: error.detail ? `${error.message} ${error.detail}` : error.message, imageUrl: null },
         { status: error.status || 500 }
