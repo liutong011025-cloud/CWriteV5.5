@@ -9,6 +9,7 @@
     "lint": "eslint .",
     "start": "node scripts/baseline-and-migrate.js && next start",
     "postinstall": "prisma generate",
+    "test:unit": "tsx --test tests/**/*.test.ts",
     "db:generate": "npx prisma generate",
     "db:push": "npx prisma db push",
     "db:migrate": "npx prisma migrate dev",
