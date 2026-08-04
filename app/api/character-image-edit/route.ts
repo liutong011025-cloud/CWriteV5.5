@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
-import { ArkImageError, generateArkImage } from "@/lib/ark-images"
+import { FalImageError, generateFalImage, getFalKey } from "@/lib/fal-images"
+import { resolveMapImageUrlForFal } from "@/lib/fal-map"
 
 type CharacterImageEditRequestBody = {
   drawingDataUrl: string
@@ -27,8 +28,8 @@ const escapePromptValue = (value: string) => value.replace(/`/g, "'")
 
 export async function POST(request: NextRequest) {
   try {
-    if (!process.env.ARK_API_KEY && !process.env.VOLCENGINE_ARK_API_KEY) {
-      console.error("[character-image-edit] ARK_API_KEY not configured")
+    if (!getFalKey()) {
+      console.error("[character-image-edit] FAL_KEY not configured")
       return NextResponse.json(
         { error: "character_unavailable", message: "Character painter is resting. Try again later." },
         { status: 200 }
@@ -51,6 +52,14 @@ export async function POST(request: NextRequest) {
     if (!drawingDataUrl || typeof drawingDataUrl !== "string" || !drawingDataUrl.startsWith("data:image/")) {
       return NextResponse.json(
         { error: "bad_request", message: "Missing valid drawing image." },
+        { status: 400 }
+      )
+    }
+
+    const drawingUrl = await resolveMapImageUrlForFal(request, drawingDataUrl)
+    if (!drawingUrl) {
+      return NextResponse.json(
+        { error: "bad_request", message: "Could not upload the drawing image." },
         { status: 400 }
       )
     }
@@ -101,11 +110,12 @@ Output rules:
 - Return one final character image only
 `.trim()
 
-    const result = await generateArkImage({
+    const result = await generateFalImage({
       prompt,
-      image: drawingDataUrl,
-      size: "2048x2048",
+      imageUrls: [drawingUrl],
+      aspectRatio: "1:1",
       outputFormat: "png",
+      resolution: "2K",
     })
 
     return NextResponse.json({
@@ -127,7 +137,9 @@ Output rules:
       {
         error: "character_unavailable",
         message:
-          error instanceof ArkImageError && /10MB limit/i.test(error.message)
+          error instanceof FalImageError && /too large|size|limit/i.test(
+            `${error.message} ${error.detail || ""}`
+          )
             ? "The sketch is too large for image editing. Please clear some details or use a smaller canvas and try again."
             : (error as any)?.status === 422
             ? "The sketch format was rejected by the model. Please try a simpler sketch and regenerate."
