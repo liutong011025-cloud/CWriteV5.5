@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { logApiCall } from '@/lib/log-api-call'
-import { ArkImageError, generateArkImage, getImageSizeFromAspectRatio } from '@/lib/ark-images'
+import { FalImageError, generateFalImage } from '@/lib/fal-images'
 
 export async function POST(request: NextRequest) {
   try {
@@ -17,24 +17,24 @@ export async function POST(request: NextRequest) {
 
     // 生成拟真风格的书封面，正对视角，不倾斜
     const prompt = `Professional book cover for "${bookTitle}". Realistic hardcover book, front view, straight perspective, no tilt or angle. Elegant typography on front cover, realistic textures, bookstore quality, professional book design.`
-    const size = getImageSizeFromAspectRatio('2:3')
 
     console.log('=== Generating Book Cover ===')
     console.log('Book Title:', bookTitle)
-    console.log('Ark image size:', size)
+    console.log('Fal aspect ratio: 2:3')
     console.log('============================')
 
-    const result = await generateArkImage({
+    const result = await generateFalImage({
       prompt,
-      size,
+      aspectRatio: '2:3',
       outputFormat: 'jpeg',
+      resolution: '1K',
     })
 
     await logApiCall(
       userId,
       'bookReviewWriting',
-      '/api/generate-book-cover (Volcengine Ark)',
-      { bookTitle, size },
+      '/api/generate-book-cover (Fal Nano Banana 2)',
+      { bookTitle, aspectRatio: '2:3' },
       { imageUrl: result.imageUrl }
     )
 
@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('Error generating book cover:', error)
-    if (error instanceof ArkImageError) {
+    if (error instanceof FalImageError) {
       return NextResponse.json(
         { error: error.detail ? `${error.message} ${error.detail}` : error.message },
         { status: error.status || 500 }
