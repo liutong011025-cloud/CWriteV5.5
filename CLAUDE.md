@@ -64,7 +64,7 @@ Each mode in `components/stages/` follows a stage pipeline. `*-no-ai.tsx` varian
 - **Central route**: `app/api/dify/route.ts` is a `switch(action)` router that handles Poetry/Drama/Book Review type routing via DeepSeek.
 - **Feature routes**: `app/api/dify-*/route.ts` (one file per feature) call the central route or DeepSeek directly.
 - **Level suffix**: `lib/level-details.ts` exports `getLevelPromptSuffix()` — prepends grade-appropriate system prompts to AI calls (1–5 scale).
-- **Image generation**: image routes use Volcano Ark / Doubao Seedream via `lib/ark-images.ts`.
+- **Image generation**: all image routes use Fal Nano Banana 2 via `lib/fal-images.ts`.
 
 ### State Management
 - `lib/interactions-store.ts` - User interactions tracking
@@ -85,7 +85,7 @@ Trees stored as JSON in `UserProfile.trees` (max 12, each { id, stage: 1-6 }).
 1. **Component variants**: `*-no-ai.tsx` files are standalone alternatives, not conditionally rendered
 2. **API responses**: Routes return `{ result }` or parsed structured data
 3. **Level system**: `lib/level-details.ts` provides grade-appropriate prompts (1-5 scale)
-4. **Image generation**: image routes share Volcano Ark helpers in `lib/ark-images.ts`
+4. **Image generation**: image routes share Fal helpers in `lib/fal-images.ts`; text-to-image uses `fal-ai/nano-banana-2` and edits use `fal-ai/nano-banana-2/edit`
 5. **Cagent mascot**: The pet in `components/cagent/` has a `CagentMood` driven by `setCagentMood` in `page.tsx`. Moods: "normal", "happy", "sleep", "like", "sit", "hang". A `RedFlashOverlay` fires on negative value feedback events.
 6. **Cross-tab navigation**: `app/write/page.tsx` uses a custom `navigateToWriteTypeSelection` event on `window`; `app/page.tsx` listens for it.
 
