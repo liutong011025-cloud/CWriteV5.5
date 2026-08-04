@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { ArkImageError, generateArkImage, getImageSizeFromAspectRatio } from "@/lib/ark-images"
+import { FalImageError, generateFalImage } from "@/lib/fal-images"
 
 export async function POST(request: Request) {
   try {
@@ -16,16 +16,17 @@ export async function POST(request: Request) {
       fullPrompt = `${fullPrompt}, drama stage backdrop, theatrical scenery, wide scene background, cartoon illustration style, kid-friendly, colorful, vibrant, panoramic, landscape scenery only, empty stage set, absolutely no people, no characters, no figures, no living beings, no animals, no creatures, uninhabited environment only`
     }
 
-    const result = await generateArkImage({
+    const result = await generateFalImage({
       prompt: fullPrompt,
-      size: getImageSizeFromAspectRatio(type === "background" ? "16:9" : "1:1"),
+      aspectRatio: type === "background" ? "16:9" : "1:1",
       outputFormat: type === "background" ? "jpeg" : "png",
+      resolution: "1K",
     })
 
     return NextResponse.json({ imageUrl: result.imageUrl })
   } catch (error) {
-    console.error("[legacy generate-image] Ark error:", error)
-    if (error instanceof ArkImageError) {
+    console.error("[legacy generate-image] Fal error:", error)
+    if (error instanceof FalImageError) {
       return NextResponse.json(
         { error: error.detail ? `${error.message} ${error.detail}` : error.message },
         { status: error.status || 500 }
