@@ -526,3 +526,77 @@ export function finalizePlotFromConversation(
     microStep,
   }
 }
+
+/**
+ * Preview the plot state after applying the student's latest reply, and return the
+ * NEXT micro-step the coach should ask about (kept in sync with finalize + buttons).
+ */
+export function resolvePlotAskStep(
+  plot: PlotState,
+  progress: PlotConversationProgress,
+  lastStudentMessage: string,
+  userTurns: number,
+  characterName: string,
+): { askStep: PlotMicroStep; plot: PlotState; progress: PlotConversationProgress } {
+  const priorCount = Math.max(0, userTurns - (lastStudentMessage.trim() ? 1 : 0))
+  const finalized = finalizePlotFromConversation(
+    plot,
+    progress,
+    null,
+    lastStudentMessage,
+    Array.from({ length: priorCount }, () => ""),
+    characterName,
+  )
+  return {
+    askStep: finalized.microStep,
+    plot: finalized.plot,
+    progress: finalized.plot_progress,
+  }
+}
+
+/** Student-facing reply when the LLM is unavailable — one short echo + one question. */
+export function buildFallbackPlotAnswer(
+  microStep: PlotMicroStep,
+  characterName: string,
+  queryText: string,
+  plot: PlotState,
+  progress: PlotConversationProgress = {},
+): string {
+  const name = characterName?.trim() || "the hero"
+  const said = queryText.trim()
+  const place = plot.setting?.trim() || progress.settingBroad?.trim() || "that place"
+  const trouble = plot.conflict?.trim() || progress.conflictBroad?.trim() || "the trouble"
+  const echo = said.length >= 2 && said.length <= 48 ? said : ""
+
+  switch (microStep) {
+    case "theme":
+      return `Hi! What kind of story feels fun for ${name} — adventure, magic, mystery, or something funny?`
+    case "setting_place":
+      return echo
+        ? `${echo} — nice! Where could ${name}'s story happen?`
+        : `Where could ${name}'s story happen?`
+    case "setting_detail":
+      return echo
+        ? `Cool — ${echo}! Where exactly inside ${place}? A corner, room, or special spot?`
+        : `Where exactly inside ${place}? A corner, room, or special spot?`
+    case "conflict_hook":
+      return `${place} sounds great! What funny or surprising trouble happens to ${name} there?`
+    case "conflict_detail":
+      return echo
+        ? `Oh no — ${echo}! Where at ${place} does that happen?`
+        : `Where at ${place} does "${trouble}" happen?`
+    case "goal_wish":
+      return `That's a problem! What does ${name} hope to do about it?`
+    case "goal_detail":
+      return echo
+        ? `I like "${echo}"! How will ${name} try, or who do they want to help?`
+        : `How will ${name} try, or who do they want to help?`
+    case "ready":
+      return (
+        `Awesome — we have a place, a problem, and a wish for ${name}! ` +
+        `Pick a story structure below when you're ready.`
+      )
+    default:
+      return `Tell me a bit more about ${name}'s story!`
+  }
+}
