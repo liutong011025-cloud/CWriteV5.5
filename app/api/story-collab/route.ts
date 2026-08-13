@@ -20,6 +20,7 @@ import {
   tipsToRevisionTags,
   type StoryRevisionTag,
 } from "@/lib/story-revision-tags"
+import { parseStoryMetaPayload, stripStoryMetaBlock } from "@/lib/story-meta"
 import {
   buildExplorePromptRules,
   buildFallbackPlotAnswer,
@@ -285,20 +286,14 @@ function buildSystemPrompt(req: CollabRequest, phase: CollabPhase, lastStudentMe
 }
 
 function parseResponse(raw: string): { answer: string; meta: Partial<CollabResponse> } {
-  // Layer 1: ---META---{JSON}---END---
-  const metaMatch = raw.match(/---META---\s*([\s\S]*?)\s*---END---/)
-  if (metaMatch) {
-    try {
-      const meta = JSON.parse(metaMatch[1]) as Partial<CollabResponse>
-      const answer = raw.slice(0, raw.indexOf("---META---")).trim()
-      return { answer, meta }
-    } catch {
-      // fall through to layer 2
-    }
+  const { answer: withoutMeta, metaText } = stripStoryMetaBlock(raw)
+  const parsedMeta = parseStoryMetaPayload(metaText)
+  if (parsedMeta) {
+    return { answer: withoutMeta, meta: parsedMeta as Partial<CollabResponse> }
   }
 
-  // Layer 2: inline markers
-  const answer = raw
+  // Layer 2: inline markers (META fence already removed even if JSON was invalid)
+  const answer = withoutMeta
     .replace(/\[PLOT_UPDATE:[^\]]*\]/g, "")
     .replace(/\[SUGGESTIONS:[^\]]*\]/g, "")
     .replace(/\[SNIPPET:[^\]]*\]/g, "")
