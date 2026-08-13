@@ -1133,9 +1133,10 @@ Continue guiding step by step. Each response should:
                         <button
                           key={section}
                           type="button"
+                          title={sectionDone[index] && index !== currentSection ? "Revise again?" : undefined}
                           onClick={() => handleSectionNavigate(index)}
                           className={cn(
-                            "px-4 py-2 text-sm font-bold transition pixel-btn",
+                            "group relative px-4 py-2 text-sm font-bold transition pixel-btn",
                             currentSection === index
                               ? "pixel-btn-green"
                               : sectionDone[index]
@@ -1144,6 +1145,19 @@ Continue guiding step by step. Each response should:
                           )}
                         >
                           {section}
+                          {sectionDone[index] && index !== currentSection && (
+                            <span
+                              className="pointer-events-none absolute left-1/2 top-full z-10 mt-1 -translate-x-1/2 rounded-md px-2 py-1 text-[11px] font-extrabold opacity-0 shadow-md transition-opacity group-hover:opacity-100"
+                              style={{
+                                background: "#fff8e7",
+                                color: "#6b5210",
+                                border: "2px solid #8b6914",
+                                whiteSpace: "nowrap",
+                              }}
+                            >
+                              Revise again?
+                            </span>
+                          )}
                         </button>
                       ))}
                     </div>
