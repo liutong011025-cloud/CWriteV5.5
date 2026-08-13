@@ -11,8 +11,10 @@ type MapUpdateRequestBody = {
   userId: string
   title: string
   topic: string
-  mapX: number
-  mapY: number
+  mapX?: number
+  mapY?: number
+  /** Header / New Writing path: no pin, so Fal may place the new element anywhere. */
+  freePlacement?: boolean
   previousMapImageUrl: string
   storySummary?: {
     characterName?: string | null
@@ -43,6 +45,7 @@ export async function POST(request: NextRequest) {
 
     const body = (await request.json()) as MapUpdateRequestBody
     const { userId, title, topic, mapX, mapY, previousMapImageUrl, storySummary, mapPrompt } = body
+    const freePlacement = Boolean(body.freePlacement)
     const safeMapX = clampPercent(mapX, 50)
     const safeMapY = clampPercent(mapY, 50)
     const safeTopic = (topic || "").trim()
@@ -76,16 +79,7 @@ export async function POST(request: NextRequest) {
     const structureType = storySummary?.structureType || null
     const extraPrompt = (mapPrompt || "").trim()
 
-    const prompt = `
-You are updating a student's personal writing adventure map using image editing.
-
-Base image:
-- Use the provided previous map image strictly as the base. Preserve its overall style, camera angle and layout.
-
-Coordinate system (very important for placement):
-- Treat the map as a 2D canvas where (0, 0) is the TOP-LEFT corner and (100, 100) is the BOTTOM-RIGHT corner.
-- The student's new step is centered near (${safeMapX}, ${safeMapY}) in this normalized coordinate system. Place the MAIN new visual focus close to this point.
-
+    const writingContext = `
 Student's new writing step:
 - Title: "${safeTitle}"
 - Character: "${characterName || "Unknown hero"}" (species: "${species || "unknown creature"}")
@@ -97,6 +91,12 @@ Story details (for inspiration only, do not render text):
 - Goal detail: "${detailedGoal || "unspecified"}"
 - Plot summary: "${plotSummary || "unspecified"}"
 - Story structure (if any): "${structureType || "unspecified"}"
+`.trim()
+
+    const pinnedPlacementTask = `
+Coordinate system (very important for placement):
+- Treat the map as a 2D canvas where (0, 0) is the TOP-LEFT corner and (100, 100) is the BOTTOM-RIGHT corner.
+- The student's new step is centered near (${safeMapX}, ${safeMapY}) in this normalized coordinate system. Place the MAIN new visual focus close to this point.
 
 Task:
 - Focus your main new visual content on a **tiny local patch** centered exactly under the student's existing pin at (${safeMapX}, ${safeMapY}), roughly a circle with radius about 1.5-2% of the map width. The strongest new shapes and colors must stay inside this tiny patch.
@@ -104,19 +104,46 @@ Task:
 - Inside this small area, add or modify only compact terrain details, tiny paths, miniature buildings, small plants, tiny props, or very small environmental storytelling cues that reflect this new topic, the plot, and the character species. Keep them smaller and quieter than before.
 - Avoid oversized landmarks, giant buildings, huge forests, large terrain blocks, or any bold focal object. New elements must feel subtle and map-scale, not poster-scale.
 - Outside the local patch, the map should remain almost completely unchanged at a glance.
+`.trim()
+
+    const freePlacementTask = `
+Placement (no pin / no coordinate):
+- The student started writing without placing a flag on the map, so there is NO target location.
+- Do NOT mention, invent, or follow any pin, flag, or (x, y) coordinate.
+- Add a tiny new visual element that reflects this writing anywhere that already fits the existing world.
+
+Task:
+- Choose any suitable quiet spot on the map. The new marks may appear anywhere; do not cluster them at the center unless that already looks natural.
+- Add or modify only compact terrain details, tiny paths, miniature buildings, small plants, tiny props, or very small environmental storytelling cues that reflect this new topic, the plot, and the character species.
+- Avoid oversized landmarks, giant buildings, huge forests, large terrain blocks, or any bold focal object. New elements must feel subtle and map-scale, not poster-scale.
+- The rest of the map should remain almost completely unchanged at a glance.
+`.trim()
+
+    const prompt = `
+You are updating a student's personal writing adventure map using image editing.
+
+Base image:
+- Use the provided previous map image strictly as the base. Preserve its overall style, camera angle and layout.
+
+${writingContext}
+
+${freePlacement ? freePlacementTask : pinnedPlacementTask}
 
 Very important:
 - This MUST look like a natural evolution of the previous map, not a brand-new style.
 - Keep the same overall palette, camera angle, and rendering style as the base image.
 - Do NOT add UI, text labels, or logos. Leave space so the interface can overlay flags or titles later.
-- ${extraPrompt || "Do not invent a whole new region; just evolve the existing map carefully."}
+- ${extraPrompt || (freePlacement
+    ? "Do not invent a whole new region; just evolve the existing map carefully, placing the new hint anywhere that fits."
+    : "Do not invent a whole new region; just evolve the existing map carefully.")}
 `.trim()
 
     console.info("[map-update] fal image-to-image", {
       model: FAL_NANO_BANANA_EDIT_MODEL,
       baseUrl: resolvedImageUrl.slice(0, 80),
-      mapX: safeMapX,
-      mapY: safeMapY,
+      freePlacement,
+      mapX: freePlacement ? null : safeMapX,
+      mapY: freePlacement ? null : safeMapY,
     })
 
     const result = await fal.subscribe(FAL_NANO_BANANA_EDIT_MODEL, {
