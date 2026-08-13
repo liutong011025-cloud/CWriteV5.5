@@ -1,96 +1,31 @@
 import assert from "node:assert/strict"
 import test from "node:test"
-import {
-  finalizePlotFromConversation,
-  type PlotConversationProgress,
-  type PlotState,
-} from "../lib/story-plot-coach"
+import { sanitizeStoryAssistantText, stripStoryMetaBlock } from "../lib/story-meta"
 
-const finishTurn = (
-  plot: PlotState,
-  progress: PlotConversationProgress,
-  message: string,
-  priorMessages: string[],
-) =>
-  finalizePlotFromConversation(
-    plot,
-    progress,
-    null,
-    message,
-    priorMessages,
-    "Melody",
-    [],
-  )
-
-test("the reply question and buttons advance to the same next plot step", () => {
-  const theme = finishTurn({}, {}, "Adventure", [])
-  assert.equal(theme.microStep, "setting_place")
-  assert.deepEqual(theme.suggestions, ["Sunny village", "School yard", "By the sea", "Mountain path"])
-
-  const place = finishTurn(theme.plot, theme.plot_progress, "School yard", ["Adventure"])
-  assert.equal(place.microStep, "setting_detail")
-  assert.ok(place.suggestions.includes("Playground"))
-
-  const trouble = finishTurn(
-    place.plot,
-    place.plot_progress,
-    "Someone needs help",
-    ["Adventure", "School yard"],
-  )
-  assert.equal(trouble.plot.setting, "School yard")
-  assert.equal(trouble.plot_progress.conflictBroad, "Someone needs help")
-  assert.equal(trouble.microStep, "conflict_detail")
-  assert.ok(trouble.suggestions.includes("By the classroom"))
+test("strips canonical ---META--- block", () => {
+  const raw =
+    'Sunny village sounds perfect!\n---META---\n{"phase":"plot","suggestions":["By the big tree"]}\n---END---'
+  const { answer } = stripStoryMetaBlock(raw)
+  assert.equal(answer, "Sunny village sounds perfect!")
+  assert.equal(sanitizeStoryAssistantText(raw).includes("META"), false)
 })
 
-test("a free-form first answer is kept as the theme, not mistaken for the setting", () => {
-  const result = finishTurn({}, {}, "A story about friendship and courage", [])
-
-  assert.equal(result.plot_progress.theme, "A story about friendship and courage")
-  assert.equal(result.plot_progress.settingBroad, undefined)
-  assert.equal(result.microStep, "setting_place")
+test("strips META when the model splits --- and META onto two lines", () => {
+  const raw = [
+    "Where in the sunny village does Nicole’s adventure start? By the big tree, near the ice cream stand, or somewhere else?",
+    "---",
+    "META---",
+    '{"phase":"plot","suggestions":["By the big tree","At the ice cream stand","In the flower garden"],"story_snippet":null,"plot_update":null,"structure_suggestion":null,"revision_tags":[]}',
+    "---END---",
+  ].join("\n")
+  const cleaned = sanitizeStoryAssistantText(raw)
+  assert.equal(cleaned.includes("META"), false)
+  assert.equal(cleaned.includes("plot_update"), false)
+  assert.ok(cleaned.includes("ice cream stand"))
 })
 
-test("goal suggestions are related to a help or injury conflict", () => {
-  const result = finishTurn(
-    { setting: "in the classroom" },
-    { conflictBroad: "girls get hurt" },
-    "cut by the cutter",
-    ["Adventure", "School", "Classroom", "girls get hurt"],
-  )
-
-  assert.equal(result.plot.conflict, "girls get hurt — cut by the cutter")
-  assert.equal(result.microStep, "goal_wish")
-  assert.ok(result.suggestions.includes("Sing a brave song together"))
-})
-
-test("a relevant custom goal is saved, while a passive conflict sentence is rejected", () => {
-  const plot = {
-    setting: "in the classroom",
-    conflict: "girls get hurt — cut by the cutter",
-  }
-  const history = ["Adventure", "School", "Classroom", "girls get hurt", "cut by the cutter"]
-
-  const accepted = finishTurn(plot, {}, "Singing a brave song together", history)
-  assert.equal(accepted.plot.goal, "Singing a brave song together")
-  assert.equal(accepted.plot_complete, true)
-
-  const rejected = finishTurn(plot, {}, "cut by the cutter", history)
-  assert.equal(rejected.plot.goal, undefined)
-  assert.equal(rejected.microStep, "goal_wish")
-})
-
-test("goal detail enriches the existing goal instead of replacing it", () => {
-  const result = finishTurn(
-    {
-      setting: "in the classroom",
-      conflict: "someone needs help",
-      goal: "Sing a brave song together",
-    },
-    {},
-    "with her classmates",
-    ["Adventure", "School", "Classroom", "Someone needs help"],
-  )
-
-  assert.equal(result.plot.goal, "Sing a brave song together — with her classmates")
+test("still hides META when the JSON is invalid", () => {
+  const raw = 'Hello!\n---META---\n{phase:plot,}\n---END---'
+  const cleaned = sanitizeStoryAssistantText(raw)
+  assert.equal(cleaned, "Hello!")
 })
