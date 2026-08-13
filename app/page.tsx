@@ -347,11 +347,14 @@ const buildStoryStructureMapPrompt = (
   character: StoryState["character"],
   plot: NonNullable<StoryState["plot"]>,
   structureType: string,
+  options?: { freePlacement?: boolean },
 ) => {
   const species = character?.species?.trim() || "story character"
   const name = character?.name?.trim() || "hero"
   return [
-    "Keep ALL existing map art. Micro-edit only at the pin.",
+    options?.freePlacement
+      ? "Keep ALL existing map art. Place the tiny new hint anywhere that fits — do not target a pin or coordinate."
+      : "Keep ALL existing map art. Micro-edit only at the pin.",
     "New marks must be pin-head sized or smaller — never large buildings or trees.",
     `Tiny hints only: ${plot.setting || "place"}, ${plot.conflict || "trouble"}, ${plot.goal || "wish"}.`,
     `${species} (${name}), structure ${structureType}.`,
@@ -499,6 +502,8 @@ type JourneyResumeSnapshot = {
   savedAt: number
   stage: string
   journeySelection: { type: JourneyType; difficulty: number } | null
+  /** True only when this writing session started from a placed map pin. */
+  mapPinAnchored?: boolean
   writingAssessment: WritingAssessment | null
   storyState: StoryState
   bookReviewState: BookReviewState
@@ -672,6 +677,8 @@ export default function Home() {
   const pendingStoryMapPinRef = useRef<{ x: number; y: number; title: string } | null>(null)
   /** 首次地圖迭代成功後會清空 currentPin；後續 Fal 請求仍用此座標 */
   const lastJourneyPinRef = useRef<{ x: number; y: number } | null>(null)
+  /** Header New Writing 沒有插針：地圖仍迭代，但不帶座標、不插旗 */
+  const mapPinAnchoredRef = useRef(false)
   const [pendingDramaMapTitle, setPendingDramaMapTitle] = useState<string | null>(null)
   // 12 价值观维度小树：每棵 stage 2->3->4（最多成长两次）
   const [trees, setTrees] = useState<{ id: number; stage: number }[] | null>(null)
@@ -723,6 +730,7 @@ export default function Home() {
           savedAt: Date.now(),
           stage,
           journeySelection,
+          mapPinAnchored: mapPinAnchoredRef.current,
           writingAssessment: writingAssessment ?? null,
           storyState,
           bookReviewState,
@@ -780,6 +788,7 @@ export default function Home() {
         throw new Error("invalid_local_snapshot")
       }
       setJourneySelection(snap.journeySelection ?? null)
+      mapPinAnchoredRef.current = snap.mapPinAnchored ?? Boolean(snap.journeySelection)
       setWritingAssessment(snap.writingAssessment ?? null)
       setStoryState(snap.storyState)
       setBookReviewState(snap.bookReviewState)
@@ -1068,6 +1077,7 @@ export default function Home() {
     const handleNavigateToWriteTypeSelection = () => {
       if (user) {
         setJourneySelection(null)
+        mapPinAnchoredRef.current = false
         setStage("writeTypeSelection")
       }
     }
@@ -1222,6 +1232,7 @@ export default function Home() {
     lastJourneyPinRef.current = null
     setJourneySelection(null)
     setJourneyActive(false)
+    mapPinAnchoredRef.current = false
     setLevelBadgeUnlocked(false)
     setActiveMapChapterIndex(0)
     setMapChapters([])
@@ -1390,13 +1401,14 @@ export default function Home() {
       /** When true, only refresh map image — flag was already added (e.g. structure select). */
       skipNewFlag?: boolean
     }) => {
-      if (!journeyActive || !user) return
+      if (!user) return
+      const pinAnchored = mapPinAnchoredRef.current
       if (mapUpdateInFlightRef.current) {
         pendingMapUpdateRef.current = params
         return
       }
-      const pinSnapshot = resolveJourneyPin()
-      lastJourneyPinRef.current = pinSnapshot
+      const pinSnapshot = pinAnchored ? resolveJourneyPin() : null
+      if (pinSnapshot) lastJourneyPinRef.current = pinSnapshot
       const chapterSnapshot = mapChapters[activeMapChapterIndex]
       const previousMapImageUrl = pickBestPreviousMapImageUrl(
         mapImageUrlRef.current ?? mapImageUrl,
@@ -1404,6 +1416,7 @@ export default function Home() {
         activeMapChapterIndex,
       )
       const isBackgroundStructure = params.source === "storyStructure"
+      const skipNewFlag = params.skipNewFlag || !pinAnchored
 
       void (async () => {
         mapUpdateInFlightRef.current = true
@@ -1415,9 +1428,12 @@ export default function Home() {
             userId: user.username,
             title: params.title,
             topic: params.topic,
-            mapX: pinSnapshot.x,
-            mapY: pinSnapshot.y,
             previousMapImageUrl,
+            freePlacement: !pinAnchored,
+          }
+          if (pinSnapshot) {
+            payload.mapX = pinSnapshot.x
+            payload.mapY = pinSnapshot.y
           }
           if (params.mapPrompt) payload.mapPrompt = params.mapPrompt
           if (params.summaryKey && params.summaryValue) payload[params.summaryKey] = params.summaryValue
@@ -1434,8 +1450,8 @@ export default function Home() {
             mapLocalUpdatedAtRef.current = Date.now()
             mapImageUrlRef.current = newImageUrl
             setMapImageUrl(newImageUrl)
-            setCurrentPin(null)
-            if (!params.skipNewFlag) {
+            if (pinAnchored) setCurrentPin(null)
+            if (!skipNewFlag && pinSnapshot) {
               const pendingStoryFinal = params.workType === "story" ? pendingStoryFlagFinalizationRef.current : null
               if (pendingStoryFinal) pendingStoryFlagFinalizationRef.current = null
               setMapFlags((prev: MapFlagItem[]) => {
@@ -1455,7 +1471,11 @@ export default function Home() {
               })
             } else {
               setMapFlags((prev: MapFlagItem[]) => {
-                persistMapStateNow({ mapImageUrl: newImageUrl, mapFlags: prev, currentPin: null })
+                persistMapStateNow({
+                  mapImageUrl: newImageUrl,
+                  mapFlags: prev,
+                  ...(pinAnchored ? { currentPin: null } : {}),
+                })
                 return prev
               })
             }
@@ -1478,7 +1498,7 @@ export default function Home() {
         }
       })()
     },
-    [journeyActive, user, resolveJourneyPin, mapImageUrl, mapChapters, activeMapChapterIndex, persistMapStateNow],
+    [user, resolveJourneyPin, mapImageUrl, mapChapters, activeMapChapterIndex, persistMapStateNow],
   )
 
   const runStoryJourneyMapAtStructureSelect = useCallback(
@@ -1487,19 +1507,26 @@ export default function Home() {
       plot: NonNullable<StoryState["plot"]>,
       structure: { type: string },
     ) => {
-      if (!journeyActive || !user) return
+      if (!user) return
       const storyTitle = getStoryWritingMapTitle(character)
       const topic = plot.setting || character?.name || storyTitle
       const plotSummary = buildStoryPlotSummary(character, plot)
-      const pinSnapshot = resolveJourneyPin()
+      const pinAnchored = mapPinAnchoredRef.current
       pendingStoryFlagFinalizationRef.current = null
-      pendingStoryMapPinRef.current = { x: pinSnapshot.x, y: pinSnapshot.y, title: storyTitle }
+      if (pinAnchored) {
+        const pinSnapshot = resolveJourneyPin()
+        pendingStoryMapPinRef.current = { x: pinSnapshot.x, y: pinSnapshot.y, title: storyTitle }
+      } else {
+        pendingStoryMapPinRef.current = null
+      }
       toast.info("Updating your writing map in the background…", { duration: 3500 })
 
       void queueJourneyMapUpdate({
         title: storyTitle,
         topic,
-        mapPrompt: buildStoryStructureMapPrompt(character, plot, structure.type),
+        mapPrompt: buildStoryStructureMapPrompt(character, plot, structure.type, {
+          freePlacement: !pinAnchored,
+        }),
         workType: "story",
         source: "storyStructure",
         skipNewFlag: true,
@@ -1515,7 +1542,7 @@ export default function Home() {
         },
       })
     },
-    [journeyActive, user, queueJourneyMapUpdate, resolveJourneyPin],
+    [user, queueJourneyMapUpdate, resolveJourneyPin],
   )
 
   /** Fire map edit immediately when the student picks a structure (not when opening Writing Map). */
@@ -1553,7 +1580,7 @@ export default function Home() {
 
   /** Start map image edit as soon as structure is chosen — do not wait for Writing Map screen. */
   useEffect(() => {
-    if (!journeyActive || !user?.username || !mapStateHydrated) return
+    if (!user?.username || !mapStateHydrated) return
     const structure = storyState.structure
     const plot = storyState.plot
     const character = storyState.character
@@ -1567,6 +1594,7 @@ export default function Home() {
       plot.goal,
       character.name,
       activeMapChapterIndex,
+      mapPinAnchoredRef.current ? "pin" : "free",
     ].join("|")
     if (structureMapTriggeredRef.current === dedupeKey) return
     structureMapTriggeredRef.current = dedupeKey
@@ -1575,7 +1603,6 @@ export default function Home() {
     storyState.structure,
     storyState.plot,
     storyState.character,
-    journeyActive,
     user?.username,
     mapStateHydrated,
     activeMapChapterIndex,
@@ -1796,7 +1823,7 @@ export default function Home() {
   const upsertStoryMapFlag = useCallback(
     (title: string, fullStory: string) => {
       const body = fullStory.trim()
-      if (!body) return false
+      if (!body || !mapPinAnchoredRef.current) return false
       const pin = resolveJourneyPin()
       const safeTitle = title.trim() || pendingStoryMapPinRef.current?.title || "My Story"
 
@@ -2023,6 +2050,40 @@ export default function Home() {
     [user, applyTreeGrowthFromMetrics]
   )
 
+  const commitDramaMapUpdate = useCallback(() => {
+    if (!dramaBook) return
+    const script = dramaBook.script || dramaBook.summary || ""
+    const dramaMapSummary = buildDramaMapSummary(
+      dramaScenes,
+      dramaTitle || "Drama",
+      script,
+    )
+    if (script.trim()) {
+      void evaluateValuesGrowth(script, "story", dramaTitle || "My Drama")
+    }
+    void queueJourneyMapUpdate({
+      title: dramaTitle || "My Drama",
+      topic: dramaMapSummary.topic,
+      content: dramaMapSummary.content,
+      mapPrompt: dramaMapSummary.mapPrompt,
+      workType: "drama",
+      source: "drama",
+    })
+  }, [dramaBook, dramaScenes, dramaTitle, evaluateValuesGrowth, queueJourneyMapUpdate])
+
+  const commitPoetryMapUpdate = useCallback(() => {
+    const topic = poetryTopicValue || "Poetry"
+    const title = `Poetry: ${topic}`
+    void evaluateValuesGrowth(poetryLinesText, "story", title)
+    void queueJourneyMapUpdate({
+      title,
+      topic,
+      content: poetryLinesText,
+      workType: "poetry",
+      source: "poetry",
+    })
+  }, [evaluateValuesGrowth, poetryLinesText, poetryTopicValue, queueJourneyMapUpdate])
+
   if (!isReady) {
     return null
   }
@@ -2111,6 +2172,7 @@ export default function Home() {
           onStartWrite={() => {
             setJourneySelection(null)
             setLevelBadgeUnlocked(false)
+            mapPinAnchoredRef.current = false
             setStage("writeTypeSelection")
           }}
           onViewAbout={() => setStage("about")}
@@ -2163,6 +2225,7 @@ export default function Home() {
             }))
             setLevelBadgeUnlocked(true)
             setJourneyActive(true)
+            mapPinAnchoredRef.current = true
             if (type === "story") {
               setStoryState({ character: null, plot: null, structure: null, story: "" })
               setStage("character")
@@ -2348,13 +2411,15 @@ export default function Home() {
           userId={user.username}
           onBookSelected={(title) => {
             setBookReviewState(prev => ({ ...prev, bookTitle: title }))
-            void queueJourneyMapUpdate({
-              title,
-              topic: title,
-              content: `Selected book for review: ${title}`,
-              workType: "review",
-              source: "bookSelection",
-            })
+            if (mapPinAnchoredRef.current) {
+              void queueJourneyMapUpdate({
+                title,
+                topic: title,
+                content: `Selected book for review: ${title}`,
+                workType: "review",
+                source: "bookSelection",
+              })
+            }
             // 選完書後，讓 AI 推薦適合的書評類型
             setStage("bookReviewTypeSelection")
           }}
@@ -2404,13 +2469,15 @@ export default function Home() {
             }
             const structure = getStructureForReviewType(bookReviewState.reviewType)
             setBookReviewState(prev => ({ ...prev, bookTitle: title, structure }))
-            void queueJourneyMapUpdate({
-              title,
-              topic: title,
-              content: `Selected book for review: ${title}`,
-              workType: "review",
-              source: "bookSelectionNoAi",
-            })
+            if (mapPinAnchoredRef.current) {
+              void queueJourneyMapUpdate({
+                title,
+                topic: title,
+                content: `Selected book for review: ${title}`,
+                workType: "review",
+                source: "bookSelectionNoAi",
+              })
+            }
             if (user.noAi) {
               setStage("bookReviewWritingNoAi")
             } else {
@@ -3061,25 +3128,12 @@ export default function Home() {
           language={language}
           userId={user.username}
           initialView="builder"
-          onBackToMap={() => setStage("journeyMap")}
-
+          onBackToMap={() => {
+            commitDramaMapUpdate()
+            setStage(journeyActive ? "journeyMap" : "home")
+          }}
           onBack={() => {
-            if (dramaBook) {
-              const dramaMapSummary = buildDramaMapSummary(
-                dramaScenes,
-                dramaTitle || "Drama",
-                dramaBook.script || dramaBook.summary || "",
-              )
-              void evaluateValuesGrowth(dramaBook.script || "", "story", "My Drama")
-              void queueJourneyMapUpdate({
-                title: "My Drama",
-                topic: dramaMapSummary.topic,
-                content: dramaMapSummary.content,
-                mapPrompt: dramaMapSummary.mapPrompt,
-                workType: "drama",
-                source: "drama",
-              })
-            }
+            commitDramaMapUpdate()
             setStage(journeyActive ? "journeyMap" : "writeTypeSelection")
           }}
         />
@@ -3089,28 +3143,12 @@ export default function Home() {
           language={language}
           userId={user.username}
           initialView="book"
-          onBackToMap={() => setStage("journeyMap")}
-
+          onBackToMap={() => {
+            commitDramaMapUpdate()
+            setStage(journeyActive ? "journeyMap" : "home")
+          }}
           onBack={() => {
-            if (dramaBook) {
-              const script = dramaBook.script || ""
-              if (script.trim()) {
-                const dramaMapSummary = buildDramaMapSummary(
-                  dramaScenes,
-                  dramaTitle || "Drama",
-                  script,
-                )
-                void evaluateValuesGrowth(script, "story", "My Drama")
-                void queueJourneyMapUpdate({
-                  title: "My Drama",
-                  topic: dramaMapSummary.topic,
-                  content: dramaMapSummary.content,
-                  mapPrompt: dramaMapSummary.mapPrompt,
-                  workType: "drama",
-                  source: "drama",
-                })
-              }
-            }
+            commitDramaMapUpdate()
             setStage(journeyActive ? "journeyMap" : "writeTypeSelection")
           }}
         />
@@ -3120,14 +3158,13 @@ export default function Home() {
       {stage === "poetryWriting" && user && (
         <PoetryWriting
           userId={user.username}
-          onBackToMap={() => setStage("journeyMap")}
-
+          onBackToMap={() => {
+            commitPoetryMapUpdate()
+            setStage(journeyActive ? "journeyMap" : "home")
+          }}
           onBack={() => setStage("writeTypeSelection")}
           onComplete={() => {
-            const topic = poetryTopicValue || "Poetry"
-            const title = `Poetry: ${topic}`
-            evaluateValuesGrowth(poetryLinesText, "story", title)
-            void queueJourneyMapUpdate({ title, topic, content: poetryLinesText, workType: "poetry", source: "poetry" })
+            commitPoetryMapUpdate()
             setStage(journeyActive ? "journeyMap" : "home")
           }}
         />
@@ -3136,14 +3173,13 @@ export default function Home() {
         <PoetryWriting
           userId={user.username}
           initialPhase="choose-form"
-          onBackToMap={() => setStage("journeyMap")}
-
+          onBackToMap={() => {
+            commitPoetryMapUpdate()
+            setStage(journeyActive ? "journeyMap" : "home")
+          }}
           onBack={() => setStage("writeTypeSelection")}
           onComplete={() => {
-            const topic = poetryTopicValue || "Poetry"
-            const title = `Poetry: ${topic}`
-            evaluateValuesGrowth(poetryLinesText, "story", title)
-            void queueJourneyMapUpdate({ title, topic, content: poetryLinesText, workType: "poetry", source: "poetry" })
+            commitPoetryMapUpdate()
             setStage(journeyActive ? "journeyMap" : "home")
           }}
         />
@@ -3152,14 +3188,13 @@ export default function Home() {
         <PoetryWriting
           userId={user.username}
           initialPhase="setup-topic"
-          onBackToMap={() => setStage("journeyMap")}
-
+          onBackToMap={() => {
+            commitPoetryMapUpdate()
+            setStage(journeyActive ? "journeyMap" : "home")
+          }}
           onBack={() => setStage("writeTypeSelection")}
           onComplete={() => {
-            const topic = poetryTopicValue || "Poetry"
-            const title = `Poetry: ${topic}`
-            evaluateValuesGrowth(poetryLinesText, "story", title)
-            void queueJourneyMapUpdate({ title, topic, content: poetryLinesText, workType: "poetry", source: "poetry" })
+            commitPoetryMapUpdate()
             setStage(journeyActive ? "journeyMap" : "home")
           }}
         />
@@ -3168,14 +3203,13 @@ export default function Home() {
         <PoetryWriting
           userId={user.username}
           initialPhase="editor"
-          onBackToMap={() => setStage("journeyMap")}
-
+          onBackToMap={() => {
+            commitPoetryMapUpdate()
+            setStage(journeyActive ? "journeyMap" : "home")
+          }}
           onBack={() => setStage("writeTypeSelection")}
           onComplete={() => {
-            const topic = poetryTopicValue || "Poetry"
-            const title = `Poetry: ${topic}`
-            evaluateValuesGrowth(poetryLinesText, "story", title)
-            void queueJourneyMapUpdate({ title, topic, content: poetryLinesText, workType: "poetry", source: "poetry" })
+            commitPoetryMapUpdate()
             setStage(journeyActive ? "journeyMap" : "home")
           }}
         />
@@ -3184,14 +3218,13 @@ export default function Home() {
         <PoetryWriting
           userId={user.username}
           initialPhase="review"
-          onBackToMap={() => setStage("journeyMap")}
-
+          onBackToMap={() => {
+            commitPoetryMapUpdate()
+            setStage(journeyActive ? "journeyMap" : "home")
+          }}
           onBack={() => setStage("writeTypeSelection")}
           onComplete={() => {
-            const topic = poetryTopicValue || "Poetry"
-            const title = `Poetry: ${topic}`
-            evaluateValuesGrowth(poetryLinesText, "story", title)
-            void queueJourneyMapUpdate({ title, topic, content: poetryLinesText, workType: "poetry", source: "poetry" })
+            commitPoetryMapUpdate()
             setStage(journeyActive ? "journeyMap" : "home")
           }}
         />
