@@ -21,11 +21,12 @@ import { getCurrentLevel } from "@/lib/current-level";
 
 interface PoetryReviewProps {
   onBack?: () => void;
+  onBackToMap?: () => void;
   onComplete?: () => void;
   userId?: string;
 }
 
-export function PoetryReview({ onBack, onComplete, userId }: PoetryReviewProps) {
+export function PoetryReview({ onBack, onBackToMap, onComplete, userId }: PoetryReviewProps) {
   const store = usePoetryStore();
   const form = store.form;
   const { topic, lines, aiLog } = store;
@@ -276,9 +277,9 @@ export function PoetryReview({ onBack, onComplete, userId }: PoetryReviewProps) 
                   <RotateCcw className="h-3.5 w-3.5" />
                   Keep Editing
                 </Button>
-                {onBack && (
+                {(onBackToMap || onBack) && (
                   <Button
-                    onClick={onBack}
+                    onClick={onBackToMap || onBack}
                     variant="outline"
                     className="flex-1 gap-2 font-hand text-sm bg-transparent pixel-btn pixel-btn-wood"
                   >
