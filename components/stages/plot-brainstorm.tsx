@@ -7,6 +7,7 @@ import type { Language, StoryState } from "@/app/page"
 import StageHeader from "@/components/stage-header"
 import { Loader2, Send } from "lucide-react"
 import { toast } from "sonner"
+import { sanitizeStoryAssistantText } from "@/lib/story-meta"
 
 interface PlotBrainstormProps {
   language: Language
@@ -130,7 +131,7 @@ export default function PlotBrainstorm({ language, character, onPlotCreate, onBa
   }
 
   const cleanAiDisplayText = (text: string) =>
-    text
+    sanitizeStoryAssistantText(text)
       .replace(/The plot is getting clearer![\s\S]*?talk about\?/gi, "")
       .replace(/故事情节已经比较清晰了[，,]?\s*还想再聊些什么吗[？?]?/g, "")
       .replace(/Great choice!?/gi, "")
