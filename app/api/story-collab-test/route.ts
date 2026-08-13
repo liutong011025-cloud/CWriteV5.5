@@ -10,6 +10,7 @@ import {
   type PlotState,
 } from "@/lib/story-plot-coach"
 import { parseRevisionTags, type StoryRevisionTag } from "@/lib/story-revision-tags"
+import { parseStoryMetaPayload, stripStoryMetaBlock } from "@/lib/story-meta"
 
 type CollabPhase = "explore" | "plot" | "structure" | "writing" | "polish"
 
@@ -84,18 +85,12 @@ function parseResponse(raw: string): {
   answer: string
   meta: Partial<CollabResponse & { section_pass?: boolean }>
 } {
-  const metaMatch = raw.match(/---META---\s*([\s\S]*?)\s*---END---/)
-  if (metaMatch) {
-    try {
-      const meta = JSON.parse(metaMatch[1]) as Partial<CollabResponse & { section_pass?: boolean }>
-      const answer = raw.slice(0, raw.indexOf("---META---")).trim()
-      return { answer, meta }
-    } catch {
-      // fall through
-    }
+  const { answer, metaText } = stripStoryMetaBlock(raw)
+  const parsedMeta = parseStoryMetaPayload(metaText)
+  return {
+    answer,
+    meta: (parsedMeta || {}) as Partial<CollabResponse & { section_pass?: boolean }>,
   }
-
-  return { answer: raw.trim(), meta: {} }
 }
 
 function detectSectionPassed(
