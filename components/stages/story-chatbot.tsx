@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { getCurrentLevel } from "@/lib/current-level"
+import { sanitizeStoryAssistantText } from "@/lib/story-meta"
 import { cn } from "@/lib/utils"
 
 type StoryChatPhase = "plot" | "structure" | "writing"
@@ -158,7 +159,7 @@ const parseStoryIntoSections = (story: string, sections: string[]): Record<numbe
 }
 
 const cleanAiDisplayText = (text: string) =>
-  text
+  sanitizeStoryAssistantText(text)
     .replace(/The plot is getting clearer![\s\S]*?talk about\?/gi, "")
     .replace(/故事情节已经比较清晰了[，,]?\s*还想再聊些什么吗[？?]?/g, "")
     .replace(/Great choice!?/gi, "")
