@@ -30,7 +30,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "DeepSeek API not configured" }, { status: 500 })
     }
 
-    const prompt = `You are Luna, a friendly and encouraging elementary school English writing teacher assistant. A student has made some changes to their ${article_type}.
+    const intent = body.intent === "open" || original_content.trim() === modified_content.trim() ? "open" : "revise"
+    const prompt =
+      intent === "open"
+        ? `You are Luna, a friendly elementary school English writing teacher. The student opened their finished ${article_type} to edit it.
+
+Their ${article_type}:
+${original_content}
+
+${modified_section ? `Focus on this section if useful: ${modified_section}` : ""}
+
+Give 2-3 short, specific, encouraging tips for making it even better. Do NOT rewrite the whole piece. Keep it around 40-60 words, warm and simple for ages 8-12. Use 1-2 emojis.${levelSuffix}`
+        : `You are Luna, a friendly and encouraging elementary school English writing teacher assistant. A student has made some changes to their ${article_type}.
 
 Original content:
 ${original_content}
@@ -50,7 +61,7 @@ Guidelines:
 3. Always provide specific, actionable suggestions for improvement
 4. Be encouraging but honest - don't give false praise
 
-Do NOT rewrite the entire article. Only provide feedback and suggestions. Keep your response concise (around 30-50 words). Be conversational and warm, like a caring teacher.这次不要在回答末尾发送六个单词${levelSuffix}`
+Do NOT rewrite the entire article. Only provide feedback and suggestions. Keep your response concise (around 30-50 words). Be conversational and warm, like a caring teacher.${levelSuffix}`
 
     const suggestion = await chat({
       messages: [{ role: "user", content: prompt }],
