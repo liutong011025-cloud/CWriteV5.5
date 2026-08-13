@@ -761,6 +761,37 @@ export default function StoryCollab({
     setCurrentWritingSection((prev) => prev + 1)
   }, [currentWritingSection, storyBlocks, chatInput])
 
+  const handleReviseWrittenSection = useCallback(
+    (targetIndex: number) => {
+      if (mode !== "ai") return
+      if (targetIndex === currentWritingSection) return
+      const targetText = storyBlocks[targetIndex]?.text.trim()
+      if (!targetText) return
+
+      const from = currentWritingSection
+      const fromMerged =
+        from >= 0 && from < storyBlocks.length
+          ? mergePadIntoSection(storyBlocks[from].text, chatInput).trim()
+          : ""
+
+      setStoryBlocks((prev) => {
+        const next = [...prev]
+        if (from >= 0 && from < next.length) {
+          next[from] = { ...next[from], text: fromMerged }
+        }
+        next[targetIndex] = { ...next[targetIndex], text: "" }
+        return next
+      })
+      if (from >= 0) gatePassSnapshotRef.current[from] = fromMerged
+      setChatInput(targetText)
+      setCurrentWritingSection(targetIndex)
+      setSectionGateStatus((prev) => ({ ...prev, [targetIndex]: "idle" }))
+      delete gatePassSnapshotRef.current[targetIndex]
+      toast.info(`Revising ${storyBlocks[targetIndex].sectionName}. Edit it in the Writing Pad.`)
+    },
+    [mode, currentWritingSection, storyBlocks, chatInput],
+  )
+
   const handleLastSectionContinue = useCallback(() => {
     const idx = storyBlocks.length - 1
     if (idx < 0 || currentWritingSection !== idx) return
@@ -1452,9 +1483,25 @@ export default function StoryCollab({
                             {isActive && <span className="text-[10px] font-bold" style={{ color: "#c4a020" }}>writing now</span>}
                           </div>
                           {mode === "ai" ? (
-                            /* Read-only display in AI mode */
+                            /* Click a finished section to revise it again */
                             <div
-                              className="min-h-[80px] min-w-0 max-w-full overflow-hidden break-words p-3 text-sm whitespace-pre-wrap transition-all duration-300"
+                              role={isDone && !isActive ? "button" : undefined}
+                              tabIndex={isDone && !isActive ? 0 : undefined}
+                              title={isDone && !isActive ? "Revise again?" : undefined}
+                              onClick={() => {
+                                if (isDone && !isActive) handleReviseWrittenSection(index)
+                              }}
+                              onKeyDown={(e) => {
+                                if (!isDone || isActive) return
+                                if (e.key === "Enter" || e.key === " ") {
+                                  e.preventDefault()
+                                  handleReviseWrittenSection(index)
+                                }
+                              }}
+                              className={cn(
+                                "group relative min-h-[80px] min-w-0 max-w-full overflow-x-hidden overflow-y-visible break-words p-3 text-sm whitespace-pre-wrap transition-all duration-300",
+                                isDone && !isActive && "cursor-pointer hover:brightness-95",
+                              )}
                               style={{
                                 background: isActive ? "#f5e6c8" : isDone ? "#d4e8b4" : "#e8dcc0",
                                 border: `3px solid ${isActive ? "#c4a020" : isDone ? "#5a9a32" : "#8b6914"}`,
@@ -1470,6 +1517,19 @@ export default function StoryCollab({
                                     ? "Finish Story only counts text saved here. After Great job!, tap Continue to move your pad writing to this box."
                                     : "Text stays in the Writing Pad until you tap Next Section."
                                   : "Not written yet")}
+                              {isDone && !isActive && (
+                                <span
+                                  className="pointer-events-none absolute left-1/2 top-2 z-10 -translate-x-1/2 rounded-md px-2 py-1 text-[11px] font-extrabold opacity-0 shadow-md transition-opacity group-hover:opacity-100"
+                                  style={{
+                                    background: "#fff8e7",
+                                    color: "#6b5210",
+                                    border: "2px solid #8b6914",
+                                    whiteSpace: "nowrap",
+                                  }}
+                                >
+                                  Revise again?
+                                </span>
+                              )}
                             </div>
                           ) : (
                             /* Editable in manual mode */
