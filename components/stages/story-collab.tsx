@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { getCurrentLevel } from "@/lib/current-level"
 import type { StoryRevisionTag } from "@/lib/story-revision-tags"
 import type { PlotConversationProgress } from "@/lib/story-plot-coach"
+import { sanitizeStoryAssistantText } from "@/lib/story-meta"
 import { cn } from "@/lib/utils"
 import StoryRevisionTags from "@/components/stages/story-revision-tags"
 
@@ -116,7 +117,7 @@ function wantsStartWriting(raw: string): boolean {
 }
 
 const cleanAiDisplayText = (text: string) =>
-  text
+  sanitizeStoryAssistantText(text)
     .replace(/The plot is getting clearer![\s\S]*?talk about\?/gi, "")
     .replace(/故事情节已经比较清晰了[，,]?\s*还想再聊些什么吗[？?]?/g, "")
     .replace(/Great choice!?/gi, "")
@@ -549,7 +550,7 @@ export default function StoryCollab({
           role: "assistant",
           content:
             data.revision_tags?.length
-              ? data.answer?.trim() ||
+              ? cleaned ||
                 "Revise your Writing Pad — tap each tag to see why, then tap Finish! again."
               : cleaned,
           suggestions: data.revision_tags?.length ? [] : data.suggestions,
@@ -563,7 +564,7 @@ export default function StoryCollab({
         // Update conversation history
         setConversationHistory([
           ...newHistory,
-          { role: "assistant", content: rawAnswer },
+          { role: "assistant", content: cleaned || rawAnswer },
         ])
       } catch (err) {
         const errMsg = err instanceof Error ? err.message : "Something went wrong"
