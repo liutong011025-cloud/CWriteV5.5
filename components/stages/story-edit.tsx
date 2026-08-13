@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { toast } from "sonner"
@@ -37,34 +37,15 @@ export default function StoryEdit({
   const [aiSuggestion, setAiSuggestion] = useState<string | null>(null)
   const [isLoadingSuggestion, setIsLoadingSuggestion] = useState(false)
   const lastModifiedRef = useRef<string>("")
-  const suggestionTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const suggestionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const openedRef = useRef(false)
 
-  // 当内容改变时，延迟调用AI获取建议
-  useEffect(() => {
-    if (suggestionTimeoutRef.current) {
-      clearTimeout(suggestionTimeoutRef.current)
-    }
-
-    // 如果内容有实际改变，延迟1.5秒后获取AI建议
-    if (editedStory !== originalStory && editedStory !== lastModifiedRef.current) {
-      suggestionTimeoutRef.current = setTimeout(() => {
-        getAISuggestion()
-        lastModifiedRef.current = editedStory
-      }, 1500)
-    }
-
-    return () => {
-      if (suggestionTimeoutRef.current) {
-        clearTimeout(suggestionTimeoutRef.current)
-      }
-    }
-  }, [editedStory, originalStory])
-
-  const getAISuggestion = async () => {
-    if (!editedStory || editedStory === originalStory) return
+  const getAISuggestion = useCallback(async (intent: "open" | "revise" = "revise") => {
+    if (!editedStory.trim()) return
+    if (intent === "revise" && editedStory === originalStory) return
 
     setIsLoadingSuggestion(true)
-    setAiSuggestion(null)
+    if (intent === "revise") setAiSuggestion(null)
 
     try {
       const response = await fetch("/api/dify-edit-assistant", {
@@ -74,8 +55,9 @@ export default function StoryEdit({
         },
         body: JSON.stringify({
           article_type: "story",
-          original_content: originalStory,
+          original_content: originalStory || editedStory,
           modified_content: editedStory,
+          intent,
           user_id: userId || "default-user",
           level: getCurrentLevel(),
         }),
@@ -86,13 +68,46 @@ export default function StoryEdit({
         setAiSuggestion(data.suggestion)
       } else {
         console.error("Failed to get AI suggestion:", data.error)
+        setAiSuggestion((prev) => prev || "I am here to help you edit. Try changing a sentence, and I will share a tip!")
       }
     } catch (error) {
       console.error("Error getting AI suggestion:", error)
+      setAiSuggestion((prev) => prev || "I am here to help you edit. Try changing a sentence, and I will share a tip!")
     } finally {
       setIsLoadingSuggestion(false)
     }
-  }
+  }, [editedStory, originalStory, userId])
+
+  useEffect(() => {
+    if (openedRef.current) return
+    openedRef.current = true
+    if (editedStory.trim()) {
+      void getAISuggestion("open")
+    }
+    // Initial coaching when Edit Story opens.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // 当内容改变时，延迟调用AI获取建议
+  useEffect(() => {
+    if (suggestionTimeoutRef.current) {
+      clearTimeout(suggestionTimeoutRef.current)
+    }
+
+    if (editedStory !== originalStory && editedStory !== lastModifiedRef.current) {
+      suggestionTimeoutRef.current = setTimeout(() => {
+        void getAISuggestion("revise")
+        lastModifiedRef.current = editedStory
+      }, 1500)
+    }
+
+    return () => {
+      if (suggestionTimeoutRef.current) {
+        clearTimeout(suggestionTimeoutRef.current)
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editedStory, originalStory])
 
   const handleSave = async () => {
     setIsSaving(true)
@@ -202,7 +217,7 @@ export default function StoryEdit({
         </div>
       )}
       
-      <div className="max-w-5xl mx-auto">
+      <div className="max-w-7xl mx-auto">
         <div className="mb-6">
           <Button
             onClick={onBack}
@@ -218,9 +233,9 @@ export default function StoryEdit({
           <p className="text-gray-600">Make changes to your story. AI will provide helpful suggestions!</p>
         </div>
 
-        <div className="grid lg:grid-cols-3 gap-6">
+        <div className="grid lg:grid-cols-12 gap-6">
           {/* 左侧：故事信息 */}
-          <div className="lg:col-span-1 space-y-4">
+          <div className="lg:col-span-3 space-y-4">
             <div className="bg-white/80 backdrop-blur-lg rounded-xl p-6 border-2 border-indigo-200 shadow-lg">
               <h3 className="text-xl font-bold mb-4 text-indigo-700">Story Info</h3>
               <div className="space-y-3">
@@ -246,9 +261,8 @@ export default function StoryEdit({
             </div>
           </div>
 
-          {/* 中间：编辑区域和AI建议 */}
-          <div className="lg:col-span-2 relative">
-            {/* 编辑文本框 - 固定宽度，不受 Luna 影响 */}
+          {/* 中间：编辑区域 */}
+          <div className="lg:col-span-5">
             <div className="bg-white/90 backdrop-blur-lg rounded-xl p-6 border-2 border-purple-200 shadow-xl">
               <label className="block text-lg font-bold mb-3 text-purple-700">
                 Your Story
@@ -275,53 +289,6 @@ export default function StoryEdit({
               </div>
             </div>
 
-            {/* AI 建议 - 绝对定位在右侧，不影响文本框 */}
-            {(aiSuggestion || isLoadingSuggestion) && (
-              <div className="absolute right-0 top-0 w-80 transform translate-x-full ml-6 z-10">
-                <div className="bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50 rounded-2xl p-5 border-4 border-pink-200 backdrop-blur-sm relative">
-                  {/* 说话气泡的尾巴 - 指向左边 */}
-                  <div className="absolute left-0 top-8 w-0 h-0 border-t-[15px] border-t-transparent border-b-[15px] border-b-transparent border-r-[20px] border-r-pink-200 transform -translate-x-full"></div>
-                  <div className="absolute left-0 top-[33px] w-0 h-0 border-t-[12px] border-t-transparent border-b-[12px] border-b-transparent border-r-[16px] border-r-pink-50 transform -translate-x-full"></div>
-                  
-                  <div className="flex items-start gap-3">
-                    {/* Luna Avatar - 无边框无阴影 */}
-                    <div className="flex-shrink-0">
-                      <Image
-                        src="/muse-avatar.webp"
-                        alt="Luna"
-                        width={60}
-                        height={60}
-                        className="rounded-full"
-                      />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="font-bold text-sm">
-                          <span className="bg-gradient-to-r from-purple-600 via-pink-600 to-orange-600 bg-clip-text text-transparent">C</span>
-                          <span className="text-purple-700">agent</span>
-                        </span>
-                        {isLoadingSuggestion && (
-                          <div className="flex gap-1">
-                            <div className="w-2 h-2 bg-pink-400 rounded-full animate-bounce"></div>
-                            <div className="w-2 h-2 bg-pink-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                            <div className="w-2 h-2 bg-pink-400 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
-                          </div>
-                        )}
-                      </div>
-                      {isLoadingSuggestion ? (
-                        <p className="text-sm text-purple-600">Thinking...</p>
-                      ) : aiSuggestion ? (
-                        <p className="text-sm text-gray-800 leading-relaxed whitespace-pre-wrap">
-                          {aiSuggestion}
-                        </p>
-                      ) : null}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* 保存按钮 */}
             <div className="flex gap-4 mt-6">
               <Button
                 onClick={handleClickSave}
@@ -331,6 +298,49 @@ export default function StoryEdit({
                 <Save className="w-5 h-5 mr-2" />
                 {isSaving ? "Saving..." : "Save Changes"}
               </Button>
+            </div>
+          </div>
+
+          {/* 右侧：AI 辅导，始终在布局内可见 */}
+          <div className="lg:col-span-4">
+            <div className="bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50 rounded-2xl p-5 border-4 border-pink-200 sticky top-28">
+              <div className="flex items-start gap-3">
+                <div className="flex-shrink-0">
+                  <Image
+                    src="/muse-avatar.webp"
+                    alt="Luna"
+                    width={60}
+                    height={60}
+                    className="rounded-full"
+                  />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="font-bold text-sm">
+                      <span className="bg-gradient-to-r from-purple-600 via-pink-600 to-orange-600 bg-clip-text text-transparent">C</span>
+                      <span className="text-purple-700">agent</span>
+                    </span>
+                    {isLoadingSuggestion && (
+                      <div className="flex gap-1">
+                        <div className="w-2 h-2 bg-pink-400 rounded-full animate-bounce"></div>
+                        <div className="w-2 h-2 bg-pink-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                        <div className="w-2 h-2 bg-pink-400 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
+                      </div>
+                    )}
+                  </div>
+                  {isLoadingSuggestion ? (
+                    <p className="text-sm text-purple-600">Reading your story...</p>
+                  ) : aiSuggestion ? (
+                    <p className="text-sm text-gray-800 leading-relaxed whitespace-pre-wrap">
+                      {aiSuggestion}
+                    </p>
+                  ) : (
+                    <p className="text-sm text-purple-600">
+                      I will share editing tips here. Change a sentence and I will help you improve it!
+                    </p>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
         </div>
