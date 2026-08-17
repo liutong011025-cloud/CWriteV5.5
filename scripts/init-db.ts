@@ -11,7 +11,7 @@ const USERS = {
   'Nicole': { password: 'yinyin2948', role: 'teacher' as const },
   'lteduhk02': { password: '123321', role: 'teacher' as const },
 
-  // EdUHK 试用学生（班级 EdUHK；ktotest1–5 由 ensureLteTrialRoster 编班，不改原密码）
+  // EdUHK 试用学生（班级 EdUHK；ktotest1–6 由 ensureLteTrialRoster 编班，不改原密码）
   'lteduhk01': { password: '123321', role: 'student' as const },
   
   // 正常AI用户（密码：123321）
