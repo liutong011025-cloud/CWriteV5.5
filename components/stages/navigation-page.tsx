@@ -61,7 +61,13 @@ export default function NavigationPage({ onBack, onSelectFarm, currentUsername }
       }
       const payload = (await response.json()) as DashboardPayload
       const lowerCurrent = currentUsername?.toLowerCase().trim()
-      const liveFriends = (payload.classGroups?.[0]?.users ?? [])
+      const allClassmates = (payload.classGroups ?? []).flatMap((group) => group.users ?? [])
+      const me = allClassmates.find((item) => item.username?.trim().toLowerCase() === lowerCurrent)
+      const myGrade = me?.grade?.trim()
+      const peerPool = myGrade
+        ? allClassmates.filter((item) => (item.grade?.trim() || "") === myGrade)
+        : (payload.classGroups?.[0]?.users ?? allClassmates)
+      const liveFriends = peerPool
         .filter((item) => {
           const username = item.username?.trim()
           return username && (!lowerCurrent || username.toLowerCase() !== lowerCurrent)
