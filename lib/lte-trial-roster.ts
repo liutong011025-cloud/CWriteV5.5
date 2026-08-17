@@ -5,7 +5,7 @@ const LEGACY_CLASS_NAME = "Lumina Lab"
 const FALLBACK_PASSWORD = "123321"
 
 export const LTE_TRIAL_STUDENTS = ["lteduhk01", "ktotest1", "ktotest2", "ktotest3", "ktotest4"] as const
-export const LTE_TRIAL_TEACHERS = ["lteduhk02", "ktotest5"] as const
+export const LTE_TRIAL_TEACHERS = ["lteduhk02", "ktotest5", "ktotest6"] as const
 
 const KNOWN_PASSWORD_LOGINS = [
   { username: "lteduhk01", password: FALLBACK_PASSWORD, role: "student" as const },
@@ -88,7 +88,7 @@ async function resolveTeacherClass(teacherId: string) {
 }
 
 /**
- * EdUHK 试用班：教师 ktotest5 / lteduhk02 都能看到
+ * EdUHK 试用班：教师 ktotest5 / ktotest6 / lteduhk02 都能看到
  * 学生 ktotest1–4 与 lteduhk01。
  */
 export async function ensureLteTrialRoster() {
