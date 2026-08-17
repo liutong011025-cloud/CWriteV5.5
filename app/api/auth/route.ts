@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma, isDatabaseUrlConfigured } from "@/lib/prisma"
+import { loginLteTrialAccount, syncLteTrialRosterAfterLogin } from "@/lib/lte-trial-roster"
 
 // 新用户注册开关（学生 + 教师）
 const REGISTRATION_ENABLED = true
@@ -175,6 +176,12 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // 3b) EdUHK 试用：lteduhk01 学生 / lteduhk02 教师（密码 123321）
+    const lteTrialUser = await loginLteTrialAccount(username, password)
+    if (lteTrialUser) {
+      return NextResponse.json({ success: true, user: lteTrialUser }, { status: 200 })
+    }
+
     // 4) 其他帳號：需要資料庫
     if (!isDatabaseUrlConfigured()) {
       console.error("Database URL is not configured")
@@ -216,12 +223,15 @@ export async function POST(request: NextRequest) {
     }
 
     if (user && user.password === password) {
+      await syncLteTrialRosterAfterLogin(user.username)
+      const fresh = await prisma.user.findUnique({ where: { id: user.id } })
+      const resolved = fresh ?? user
       return NextResponse.json({
         success: true,
         user: {
-          username: user.username,
-          role: user.role as "teacher" | "student",
-          noAi: user.noAi || false,
+          username: resolved.username,
+          role: resolved.role as "teacher" | "student",
+          noAi: resolved.noAi || false,
           isCopywriter: false,
         },
       })
