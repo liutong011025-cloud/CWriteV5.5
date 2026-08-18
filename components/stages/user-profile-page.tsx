@@ -1195,6 +1195,20 @@ export default function UserProfilePage({
     >
       {/* My Farm - 固定視窗鋪滿，背景 object-cover 不露 firstmap，前景用 % 鎖定相對位置 */}
       <div ref={farmContainerRef} className="fixed inset-0 w-full h-full overflow-hidden">
+        <style>{`
+          @keyframes farm-breathe {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.055); }
+          }
+          .farm-breathe {
+            animation: farm-breathe 2.7s ease-in-out infinite;
+            transform-origin: center center;
+            will-change: transform;
+          }
+          @media (prefers-reduced-motion: reduce) {
+            .farm-breathe { animation: none; }
+          }
+        `}</style>
         <img
           ref={farmImageRef}
           src={farmBackgroundSrc}
@@ -1260,14 +1274,22 @@ export default function UserProfilePage({
                     <img
                       src={treeImageSrc}
                       alt={`Farm tree ${index + 1}`}
-                      className="h-full w-full object-contain select-none pointer-events-none"
+                      className={`h-full w-full object-contain select-none pointer-events-none ${canClickTree ? "farm-breathe" : ""}`}
+                      style={
+                        canClickTree
+                          ? {
+                              animationDelay: `${index * 0.22}s`,
+                              animationPlayState: isHoveredTree || isHighlightedTree ? "paused" : "running",
+                            }
+                          : undefined
+                      }
                       draggable={false}
                     />
                   </Wrapper>
                 )
               })}
 
-            {farmElements.map((element) => {
+            {farmElements.map((element, elementIndex) => {
               const state = farmElementStates[element.id]
               if (!state) return null
               const isHovered = hoveredFarmElement === element.id
@@ -1305,20 +1327,28 @@ export default function UserProfilePage({
                     }
                   }}
                 >
-                  <img
-                    src={element.imageSrc}
-                    alt={element.label}
-                    className={`block w-full object-contain select-none pointer-events-none ${
-                      element.useNaturalAspect ? "h-auto" : "h-full"
-                    }`}
-                    draggable={false}
-                  />
-                  {element.id === "farmwrittingboard" && !isOtherFarm && unreadCount > 0 && (
-                    <span
-                      className="absolute right-[6%] top-[10%] h-3.5 w-3.5 rounded-full bg-red-500 ring-2 ring-white"
-                      aria-label="Unread review notifications"
+                  <span
+                    className="farm-breathe relative block h-full w-full"
+                    style={{
+                      animationDelay: `${elementIndex * 0.35}s`,
+                      animationPlayState: isHovered ? "paused" : "running",
+                    }}
+                  >
+                    <img
+                      src={element.imageSrc}
+                      alt={element.label}
+                      className={`block w-full object-contain select-none pointer-events-none ${
+                        element.useNaturalAspect ? "h-auto" : "h-full"
+                      }`}
+                      draggable={false}
                     />
-                  )}
+                    {element.id === "farmwrittingboard" && !isOtherFarm && unreadCount > 0 && (
+                      <span
+                        className="absolute right-[6%] top-[10%] h-3.5 w-3.5 rounded-full bg-red-500 ring-2 ring-white"
+                        aria-label="Unread review notifications"
+                      />
+                    )}
+                  </span>
                 </button>
               )
             })}
@@ -1420,9 +1450,11 @@ export default function UserProfilePage({
             {/* Single bubble: "Hello there!" uses left position, conversation uses cagentBubblePosition */}
             {isOtherFarm || (cagentHoverTrigger && !cagentBubbleOpen) || cagentBubbleOpen ? (
               <div
-                className={`absolute z-50 max-w-md rounded-2xl border border-purple-200 bg-gradient-to-br from-purple-50 via-pink-50 to-amber-50 px-5 py-4 shadow-xl ${
-                  isOtherFarm ? "animate-pulse" : ""
-                }`}
+                className={`absolute z-50 rounded-2xl border border-purple-200 bg-gradient-to-br from-purple-50 via-pink-50 to-amber-50 px-5 py-4 shadow-xl ${
+                  cagentBubbleOpen
+                    ? "w-[min(44rem,76%)] max-w-[44rem]"
+                    : "max-w-md"
+                } ${isOtherFarm ? "animate-pulse" : ""}`}
                 style={{
                   left: isOtherFarm
                     ? `${cagentHelloBubblePosition.x}%`
