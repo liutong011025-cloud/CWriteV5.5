@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef, useCallback, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react"
+import { useState, useEffect, useRef, useCallback, type PointerEvent as ReactPointerEvent } from "react"
 import { Button } from "@/components/ui/button"
 import { BackButton } from "@/components/ui/back-button"
 import {
@@ -405,22 +405,6 @@ function FarmHeroBrand({
     }
   }
 
-  const titleStyle: CSSProperties = {
-    background: "linear-gradient(135deg, #E8FF72 0%, #A8FF5A 52%, #5DDB4E 100%)",
-    WebkitBackgroundClip: "text",
-    WebkitTextFillColor: "transparent",
-    backgroundClip: "text",
-    fontFamily: '"Berlin Sans FB Demi", "Berlin Sans FB", var(--font-baloo), sans-serif',
-  }
-  const subtitleStyle: CSSProperties = {
-    background: "linear-gradient(135deg, #EEFF84 0%, #A8FF5A 48%, #EEFF84 100%)",
-    WebkitBackgroundClip: "text",
-    WebkitTextFillColor: "transparent",
-    backgroundClip: "text",
-    fontFamily: '"Berlin Sans FB Demi", "Berlin Sans FB", var(--font-baloo), sans-serif',
-    filter: "brightness(1.08) saturate(1.08)",
-  }
-
   return (
     <>
       <div
@@ -442,16 +426,7 @@ function FarmHeroBrand({
             拖动调整标题位置
           </div>
         )}
-        <p className="mb-1 text-xl font-bold md:text-2xl lg:text-3xl" style={titleStyle}>
-          Welcome to
-        </p>
         <FarmCwriteWordmark />
-        <p className="mt-3 text-lg font-bold md:text-2xl lg:text-3xl" style={subtitleStyle}>
-          The Future of Creative Writing
-        </p>
-        <p className="mt-1 text-base font-bold md:text-xl lg:text-2xl" style={subtitleStyle}>
-          in the AI Era
-        </p>
         <p
           className="mt-3 text-xl font-black italic md:text-2xl lg:text-3xl"
           style={{
