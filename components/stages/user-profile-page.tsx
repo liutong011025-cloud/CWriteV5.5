@@ -514,7 +514,6 @@ export default function UserProfilePage({
   const [cagentUserInput, setCagentUserInput] = useState("")
   const [cagentSending, setCagentSending] = useState(false)
   const [cagentTriggerPosition, setCagentTriggerPosition] = useState({ x: 50, y: 42 })
-  const [cagentBubblePosition, setCagentBubblePosition] = useState({ x: 56, y: 30 })
   const [cagentHelloBubblePosition, setCagentHelloBubblePosition] = useState({ x: 50, y: 32 })
   const [cagentHoverTrigger, setCagentHoverTrigger] = useState(false)
   const [otherFarmBubbleStep, setOtherFarmBubbleStep] = useState<"intro" | "warning">("intro")
@@ -1260,8 +1259,8 @@ export default function UserProfilePage({
     )
   }
 
-  const cagentBubbleX = isOtherFarm || !cagentBubbleOpen ? cagentHelloBubblePosition.x : cagentBubblePosition.x
-  const cagentBubbleY = isOtherFarm || !cagentBubbleOpen ? cagentHelloBubblePosition.y : cagentBubblePosition.y
+  const cagentBubbleX = cagentHelloBubblePosition.x
+  const cagentBubbleY = cagentHelloBubblePosition.y
   const cagentBubbleLeft = coverOverlayRect
     ? coverOverlayRect.left + (coverOverlayRect.width * cagentBubbleX) / 100
     : `${cagentBubbleX}%`
@@ -1270,8 +1269,8 @@ export default function UserProfilePage({
     : `${cagentBubbleY}%`
   const cagentGreeting = cagentHoverTrigger ? "click me!" : "Hello there!"
   const cagentGuideDisplay = (cagentGuideText || "Loading...").replace(/\n{2,}/g, "\n")
-  const cagentAnchorTop = typeof cagentBubbleTop === "number" ? cagentBubbleTop : 0
-  const cagentOpenTop = Math.max(16, cagentAnchorTop)
+  const cagentAnchorTop = typeof cagentBubbleTop === "number" ? cagentBubbleTop : 160
+  const cagentMaxHeight = Math.max(120, cagentAnchorTop - 12)
 
   return (
     <div
@@ -1564,13 +1563,13 @@ export default function UserProfilePage({
 
       <div
         className={`fixed z-[80] rounded-2xl border border-amber-200/90 bg-[#fff6e4]/95 shadow-xl ${
-          cagentBubbleOpen ? "w-[min(40rem,78%)] max-w-[40rem] px-4 py-2.5" : "max-w-md px-4 py-2"
-        } ${isOtherFarm ? "animate-pulse px-4 py-2" : ""} ${cagentBubbleOpen ? "pointer-events-auto" : "pointer-events-none"}`}
+          cagentBubbleOpen ? "w-[min(26rem,58vw)] px-3 py-2" : "max-w-xs px-4 py-2"
+        } ${isOtherFarm ? "animate-pulse px-3 py-2" : ""} ${cagentBubbleOpen ? "pointer-events-auto" : "pointer-events-none"}`}
         style={{
           left: cagentBubbleLeft,
-          top: cagentBubbleOpen || isOtherFarm ? cagentOpenTop : cagentBubbleTop,
-          transform: cagentBubbleOpen || isOtherFarm ? "translate(-50%, 0)" : "translate(-50%, -100%)",
-          maxHeight: cagentBubbleOpen || isOtherFarm ? "calc(100vh - 32px)" : undefined,
+          top: cagentBubbleTop,
+          transform: "translate(-50%, -100%)",
+          maxHeight: cagentBubbleOpen || isOtherFarm ? cagentMaxHeight : undefined,
           overflowY: cagentBubbleOpen || isOtherFarm ? "auto" : undefined,
           color: "#5c3a1e",
           fontFamily: CAGENT_FARM_FONT,
