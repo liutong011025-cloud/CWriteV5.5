@@ -19,7 +19,6 @@ export default function Header() {
   const [isScrolled, setIsScrolled] = useState(false)
   const [isAtTop, setIsAtTop] = useState(true)
   const [isHovering, setIsHovering] = useState(false)
-  const [aboutMenuOpen, setAboutMenuOpen] = useState(false)
   const [currentStage, setCurrentStage] = useState<string | null>(null)
   const [language, setLanguage] = useState<HeaderLanguage>("en") // 默认英语
   const [userInfo, setUserInfo] = useState<HeaderUserInfo>(null)
@@ -127,14 +126,6 @@ export default function Header() {
   }, [])
 
   const navItems = [
-    { label: "Home", href: "/", action: () => {
-      // 触发自定义事件来通知主页面切换到home
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('navigateToHome'))
-      }
-      // 滚动到顶部
-      window.scrollTo({ top: 0, behavior: 'smooth' })
-    } },
     { label: "New Writing", href: "/write", action: () => {
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('navigateToWriteTypeSelection'))
@@ -144,11 +135,6 @@ export default function Header() {
       // 触发自定义事件来通知主页面切换到gallery
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('navigateToGallery'))
-      }
-    } },
-    { label: "Resource", href: "/research", action: () => {
-      if (typeof window !== "undefined") {
-        window.dispatchEvent(new CustomEvent("navigateToResearch"))
       }
     } },
   ]
@@ -298,12 +284,9 @@ export default function Header() {
                <nav className="flex items-center gap-1.5 md:gap-2 xl:gap-3 flex-shrink-0 min-w-0">
                  <div className="flex items-center gap-1.5 md:gap-1.5 xl:gap-3 min-w-0 justify-end">
                  {navItems.map((item) => {
-                   // 检查是否激活
-                  const isHomePageActive = (currentStage === 'home' || pathname === '/') && item.href === "/"
-                  const isAboutPageActive = false
-                  const isWritePageActive = currentStage === 'writeTypeSelection' && item.href === "/write"
-                  const isGalleryPageActive = isGalleryPage && (item.href === "/gallery" || item.label === "Luminai Library")
-                  const isActive = isHomePageActive || isAboutPageActive || isWritePageActive || isGalleryPageActive
+                   const isWritePageActive = currentStage === 'writeTypeSelection' && item.href === "/write"
+                   const isGalleryPageActive = isGalleryPage && (item.href === "/gallery" || item.label === "Luminai Library")
+                   const isActive = isWritePageActive || isGalleryPageActive
                    return (
                      <Link
                        key={item.href}
@@ -327,60 +310,6 @@ export default function Header() {
                      </Link>
                    )
                  })}
-                {/* About us 下拉菜單：改為點擊開關，不因移出 header 立即消失 */}
-                 <div className="relative">
-                   <button
-                     type="button"
-                     onClick={() => setAboutMenuOpen((open) => !open)}
-                    className={`px-2.5 py-1.5 md:px-2.5 md:py-1.5 xl:px-6 xl:py-3 rounded-xl font-semibold text-xs md:text-[12px] xl:text-lg transition-all duration-200 whitespace-nowrap ${
-                       isAboutPage
-                         ? showBackground
-                           ? "text-yellow-200"
-                           : "text-black"
-                         : showBackground
-                         ? "text-blue-100 hover:text-white"
-                         : "text-black drop-shadow-sm hover:text-gray-700"
-                     }`}
-                   >
-                     About us
-                   </button>
-                   {aboutMenuOpen && (
-                     <div
-                       className="absolute left-1/2 -translate-x-1/2 mt-3 w-60 rounded-2xl border border-slate-700/60 bg-slate-900/95 text-sm text-slate-100 shadow-2xl py-2 z-50 backdrop-blur-md"
-                     >
-                       <button
-                         type="button"
-                         className="w-full px-4 py-3 text-left hover:bg-slate-800/80 transition-colors duration-200"
-                         onClick={() => {
-                           setAboutMenuOpen(false)
-                           if (typeof window !== "undefined") {
-                             window.dispatchEvent(new CustomEvent("navigateToAboutVision"))
-                           }
-                         }}
-                       >
-                         <span className="inline-flex items-center gap-2 font-semibold">
-                           <span className="h-1.5 w-1.5 rounded-full bg-fuchsia-300" />
-                           Vision &amp; Philosophy
-                         </span>
-                       </button>
-                       <button
-                         type="button"
-                         className="w-full px-4 py-3 text-left hover:bg-slate-800/80 transition-colors duration-200"
-                         onClick={() => {
-                           setAboutMenuOpen(false)
-                           if (typeof window !== "undefined") {
-                             window.dispatchEvent(new CustomEvent("navigateToAboutResearchTeam"))
-                           }
-                         }}
-                       >
-                         <span className="inline-flex items-center gap-2 font-semibold">
-                           <span className="h-1.5 w-1.5 rounded-full bg-cyan-300" />
-                           Research Team
-                         </span>
-                       </button>
-                     </div>
-                   )}
-                 </div>
                  </div>
                  
                 {/* My Farm 文字按钮 - 登录后显示，点击进入农场 */}
