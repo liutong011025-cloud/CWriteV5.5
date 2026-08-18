@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useEffect, useRef, useState } from "react"
+import React, { useEffect, useState } from "react"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -23,33 +23,7 @@ interface LoginPageProps {
 const REGISTRATION_ENABLED = true
 const TEACHER_REGISTRATION_ENABLED = true
 const REGISTRATION_DISABLED_MESSAGE = "New user registration: Function is not available."
-
-type PanelTune = { x: number; y: number; scale: number; width: number }
-const DEFAULT_PANEL_TUNE: PanelTune = { x: 0, y: 0, scale: 1, width: 384 }
-const PANEL_TUNE_KEY = "cwrite-login-panel-tune"
-
-function loadPanelTune(): PanelTune {
-  if (typeof window === "undefined") return DEFAULT_PANEL_TUNE
-  try {
-    const saved = localStorage.getItem(PANEL_TUNE_KEY) || localStorage.getItem("cwrite-login-panel-offset")
-    if (saved) {
-      const parsed = JSON.parse(saved) as Partial<PanelTune>
-      return {
-        x: typeof parsed.x === "number" ? parsed.x : DEFAULT_PANEL_TUNE.x,
-        y: typeof parsed.y === "number" ? parsed.y : DEFAULT_PANEL_TUNE.y,
-        scale: typeof parsed.scale === "number" ? parsed.scale : DEFAULT_PANEL_TUNE.scale,
-        width: typeof parsed.width === "number" ? parsed.width : DEFAULT_PANEL_TUNE.width,
-      }
-    }
-  } catch {
-    // ignore invalid local cache
-  }
-  return DEFAULT_PANEL_TUNE
-}
-
-function clamp(value: number, min: number, max: number) {
-  return Math.min(max, Math.max(min, value))
-}
+const LOGIN_BACKGROUND_SRC = "/Background1.png"
 
 export default function LoginPage({ onLogin }: LoginPageProps) {
   const [mode, setMode] = useState<"login" | "register">("login")
@@ -60,97 +34,24 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
   const [registerEmail, setRegisterEmail] = useState("")
   const [password, setPassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)
-  const [panelTune, setPanelTune] = useState<PanelTune>(loadPanelTune)
-  const [tuneOpen, setTuneOpen] = useState(true)
-  const dragState = useRef<{
-    pointerId: number
-    startX: number
-    startY: number
-    origX: number
-    origY: number
-  } | null>(null)
-  const resizeState = useRef<{
-    pointerId: number
-    startX: number
-    origScale: number
-  } | null>(null)
+  const [bgReady, setBgReady] = useState(false)
 
   useEffect(() => {
-    try {
-      localStorage.setItem(PANEL_TUNE_KEY, JSON.stringify(panelTune))
-    } catch {
-      // ignore quota / private mode
+    let cancelled = false
+    const img = new window.Image()
+    const markReady = () => {
+      if (!cancelled) setBgReady(true)
     }
-  }, [panelTune])
-
-  const nudgePanel = (dx: number, dy: number) => {
-    setPanelTune((prev) => ({ ...prev, x: prev.x + dx, y: prev.y + dy }))
-  }
-
-  const handlePanelPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
-    event.preventDefault()
-    event.currentTarget.setPointerCapture(event.pointerId)
-    dragState.current = {
-      pointerId: event.pointerId,
-      startX: event.clientX,
-      startY: event.clientY,
-      origX: panelTune.x,
-      origY: panelTune.y,
+    img.onload = markReady
+    img.onerror = markReady
+    img.src = LOGIN_BACKGROUND_SRC
+    if (img.complete && img.naturalWidth > 0) {
+      markReady()
     }
-  }
-
-  const handlePanelPointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
-    if (!dragState.current || dragState.current.pointerId !== event.pointerId) return
-    const dx = event.clientX - dragState.current.startX
-    const dy = event.clientY - dragState.current.startY
-    setPanelTune((prev) => ({
-      ...prev,
-      x: dragState.current!.origX + dx,
-      y: dragState.current!.origY + dy,
-    }))
-  }
-
-  const handlePanelPointerUp = (event: React.PointerEvent<HTMLDivElement>) => {
-    if (dragState.current?.pointerId === event.pointerId) {
-      dragState.current = null
+    return () => {
+      cancelled = true
     }
-  }
-
-  const handleResizePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
-    event.preventDefault()
-    event.stopPropagation()
-    event.currentTarget.setPointerCapture(event.pointerId)
-    resizeState.current = {
-      pointerId: event.pointerId,
-      startX: event.clientX,
-      origScale: panelTune.scale,
-    }
-  }
-
-  const handleResizePointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
-    if (!resizeState.current || resizeState.current.pointerId !== event.pointerId) return
-    const dx = event.clientX - resizeState.current.startX
-    setPanelTune((prev) => ({
-      ...prev,
-      scale: Number(clamp(resizeState.current!.origScale + dx / 280, 0.7, 1.5).toFixed(2)),
-    }))
-  }
-
-  const handleResizePointerUp = (event: React.PointerEvent<HTMLDivElement>) => {
-    if (resizeState.current?.pointerId === event.pointerId) {
-      resizeState.current = null
-    }
-  }
-
-  const copyPanelTune = async () => {
-    const text = `x: ${panelTune.x}, y: ${panelTune.y}, scale: ${panelTune.scale}, width: ${panelTune.width}`
-    try {
-      await navigator.clipboard.writeText(text)
-      toast.success(`已复制：${text}`)
-    } catch {
-      toast.message(`当前数值：${text}`)
-    }
-  }
+  }, [])
 
   useEffect(() => {
     const warmAudioCache = () => {
@@ -302,38 +203,46 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
       className="min-h-screen flex items-center justify-center px-4 relative overflow-hidden login-page"
       data-login-page
     >
+      <style>{`
+        @keyframes login-cagent-bob {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-12px); }
+        }
+      `}</style>
+
       {/* 背景居中铺满，无雾化 / 无遮罩 */}
       <div className="absolute inset-0 overflow-hidden bg-[#7ec8e8]">
         <img
-          src="/Background1.png"
+          src={LOGIN_BACKGROUND_SRC}
           alt=""
-          className="absolute inset-0 h-full w-full object-cover object-center select-none"
+          className={`absolute inset-0 h-full w-full object-cover object-center select-none transition-opacity duration-500 ${
+            bgReady ? "opacity-100" : "opacity-0"
+          }`}
           draggable={false}
+          onLoad={() => setBgReady(true)}
         />
       </div>
 
-      <div
-        className="relative z-10 w-full"
-        style={{
-          width: panelTune.width,
-          maxWidth: "100%",
-          transform: `translate(${panelTune.x}px, ${panelTune.y}px) scale(${panelTune.scale})`,
-          transformOrigin: "center center",
-        }}
-      >
-        {tuneOpen && (
+      {!bgReady && (
+        <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-[#8ec8ea]">
+          <img
+            src="/Cagentsit.png"
+            alt="Cagent"
+            className="h-48 w-48 object-contain drop-shadow-lg sm:h-56 sm:w-56"
+            style={{ animation: "login-cagent-bob 1.4s ease-in-out infinite" }}
+            draggable={false}
+          />
           <div
-            onPointerDown={handlePanelPointerDown}
-            onPointerMove={handlePanelPointerMove}
-            onPointerUp={handlePanelPointerUp}
-            onPointerCancel={handlePanelPointerUp}
-            className="mb-2 flex cursor-grab items-center justify-center gap-2 rounded-xl border border-white/50 bg-black/55 px-3 py-1.5 text-xs font-semibold text-white shadow-lg active:cursor-grabbing"
-          >
-            <span aria-hidden>⋮⋮</span>
-            拖动调整登录面板位置
-          </div>
-        )}
-        <div className="relative">
+            className="mt-5 h-10 w-10 animate-spin rounded-full border-4 border-white/45 border-t-white"
+            aria-label="Loading"
+          />
+        </div>
+      )}
+
+      {bgReady && (
+      <div
+        className="relative z-10 w-full max-w-[384px] origin-center md:w-[384px] md:max-w-none md:translate-x-[463.31px] md:-translate-y-[14.72px] md:scale-150"
+      >
         <SpotlightCard className="px-10 py-6 shadow-2xl [background-color:rgba(20,16,32,0.52)]" spotlightColor="rgba(0, 229, 255, 0.2)">
           {entryStep === "role" ? (
             <div className="space-y-5 py-4">
@@ -520,145 +429,8 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
             </>
           )}
         </SpotlightCard>
-        {tuneOpen && (
-          <div
-            onPointerDown={handleResizePointerDown}
-            onPointerMove={handleResizePointerMove}
-            onPointerUp={handleResizePointerUp}
-            onPointerCancel={handleResizePointerUp}
-            className="absolute -bottom-2 -right-2 z-20 flex h-7 w-7 cursor-nwse-resize items-center justify-center rounded-md border border-white/60 bg-black/70 text-white shadow-lg"
-            title="拖动调整大小"
-          >
-            <span className="text-[10px] leading-none">↘</span>
-          </div>
-        )}
-        </div>
       </div>
-
-      {/* 临时位置/大小调整工具：调好后把数值发给我，再固化并移除 */}
-      <div className="absolute left-3 top-3 z-50 select-none">
-        {tuneOpen ? (
-          <div className="w-64 rounded-2xl border border-white/40 bg-black/75 p-3 text-white shadow-2xl backdrop-blur-md">
-            <div className="mb-2 flex items-center justify-between">
-              <p className="text-xs font-bold tracking-wide">登录面板调整工具</p>
-              <button
-                type="button"
-                onClick={() => setTuneOpen(false)}
-                className="rounded-md px-1.5 py-0.5 text-[11px] text-white/80 hover:bg-white/10"
-              >
-                收起
-              </button>
-            </div>
-            <p className="mb-2 text-[11px] leading-snug text-white/75">
-              拖动手柄改位置，右下角或滑块改大小。调好后点复制，把数值发给我。
-            </p>
-            <div className="space-y-2 text-[11px]">
-              <label className="block">
-                <span className="mb-1 flex justify-between">
-                  <span>X（左右）</span>
-                  <span className="font-mono">{panelTune.x}px</span>
-                </span>
-                <input
-                  type="range"
-                  min={-480}
-                  max={480}
-                  value={panelTune.x}
-                  onChange={(e) => setPanelTune((prev) => ({ ...prev, x: Number(e.target.value) }))}
-                  className="w-full accent-cyan-300"
-                />
-              </label>
-              <label className="block">
-                <span className="mb-1 flex justify-between">
-                  <span>Y（上下）</span>
-                  <span className="font-mono">{panelTune.y}px</span>
-                </span>
-                <input
-                  type="range"
-                  min={-360}
-                  max={360}
-                  value={panelTune.y}
-                  onChange={(e) => setPanelTune((prev) => ({ ...prev, y: Number(e.target.value) }))}
-                  className="w-full accent-cyan-300"
-                />
-              </label>
-              <label className="block">
-                <span className="mb-1 flex justify-between">
-                  <span>大小（缩放）</span>
-                  <span className="font-mono">{Math.round(panelTune.scale * 100)}%</span>
-                </span>
-                <input
-                  type="range"
-                  min={70}
-                  max={150}
-                  value={Math.round(panelTune.scale * 100)}
-                  onChange={(e) => setPanelTune((prev) => ({ ...prev, scale: Number(e.target.value) / 100 }))}
-                  className="w-full accent-amber-300"
-                />
-              </label>
-              <label className="block">
-                <span className="mb-1 flex justify-between">
-                  <span>宽度</span>
-                  <span className="font-mono">{panelTune.width}px</span>
-                </span>
-                <input
-                  type="range"
-                  min={280}
-                  max={560}
-                  value={panelTune.width}
-                  onChange={(e) => setPanelTune((prev) => ({ ...prev, width: Number(e.target.value) }))}
-                  className="w-full accent-amber-300"
-                />
-              </label>
-            </div>
-            <div className="mt-2 grid grid-cols-3 gap-1">
-              <span />
-              <button type="button" onClick={() => nudgePanel(0, -8)} className="rounded-md bg-white/15 py-1 text-sm hover:bg-white/25">↑</button>
-              <span />
-              <button type="button" onClick={() => nudgePanel(-8, 0)} className="rounded-md bg-white/15 py-1 text-sm hover:bg-white/25">←</button>
-              <button type="button" onClick={() => setPanelTune(DEFAULT_PANEL_TUNE)} className="rounded-md bg-white/15 py-1 text-[10px] hover:bg-white/25">复位</button>
-              <button type="button" onClick={() => nudgePanel(8, 0)} className="rounded-md bg-white/15 py-1 text-sm hover:bg-white/25">→</button>
-              <span />
-              <button type="button" onClick={() => nudgePanel(0, 8)} className="rounded-md bg-white/15 py-1 text-sm hover:bg-white/25">↓</button>
-              <span />
-            </div>
-            <div className="mt-2 flex gap-1">
-              <button
-                type="button"
-                onClick={() => setPanelTune((prev) => ({ ...prev, scale: Number(clamp(prev.scale - 0.05, 0.7, 1.5).toFixed(2)) }))}
-                className="flex-1 rounded-md bg-white/15 py-1 text-xs hover:bg-white/25"
-              >
-                缩小
-              </button>
-              <button
-                type="button"
-                onClick={() => setPanelTune((prev) => ({ ...prev, scale: Number(clamp(prev.scale + 0.05, 0.7, 1.5).toFixed(2)) }))}
-                className="flex-1 rounded-md bg-white/15 py-1 text-xs hover:bg-white/25"
-              >
-                放大
-              </button>
-            </div>
-            <div className="mt-2 rounded-lg bg-white/10 px-2 py-1.5 font-mono text-[11px] leading-relaxed">
-              x: {panelTune.x}, y: {panelTune.y}<br />
-              scale: {panelTune.scale}, width: {panelTune.width}
-            </div>
-            <button
-              type="button"
-              onClick={copyPanelTune}
-              className="mt-2 w-full rounded-lg bg-cyan-400/90 py-1.5 text-xs font-bold text-slate-900 hover:bg-cyan-300"
-            >
-              复制当前数值
-            </button>
-          </div>
-        ) : (
-          <button
-            type="button"
-            onClick={() => setTuneOpen(true)}
-            className="rounded-xl border border-white/40 bg-black/70 px-3 py-1.5 text-xs font-semibold text-white shadow-lg hover:bg-black/80"
-          >
-            显示调整工具
-          </button>
-        )}
-      </div>
+      )}
     </div>
   )
 }
