@@ -4,8 +4,16 @@
  */
 
 const DEEPSEEK_API_URL = "https://api.deepseek.com/chat/completions"
-const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY
 const DEEPSEEK_MODEL = "deepseek-chat"
+
+function getDeepSeekApiKey(): string {
+  // 用动态取值，避免 Next 在构建时把空的 process.env.DEEPSEEK_API_KEY 写死进产物
+  const raw =
+    process.env["DEEPSEEK_API_KEY"] ||
+    process.env["DEEPSEEK_KEY"] ||
+    ""
+  return raw.trim()
+}
 
 export interface DeepSeekMessage {
   role: "system" | "user" | "assistant"
@@ -56,7 +64,8 @@ export async function chat(options: DeepSeekOptions): Promise<string> {
     signal,
   } = options
 
-  if (!DEEPSEEK_API_KEY) {
+  const apiKey = getDeepSeekApiKey()
+  if (!apiKey) {
     throw buildError("DEEPSEEK_API_KEY is not configured", 500)
   }
 
@@ -68,7 +77,7 @@ export async function chat(options: DeepSeekOptions): Promise<string> {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${DEEPSEEK_API_KEY}`,
+        Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
         model: DEEPSEEK_MODEL,
@@ -115,7 +124,8 @@ export async function chat(options: DeepSeekOptions): Promise<string> {
 export async function* streamChat(options: DeepSeekStreamOptions): AsyncGenerator<string> {
   const { messages, onChunk, signal } = options
 
-  if (!DEEPSEEK_API_KEY) {
+  const apiKey = getDeepSeekApiKey()
+  if (!apiKey) {
     throw buildError("DEEPSEEK_API_KEY is not configured", 500)
   }
 
@@ -123,7 +133,7 @@ export async function* streamChat(options: DeepSeekStreamOptions): AsyncGenerato
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${DEEPSEEK_API_KEY}`,
+      Authorization: `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
       model: DEEPSEEK_MODEL,
@@ -186,5 +196,5 @@ export async function* streamChat(options: DeepSeekStreamOptions): AsyncGenerato
  * 檢查 API Key 是否已配置
  */
 export function isConfigured(): boolean {
-  return Boolean(DEEPSEEK_API_KEY && DEEPSEEK_API_KEY.trim().length > 0)
+  return getDeepSeekApiKey().length > 0
 }
