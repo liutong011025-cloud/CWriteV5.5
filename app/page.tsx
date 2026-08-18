@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect, useMemo, useCallback, useRef } from "react"
-import HomePage from "@/components/stages/home-page"
 import WelcomePage from "@/components/stages/welcome-page"
 import BookReviewWelcome from "@/components/stages/book-review-welcome"
 import CharacterCreation from "@/components/stages/character-creation"
@@ -699,6 +698,12 @@ export default function Home() {
   }, [stage, user?.username])
 
   useEffect(() => {
+    if (stage === "home" && user) {
+      setStage("userProfile")
+    }
+  }, [stage, user])
+
+  useEffect(() => {
     if (typeof window === "undefined") return
 
     const resetScroll = () => {
@@ -720,7 +725,7 @@ export default function Home() {
   // 自动记录“上次旅程进度”，用于首页 Continue past journey 一键恢复
   useEffect(() => {
     if (!user?.username || typeof window === "undefined") return
-    if (["login", "home", "dashboard"].includes(stage)) return
+    if (["login", "home", "dashboard", "userProfile", "otherFarm", "navigation", "userSettings"].includes(stage)) return
     const save = () => {
       try {
         const dramaState = useDramaStore.getState()
@@ -899,8 +904,8 @@ export default function Home() {
         return
       }
 
-      // unknown stage: go home
-      setStage("home")
+      // unknown stage: go to farm
+      setStage("userProfile")
     } catch {
       toast.error("Failed to continue past journey.")
     }
@@ -1084,7 +1089,7 @@ export default function Home() {
     }
 
     const handleNavigateToHome = () => {
-      setStage("home")
+      if (user) setStage("userProfile")
       setJourneySelection(null)
       setLevelBadgeUnlocked(false)
     }
@@ -2169,51 +2174,23 @@ export default function Home() {
                 // ignore
               }
             }
-            // copywriting 專用賬號：即使是 teacher 角色，也直接進入 home，不進教師後台
+            // copywriting 專用賬號：即使是 teacher 角色，也直接进入农场
             if (userData.username === "copywriting") {
-              setStage("home")
+              setStage("userProfile")
               return
             }
 
             if (userData.role === "teacher") {
               setStage("dashboard")
             } else {
-              // 取消“继续作品”弹窗：登录后直接进入主页
+              // 取消“继续作品”弹窗：登录后直接进入农场
               setShowContinueDialog(false)
-              setStage("home")
+              setStage("userProfile")
             }
           }}
         />
       )}
 
-      {stage === "home" && user && (
-        <HomePage
-          language={language}
-          user={user}
-          onStartPlan={() => {
-            setLevelBadgeUnlocked(false)
-            if (planTestResult) {
-              setWritingAssessment({
-                score: planTestResult.score,
-                level: planTestResult.level,
-                mapImageStatus: "idle",
-              })
-            }
-            setStage("journeyMap")
-          }}
-          onContinuePastJourney={continuePastJourney}
-          onStartWrite={() => {
-            setJourneySelection(null)
-            setLevelBadgeUnlocked(false)
-            mapPinAnchoredRef.current = false
-            setStage("writeTypeSelection")
-          }}
-          onViewAbout={() => setStage("about")}
-          onVisitFarm={() => {
-            if (user) setStage("userProfile")
-          }}
-        />
-      )}
       {stage === "planTest" && user && (
         <PlanTest
           language={language}
@@ -2341,7 +2318,7 @@ export default function Home() {
           onSelectLetter={() => setStage("letterAdventure")}
           onSelectDrama={() => setStage("dramaWriting")}
           onSelectPoetry={() => setStage("poetryWriting")}
-          onBack={() => setStage("home")}
+          onBack={() => setStage("userProfile")}
         />
       )}
       {stage === "bookReviewWelcome" && user && (
@@ -2364,7 +2341,7 @@ export default function Home() {
               setStage("bookSelection")
             }
           }}
-          onBack={() => setStage("home")}
+          onBack={() => setStage("userProfile")}
         />
       )}
       {stage === "bookReviewTypeSelection" && user && (
@@ -3268,7 +3245,7 @@ export default function Home() {
       )}
       {stage === "research" && user && (
         <ResearchRoom
-          onBack={() => setStage("home")}
+          onBack={() => setStage("userProfile")}
         />
       )}
 
