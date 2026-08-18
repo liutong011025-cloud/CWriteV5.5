@@ -449,13 +449,13 @@ export default function UserProfilePage({
 
   const farmElements: FarmElementConfig[] = isOtherFarm
     ? [
-        { id: "farmbacktomap", label: "Back", imageSrc: "/farmbacktomap.webp" },
+        { id: "farmbacktomap", label: "Start writing!", imageSrc: "/farmbacktomap.png", baseWidthPercent: 14, useNaturalAspect: true },
         { id: "theirmap", label: "Writing Map", imageSrc: "/theirmap.webp", baseWidthPercent: 16, useNaturalAspect: true },
         { id: "farmwrittingboard", label: "Writing Board", imageSrc: "/farmwritingboard.webp" },
         { id: "vistothersfarm", label: "Visit Others' Farms", imageSrc: "/visitothersfarm.webp" },
       ]
     : [
-    { id: "farmbacktomap", label: "Back to Map", imageSrc: "/farmbacktomap.webp" },
+    { id: "farmbacktomap", label: "Start writing!", imageSrc: "/farmbacktomap.png", baseWidthPercent: 14, useNaturalAspect: true },
     { id: "farmsetting", label: "Settings", imageSrc: "/farmsetting.webp" },
     { id: "farmwrittingboard", label: "Writing Board", imageSrc: "/farmwritingboard.webp" },
     { id: "vistothersfarm", label: "Visit Others' Farms", imageSrc: "/visitothersfarm.webp" },
@@ -1205,6 +1205,9 @@ export default function UserProfilePage({
             transform-origin: center center;
             will-change: transform;
           }
+          .farm-breathe-fast {
+            animation-duration: 1.85s;
+          }
           @media (prefers-reduced-motion: reduce) {
             .farm-breathe { animation: none; }
           }
@@ -1328,7 +1331,9 @@ export default function UserProfilePage({
                   }}
                 >
                   <span
-                    className="farm-breathe relative block h-full w-full"
+                    className={`farm-breathe relative block h-full w-full ${
+                      element.id === "farmbacktomap" ? "farm-breathe-fast" : ""
+                    }`}
                     style={{
                       animationDelay: `${elementIndex * 0.35}s`,
                       animationPlayState: isHovered ? "paused" : "running",
