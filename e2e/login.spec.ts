@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test'
 import { loginAsStudent } from './helpers'
 
 test.describe('Login Flow', () => {
-  test('should login as student and reach home page', async ({ page }) => {
+  test('should login as student and reach My Farm', async ({ page }) => {
     await page.goto('/')
     await page.waitForLoadState('networkidle')
 
@@ -13,6 +13,7 @@ test.describe('Login Flow', () => {
     // Check that the login page is no longer visible
     const loginPage = page.locator('[data-login-page]')
     await expect(loginPage).not.toBeVisible({ timeout: 10_000 })
+    await expect(page.locator('[data-stage="userProfile"]')).toBeVisible({ timeout: 10_000 })
 
     // Take screenshot for debugging
     await page.screenshot({ path: '/tmp/e2e-login-success.png' })
