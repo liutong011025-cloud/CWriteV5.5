@@ -259,6 +259,23 @@ function FarmMuteButton({
 const FARM_HERO_LAYOUT = { x: 283, y: 63, scale: 1.4 }
 const CAGENT_FARM_FONT = 'var(--font-caveat), var(--font-patrick-hand), "Patrick Hand", cursive'
 
+function decorateFarmGuideEmojis(text: string) {
+  const addOnce = (source: string, pattern: RegExp, emoji: string) => {
+    if (source.includes(emoji)) return source
+    return source.replace(pattern, (match) => `${match} ${emoji}`)
+  }
+  let next = text
+  next = addOnce(next, /back[- ]arrow(?: icon)?/i, "⬅️")
+  next = addOnce(next, /writing[- ]board(?: icon)?/i, "📝")
+  next = addOnce(next, /\bstories\b/i, "📖")
+  next = addOnce(next, /settings(?: icon)?/i, "⚙️")
+  next = addOnce(next, /Visit Others'? Farm/i, "🏡")
+  next = addOnce(next, /\bfriends(?:' farms)?\b/i, "👫")
+  next = addOnce(next, /\bmap\b/i, "🗺️")
+  next = addOnce(next, /\bfarm\b/i, "🌾")
+  return next
+}
+
 function FarmCwriteWordmark() {
   return (
     <h1
@@ -1268,7 +1285,7 @@ export default function UserProfilePage({
     ? coverOverlayRect.top + (coverOverlayRect.height * cagentBubbleY) / 100
     : `${cagentBubbleY}%`
   const cagentGreeting = cagentHoverTrigger ? "click me!" : "Hello there!"
-  const cagentGuideDisplay = (cagentGuideText || "Loading...").replace(/\n{2,}/g, "\n")
+  const cagentGuideDisplay = decorateFarmGuideEmojis((cagentGuideText || "Loading...").replace(/\n{2,}/g, "\n"))
   const cagentAnchorTop = typeof cagentBubbleTop === "number" ? cagentBubbleTop : 160
   const cagentMaxHeight = Math.max(120, cagentAnchorTop - 12)
 
@@ -1563,7 +1580,7 @@ export default function UserProfilePage({
 
       <div
         className={`fixed z-[80] rounded-2xl border border-amber-200/90 bg-[#fff6e4]/95 shadow-xl ${
-          cagentBubbleOpen ? "w-[min(26rem,58vw)] px-3 py-2" : "max-w-xs px-4 py-2"
+          cagentBubbleOpen ? "w-[min(36rem,72vw)] px-4 py-2" : "max-w-xs px-4 py-2"
         } ${isOtherFarm ? "animate-pulse px-3 py-2" : ""} ${cagentBubbleOpen ? "pointer-events-auto" : "pointer-events-none"}`}
         style={{
           left: cagentBubbleLeft,
