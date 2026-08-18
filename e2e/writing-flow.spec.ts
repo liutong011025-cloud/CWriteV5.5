@@ -8,9 +8,9 @@ async function step1_loginAndStart(page: Page) {
   await page.goto('/')
   await page.waitForLoadState('networkidle')
 
-  // Check if we're already logged in (Home page)
-  const startBtn = page.locator('button:has-text("Start a new journey")')
-  const isLoggedIn = await startBtn.isVisible({ timeout: 3_000 }).catch(() => false)
+  // Check if we're already logged in (My Farm)
+  const farmPage = page.locator('[data-stage="userProfile"]')
+  const isLoggedIn = await farmPage.isVisible({ timeout: 3_000 }).catch(() => false)
   console.log('[DEBUG step1] Already logged in:', isLoggedIn)
 
   if (!isLoggedIn) {
@@ -18,22 +18,9 @@ async function step1_loginAndStart(page: Page) {
     await page.waitForTimeout(1500)
   }
 
-  // Now navigate to planTest by triggering "Start a new journey"
-  // Use React props to call onClick handler
+  // New Writing in the header replaces the old homepage "Start a new journey"
   await page.evaluate(() => {
-    const buttons = document.querySelectorAll('button')
-    for (const btn of buttons) {
-      if (btn.textContent?.includes('Start a new journey')) {
-        const propsKey = Object.keys(btn).find(k => k.startsWith('__reactProps$'))
-        if (propsKey) {
-          const props = (btn as any)[propsKey]
-          if (props?.onClick) {
-            props.onClick({ stopPropagation: () => {}, preventDefault: () => {} })
-          }
-        }
-        break
-      }
-    }
+    window.dispatchEvent(new CustomEvent('navigateToWriteTypeSelection'))
   })
 
   // Wait for stage to change to planTest (or journeyMap if planTestResult exists)
