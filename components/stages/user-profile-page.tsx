@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef, useCallback } from "react"
+import { useState, useEffect, useRef, useCallback, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react"
 import { Button } from "@/components/ui/button"
 import { BackButton } from "@/components/ui/back-button"
 import {
@@ -256,6 +256,386 @@ function FarmMuteButton({
   )
 }
 
+type FarmHeroTune = { x: number; y: number; scale: number }
+const DEFAULT_FARM_HERO_TUNE: FarmHeroTune = { x: 0, y: 8, scale: 1 }
+const FARM_HERO_TUNE_KEY = "cwrite-farm-hero-tune"
+const DEFAULT_START_WRITING_TUNE: FarmElementState = { x: 74.1, y: 44.0, scale: 0.78 }
+const START_WRITING_TUNE_KEY = "cwrite-farm-start-writing-tune"
+
+function loadFarmHeroTune(): FarmHeroTune {
+  if (typeof window === "undefined") return DEFAULT_FARM_HERO_TUNE
+  try {
+    const saved = localStorage.getItem(FARM_HERO_TUNE_KEY)
+    if (!saved) return DEFAULT_FARM_HERO_TUNE
+    const parsed = JSON.parse(saved) as Partial<FarmHeroTune>
+    return {
+      x: typeof parsed.x === "number" ? parsed.x : DEFAULT_FARM_HERO_TUNE.x,
+      y: typeof parsed.y === "number" ? parsed.y : DEFAULT_FARM_HERO_TUNE.y,
+      scale: typeof parsed.scale === "number" ? parsed.scale : DEFAULT_FARM_HERO_TUNE.scale,
+    }
+  } catch {
+    return DEFAULT_FARM_HERO_TUNE
+  }
+}
+
+function loadStartWritingTune(): FarmElementState {
+  if (typeof window === "undefined") return DEFAULT_START_WRITING_TUNE
+  try {
+    const saved = localStorage.getItem(START_WRITING_TUNE_KEY)
+    if (!saved) return DEFAULT_START_WRITING_TUNE
+    const parsed = JSON.parse(saved) as Partial<FarmElementState>
+    return {
+      x: typeof parsed.x === "number" ? parsed.x : DEFAULT_START_WRITING_TUNE.x,
+      y: typeof parsed.y === "number" ? parsed.y : DEFAULT_START_WRITING_TUNE.y,
+      scale: typeof parsed.scale === "number" ? parsed.scale : DEFAULT_START_WRITING_TUNE.scale,
+    }
+  } catch {
+    return DEFAULT_START_WRITING_TUNE
+  }
+}
+
+function FarmCwriteWordmark() {
+  return (
+    <h1
+      className="relative inline-block text-[3.4rem] md:text-[4.6rem] lg:text-[5.6rem] font-semibold leading-none tracking-tight"
+      style={{
+        fontFamily: '"Berlin Sans FB Demi", "Berlin Sans FB", var(--font-baloo), sans-serif',
+        letterSpacing: "-0.03em",
+        filter: "drop-shadow(0 10px 12px rgba(109, 43, 92, 0.32))",
+      }}
+    >
+      <span
+        aria-hidden
+        className="absolute inset-0 select-none"
+        style={{ color: "#E45A97", transform: "translateY(8px)", opacity: 0.99 }}
+      >
+        CWrite
+      </span>
+      <span
+        aria-hidden
+        className="absolute inset-0 select-none"
+        style={{
+          background: "linear-gradient(180deg, #FFE85C 0%, #FFD93D 28%, #FFB25F 52%, #FF89B8 76%, #FF5FA0 100%)",
+          WebkitBackgroundClip: "text",
+          WebkitTextFillColor: "transparent",
+          backgroundClip: "text",
+          transform: "translateY(4px)",
+        }}
+      >
+        CWrite
+      </span>
+      <span
+        className="relative block"
+        style={{
+          background: "linear-gradient(180deg, #FFF1A8 0%, #FFE45E 18%, #FFD93D 38%, #FFB85F 62%, #FF8CBB 82%, #FF679E 100%)",
+          WebkitBackgroundClip: "text",
+          WebkitTextFillColor: "transparent",
+          backgroundClip: "text",
+        }}
+      >
+        CWrite
+      </span>
+    </h1>
+  )
+}
+
+function FarmHeroBrand({
+  startWriting,
+  onStartWritingChange,
+}: {
+  startWriting: FarmElementState
+  onStartWritingChange: (next: FarmElementState) => void
+}) {
+  const [tune, setTune] = useState<FarmHeroTune>(loadFarmHeroTune)
+  const [tuneOpen, setTuneOpen] = useState(true)
+  const [tuneTab, setTuneTab] = useState<"hero" | "sign">("sign")
+  const [copied, setCopied] = useState(false)
+  const dragState = useRef<{
+    pointerId: number
+    startX: number
+    startY: number
+    origX: number
+    origY: number
+  } | null>(null)
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(FARM_HERO_TUNE_KEY, JSON.stringify(tune))
+    } catch {
+      // ignore
+    }
+  }, [tune])
+
+  const handlePointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
+    event.preventDefault()
+    event.currentTarget.setPointerCapture(event.pointerId)
+    dragState.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      origX: tune.x,
+      origY: tune.y,
+    }
+  }
+
+  const handlePointerMove = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (!dragState.current || dragState.current.pointerId !== event.pointerId) return
+    setTune((prev) => ({
+      ...prev,
+      x: dragState.current!.origX + (event.clientX - dragState.current!.startX),
+      y: dragState.current!.origY + (event.clientY - dragState.current!.startY),
+    }))
+  }
+
+  const handlePointerUp = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (dragState.current?.pointerId === event.pointerId) dragState.current = null
+  }
+
+  const copyTune = async () => {
+    const text =
+      tuneTab === "hero"
+        ? `hero x: ${Math.round(tune.x)}, y: ${Math.round(tune.y)}, scale: ${Number(tune.scale.toFixed(2))}`
+        : `startWriting x: ${Number(startWriting.x.toFixed(1))}, y: ${Number(startWriting.y.toFixed(1))}, scale: ${Number(startWriting.scale.toFixed(2))}`
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopied(true)
+      window.setTimeout(() => setCopied(false), 1600)
+    } catch {
+      setCopied(false)
+    }
+  }
+
+  const titleStyle: CSSProperties = {
+    background: "linear-gradient(135deg, #E8FF72 0%, #A8FF5A 52%, #5DDB4E 100%)",
+    WebkitBackgroundClip: "text",
+    WebkitTextFillColor: "transparent",
+    backgroundClip: "text",
+    fontFamily: '"Berlin Sans FB Demi", "Berlin Sans FB", var(--font-baloo), sans-serif',
+  }
+  const subtitleStyle: CSSProperties = {
+    background: "linear-gradient(135deg, #EEFF84 0%, #A8FF5A 48%, #EEFF84 100%)",
+    WebkitBackgroundClip: "text",
+    WebkitTextFillColor: "transparent",
+    backgroundClip: "text",
+    fontFamily: '"Berlin Sans FB Demi", "Berlin Sans FB", var(--font-baloo), sans-serif',
+    filter: "brightness(1.08) saturate(1.08)",
+  }
+
+  return (
+    <>
+      <div
+        className="pointer-events-none fixed left-1/2 top-0 z-[60] text-center"
+        style={{
+          transform: `translate(calc(-50% + ${tune.x}px), ${tune.y}px) scale(${tune.scale})`,
+          transformOrigin: "top center",
+        }}
+      >
+        {tuneOpen && tuneTab === "hero" && (
+          <div
+            className="pointer-events-auto mx-auto mb-2 inline-flex cursor-grab items-center gap-2 rounded-xl border border-white/50 bg-black/55 px-3 py-1.5 text-xs font-semibold text-white shadow-lg active:cursor-grabbing"
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            onPointerCancel={handlePointerUp}
+          >
+            <span aria-hidden>⋮⋮</span>
+            拖动调整标题位置
+          </div>
+        )}
+        <p className="mb-1 text-xl font-bold md:text-2xl lg:text-3xl" style={titleStyle}>
+          Welcome to
+        </p>
+        <FarmCwriteWordmark />
+        <p className="mt-3 text-lg font-bold md:text-2xl lg:text-3xl" style={subtitleStyle}>
+          The Future of Creative Writing
+        </p>
+        <p className="mt-1 text-base font-bold md:text-xl lg:text-2xl" style={subtitleStyle}>
+          in the AI Era
+        </p>
+        <p
+          className="mt-3 text-xl font-black italic md:text-2xl lg:text-3xl"
+          style={{
+            color: "#FFFFFF",
+            fontFamily: "var(--font-caveat), var(--font-patrick-hand), cursive",
+            textShadow: "0 6px 14px rgba(7, 42, 92, 0.35), 0 1px 4px rgba(255,255,255,0.2)",
+            letterSpacing: "0.03em",
+          }}
+        >
+          Unleash Creativity, Empower Expression
+        </p>
+      </div>
+
+      <div className="fixed left-3 top-3 z-[70] select-none">
+        {tuneOpen ? (
+          <div className="w-64 rounded-2xl border border-white/40 bg-black/75 p-3 text-white shadow-2xl backdrop-blur-md">
+            <div className="mb-2 flex items-center justify-between">
+              <p className="text-xs font-bold tracking-wide">农场布局工具</p>
+              <button
+                type="button"
+                onClick={() => setTuneOpen(false)}
+                className="rounded-md px-1.5 py-0.5 text-[11px] text-white/80 hover:bg-white/10"
+              >
+                收起
+              </button>
+            </div>
+            <div className="mb-2 grid grid-cols-2 gap-1">
+              <button
+                type="button"
+                onClick={() => setTuneTab("hero")}
+                className={`rounded-md py-1 text-[11px] font-semibold ${
+                  tuneTab === "hero" ? "bg-cyan-400 text-slate-900" : "bg-white/15 hover:bg-white/25"
+                }`}
+              >
+                标题文字
+              </button>
+              <button
+                type="button"
+                onClick={() => setTuneTab("sign")}
+                className={`rounded-md py-1 text-[11px] font-semibold ${
+                  tuneTab === "sign" ? "bg-cyan-400 text-slate-900" : "bg-white/15 hover:bg-white/25"
+                }`}
+              >
+                Start writing
+              </button>
+            </div>
+            <p className="mb-2 text-[11px] leading-snug text-white/75">
+              {tuneTab === "hero"
+                ? "拖动标题上方手柄，或用滑块改位置和大小。"
+                : "拖动木牌改位置；右下角蓝点或滑块改大小。滑块也可同时调位置和大小。"}
+            </p>
+            {tuneTab === "hero" ? (
+              <div className="space-y-2 text-[11px]">
+                <label className="block">
+                  <span className="mb-1 flex justify-between">
+                    <span>X（左右）</span>
+                    <span className="font-mono">{Math.round(tune.x)}px</span>
+                  </span>
+                  <input
+                    type="range"
+                    min={-480}
+                    max={480}
+                    value={tune.x}
+                    onChange={(e) => setTune((prev) => ({ ...prev, x: Number(e.target.value) }))}
+                    className="w-full accent-cyan-300"
+                  />
+                </label>
+                <label className="block">
+                  <span className="mb-1 flex justify-between">
+                    <span>Y（上下）</span>
+                    <span className="font-mono">{Math.round(tune.y)}px</span>
+                  </span>
+                  <input
+                    type="range"
+                    min={-40}
+                    max={280}
+                    value={tune.y}
+                    onChange={(e) => setTune((prev) => ({ ...prev, y: Number(e.target.value) }))}
+                    className="w-full accent-cyan-300"
+                  />
+                </label>
+                <label className="block">
+                  <span className="mb-1 flex justify-between">
+                    <span>大小</span>
+                    <span className="font-mono">{Math.round(tune.scale * 100)}%</span>
+                  </span>
+                  <input
+                    type="range"
+                    min={50}
+                    max={140}
+                    value={Math.round(tune.scale * 100)}
+                    onChange={(e) => setTune((prev) => ({ ...prev, scale: Number(e.target.value) / 100 }))}
+                    className="w-full accent-amber-300"
+                  />
+                </label>
+              </div>
+            ) : (
+              <div className="space-y-2 text-[11px]">
+                <label className="block">
+                  <span className="mb-1 flex justify-between">
+                    <span>X（左右）</span>
+                    <span className="font-mono">{startWriting.x.toFixed(1)}%</span>
+                  </span>
+                  <input
+                    type="range"
+                    min={20}
+                    max={95}
+                    step={0.1}
+                    value={startWriting.x}
+                    onChange={(e) => onStartWritingChange({ ...startWriting, x: Number(e.target.value) })}
+                    className="w-full accent-cyan-300"
+                  />
+                </label>
+                <label className="block">
+                  <span className="mb-1 flex justify-between">
+                    <span>Y（上下）</span>
+                    <span className="font-mono">{startWriting.y.toFixed(1)}%</span>
+                  </span>
+                  <input
+                    type="range"
+                    min={20}
+                    max={80}
+                    step={0.1}
+                    value={startWriting.y}
+                    onChange={(e) => onStartWritingChange({ ...startWriting, y: Number(e.target.value) })}
+                    className="w-full accent-cyan-300"
+                  />
+                </label>
+                <label className="block">
+                  <span className="mb-1 flex justify-between">
+                    <span>大小</span>
+                    <span className="font-mono">{Math.round(startWriting.scale * 100)}%</span>
+                  </span>
+                  <input
+                    type="range"
+                    min={40}
+                    max={220}
+                    value={Math.round(startWriting.scale * 100)}
+                    onChange={(e) => onStartWritingChange({ ...startWriting, scale: Number(e.target.value) / 100 })}
+                    className="w-full accent-amber-300"
+                  />
+                </label>
+              </div>
+            )}
+            <div className="mt-2 flex gap-1">
+              <button
+                type="button"
+                onClick={() =>
+                  tuneTab === "hero"
+                    ? setTune(DEFAULT_FARM_HERO_TUNE)
+                    : onStartWritingChange(DEFAULT_START_WRITING_TUNE)
+                }
+                className="flex-1 rounded-md bg-white/15 py-1 text-xs hover:bg-white/25"
+              >
+                复位
+              </button>
+              <button
+                type="button"
+                onClick={copyTune}
+                className="flex-1 rounded-md bg-cyan-400/90 py-1 text-xs font-bold text-slate-900 hover:bg-cyan-300"
+              >
+                {copied ? "已复制" : "复制数值"}
+              </button>
+            </div>
+            <div className="mt-2 rounded-lg bg-white/10 px-2 py-1.5 font-mono text-[11px] leading-relaxed">
+              {tuneTab === "hero"
+                ? `x: ${Math.round(tune.x)}, y: ${Math.round(tune.y)}, scale: ${Number(tune.scale.toFixed(2))}`
+                : `x: ${startWriting.x.toFixed(1)}, y: ${startWriting.y.toFixed(1)}, scale: ${Number(startWriting.scale.toFixed(2))}`}
+            </div>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setTuneOpen(true)}
+            className="rounded-xl border border-white/40 bg-black/70 px-3 py-1.5 text-xs font-semibold text-white shadow-lg hover:bg-black/80"
+          >
+            显示布局工具
+          </button>
+        )}
+      </div>
+    </>
+  )
+}
+
 export default function UserProfilePage({
   userId,
   userRole,
@@ -305,6 +685,21 @@ export default function UserProfilePage({
   const farmContainerRef = useRef<HTMLDivElement | null>(null)
   const [hoveredFarmElement, setHoveredFarmElement] = useState<FarmElementId | null>(null)
   const [farmElementStates, setFarmElementStates] = useState<Record<FarmElementId, FarmElementState>>(() => getDefaultFarmButtonStates(isOtherFarm))
+  const [startWritingTune, setStartWritingTune] = useState<FarmElementState>(loadStartWritingTune)
+  const startWritingDragRef = useRef<{
+    pointerId: number
+    startX: number
+    startY: number
+    origX: number
+    origY: number
+    moved: boolean
+  } | null>(null)
+  const startWritingResizeRef = useRef<{
+    pointerId: number
+    startX: number
+    origScale: number
+  } | null>(null)
+  const skipStartWritingClickRef = useRef(false)
   const [isMuted, setIsMuted] = useState(false)
   const backgroundMusicRef = useRef<HTMLAudioElement | null>(null)
   const hoverAudioRef = useRef<HTMLAudioElement | null>(null)
@@ -323,6 +718,15 @@ export default function UserProfilePage({
       setFarmViewNonce((n) => n + 1)
     }
   }, [viewMode, isOtherFarm])
+
+  useEffect(() => {
+    if (isOtherFarm) return
+    try {
+      localStorage.setItem(START_WRITING_TUNE_KEY, JSON.stringify(startWritingTune))
+    } catch {
+      // ignore
+    }
+  }, [startWritingTune, isOtherFarm])
 
   useEffect(() => {
     try {
@@ -1192,7 +1596,11 @@ export default function UserProfilePage({
       className="min-h-screen bg-transparent"
       style={{ paddingTop: 0, paddingBottom: 0 }}
       data-stage="userProfile"
+      {...(!isOtherFarm ? { "data-no-header": "true" } : {})}
     >
+      {!isOtherFarm && (
+        <FarmHeroBrand startWriting={startWritingTune} onStartWritingChange={setStartWritingTune} />
+      )}
       {/* My Farm - 固定視窗鋪滿，背景 object-cover 不露 firstmap，前景用 % 鎖定相對位置 */}
       <div ref={farmContainerRef} className="fixed inset-0 w-full h-full overflow-hidden">
         <style>{`
@@ -1293,10 +1701,17 @@ export default function UserProfilePage({
               })}
 
             {farmElements.map((element, elementIndex) => {
-              const state = farmElementStates[element.id]
+              const state =
+                !isOtherFarm && element.id === "farmbacktomap"
+                  ? startWritingTune
+                  : farmElementStates[element.id]
               if (!state) return null
               const isHovered = hoveredFarmElement === element.id
-              const sizePercent = Math.min(32, (element.baseWidthPercent ?? 8) * state.scale)
+              const isOwnStartWriting = !isOtherFarm && element.id === "farmbacktomap"
+              const sizePercent =
+                element.id === "farmbacktomap"
+                  ? Math.min(48, (element.baseWidthPercent ?? 14) * state.scale)
+                  : Math.min(32, (element.baseWidthPercent ?? 8) * state.scale)
               return (
                 <button
                   key={element.id}
@@ -1307,19 +1722,61 @@ export default function UserProfilePage({
                     top: `${state.y}%`,
                     width: `${sizePercent}%`,
                     aspectRatio: element.useNaturalAspect ? undefined : "1 / 1",
-                    transform: `translate(-50%, -50%) scale(${isHovered ? 1.08 : 1})`,
+                    transform: `translate(-50%, -50%) scale(${isHovered && !isOwnStartWriting ? 1.08 : 1})`,
                     transformOrigin: "center center",
-                    transition: "transform 0.25s ease-in-out",
+                    transition: isOwnStartWriting ? undefined : "transform 0.25s ease-in-out",
                     zIndex: 20,
+                    cursor: isOwnStartWriting ? "grab" : undefined,
+                    touchAction: isOwnStartWriting ? "none" : undefined,
                   }}
                   onMouseEnter={() => {
                     setHoveredFarmElement(element.id)
                     playFarmHoverSound(element.id)
                   }}
                   onMouseLeave={() => setHoveredFarmElement((prev) => (prev === element.id ? null : prev))}
+                  onPointerDown={(event) => {
+                    if (!isOwnStartWriting) return
+                    event.currentTarget.setPointerCapture(event.pointerId)
+                    startWritingDragRef.current = {
+                      pointerId: event.pointerId,
+                      startX: event.clientX,
+                      startY: event.clientY,
+                      origX: startWritingTune.x,
+                      origY: startWritingTune.y,
+                      moved: false,
+                    }
+                  }}
+                  onPointerMove={(event) => {
+                    const drag = startWritingDragRef.current
+                    if (!drag || drag.pointerId !== event.pointerId) return
+                    const overlay = coverOverlayRect
+                    if (!overlay || overlay.width <= 0 || overlay.height <= 0) return
+                    const dxPx = event.clientX - drag.startX
+                    const dyPx = event.clientY - drag.startY
+                    if (Math.abs(dxPx) > 4 || Math.abs(dyPx) > 4) drag.moved = true
+                    const nextX = Math.min(95, Math.max(5, drag.origX + (dxPx / overlay.width) * 100))
+                    const nextY = Math.min(90, Math.max(10, drag.origY + (dyPx / overlay.height) * 100))
+                    setStartWritingTune((prev) => ({ ...prev, x: nextX, y: nextY }))
+                  }}
+                  onPointerUp={(event) => {
+                    const drag = startWritingDragRef.current
+                    if (!drag || drag.pointerId !== event.pointerId) return
+                    if (drag.moved) skipStartWritingClickRef.current = true
+                    startWritingDragRef.current = null
+                  }}
+                  onPointerCancel={() => {
+                    startWritingDragRef.current = null
+                  }}
                   onClick={() => {
-                    if (element.id === "farmbacktomap") onBack()
-                    else if (element.id === "farmsetting") {
+                    if (element.id === "farmbacktomap") {
+                      if (skipStartWritingClickRef.current) {
+                        skipStartWritingClickRef.current = false
+                        return
+                      }
+                      onBack()
+                      return
+                    }
+                    if (element.id === "farmsetting") {
                       if (!isOtherFarm) onOpenSettings()
                     } else if (element.id === "theirmap") {
                       setShowOtherWritingMap(true)
@@ -1347,6 +1804,43 @@ export default function UserProfilePage({
                       }`}
                       draggable={false}
                     />
+                    {isOwnStartWriting && (
+                      <span
+                        className="absolute -bottom-1 -right-1 z-10 h-5 w-5 cursor-nwse-resize rounded-full border-2 border-white bg-cyan-400 shadow-md"
+                        aria-label="调整 Start writing 大小"
+                        onPointerDown={(event) => {
+                          event.preventDefault()
+                          event.stopPropagation()
+                          event.currentTarget.setPointerCapture(event.pointerId)
+                          startWritingResizeRef.current = {
+                            pointerId: event.pointerId,
+                            startX: event.clientX,
+                            origScale: startWritingTune.scale,
+                          }
+                        }}
+                        onPointerMove={(event) => {
+                          const resize = startWritingResizeRef.current
+                          if (!resize || resize.pointerId !== event.pointerId) return
+                          event.stopPropagation()
+                          const nextScale = Math.min(
+                            2.2,
+                            Math.max(0.4, resize.origScale + (event.clientX - resize.startX) / 180),
+                          )
+                          setStartWritingTune((prev) => ({ ...prev, scale: nextScale }))
+                        }}
+                        onPointerUp={(event) => {
+                          event.stopPropagation()
+                          if (startWritingResizeRef.current?.pointerId === event.pointerId) {
+                            skipStartWritingClickRef.current = true
+                            startWritingResizeRef.current = null
+                          }
+                        }}
+                        onClick={(event) => {
+                          event.preventDefault()
+                          event.stopPropagation()
+                        }}
+                      />
+                    )}
                     {element.id === "farmwrittingboard" && !isOtherFarm && unreadCount > 0 && (
                       <span
                         className="absolute right-[6%] top-[10%] h-3.5 w-3.5 rounded-full bg-red-500 ring-2 ring-white"
