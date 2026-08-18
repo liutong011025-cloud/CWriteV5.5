@@ -1268,7 +1268,10 @@ export default function UserProfilePage({
   const cagentBubbleTop = coverOverlayRect
     ? coverOverlayRect.top + (coverOverlayRect.height * cagentBubbleY) / 100
     : `${cagentBubbleY}%`
-  const cagentGreeting = cagentHoverTrigger ? "click" : "Hello there!"
+  const cagentGreeting = cagentHoverTrigger ? "click me!" : "Hello there!"
+  const cagentGuideDisplay = (cagentGuideText || "Loading...").replace(/\n{2,}/g, "\n")
+  const cagentAnchorTop = typeof cagentBubbleTop === "number" ? cagentBubbleTop : 0
+  const cagentOpenTop = Math.max(16, cagentAnchorTop)
 
   return (
     <div
@@ -1560,43 +1563,45 @@ export default function UserProfilePage({
         </div>
 
       <div
-        className={`fixed z-[80] rounded-2xl border border-amber-200/90 bg-[#fff6e4]/95 px-5 py-3 shadow-xl ${
-          cagentBubbleOpen ? "w-[min(44rem,76%)] max-w-[44rem]" : "max-w-md"
-        } ${isOtherFarm ? "animate-pulse" : ""} ${cagentBubbleOpen ? "pointer-events-auto" : "pointer-events-none"}`}
+        className={`fixed z-[80] rounded-2xl border border-amber-200/90 bg-[#fff6e4]/95 shadow-xl ${
+          cagentBubbleOpen ? "w-[min(40rem,78%)] max-w-[40rem] px-4 py-2.5" : "max-w-md px-4 py-2"
+        } ${isOtherFarm ? "animate-pulse px-4 py-2" : ""} ${cagentBubbleOpen ? "pointer-events-auto" : "pointer-events-none"}`}
         style={{
           left: cagentBubbleLeft,
-          top: cagentBubbleTop,
-          transform: "translate(-50%, -100%)",
+          top: cagentBubbleOpen || isOtherFarm ? cagentOpenTop : cagentBubbleTop,
+          transform: cagentBubbleOpen || isOtherFarm ? "translate(-50%, 0)" : "translate(-50%, -100%)",
+          maxHeight: cagentBubbleOpen || isOtherFarm ? "calc(100vh - 32px)" : undefined,
+          overflowY: cagentBubbleOpen || isOtherFarm ? "auto" : undefined,
           color: "#5c3a1e",
           fontFamily: CAGENT_FARM_FONT,
         }}
       >
         {isOtherFarm ? (
-          <p className="text-xl leading-snug" style={{ fontFamily: CAGENT_FARM_FONT }}>
+          <p className="text-2xl leading-snug" style={{ fontFamily: CAGENT_FARM_FONT }}>
             {otherFarmBubbleStep === "intro"
               ? `Hello... Wait, you are not ${userId}, who are you?`
               : `You can click the writing board below to review ${userId}'s work. Leave your review and head out - ${userId} doesn't let me talk to strangers.`}
           </p>
         ) : cagentBubbleOpen ? (
-          <div className="flex items-start gap-2 text-lg">
-            <div className="flex-1">
-              <p className="whitespace-pre-wrap leading-relaxed" style={{ fontFamily: CAGENT_FARM_FONT }}>
-                {cagentLoading ? "..." : cagentGuideText || "Loading..."}
+          <div className="flex items-start gap-2">
+            <div className="min-w-0 flex-1">
+              <p className="whitespace-pre-wrap text-2xl leading-snug" style={{ fontFamily: CAGENT_FARM_FONT }}>
+                {cagentLoading ? "..." : cagentGuideDisplay}
               </p>
-              <form onSubmit={handleCagentSend} className="mt-3 flex gap-2">
+              <form onSubmit={handleCagentSend} className="mt-2 flex gap-2">
                 <input
                   type="text"
                   value={cagentUserInput}
                   onChange={(e) => setCagentUserInput(e.target.value)}
                   placeholder="Talk to Cagent..."
-                  className="flex-1 rounded-full border border-amber-300 bg-white/80 px-4 py-2 text-sm focus:outline-none focus:ring-0"
+                  className="flex-1 rounded-full border border-amber-300 bg-white/80 px-3 py-1.5 text-lg leading-none focus:outline-none focus:ring-0"
                   style={{ fontFamily: CAGENT_FARM_FONT }}
                 />
                 <button
                   type="submit"
                   onClick={handleCagentSend}
                   disabled={!cagentUserInput.trim() || cagentSending}
-                  className="rounded-full bg-amber-700 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-800 disabled:opacity-50"
+                  className="rounded-full bg-amber-700 px-4 py-1.5 text-lg font-semibold leading-none text-white hover:bg-amber-800 disabled:opacity-50"
                   style={{ fontFamily: CAGENT_FARM_FONT }}
                 >
                   {cagentSending ? "Sending..." : "Send"}
@@ -1606,14 +1611,14 @@ export default function UserProfilePage({
             <button
               type="button"
               onClick={() => setCagentBubbleOpen(false)}
-              className="text-sm text-amber-800/70 hover:text-amber-950"
+              className="mt-0.5 text-base leading-none text-amber-800/70 hover:text-amber-950"
               aria-label="Close"
             >
               ✕
             </button>
           </div>
         ) : (
-          <p className="text-2xl leading-none" style={{ fontFamily: CAGENT_FARM_FONT }}>
+          <p className="text-3xl leading-none" style={{ fontFamily: CAGENT_FARM_FONT }}>
             {cagentGreeting}
           </p>
         )}
