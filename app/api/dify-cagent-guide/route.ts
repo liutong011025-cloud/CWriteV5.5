@@ -40,6 +40,7 @@ export async function POST(request: NextRequest) {
     const levelSuffix = getLevelPromptSuffix(level, "general")
 
     if (!isConfigured()) {
+      console.error("[dify-cagent-guide] DEEPSEEK_API_KEY is missing in this deployment environment")
       return NextResponse.json(
         { error: "Guide unavailable", message: "Cagent is resting. Try again in a bit! 🧸" },
         { status: 200 }
