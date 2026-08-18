@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { BackButton } from "@/components/ui/back-button"
 import type { Language } from "@/app/page"
@@ -190,8 +190,41 @@ export default function WriteTypeSelection({
   onBack 
 }: WriteTypeSelectionProps) {
   const [hoveredCard, setHoveredCard] = useState<string | null>(null)
+  const hoverAudioRef = useRef<HTMLAudioElement | null>(null)
+  const lastHoverSoundAtRef = useRef(0)
   const t = translations[language] || translations.en
   const writingTypes = getWritingTypes(language)
+
+  useEffect(() => {
+    try {
+      const hoverAudio = new Audio("/soundreality-finger-snap-179180.mp3")
+      hoverAudio.preload = "auto"
+      hoverAudio.volume = 0.45
+      hoverAudio.load?.()
+      hoverAudioRef.current = hoverAudio
+    } catch {
+      // ignore
+    }
+    return () => {
+      hoverAudioRef.current?.pause()
+      hoverAudioRef.current = null
+    }
+  }, [])
+
+  const playTypeHoverSound = (typeId: string) => {
+    if (hoveredCard === typeId) return
+    const now = Date.now()
+    if (now - lastHoverSoundAtRef.current < 120) return
+    lastHoverSoundAtRef.current = now
+    try {
+      if (window.localStorage.getItem("cwrite-home-muted") === "true") return
+      if (!hoverAudioRef.current) return
+      hoverAudioRef.current.currentTime = 0
+      void hoverAudioRef.current.play()
+    } catch {
+      // ignore
+    }
+  }
 
   const handleSelect = (type: string) => {
     if (type === "story") {
@@ -276,7 +309,10 @@ export default function WriteTypeSelection({
             return (
               <div
                 key={type.id}
-                onMouseEnter={() => setHoveredCard(type.id)}
+                onMouseEnter={() => {
+                  playTypeHoverSound(type.id)
+                  setHoveredCard(type.id)
+                }}
                 onMouseLeave={() => setHoveredCard(null)}
                 onClick={() => handleSelect(type.id)}
                 className="pixel-panel p-8 cursor-pointer transition-all duration-300 min-h-[520px] flex"
