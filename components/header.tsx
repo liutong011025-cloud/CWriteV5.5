@@ -175,10 +175,11 @@ export default function Header() {
   // 1. 如果在顶部（isAtTop = true），背景始终透明，不显示背景色
   // 2. 如果向下滚动（isScrolled = true），显示背景和窄窄的header
   // 3. 顶部时，文字为黑色；滚动后，文字根据背景调整
-  const isHomePage = currentStage === 'home' || pathname === '/'
+  const isHomePage = currentStage === "home"
+  const isFarmPage = currentStage === "userProfile" || currentStage === "otherFarm"
   const isAboutPage = currentStage?.startsWith('about') || false
   const isGalleryPage = currentStage === 'gallery' || pathname === '/gallery' || pathname?.includes('gallery')
-  const showBackground = isScrolled || isAboutPage || isGalleryPage // About 和 Gallery 页面始终显示背景
+  const showBackground = isScrolled || isAboutPage || isGalleryPage || isFarmPage
   const showLogo = isHomePage && isAtTop && !isHovering && !isAboutPage && !isGalleryPage // 只在首页顶部且未悬停时显示logo
 
   // 处理导航点击
