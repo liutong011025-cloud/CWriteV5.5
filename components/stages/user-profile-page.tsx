@@ -221,6 +221,40 @@ const DEFAULT_TREE_LAYOUT: FarmElementState[] = [
 
 // 视觉上将两排树位对调：上排显示 7-12，下排显示 1-6
 const FARM_SLOT_TREE_IDS = [7, 8, 9, 10, 11, 12, 1, 2, 3, 4, 5, 6]
+const FARM_BGM_SRC = "/yoshiyuki_tatsuya-pixel-hearts-foreverwav-427383.mp3"
+const FARM_HOVER_SOUND_SRC = "/soundreality-finger-snap-179180.mp3"
+
+function FarmMuteButton({
+  isMuted,
+  onToggle,
+}: {
+  isMuted: boolean
+  onToggle: () => void
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      className="fixed bottom-6 right-6 z-50 rounded-full bg-white/90 p-4 shadow-lg backdrop-blur-sm transition hover:scale-105 hover:bg-white"
+      style={{
+        border: "4px solid #4A9BE8",
+        boxShadow: "0 6px 0 #2E7DD1, 0 10px 22px rgba(0,0,0,0.18)",
+        imageRendering: "pixelated",
+      }}
+      aria-label={isMuted ? "Turn sound on" : "Turn sound off"}
+      title={isMuted ? "Turn sound on" : "Turn sound off"}
+    >
+      <img
+        src={isMuted ? "/speakeroff.webp" : "/speaker on.webp"}
+        alt={isMuted ? "Sound off" : "Sound on"}
+        width={44}
+        height={44}
+        className="pointer-events-none select-none"
+        draggable={false}
+      />
+    </button>
+  )
+}
 
 export default function UserProfilePage({
   userId,
@@ -271,6 +305,10 @@ export default function UserProfilePage({
   const farmContainerRef = useRef<HTMLDivElement | null>(null)
   const [hoveredFarmElement, setHoveredFarmElement] = useState<FarmElementId | null>(null)
   const [farmElementStates, setFarmElementStates] = useState<Record<FarmElementId, FarmElementState>>(() => getDefaultFarmButtonStates(isOtherFarm))
+  const [isMuted, setIsMuted] = useState(false)
+  const backgroundMusicRef = useRef<HTMLAudioElement | null>(null)
+  const hoverAudioRef = useRef<HTMLAudioElement | null>(null)
+  const lastHoverSoundAtRef = useRef(0)
   const [viewMode, setViewMode] = useState<"farm" | "writings">("farm")
   // 进入 farm 视图的次数：用于确保每次切回 farm 时都能重新触发闪光动画
   const [farmViewNonce, setFarmViewNonce] = useState(0)
@@ -285,6 +323,111 @@ export default function UserProfilePage({
       setFarmViewNonce((n) => n + 1)
     }
   }, [viewMode, isOtherFarm])
+
+  useEffect(() => {
+    try {
+      if (window.localStorage.getItem("cwrite-home-muted") === "true") {
+        setIsMuted(true)
+      }
+    } catch {
+      // ignore
+    }
+  }, [])
+
+  useEffect(() => {
+    try {
+      const hoverAudio = new Audio(FARM_HOVER_SOUND_SRC)
+      hoverAudio.preload = "auto"
+      hoverAudio.volume = 0.45
+      hoverAudio.load?.()
+      hoverAudioRef.current = hoverAudio
+    } catch {
+      // ignore
+    }
+
+    return () => {
+      hoverAudioRef.current?.pause()
+      hoverAudioRef.current = null
+    }
+  }, [])
+
+  useEffect(() => {
+    if (isOtherFarm) return
+
+    let isUnmounted = false
+    const backgroundAudio = new Audio(FARM_BGM_SRC)
+    backgroundAudio.preload = "auto"
+    backgroundAudio.loop = true
+    backgroundAudio.volume = 0.3
+    backgroundAudio.muted = isMuted
+    backgroundAudio.load?.()
+    backgroundMusicRef.current = backgroundAudio
+
+    const tryPlayBackgroundMusic = async () => {
+      if (isUnmounted || isMuted) return
+      try {
+        await backgroundAudio.play()
+      } catch {
+        // Some browsers require a user gesture before audio playback.
+      }
+    }
+
+    const resumeAfterInteraction = () => {
+      void tryPlayBackgroundMusic()
+    }
+
+    void tryPlayBackgroundMusic()
+    window.addEventListener("pointerdown", resumeAfterInteraction, { once: true })
+    window.addEventListener("keydown", resumeAfterInteraction, { once: true })
+    window.addEventListener("touchstart", resumeAfterInteraction, { once: true })
+
+    return () => {
+      isUnmounted = true
+      window.removeEventListener("pointerdown", resumeAfterInteraction)
+      window.removeEventListener("keydown", resumeAfterInteraction)
+      window.removeEventListener("touchstart", resumeAfterInteraction)
+      backgroundAudio.pause()
+      backgroundAudio.currentTime = 0
+      if (backgroundMusicRef.current === backgroundAudio) {
+        backgroundMusicRef.current = null
+      }
+    }
+  }, [isMuted, isOtherFarm])
+
+  useEffect(() => {
+    const allAudio = [backgroundMusicRef.current, hoverAudioRef.current]
+    allAudio.forEach((audio) => {
+      if (!audio) return
+      audio.muted = isMuted
+    })
+    try {
+      window.localStorage.setItem("cwrite-home-muted", String(isMuted))
+    } catch {
+      // ignore
+    }
+    if (isMuted) {
+      backgroundMusicRef.current?.pause()
+      return
+    }
+    void backgroundMusicRef.current?.play().catch(() => {
+      // ignore autoplay restrictions until the next user gesture
+    })
+  }, [isMuted])
+
+  const playFarmHoverSound = (elementId: string) => {
+    if (isMuted || isOtherFarm) return
+    if (hoveredFarmElement === elementId) return
+    const now = Date.now()
+    if (now - lastHoverSoundAtRef.current < 120) return
+    lastHoverSoundAtRef.current = now
+    try {
+      if (!hoverAudioRef.current) return
+      hoverAudioRef.current.currentTime = 0
+      void hoverAudioRef.current.play()
+    } catch {
+      // ignore
+    }
+  }
 
   useEffect(() => {
     setFarmElementStates(getDefaultFarmButtonStates(isOtherFarm))
@@ -1037,6 +1180,9 @@ export default function UserProfilePage({
             </div>
           )}
         </div>
+        {!isOtherFarm && (
+          <FarmMuteButton isMuted={isMuted} onToggle={() => setIsMuted((prev) => !prev)} />
+        )}
       </div>
     )
   }
@@ -1141,7 +1287,10 @@ export default function UserProfilePage({
                     transition: "transform 0.25s ease-in-out",
                     zIndex: 20,
                   }}
-                  onMouseEnter={() => setHoveredFarmElement(element.id)}
+                  onMouseEnter={() => {
+                    setHoveredFarmElement(element.id)
+                    playFarmHoverSound(element.id)
+                  }}
                   onMouseLeave={() => setHoveredFarmElement((prev) => (prev === element.id ? null : prev))}
                   onClick={() => {
                     if (element.id === "farmbacktomap") onBack()
@@ -1531,6 +1680,9 @@ export default function UserProfilePage({
             </div>
           </div>
         )}
+      {!isOtherFarm && (
+        <FarmMuteButton isMuted={isMuted} onToggle={() => setIsMuted((prev) => !prev)} />
+      )}
     </div>
   )
 }
