@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useEffect, useState } from "react"
+import React, { useEffect, useRef, useState } from "react"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -33,6 +33,79 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
   const [registerEmail, setRegisterEmail] = useState("")
   const [password, setPassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)
+  const [panelOffset, setPanelOffset] = useState(() => {
+    if (typeof window === "undefined") return { x: 0, y: 0 }
+    try {
+      const saved = localStorage.getItem("cwrite-login-panel-offset")
+      if (saved) {
+        const parsed = JSON.parse(saved) as { x?: number; y?: number }
+        if (typeof parsed.x === "number" && typeof parsed.y === "number") {
+          return { x: parsed.x, y: parsed.y }
+        }
+      }
+    } catch {
+      // ignore invalid local cache
+    }
+    return { x: 0, y: 0 }
+  })
+  const [tuneOpen, setTuneOpen] = useState(true)
+  const dragState = useRef<{
+    pointerId: number
+    startX: number
+    startY: number
+    origX: number
+    origY: number
+  } | null>(null)
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("cwrite-login-panel-offset", JSON.stringify(panelOffset))
+    } catch {
+      // ignore quota / private mode
+    }
+  }, [panelOffset])
+
+  const nudgePanel = (dx: number, dy: number) => {
+    setPanelOffset((prev) => ({ x: prev.x + dx, y: prev.y + dy }))
+  }
+
+  const handlePanelPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+    event.preventDefault()
+    event.currentTarget.setPointerCapture(event.pointerId)
+    dragState.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      origX: panelOffset.x,
+      origY: panelOffset.y,
+    }
+  }
+
+  const handlePanelPointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (!dragState.current || dragState.current.pointerId !== event.pointerId) return
+    const dx = event.clientX - dragState.current.startX
+    const dy = event.clientY - dragState.current.startY
+    setPanelOffset({
+      x: dragState.current.origX + dx,
+      y: dragState.current.origY + dy,
+    })
+  }
+
+  const handlePanelPointerUp = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (dragState.current?.pointerId === event.pointerId) {
+      dragState.current = null
+    }
+  }
+
+  const copyPanelOffset = async () => {
+    const text = `x: ${panelOffset.x}, y: ${panelOffset.y}`
+    try {
+      await navigator.clipboard.writeText(text)
+      toast.success(`已复制位置：${text}`)
+    } catch {
+      toast.message(`当前位置：${text}`)
+    }
+  }
 
   useEffect(() => {
     const warmAudioCache = () => {
@@ -180,33 +253,37 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 relative overflow-hidden login-page" data-login-page>
-      {/* 背景图片 - 左上部分 */}
-      <div className="absolute top-0 left-0 w-full h-full overflow-hidden">
-        <div 
-          className="absolute top-0 left-0 w-full h-full bg-cover bg-no-repeat"
-          style={{
-            backgroundImage: 'url(/Background.webp)',
-            backgroundPosition: 'left top',
-            backgroundSize: 'cover',
-            filter: 'blur(4px) brightness(0.8)',
-            transform: 'scale(1.1)',
-          }}
+    <div
+      className="min-h-screen flex items-center justify-center px-4 relative overflow-hidden login-page"
+      data-login-page
+    >
+      {/* 背景居中铺满，无雾化 / 无遮罩 */}
+      <div className="absolute inset-0 overflow-hidden bg-[#7ec8e8]">
+        <img
+          src="/Background1.png"
+          alt=""
+          className="absolute inset-0 h-full w-full object-cover object-center select-none"
+          draggable={false}
         />
-        {/* 渐变遮罩让背景更柔和，保证内容清晰 */}
-        <div className="absolute inset-0 bg-gradient-to-br from-purple-900/50 via-indigo-800/40 to-pink-900/50" />
-        {/* 额外的半透明遮罩 */}
-        <div className="absolute inset-0 bg-black/20" />
       </div>
 
-      {/* 装饰性背景元素 - 降低透明度 */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-30">
-        <div className="absolute top-20 left-10 w-96 h-96 bg-purple-300 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-pulse"></div>
-        <div className="absolute bottom-20 right-10 w-96 h-96 bg-pink-300 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-pulse" style={{ animationDelay: '2s' }}></div>
-      </div>
-
-      <div className="max-w-sm w-full relative z-10">
-        <SpotlightCard className="px-10 py-6 shadow-2xl" spotlightColor="rgba(0, 229, 255, 0.2)">
+      <div
+        className="max-w-sm w-full relative z-10"
+        style={{ transform: `translate(${panelOffset.x}px, ${panelOffset.y}px)` }}
+      >
+        {tuneOpen && (
+          <div
+            onPointerDown={handlePanelPointerDown}
+            onPointerMove={handlePanelPointerMove}
+            onPointerUp={handlePanelPointerUp}
+            onPointerCancel={handlePanelPointerUp}
+            className="mb-2 flex cursor-grab items-center justify-center gap-2 rounded-xl border border-white/50 bg-black/55 px-3 py-1.5 text-xs font-semibold text-white shadow-lg active:cursor-grabbing"
+          >
+            <span aria-hidden>⋮⋮</span>
+            拖动调整登录面板位置
+          </div>
+        )}
+        <SpotlightCard className="px-10 py-6 shadow-2xl [background-color:rgba(20,16,32,0.52)]" spotlightColor="rgba(0, 229, 255, 0.2)">
           {entryStep === "role" ? (
             <div className="space-y-5 py-4">
               <div className="text-center mb-2">
@@ -392,6 +469,86 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
             </>
           )}
         </SpotlightCard>
+      </div>
+
+      {/* 临时位置调整工具：调好后把数值发给我，再固化并移除 */}
+      <div className="absolute left-3 top-3 z-50 select-none">
+        {tuneOpen ? (
+          <div className="w-64 rounded-2xl border border-white/40 bg-black/75 p-3 text-white shadow-2xl backdrop-blur-md">
+            <div className="mb-2 flex items-center justify-between">
+              <p className="text-xs font-bold tracking-wide">登录面板位置工具</p>
+              <button
+                type="button"
+                onClick={() => setTuneOpen(false)}
+                className="rounded-md px-1.5 py-0.5 text-[11px] text-white/80 hover:bg-white/10"
+              >
+                收起
+              </button>
+            </div>
+            <p className="mb-2 text-[11px] leading-snug text-white/75">
+              可拖动面板上方的手柄，或用下方按钮微调。调好后点复制，把数值发给我。
+            </p>
+            <div className="space-y-2 text-[11px]">
+              <label className="block">
+                <span className="mb-1 flex justify-between">
+                  <span>X（左右）</span>
+                  <span className="font-mono">{panelOffset.x}px</span>
+                </span>
+                <input
+                  type="range"
+                  min={-480}
+                  max={480}
+                  value={panelOffset.x}
+                  onChange={(e) => setPanelOffset((prev) => ({ ...prev, x: Number(e.target.value) }))}
+                  className="w-full accent-cyan-300"
+                />
+              </label>
+              <label className="block">
+                <span className="mb-1 flex justify-between">
+                  <span>Y（上下）</span>
+                  <span className="font-mono">{panelOffset.y}px</span>
+                </span>
+                <input
+                  type="range"
+                  min={-360}
+                  max={360}
+                  value={panelOffset.y}
+                  onChange={(e) => setPanelOffset((prev) => ({ ...prev, y: Number(e.target.value) }))}
+                  className="w-full accent-cyan-300"
+                />
+              </label>
+            </div>
+            <div className="mt-2 grid grid-cols-3 gap-1">
+              <span />
+              <button type="button" onClick={() => nudgePanel(0, -8)} className="rounded-md bg-white/15 py-1 text-sm hover:bg-white/25">↑</button>
+              <span />
+              <button type="button" onClick={() => nudgePanel(-8, 0)} className="rounded-md bg-white/15 py-1 text-sm hover:bg-white/25">←</button>
+              <button type="button" onClick={() => setPanelOffset({ x: 0, y: 0 })} className="rounded-md bg-white/15 py-1 text-[10px] hover:bg-white/25">复位</button>
+              <button type="button" onClick={() => nudgePanel(8, 0)} className="rounded-md bg-white/15 py-1 text-sm hover:bg-white/25">→</button>
+              <span />
+              <button type="button" onClick={() => nudgePanel(0, 8)} className="rounded-md bg-white/15 py-1 text-sm hover:bg-white/25">↓</button>
+              <span />
+            </div>
+            <div className="mt-2 rounded-lg bg-white/10 px-2 py-1.5 font-mono text-[11px]">
+              x: {panelOffset.x}, y: {panelOffset.y}
+            </div>
+            <button
+              type="button"
+              onClick={copyPanelOffset}
+              className="mt-2 w-full rounded-lg bg-cyan-400/90 py-1.5 text-xs font-bold text-slate-900 hover:bg-cyan-300"
+            >
+              复制当前位置
+            </button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setTuneOpen(true)}
+            className="rounded-xl border border-white/40 bg-black/70 px-3 py-1.5 text-xs font-semibold text-white shadow-lg hover:bg-black/80"
+          >
+            显示位置工具
+          </button>
+        )}
       </div>
     </div>
   )
