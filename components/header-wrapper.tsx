@@ -34,6 +34,14 @@ export default function HeaderWrapper() {
           setShouldShowHeader(false)
           return
         }
+
+        if (stage === 'userProfile') {
+          const farmPage = document.querySelector('[data-no-header][data-stage="userProfile"]')
+          if (farmPage) {
+            setShouldShowHeader(false)
+            return
+          }
+        }
         
         // 检查是否有data-login-page属性
         if (loginElements.length > 0) {
