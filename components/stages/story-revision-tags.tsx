@@ -6,13 +6,16 @@ import {
   REVISION_TAG_COLOR_STYLES,
   type StoryRevisionTag,
 } from "@/lib/story-revision-tags"
+import { getStoryCopy, type StoryUiLang } from "@/lib/story-i18n"
 
 interface StoryRevisionTagsProps {
   tags: StoryRevisionTag[]
   className?: string
+  language?: StoryUiLang
 }
 
-export default function StoryRevisionTags({ tags, className }: StoryRevisionTagsProps) {
+export default function StoryRevisionTags({ tags, className, language = "en" }: StoryRevisionTagsProps) {
+  const t = getStoryCopy(language)
   const [openIndex, setOpenIndex] = useState<number | null>(null)
   const [hoverIndex, setHoverIndex] = useState<number | null>(null)
 
@@ -21,7 +24,7 @@ export default function StoryRevisionTags({ tags, className }: StoryRevisionTags
   return (
     <div className={cn("mt-4 space-y-3", className)}>
       <p className="text-sm font-bold uppercase tracking-wide" style={{ color: "#6b5210" }}>
-        Tap a tag to see why · hover to preview
+        {t.revisionTagHint}
       </p>
       <div className="flex flex-wrap gap-2.5">
         {tags.map((tag, index) => {
