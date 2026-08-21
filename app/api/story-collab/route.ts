@@ -39,7 +39,7 @@ import {
   getSectionLabel,
   getStoryCopy,
   isZh,
-  localizeSuggestionChips,
+  ensureEnglishSuggestionChips,
   matchStructureType,
   PASS_GUIDED_WRITING,
   PASS_LAST_SECTION,
@@ -292,8 +292,9 @@ function buildSystemPrompt(req: CollabRequest, phase: CollabPhase, lastStudentMe
   parts.push(
     "\n\nIMPORTANT: After your conversational response, you MUST append a META block in this exact format:" +
     '\n---META---\n{"phase":"...","suggestions":[...],"story_snippet":"..."|null,"plot_update":{...}|null,"structure_suggestion":"..."|null,"revision_tags":[{"label":"...","rationale":"...","color":"amber"}]}\n---END---' +
-    "\nThe suggestions array must contain 2-4 short clickable options (2-6 words each) that answer YOUR question. " +
-    "FORBIDDEN suggestions: Tell me more, What happens next?, Help me. Always include suggestions."
+    "\nThe suggestions array must contain 2-4 short English clickable options (2-6 words each) that answer YOUR question. " +
+    "Even if your chat reply is Chinese, suggestions MUST stay English. " +
+    "FORBIDDEN suggestions: Tell me more, What happens next?, Help me, or any Chinese chip labels. Always include suggestions."
   )
 
   parts.push(buildStoryAiLanguageRules(langOf(req)))
@@ -501,7 +502,7 @@ function buildDeterministicPlotResponse(
   return {
     answer,
     phase: plotFinal.plot_complete ? "structure" : plotFinal.phase,
-    suggestions: localizeSuggestionChips(plotFinal.suggestions, langOf(req)),
+    suggestions: ensureEnglishSuggestionChips(plotFinal.suggestions),
     story_snippet: null,
     plot_update: plotFinal.plot_update,
     plot_state: plotFinal.plot,
@@ -700,14 +701,10 @@ export async function POST(request: NextRequest) {
           ? []
           : ["Adventure", "Magic", "Mystery"]
 
-    const uiLang = langOf(req)
     const responseSuggestions =
       draftSubmission && finalized.revision_tags.length > 0
         ? []
-        : localizeSuggestionChips(
-            suggestions?.length ? suggestions : defaultSuggestions,
-            uiLang,
-          )
+        : ensureEnglishSuggestionChips(suggestions?.length ? suggestions : defaultSuggestions)
 
     const pickedStructure = meta.structure_suggestion
       ? matchStructureType(meta.structure_suggestion)
