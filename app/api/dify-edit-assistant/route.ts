@@ -12,6 +12,7 @@ export async function POST(request: NextRequest) {
       modified_section,
       user_id,
       level: levelRaw,
+      language,
     } = body
     const level = Math.min(5, Math.max(1, Number(levelRaw) || 1))
     const levelSuffix = getLevelPromptSuffix(
@@ -30,6 +31,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "DeepSeek API not configured" }, { status: 500 })
     }
 
+    const languageRule =
+      language === "zh"
+        ? " Reply in Simplified Chinese. The student's story text is English and must stay English — do not rewrite it in Chinese."
+        : " Reply in English."
+
     const intent = body.intent === "open" || original_content.trim() === modified_content.trim() ? "open" : "revise"
     const prompt =
       intent === "open"
@@ -40,7 +46,7 @@ ${original_content}
 
 ${modified_section ? `Focus on this section if useful: ${modified_section}` : ""}
 
-Give 2-3 short, specific, encouraging tips for making it even better. Do NOT rewrite the whole piece. Keep it around 40-60 words, warm and simple for ages 8-12. Use 1-2 emojis.${levelSuffix}`
+Give 2-3 short, specific, encouraging tips for making it even better. Do NOT rewrite the whole piece. Keep it around 40-60 words, warm and simple for ages 8-12. Use 1-2 emojis.${languageRule}${levelSuffix}`
         : `You are Luna, a friendly and encouraging elementary school English writing teacher assistant. A student has made some changes to their ${article_type}.
 
 Original content:
@@ -61,7 +67,7 @@ Guidelines:
 3. Always provide specific, actionable suggestions for improvement
 4. Be encouraging but honest - don't give false praise
 
-Do NOT rewrite the entire article. Only provide feedback and suggestions. Keep your response concise (around 30-50 words). Be conversational and warm, like a caring teacher.${levelSuffix}`
+Do NOT rewrite the entire article. Only provide feedback and suggestions. Keep your response concise (around 30-50 words). Be conversational and warm, like a caring teacher.${languageRule}${levelSuffix}`
 
     const suggestion = await chat({
       messages: [{ role: "user", content: prompt }],
