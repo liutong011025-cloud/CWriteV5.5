@@ -619,4 +619,29 @@ export function getJourneyTicketCopy(lang: StoryUiLang) {
   }
 }
 
+export function getPlanTestCopy(lang: StoryUiLang) {
+  const zh = isZh(lang)
+  return {
+    title: zh ? "写作等级任务" : "Writing Level Quest",
+    subtitle: zh
+      ? "先放好第一枚图钉，再完成这 7 道题，就能解锁你的旅程机票。"
+      : "Place your first pin, then clear these 7 questions to unlock your journey ticket.",
+    questionN: (current: number, total: number) =>
+      zh ? `第 ${current} 题 / 共 ${total} 题` : `Question ${current} / ${total}`,
+    questComplete: zh ? "任务完成" : "Quest Complete",
+    answeredN: (n: number) => (zh ? `已答 ${n} 题` : `${n} answered`),
+    levelCheck: zh ? "等级检测" : "LEVEL CHECK",
+    firstPinOnly: zh ? "仅首次图钉" : "FIRST PIN ONLY",
+    ticketUnlocked: zh ? "旅程机票已解锁" : "JOURNEY TICKET UNLOCKED",
+    finishTitle: zh ? "题目全部完成，做得好！" : "Great job finishing the questions!",
+    finishHint: zh
+      ? "我们会根据你的答案，为你的写作旅程选择合适的起始等级。"
+      : "We will use your answers to choose a good starting level for your writing journey.",
+    continueToTicket: zh ? "继续前往旅程机票" : "Continue to Journey Ticket",
+    cefrNote: zh
+      ? "题目依据 CEFR 写作等级（A2–B2）设计。"
+      : "Questions are designed based on CEFR writing levels (A2–B2).",
+  }
+}
+
 export type StoryCopy = ReturnType<typeof getStoryCopy>
