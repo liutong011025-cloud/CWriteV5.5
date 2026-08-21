@@ -2,6 +2,7 @@
 
 import type { FormEvent, ChangeEvent } from "react"
 import { useState, useCallback, useEffect, useRef } from "react"
+import { getCagentCopy } from "@/lib/story-i18n"
 
 export type CagentMood = "normal" | "like" | "angry"
 
@@ -28,6 +29,8 @@ export interface CagentProps {
   valuesMessage?: string | null
   /** Optional suggestion when values violation */
   valuesSuggestion?: string | null
+  /** Header UI language */
+  language?: "en" | "zh"
   /** Callback when guide response is needed (e.g. parent fetches and passes content) */
   onOpenDialog?: () => void
 }
@@ -39,7 +42,9 @@ export default function Cagent({
   mood,
   valuesMessage,
   valuesSuggestion,
+  language = "en",
 }: CagentProps) {
+  const t = getCagentCopy(language)
   const [showBubble, setShowBubble] = useState(false)
   const [guideText, setGuideText] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -76,7 +81,7 @@ export default function Cagent({
       if (!opts?.userMessage) {
         setGuideText(null)
       } else {
-        setGuideText("Cagent is thinking... ✨")
+        setGuideText(t.thinking)
       }
       try {
         const res = await fetch("/api/dify-cagent-guide", {
@@ -87,26 +92,27 @@ export default function Cagent({
             contextSummary: contextSummary || "",
             user_id: userId,
             userMessage: opts?.userMessage || null,
+            language,
           }),
         })
         if (!res.ok) throw new Error(`cagent_guide_http_${res.status}`)
         const data = await res.json()
         if (requestSeq !== requestSeqRef.current) return
         if (data.error) {
-          setGuideText("Oops, Cagent is resting. Try again in a bit! 🧸")
+          setGuideText(t.resting)
           return
         }
-        setGuideText(data.message || data.answer || "Keep going! You're doing great! ✨")
+        setGuideText(data.message || data.answer || t.fallback)
       } catch {
         if (requestSeq !== requestSeqRef.current) return
-        setGuideText("Something went wrong. Try again! 🌟")
+        setGuideText(t.error)
       } finally {
         if (requestSeq === requestSeqRef.current) {
           setLoading(false)
         }
       }
     },
-    [stage, contextSummary, userId]
+    [stage, contextSummary, userId, language, t.thinking, t.resting, t.fallback, t.error]
   )
 
   // Auto-speak when entering a new stage or when values message appears
@@ -116,12 +122,12 @@ export default function Cagent({
     setUserInput("")
     setIsSleeping(false)
     setShowBubble(true)
-    setGuideText("I am here for this page. One second! ✨")
+    setGuideText(t.pageWait)
     scheduleSleep()
     if (!valuesMessage) {
       fetchGuide()
     }
-  }, [stage, contextSummary, valuesMessage, fetchGuide, scheduleSleep])
+  }, [stage, contextSummary, valuesMessage, fetchGuide, scheduleSleep, t.pageWait])
 
   const handleOpen = useCallback(() => {
     setShowBubble(true)
@@ -149,7 +155,7 @@ export default function Cagent({
   )
 
   const displayMessage = valuesMessage
-    ? `${valuesMessage}${valuesSuggestion ? `\n\nSuggestion: ${valuesSuggestion}` : ""}`
+    ? `${valuesMessage}${valuesSuggestion ? `\n\n${t.suggestion} ${valuesSuggestion}` : ""}`
     : guideText
 
   const avatarSrc = isSleeping ? SLEEP_IMAGE : IMAGE_MAP[mood]
@@ -170,7 +176,7 @@ export default function Cagent({
         type="button"
         onClick={handleOpen}
         className="group flex flex-col items-center gap-1 transition-transform duration-200 hover:scale-110 focus:outline-none pointer-events-auto"
-        aria-label="Open Cagent"
+        aria-label={t.openAria}
       >
         <img
           src={avatarSrc}
@@ -204,7 +210,7 @@ export default function Cagent({
                     onChange={(e: ChangeEvent<HTMLInputElement>) => setUserInput(e.target.value)}
                     onFocus={() => setIsInteracting(true)}
                     onBlur={() => setIsInteracting(false)}
-                    placeholder="Talk to Cagent..."
+                    placeholder={t.talkPlaceholder}
                   className="flex-1 rounded-full border border-purple-200 bg-white/80 px-5 py-3 text-base focus:outline-none focus:ring-0"
                   />
                   <button
@@ -213,7 +219,7 @@ export default function Cagent({
                     disabled={!userInput.trim() || isSending}
                     className="rounded-full bg-purple-500 px-5 py-3 text-base font-semibold text-white hover:bg-purple-600 disabled:opacity-50"
                   >
-                    {isSending ? "Sending..." : "Send"}
+                    {isSending ? t.sending : t.send}
                   </button>
                 </form>
               )}
@@ -222,7 +228,7 @@ export default function Cagent({
               type="button"
               onClick={() => setShowBubble(false)}
               className="ml-1 text-xs text-purple-500 hover:text-purple-700"
-              aria-label="Close Cagent message"
+              aria-label={t.closeAria}
             >
               ✕
             </button>
