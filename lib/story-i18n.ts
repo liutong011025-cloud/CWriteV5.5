@@ -566,4 +566,57 @@ export function getStoryCopy(lang: StoryUiLang) {
   }
 }
 
+export function getJourneyTicketCopy(lang: StoryUiLang) {
+  const zh = isZh(lang)
+  return {
+    backToMap: zh ? "返回地图" : "Back to Map",
+    title: zh ? "你的旅程机票" : "Your Journey Ticket",
+    subtitle: zh
+      ? "在登机牌上选择写作类型、设定难度，然后出发。"
+      : "Pick a writing type on your boarding pass, set difficulty, then depart.",
+    boardingPass: zh ? "登机牌" : "Boarding Pass",
+    pickJourney: zh ? "选择旅程" : "Pick Journey",
+    dragToStamp: zh ? "拖到盖章处 →" : "Drag to stamp →",
+    orTap: zh ? "或点选类型" : "or tap a type",
+    passenger: zh ? "乘客" : "Passenger",
+    writingLevel: zh ? "写作等级" : "Writing Level",
+    levelN: (n: number) => (zh ? `等级 ${n}` : `Level ${n}`),
+    scoreN: (score: number) => (zh ? `得分 ${score}/7` : `Score ${score}/7`),
+    retest: zh ? "重新测试" : "Retest",
+    journey: zh ? "旅程" : "Journey",
+    flight: zh ? "航班" : "Flight",
+    gate: zh ? "登机口" : "Gate",
+    seat: zh ? "座位" : "Seat",
+    chooseDifficulty: zh ? "选择难度" : "Choose Difficulty",
+    start: zh ? "✈️ 出发" : "✈️ Start",
+    stampLevel: (n: number) => (zh ? `等级 ${n}` : `Lv ${n}`),
+    pickTypeHint: zh ? "先选择一种旅程并盖章" : "Pick a journey type and stamp it",
+    pickDifficultyHint: zh ? "请选择难度等级" : "Choose a difficulty level",
+    boarding: zh ? "登机" : "Boarding",
+    code: zh ? "代码" : "Code",
+    stampHere: zh ? "在此盖章" : "Stamp Here",
+    dropHere: zh ? "把旅程拖到这里" : "Drop journey here",
+    types: {
+      story: zh ? "故事" : "Story",
+      bookReview: zh ? "书评" : "Book Review",
+      letter: zh ? "书信" : "Letter",
+      drama: zh ? "戏剧" : "Drama",
+      poetry: zh ? "诗歌" : "Poetry",
+    } as Record<"story" | "bookReview" | "letter" | "drama" | "poetry", string>,
+    noticeEasierMuch: zh
+      ? "这比你现在的等级简单很多。想挑战难一点的吗？"
+      : "This looks much easier than your level. Want a bigger challenge?",
+    noticeEasier: zh
+      ? "这可能有点太简单了。想挑战难一点的吗？"
+      : "This might be a little too easy. Want a bigger challenge?",
+    noticeHarderMuch: zh
+      ? "这比你现在的等级难很多。可以试试，但可能会比较吃力。"
+      : "This looks much harder than your level. You can try, but it may be tough.",
+    noticeHarder: zh
+      ? "这可能会有点挑战。确定要试试吗？"
+      : "This might be a bit challenging. Are you sure you want to try it?",
+    noticeMatch: zh ? "和你现在的等级很匹配。" : "Great match for your current level.",
+  }
+}
+
 export type StoryCopy = ReturnType<typeof getStoryCopy>
