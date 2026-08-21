@@ -10,6 +10,7 @@ import Image from "next/image"
 import type { Language, StoryState } from "@/app/page"
 import { getCurrentLevel } from "@/lib/current-level"
 import { CheckCircle2, Loader2 } from "lucide-react"
+import { getStoryCopy, getSpeciesLabel, getStructureLabel } from "@/lib/story-i18n"
 
 interface StoryEditProps {
   language: Language
@@ -30,6 +31,7 @@ export default function StoryEdit({
   userId,
   workId,
 }: StoryEditProps) {
+  const t = getStoryCopy(language)
   const [editedStory, setEditedStory] = useState(storyState.story || "")
   const [originalStory, setOriginalStory] = useState(storyState.story || "")
   const [isSaving, setIsSaving] = useState(false)
@@ -60,6 +62,7 @@ export default function StoryEdit({
           intent,
           user_id: userId || "default-user",
           level: getCurrentLevel(),
+          language,
         }),
       })
 
@@ -68,15 +71,15 @@ export default function StoryEdit({
         setAiSuggestion(data.suggestion)
       } else {
         console.error("Failed to get AI suggestion:", data.error)
-        setAiSuggestion((prev) => prev || "I am here to help you edit. Try changing a sentence, and I will share a tip!")
+        setAiSuggestion((prev) => prev || t.editHelpFallback)
       }
     } catch (error) {
       console.error("Error getting AI suggestion:", error)
-      setAiSuggestion((prev) => prev || "I am here to help you edit. Try changing a sentence, and I will share a tip!")
+      setAiSuggestion((prev) => prev || t.editHelpFallback)
     } finally {
       setIsLoadingSuggestion(false)
     }
-  }, [editedStory, originalStory, userId])
+  }, [editedStory, originalStory, userId, language, t.editHelpFallback])
 
   useEffect(() => {
     if (openedRef.current) return
@@ -145,15 +148,15 @@ export default function StoryEdit({
 
       const data = await response.json()
       if (data.success) {
-        toast.success("Story updated successfully! ✨")
+        toast.success(t.savedOk)
         onSave(updatedStoryState)
         setShowUploadDialog(false)
       } else {
-        toast.error("Failed to save story")
+        toast.error(t.saveFail)
       }
     } catch (error) {
       console.error("Error saving story:", error)
-      toast.error("Failed to save story")
+      toast.error(t.saveFail)
     } finally {
       setIsSaving(false)
     }
@@ -166,7 +169,7 @@ export default function StoryEdit({
 
   return (
     <div className="min-h-screen py-8 px-6 bg-gradient-to-br from-indigo-100 via-purple-50 via-pink-50 to-orange-50 relative" style={{ paddingTop: '120px', paddingBottom: '120px' }}>
-      <StageHeader language={language} />
+      <StageHeader stage={5} title={t.editPageTitle} onBack={onBack} language={language} />
 
       {/* 上传确认弹窗 */}
       {showUploadDialog && (
@@ -175,9 +178,9 @@ export default function StoryEdit({
             <div className="text-center">
               <div className="mb-6">
                 <Sparkles className="w-16 h-16 mx-auto mb-4 animate-pulse" style={{ color: "#e8c547" }} />
-                <h2 className="text-3xl font-bold mb-2 pixel-text" style={{ color: "#6b5210" }}>Upload to Luminai Library?</h2>
+                <h2 className="text-3xl font-bold mb-2 pixel-text" style={{ color: "#6b5210" }}>{t.uploadTitle}</h2>
                 <p className="text-lg pixel-text" style={{ color: "#5a4a2a" }}>
-                  Do you want to upload your updated story to Luminai Library?
+                  {t.uploadBody}
                 </p>
               </div>
               <div className="flex gap-4 justify-center">
@@ -189,12 +192,12 @@ export default function StoryEdit({
                   {isSaving ? (
                     <>
                       <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                      Uploading...
+                      {t.uploading}
                     </>
                   ) : (
                     <>
                       <CheckCircle2 className="w-5 h-5 mr-2" />
-                      Yes, Upload
+                      {t.yesUpload}
                     </>
                   )}
                 </Button>
@@ -203,13 +206,13 @@ export default function StoryEdit({
                     setShowUploadDialog(false)
                     // 本地先更新（不上传）
                     onSave({ ...storyState, story: editedStory })
-                    toast.success("Saved locally. You can upload later.")
+                    toast.success(t.savedLocal)
                   }}
                   disabled={isSaving}
                   variant="outline"
                   className="pixel-btn pixel-btn-wood shadow-lg font-bold py-3 px-8 text-lg hover:scale-105 transition-all disabled:opacity-50"
                 >
-                  Maybe Later
+                  {t.maybeLater}
                 </Button>
               </div>
             </div>
@@ -225,37 +228,37 @@ export default function StoryEdit({
             className="mb-4"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
-            Back
+            {t.back}
           </Button>
           <h1 className="text-4xl font-black mb-2 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
-            Edit Your Story ✏️
+            {t.editPageTitle}
           </h1>
-          <p className="text-gray-600">Make changes to your story. AI will provide helpful suggestions!</p>
+          <p className="text-gray-600">{t.editPageHint}</p>
         </div>
 
         <div className="grid lg:grid-cols-12 gap-6">
           {/* 左侧：故事信息 */}
           <div className="lg:col-span-3 space-y-4">
             <div className="bg-white/80 backdrop-blur-lg rounded-xl p-6 border-2 border-indigo-200 shadow-lg">
-              <h3 className="text-xl font-bold mb-4 text-indigo-700">Story Info</h3>
+              <h3 className="text-xl font-bold mb-4 text-indigo-700">{t.storyInfo}</h3>
               <div className="space-y-3">
                 <div>
-                  <p className="text-sm text-gray-600 font-semibold mb-1">Character</p>
+                  <p className="text-sm text-gray-600 font-semibold mb-1">{t.character}</p>
                   <p className="text-lg font-bold text-indigo-700">{storyState.character?.name || 'N/A'}</p>
                 </div>
                 {storyState.character?.species && (
                   <div>
-                    <p className="text-sm text-gray-600 font-semibold mb-1">Species</p>
-                    <p className="text-lg font-bold text-purple-700">{storyState.character.species}</p>
+                    <p className="text-sm text-gray-600 font-semibold mb-1">{t.species}</p>
+                    <p className="text-lg font-bold text-purple-700">{getSpeciesLabel(storyState.character.species, language)}</p>
                   </div>
                 )}
                 <div>
-                  <p className="text-sm text-gray-600 font-semibold mb-1">Setting</p>
+                  <p className="text-sm text-gray-600 font-semibold mb-1">{t.setting}</p>
                   <p className="text-lg font-bold text-pink-700">{storyState.plot?.setting || 'N/A'}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-600 font-semibold mb-1">Type</p>
-                  <p className="text-lg font-bold text-orange-700 capitalize">{storyState.structure?.type || 'N/A'}</p>
+                  <p className="text-sm text-gray-600 font-semibold mb-1">{t.type}</p>
+                  <p className="text-lg font-bold text-orange-700 capitalize">{getStructureLabel(storyState.structure?.type || "", language, storyState.structure?.type || "N/A")}</p>
                 </div>
               </div>
             </div>
@@ -265,13 +268,13 @@ export default function StoryEdit({
           <div className="lg:col-span-5">
             <div className="bg-white/90 backdrop-blur-lg rounded-xl p-6 border-2 border-purple-200 shadow-xl">
               <label className="block text-lg font-bold mb-3 text-purple-700">
-                Your Story
+                {t.yourStory}
               </label>
               <Textarea
                 value={editedStory}
                 onChange={(e) => setEditedStory(e.target.value)}
                 className="min-h-[400px] text-base leading-relaxed border-2 border-purple-200 focus:border-purple-400 focus:ring-2 focus:ring-purple-300 rounded-xl p-4 w-full"
-                placeholder="Start editing your story here..."
+                placeholder={t.editPlaceholder}
               />
               <div className="mt-4">
                 <Button
@@ -284,7 +287,7 @@ export default function StoryEdit({
                   className="bg-gradient-to-r from-purple-100 to-pink-100 hover:from-purple-200 hover:to-pink-200 text-purple-700 border-2 border-purple-300 shadow-md"
                 >
                   <Sparkles className="w-4 h-4 mr-2" />
-                  Need inspiration? Check out others' works!
+                  {t.needInspiration}
                 </Button>
               </div>
             </div>
@@ -296,7 +299,7 @@ export default function StoryEdit({
                 className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white border-0 shadow-xl py-6 text-lg font-bold disabled:opacity-50"
               >
                 <Save className="w-5 h-5 mr-2" />
-                {isSaving ? "Saving..." : "Save Changes"}
+                {isSaving ? t.saving : t.saveChanges}
               </Button>
             </div>
           </div>
