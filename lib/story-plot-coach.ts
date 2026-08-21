@@ -46,6 +46,18 @@ const THEME_ONLY = new Set([
   "school",
 ])
 
+const THEME_ALIASES: Record<string, string> = {
+  冒险: "adventure",
+  冒险故事: "adventure",
+  魔法: "magic",
+  魔法故事: "magic",
+  神秘: "mystery",
+  推理: "mystery",
+  搞笑: "funny",
+  有趣: "funny",
+  好玩: "funny",
+}
+
 const GENERIC_GOAL_PHRASES = [
   /^the hero wants to\b/i,
   /^wants to fix the problem$/i,
@@ -111,7 +123,9 @@ function isGenericUserReply(text: string): boolean {
   if (!t) return true
   if (GENERIC_SUGGESTIONS.has(t)) return true
   if (THEME_ONLY.has(t)) return true
+  if (THEME_ALIASES[text.replace(/\s+/g, "")]) return true
   if (/^(yes|no|ok|okay|sure|maybe|idk|i don't know)$/i.test(t)) return true
+  if (/^(好的?|是的?|不是|不知道|随便|都可以)[！!。.]?$/.test(text.replace(/\s+/g, ""))) return true
   if (GENERIC_GOAL_PHRASES.some((re) => re.test(t))) return true
   return false
 }
@@ -366,7 +380,7 @@ export function buildPlotPhasePromptRules(
     `- Do NOT use bullet lists or lines starting with "-" in the reply.\n` +
     `- Ask only ONE question this turn.\n` +
     `- Always return plot_update as null; the server already saved the student's answer.\n` +
-    `- Leave suggestions in META empty []; the server will attach matching buttons.\n`
+    `- Leave suggestions in META empty []; the server will attach English buttons (never Chinese labels).\n`
   )
 }
 
@@ -435,6 +449,8 @@ export function detectThemeFromMessages(studentMessages: string[]): string | und
   for (const msg of studentMessages) {
     const w = msg.trim().toLowerCase()
     if (THEME_ONLY.has(w)) return w
+    const compact = msg.replace(/\s+/g, "")
+    if (THEME_ALIASES[compact]) return THEME_ALIASES[compact]
   }
   return undefined
 }
