@@ -34,6 +34,19 @@ import {
   type PlotConversationProgress,
   type PlotState,
 } from "@/lib/story-plot-coach"
+import {
+  buildStoryAiLanguageRules,
+  getSectionLabel,
+  getStoryCopy,
+  isZh,
+  localizeSuggestionChips,
+  matchStructureType,
+  PASS_GUIDED_WRITING,
+  PASS_LAST_SECTION,
+  PASS_NEXT_SECTION,
+  stripPassSignalsFromAnswer,
+  type StoryUiLang,
+} from "@/lib/story-i18n"
 
 type CollabPhase = "explore" | "plot" | "structure" | "writing" | "polish"
 
@@ -51,6 +64,7 @@ interface CollabRequest {
   user_id: string
   level: number
   action?: "help_me" | "chat" | "submit_section"
+  language?: "en" | "zh"
 }
 
 interface CollabResponse {
@@ -67,10 +81,6 @@ interface CollabResponse {
   plot_progress?: PlotConversationProgress
   plot_complete?: boolean
 }
-
-const PASS_NEXT_SECTION = "You can move to the next section."
-const PASS_LAST_SECTION = "Great job!"
-const PASS_GUIDED_WRITING = "You can move on to the next part of your writing!"
 
 function countWords(text: string): number {
   if (!text?.trim()) return 0
@@ -111,6 +121,10 @@ function determinePhase(req: CollabRequest): CollabPhase {
   if (!hasStructure) return "structure"
   if (totalWords < 100) return "writing"
   return "polish"
+}
+
+function langOf(req: CollabRequest): StoryUiLang {
+  return req.language === "zh" ? "zh" : "en"
 }
 
 function buildSystemPrompt(req: CollabRequest, phase: CollabPhase, lastStudentMessage: string): string {
@@ -282,6 +296,13 @@ function buildSystemPrompt(req: CollabRequest, phase: CollabPhase, lastStudentMe
     "FORBIDDEN suggestions: Tell me more, What happens next?, Help me. Always include suggestions."
   )
 
+  parts.push(buildStoryAiLanguageRules(langOf(req)))
+  if (isZh(langOf(req))) {
+    parts.push(
+      "\nIf you put a starter sentence in story_snippet, it MUST be English so the student can copy it into the Writing Pad."
+    )
+  }
+
   return parts.join("")
 }
 
@@ -323,18 +344,6 @@ function parseResponse(raw: string): { answer: string; meta: Partial<CollabRespo
   if (structMatch) meta.structure_suggestion = structMatch[1]
 
   return { answer, meta }
-}
-
-function stripPassSignalsFromAnswer(answer: string): string {
-  return answer
-    .replace(/\n*You can move on to the next part of your writing!\.?\s*$/i, "")
-    .replace(/\n*You can move to the next section\.?\s*$/i, "")
-    .replace(/\n*You may move to the next section\.?\s*$/i, "")
-    .replace(/\n*Great job!?\.?\s*$/i, "")
-    .replace(/\n*太棒了[！!。.]?\s*$/, "")
-    .replace(/\n*做得好[！!。.]?\s*$/, "")
-    .replace(/\s{2,}/g, " ")
-    .trim()
 }
 
 function appendPassSentence(answer: string, isLastSection: boolean): string {
@@ -399,9 +408,11 @@ function finalizeWritingSectionFeedback(
   )
 
   if (passed) {
+    const copy = getStoryCopy(langOf(req))
     const passLine = isLastSection ? PASS_LAST_SECTION : PASS_NEXT_SECTION
+    const sectionName = getSectionLabel(section.section, langOf(req))
     return {
-      answer: `Nice work on ${section.section}! ${passLine}`,
+      answer: `${copy.niceWorkOn(sectionName)}${passLine}`,
       revision_tags: [],
       section_passed: true,
     }
@@ -451,7 +462,7 @@ function finalizeWritingSectionFeedback(
   revision_tags = revision_tags.slice(0, max)
 
   return {
-    answer: "Revise your Writing Pad — tap each tag to see why, then tap Finish! again.",
+    answer: getStoryCopy(langOf(req)).revisePadAgain,
     revision_tags,
     section_passed: false,
   }
@@ -490,7 +501,7 @@ function buildDeterministicPlotResponse(
   return {
     answer,
     phase: plotFinal.plot_complete ? "structure" : plotFinal.phase,
-    suggestions: plotFinal.suggestions,
+    suggestions: localizeSuggestionChips(plotFinal.suggestions, langOf(req)),
     story_snippet: null,
     plot_update: plotFinal.plot_update,
     plot_state: plotFinal.plot,
@@ -661,9 +672,9 @@ export async function POST(request: NextRequest) {
       }
       if (plotFinal.plot_complete && !req.structure_type) {
         finalPhase = "structure"
-        if (!/structure|choose|pick/i.test(answer)) {
+        if (!/structure|choose|pick|结构|选/.test(answer)) {
           answer =
-            `${answer}\n\nYour story idea sounds ready — pick a structure below when you like!`.trim()
+            `${answer}\n\n${getStoryCopy(langOf(req)).plotReadyPick}`.trim()
         }
       } else if (!plotFinal.plot_complete) {
         finalPhase = plotFinal.phase
@@ -689,12 +700,18 @@ export async function POST(request: NextRequest) {
           ? []
           : ["Adventure", "Magic", "Mystery"]
 
+    const uiLang = langOf(req)
     const responseSuggestions =
       draftSubmission && finalized.revision_tags.length > 0
         ? []
-        : suggestions?.length
-          ? suggestions
-          : defaultSuggestions
+        : localizeSuggestionChips(
+            suggestions?.length ? suggestions : defaultSuggestions,
+            uiLang,
+          )
+
+    const pickedStructure = meta.structure_suggestion
+      ? matchStructureType(meta.structure_suggestion)
+      : null
 
     const response: CollabResponse = {
       answer: answer || rawAnswer,
@@ -705,7 +722,7 @@ export async function POST(request: NextRequest) {
       plot_state,
       plot_progress,
       plot_complete,
-      structure_suggestion: meta.structure_suggestion || null,
+      structure_suggestion: pickedStructure || meta.structure_suggestion || null,
       revision_tags: finalized.section_passed ? undefined : finalized.revision_tags,
       section_passed: finalized.section_passed || undefined,
     }
