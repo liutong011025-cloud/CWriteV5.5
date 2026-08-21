@@ -9,6 +9,13 @@ import { Loader2, Sparkles, Trash2, Eraser, PencilLine, RefreshCw } from "lucide
 import { toast } from "sonner"
 import { EOB_TRAITS, type EobTrait } from "@/lib/character-eob-traits"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import {
+  getStoryCopy,
+  getSpeciesLabel,
+  getTraitLabel,
+  getTraitExplanation,
+  getTraitTips,
+} from "@/lib/story-i18n"
 
 interface CharacterCreationProps {
   language: Language
@@ -43,7 +50,8 @@ const PIXEL_TRAIT_COLORS = [
 
 type DrawMode = "pen" | "eraser"
 
-export default function CharacterCreation({ onCharacterCreate, onBack, userId, level = 1 }: CharacterCreationProps) {
+export default function CharacterCreation({ language, onCharacterCreate, onBack, userId, level = 1 }: CharacterCreationProps) {
+  const t = getStoryCopy(language)
   const [species, setSpecies] = useState("")
   const [customSpecies, setCustomSpecies] = useState("")
   const [name, setName] = useState("")
@@ -256,11 +264,11 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
   const handleGenerateImage = async () => {
     if (!canGenerate) {
       if (!finalSpecies.trim()) {
-        toast.error("Choose a species first so AI can follow your design.")
+        toast.error(t.toastNeedSpecies)
         return
       }
       if (!hasSketchStroke) {
-        toast.error("Please draw your character sketch first.")
+        toast.error(t.toastNeedSketch)
         return
       }
       return
@@ -268,7 +276,7 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
 
     const canvas = canvasRef.current
     if (!canvas || !hasInitializedCanvasRef.current) {
-      toast.error("Drawing board is not ready yet.")
+      toast.error(t.toastBoardNotReady)
       return
     }
 
@@ -278,7 +286,7 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
       setIntroMascotFading(true)
       window.setTimeout(() => setShowDetailsPanel(true), 700)
     }
-    toast.info("Generating image... This can take some time. You can continue filling details while waiting.")
+    toast.info(t.toastGenerating)
 
     try {
       const drawingDataUrl = canvas.toDataURL("image/png")
@@ -300,20 +308,20 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
 
       const data = await response.json()
       if (!response.ok || data.error) {
-        toast.error(data.message || data.error || "Failed to generate image.")
+        toast.error(data.message || data.error || t.toastGenFail)
         return
       }
 
       if (data.imageUrl) {
         setImageUrl(data.imageUrl as string)
         setShowGenerationHint(false)
-        toast.success("Character image generated!")
+        toast.success(t.toastGenOk)
       } else {
-        toast.error("No image returned. Please try again.")
+        toast.error(t.toastNoImage)
       }
     } catch (error) {
       console.error("Error generating character image:", error)
-      toast.error("Failed to generate image. Please try again.")
+      toast.error(t.toastGenFail)
     } finally {
       setIsGenerating(false)
     }
@@ -321,7 +329,7 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
 
   const handleCreate = () => {
     if (!canContinue) {
-      toast.error("Complete all required details before continuing.")
+      toast.error(t.toastNeedDetails)
       return
     }
 
@@ -407,15 +415,15 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
           {traitDialogTrait && (
             <>
               <DialogHeader>
-                <DialogTitle className="pixel-title text-xl" style={{ color: "#8b6914" }}>{traitDialogTrait.name}</DialogTitle>
+                <DialogTitle className="pixel-title text-xl" style={{ color: "#8b6914" }}>{getTraitLabel(traitDialogTrait.name, language)}</DialogTitle>
                 <DialogDescription className="text-sm mt-2" style={{ color: "#5a4a2a" }}>
-                  {traitDialogTrait.explanationTemplate.replace(/\{\{name\}\}/g, name.trim() || "your character")}
+                  {getTraitExplanation(traitDialogTrait.name, traitDialogTrait.explanationTemplate, language).replace(/\{\{name\}\}/g, name.trim() || (language === "zh" ? "你的角色" : "your character"))}
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-2">
-                <p className="text-sm font-bold" style={{ color: "#8b6914" }}>When writing, you can use:</p>
+                <p className="text-sm font-bold" style={{ color: "#8b6914" }}>{t.writingTips}</p>
                 <ul className="list-disc list-inside space-y-1 text-sm" style={{ color: "#6b5210" }}>
-                  {traitDialogTrait.writingTips.map((tip, i) => (
+                  {getTraitTips(traitDialogTrait.name, traitDialogTrait.writingTips, language).map((tip, i) => (
                     <li key={i}>&quot;{tip}&quot;</li>
                   ))}
                 </ul>
@@ -430,7 +438,7 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
                       setTraitDialogTrait(null)
                     }}
                   >
-                    Unselect
+                    {t.unselect}
                   </Button>
                 ) : (
                   <Button
@@ -441,7 +449,7 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
                       setTraitDialogTrait(null)
                     }}
                   >
-                    Select this trait
+                    {t.selectTrait}
                   </Button>
                 )}
                 <Button
@@ -451,7 +459,7 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
                     setTraitDialogTrait(null)
                   }}
                 >
-                  Close
+                  {t.close}
                 </Button>
               </DialogFooter>
             </>
@@ -460,7 +468,7 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
       </Dialog>
 
       <div className="max-w-7xl mx-auto relative z-10 px-6 py-8">
-        <StageHeader stage={1} title="Create Your Character" onBack={onBack} />
+        <StageHeader stage={1} title={t.characterTitle} onBack={onBack} language={language} />
         
         {/* Position Adjustment Debug Tool */}
         <button 
@@ -561,12 +569,12 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
             }
           >
             <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
-              <h2 className="text-2xl font-extrabold pixel-title" style={{ color: "#5a4a2a", textShadow: "1px 1px 0 rgba(0,0,0,0.2)" }}>Sketch Board</h2>
-              <p className="text-sm font-bold pixel-text" style={{ color: "#5a4a2a", textShadow: "1px 1px 0 rgba(0,0,0,0.1)" }}>1) Choose species, 2) Draw, 3) Generate</p>
+              <h2 className="text-2xl font-extrabold pixel-title" style={{ color: "#5a4a2a", textShadow: "1px 1px 0 rgba(0,0,0,0.2)" }}>{t.sketchBoard}</h2>
+              <p className="text-sm font-bold pixel-text" style={{ color: "#5a4a2a", textShadow: "1px 1px 0 rgba(0,0,0,0.1)" }}>{t.sketchSteps}</p>
             </div>
 
             <div className="mb-4">
-              <label className="block text-lg font-extrabold mb-3 pixel-text" style={{ color: "#5a4a2a", textShadow: "1px 1px 0 rgba(0,0,0,0.15)" }}>Species (Required first)</label>
+              <label className="block text-lg font-extrabold mb-3 pixel-text" style={{ color: "#5a4a2a", textShadow: "1px 1px 0 rgba(0,0,0,0.15)" }}>{t.speciesRequired}</label>
               <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-2.5 md:gap-3">
                 {SPECIES.map((spec) => {
                   const selected = species === spec.name
@@ -580,7 +588,7 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
                       }`}
                     >
                       <span className="text-4xl leading-none">{spec.icon}</span>
-                      <span className="text-base leading-tight">{spec.name}</span>
+                      <span className="text-base leading-tight">{getSpeciesLabel(spec.name, language)}</span>
                     </button>
                   )
                 })}
@@ -594,14 +602,14 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
                   }`}
                 >
                   <span className="text-4xl leading-none">✏️</span>
-                  <span className="text-base leading-tight">Custom</span>
+                  <span className="text-base leading-tight">{t.custom}</span>
                 </button>
               </div>
               {species === "Custom" && (
                 <Input
                   value={customSpecies}
                   onChange={(e) => setCustomSpecies(e.target.value)}
-                  placeholder="Enter custom species..."
+                  placeholder={t.customSpeciesPlaceholder}
                   className="mt-3 pixel-input"
                 />
               )}
@@ -616,7 +624,7 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
                     className={`pixel-btn ${drawMode === "pen" ? "pixel-btn-green" : "pixel-btn-wood"}`}
                   >
                     <PencilLine className="h-4 w-4 mr-1" />
-                    Pen
+                    {t.pen}
                   </Button>
                   <Button
                     type="button"
@@ -624,11 +632,11 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
                     className={`pixel-btn ${drawMode === "eraser" ? "pixel-btn-green" : "pixel-btn-wood"}`}
                   >
                     <Eraser className="h-4 w-4 mr-1" />
-                    Eraser
+                    {t.eraser}
                   </Button>
                 </div>
                 <div className="flex items-center gap-3">
-                  <label className="text-xs font-bold pixel-text" style={{ color: "#8b6914" }}>Size</label>
+                  <label className="text-xs font-bold pixel-text" style={{ color: "#8b6914" }}>{t.size}</label>
                   <input
                     type="range"
                     min={2}
@@ -684,7 +692,7 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
               <div className="mt-3 flex items-center justify-between gap-2 flex-wrap">
                 <Button type="button" onClick={clearSketch} className="pixel-btn pixel-btn-red">
                   <Trash2 className="h-4 w-4 mr-1" />
-                  Clear Board
+                  {t.clearBoard}
                 </Button>
                 <Button
                   type="button"
@@ -695,12 +703,12 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
                   {isGenerating ? (
                     <>
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Generating...
+                      {t.generating}
                     </>
                   ) : (
                     <>
                       <Sparkles className="h-4 w-4 mr-2" />
-                      Generate from Sketch
+                      {t.generateFromSketch}
                     </>
                   )}
                 </Button>
@@ -726,9 +734,12 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
                   color: "#5a4a2a"
                 }}
               >
-                After determining the species of your story characters, you can draw them on the drawing board.
-                <br />
-                Let&apos;s see who can draw it more Realistic !
+                {t.mascotHint.split("\n").map((line, i) => (
+                  <span key={i}>
+                    {i > 0 ? <br /> : null}
+                    {line}
+                  </span>
+                ))}
               </div>
               <img
                 src="/Cagentdraw.webp"
@@ -743,31 +754,31 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
               showDetailsPanel ? "opacity-100 translate-x-0" : "opacity-0 translate-x-8 pointer-events-none hidden md:block"
             }`}
           >
-            <h2 className="text-2xl font-extrabold mb-4 pixel-title" style={{ color: "#5a4a2a", textShadow: "1px 1px 0 rgba(0,0,0,0.2)" }}>Character Details</h2>
+            <h2 className="text-2xl font-extrabold mb-4 pixel-title" style={{ color: "#5a4a2a", textShadow: "1px 1px 0 rgba(0,0,0,0.2)" }}>{t.characterDetails}</h2>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-extrabold mb-1 pixel-text" style={{ color: "#5a4a2a", textShadow: "1px 1px 0 rgba(0,0,0,0.15)" }}>Name *</label>
+                <label className="block text-sm font-extrabold mb-1 pixel-text" style={{ color: "#5a4a2a", textShadow: "1px 1px 0 rgba(0,0,0,0.15)" }}>{t.name}</label>
                 <Input
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="e.g., Lumi"
+                  placeholder={t.namePlaceholder}
                   className="pixel-input"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-extrabold mb-1 pixel-text" style={{ color: "#5a4a2a", textShadow: "1px 1px 0 rgba(0,0,0,0.15)" }}>Age *</label>
+                <label className="block text-sm font-extrabold mb-1 pixel-text" style={{ color: "#5a4a2a", textShadow: "1px 1px 0 rgba(0,0,0,0.15)" }}>{t.age}</label>
                 <Input
                   type="number"
                   value={age}
                   onChange={(e) => setAge(e.target.value)}
-                  placeholder="e.g., 8"
+                  placeholder={t.agePlaceholder}
                   className="pixel-input"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-extrabold mb-1 pixel-text" style={{ color: "#5a4a2a", textShadow: "1px 1px 0 rgba(0,0,0,0.15)" }}>Traits * (choose up to 3)</label>
+                <label className="block text-sm font-extrabold mb-1 pixel-text" style={{ color: "#5a4a2a", textShadow: "1px 1px 0 rgba(0,0,0,0.15)" }}>{t.traits}</label>
                 <div className="flex flex-wrap gap-2">
                   {EOB_TRAITS.map((trait, traitIndex) => {
                     const selected = selectedTraits.includes(trait.name)
@@ -785,7 +796,7 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
                         }`}
                         style={{ color: selected ? undefined : "#5a4a2a" }}
                       >
-                        {trait.name}
+                        {getTraitLabel(trait.name, language)}
                       </button>
                     )
                   })}
@@ -795,34 +806,34 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
               {isHighLevel && (
                 <>
                   <div>
-                    <label className="block text-sm font-extrabold mb-1 pixel-text" style={{ color: "#5a4a2a", textShadow: "1px 1px 0 rgba(0,0,0,0.15)" }}>Background *</label>
+                    <label className="block text-sm font-extrabold mb-1 pixel-text" style={{ color: "#5a4a2a", textShadow: "1px 1px 0 rgba(0,0,0,0.15)" }}>{t.backgroundReq}</label>
                     <textarea
                       value={background}
                       onChange={(e) => setBackground(e.target.value)}
                       rows={3}
-                      placeholder="Where does this character come from?"
+                      placeholder={t.backgroundPh}
                       className="w-full px-3 py-2 text-sm pixel-input"
                       style={{ color: "#5a4a2a" }}
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-extrabold mb-1 pixel-text" style={{ color: "#5a4a2a", textShadow: "1px 1px 0 rgba(0,0,0,0.15)" }}>Emotional Experience *</label>
+                    <label className="block text-sm font-extrabold mb-1 pixel-text" style={{ color: "#5a4a2a", textShadow: "1px 1px 0 rgba(0,0,0,0.15)" }}>{t.emotionalReq}</label>
                     <textarea
                       value={emotional}
                       onChange={(e) => setEmotional(e.target.value)}
                       rows={3}
-                      placeholder="What feelings does this character often face?"
+                      placeholder={t.emotionalPh}
                       className="w-full px-3 py-2 text-sm pixel-input"
                       style={{ color: "#5a4a2a" }}
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-extrabold mb-1 pixel-text" style={{ color: "#5a4a2a", textShadow: "1px 1px 0 rgba(0,0,0,0.15)" }}>Symbolic Objects *</label>
+                    <label className="block text-sm font-extrabold mb-1 pixel-text" style={{ color: "#5a4a2a", textShadow: "1px 1px 0 rgba(0,0,0,0.15)" }}>{t.symbolicReq}</label>
                     <textarea
                       value={symbolic}
                       onChange={(e) => setSymbolic(e.target.value)}
                       rows={3}
-                      placeholder="Any object that represents your character?"
+                      placeholder={t.symbolicPh}
                       className="w-full px-3 py-2 text-sm pixel-input"
                       style={{ color: "#5a4a2a" }}
                     />
@@ -832,12 +843,12 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
 
               {!isHighLevel && (
                 <div>
-                  <label className="block text-sm font-extrabold mb-1 pixel-text" style={{ color: "#5a4a2a", textShadow: "1px 1px 0 rgba(0,0,0,0.15)" }}>Background (optional)</label>
+                  <label className="block text-sm font-extrabold mb-1 pixel-text" style={{ color: "#5a4a2a", textShadow: "1px 1px 0 rgba(0,0,0,0.15)" }}>{t.backgroundOpt}</label>
                   <textarea
                     value={background}
                     onChange={(e) => setBackground(e.target.value)}
                     rows={3}
-                    placeholder="Optional story details about your character..."
+                    placeholder={t.backgroundOptPh}
                     className="w-full px-3 py-2 text-sm pixel-input"
                     style={{ color: "#5a4a2a" }}
                   />
@@ -846,11 +857,11 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
             </div>
 
             <div className="mt-5 pixel-card p-4">
-              <h3 className="text-sm font-extrabold mb-2 pixel-text" style={{ color: "#5a4a2a", textShadow: "1px 1px 0 rgba(0,0,0,0.15)" }}>Generation Preview</h3>
+              <h3 className="text-sm font-extrabold mb-2 pixel-text" style={{ color: "#5a4a2a", textShadow: "1px 1px 0 rgba(0,0,0,0.15)" }}>{t.generationPreview}</h3>
               {isGenerating && (
                 <div className="mb-3 pixel-card px-3 py-2">
                   <div className="flex items-center gap-2 text-sm font-bold" style={{ color: "#7ec850" }}>
-                    Generating image...
+                    {t.generatingImage}
                   </div>
                 </div>
               )}
@@ -869,7 +880,7 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
                     className="w-full pixel-btn pixel-btn-blue"
                   >
                     {!isGenerating && <RefreshCw className="h-4 w-4 mr-2" />}
-                    Regenerate Image
+                    {t.regenerate}
                   </Button>
                 </div>
               ) : (
@@ -888,7 +899,7 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
 
             <div className="mt-6 space-y-2">
               <p className="text-xs pixel-text" style={{ color: "#6b5210" }}>
-                Continue is unlocked only when all required details are complete.
+                {t.continueHint}
               </p>
               <Button
                 type="button"
@@ -896,7 +907,7 @@ export default function CharacterCreation({ onCharacterCreate, onBack, userId, l
                 disabled={!canContinue}
                 className="w-full text-base font-bold py-5 pixel-btn pixel-btn-green disabled:opacity-50"
               >
-                Continue →
+                {t.continue}
               </Button>
             </div>
           </section>
