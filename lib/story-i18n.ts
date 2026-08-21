@@ -227,14 +227,47 @@ export function getScoreDimLabel(key: string, lang: StoryUiLang): string {
   return SCORE_DIM_ZH[key] || key
 }
 
-export function localizeSuggestionChip(text: string, lang: StoryUiLang): string {
-  if (!isZh(lang)) return text
-  return SUGGESTION_CHIP_ZH[text] || text
+const SUGGESTION_CHIP_EN_BY_ZH: Record<string, string> = Object.fromEntries(
+  Object.entries(SUGGESTION_CHIP_ZH).map(([en, zh]) => [zh, en]),
+)
+
+const THEME_CHIP_EN: Record<string, string> = {
+  adventure: "Adventure",
+  magic: "Magic",
+  mystery: "Mystery",
+  funny: "Funny",
 }
 
-export function localizeSuggestionChips(chips: string[] | undefined, lang: StoryUiLang): string[] {
+/** Clickable chips stay English so the next AI turn receives the same English option. */
+export function ensureEnglishSuggestionChip(text: string): string {
+  const trimmed = text.trim()
+  if (!trimmed) return trimmed
+  if (SUGGESTION_CHIP_ZH[trimmed]) return trimmed
+  const fromZh = SUGGESTION_CHIP_EN_BY_ZH[trimmed]
+  if (fromZh) return fromZh
+  const theme = normalizeThemeWord(trimmed)
+  if (theme && THEME_CHIP_EN[theme]) return THEME_CHIP_EN[theme]
+  if (/pick|选|structure|结构|freytag|fichtean|three act|三幕|金字塔|费希特/i.test(trimmed)) {
+    const struct = matchStructureType(trimmed)
+    if (struct === "threeAct") return "Pick Three Act"
+    if (struct === "freytag") return "Pick Freytag"
+    if (struct === "fichtean") return "Pick Fichtean"
+  }
+  return trimmed
+}
+
+export function ensureEnglishSuggestionChips(chips: string[] | undefined): string[] {
   if (!chips?.length) return []
-  return chips.map((chip) => localizeSuggestionChip(chip, lang))
+  return chips.map((chip) => ensureEnglishSuggestionChip(chip))
+}
+
+/** @deprecated Chips are English-only; kept so existing call sites still compile. */
+export function localizeSuggestionChip(text: string, _lang?: StoryUiLang): string {
+  return ensureEnglishSuggestionChip(text)
+}
+
+export function localizeSuggestionChips(chips: string[] | undefined, _lang?: StoryUiLang): string[] {
+  return ensureEnglishSuggestionChips(chips)
 }
 
 /** Keep English trigger phrases even when the UI is Chinese. */
@@ -363,7 +396,9 @@ export function buildStoryAiLanguageRules(lang: StoryUiLang | string | undefined
     "\n[LANGUAGE — Simplified Chinese UI, English student writing]",
     "Speak to the student in Simplified Chinese for chat, coaching, praise, and revision_tags.",
     "The student's STORY DRAFT in the Writing Pad MUST stay in English. Remind them in Chinese to write English sentences there. Do not write the story for them in Chinese.",
-    "Plot chat answers and suggestion chips may be in Chinese.",
+    "Plot chat answers may be in Chinese.",
+    "Clickable suggestions[] MUST be English only (2–6 English words). Never translate chips into Chinese. Examples: Adventure, Magic, Mystery, Funny, In the open, Pick Three Act, Pick Freytag, Pick Fichtean.",
+    "When the student taps a chip, the next user message will be that exact English chip text. Treat it as their choice.",
     "META JSON keys stay English. structure_suggestion must be exactly one of: freytag, threeAct, fichtean.",
     `When a non-last section is good enough, you MUST still end with this exact English trigger on its own line: ${PASS_NEXT_SECTION}`,
     `When the last section is good enough, you MUST still end with this exact English trigger: ${PASS_LAST_SECTION}`,
@@ -642,6 +677,133 @@ export function getPlanTestCopy(lang: StoryUiLang) {
       ? "题目依据 CEFR 写作等级（A2–B2）设计。"
       : "Questions are designed based on CEFR writing levels (A2–B2).",
   }
+}
+
+export function getCagentCopy(lang: StoryUiLang | string | undefined) {
+  const zh = isZh(lang)
+  return {
+    thinking: zh ? "Cagent 正在想… ✨" : "Cagent is thinking... ✨",
+    pageWait: zh ? "我在这一页等你，马上就好！✨" : "I am here for this page. One second! ✨",
+    resting: zh ? "哎呀，Cagent 在休息，稍后再试试吧！🧸" : "Oops, Cagent is resting. Try again in a bit! 🧸",
+    fallback: zh ? "继续加油！你做得很好！✨" : "Keep going! You're doing great! ✨",
+    error: zh ? "出了一点问题，再试一次吧！🌟" : "Something went wrong. Try again! 🌟",
+    talkPlaceholder: zh ? "跟 Cagent 说话…" : "Talk to Cagent...",
+    send: zh ? "发送" : "Send",
+    sending: zh ? "发送中…" : "Sending...",
+    suggestion: zh ? "建议：" : "Suggestion:",
+    openAria: zh ? "打开 Cagent" : "Open Cagent",
+    closeAria: zh ? "关闭 Cagent 消息" : "Close Cagent message",
+  }
+}
+
+export function buildCagentGuideLanguageRules(lang: StoryUiLang | string | undefined): string {
+  if (!isZh(lang)) {
+    return [
+      "Your answers must be in simple English that a young child can understand.",
+      "Write in English only. No markdown. Be encouraging and warm.",
+      "When naming buttons, use the English labels shown on screen.",
+    ].join("\n")
+  }
+
+  return [
+    "Your answers must be in simple Simplified Chinese that a young child can understand.",
+    "Reply in Simplified Chinese. Do not write the whole reply in English.",
+    "UI button names must match the Chinese labels on screen (for example 出发, 继续 →, 重新测试).",
+    "If the student is writing a story, letter, book review, drama, or poem, their writing body must stay in English. Quote their English words, explain in Chinese, and give English example sentences they can copy.",
+    "Never invent UI or journey types. Journey types are only: 故事, 书评, 书信, 戏剧, 诗歌.",
+    "No markdown. Be encouraging and warm.",
+  ].join("\n")
+}
+
+export function getCagentStageButtonHint(stage: string, lang: StoryUiLang | string | undefined): string {
+  const zh = isZh(lang)
+  const map: Record<string, { en: string; zh: string }> = {
+    welcome: {
+      en: 'Tell them to click the "Start" button.',
+      zh: "告诉他们点击「开始」按钮。",
+    },
+    character: {
+      en: 'Tell them to fill the current field, then click "Generate Character". After the character image appears, tell them to click "Continue →" (or "Regenerate Image" if they want a new picture).',
+      zh: "告诉他们先填好当前栏目，再点「生成角色」。角色图片出现后，点「继续 →」（如果想换一张图，再点「重新生成图片」）。",
+    },
+    plot: {
+      en: 'Tell them to choose one word button or type in the input, then click the send button, and click "Continue →" when ready.',
+      zh: "告诉他们点一个词语按钮或在输入框里打字，再点发送；准备好后点「继续 →」。",
+    },
+    structure: {
+      en: "Tell them to pick a structure card and click the next/continue button.",
+      zh: "告诉他们选一张结构卡片，再点下一步/继续。",
+    },
+    journeyTicket: {
+      en: 'Tell them to drag one journey type card onto the ticket (only Story, Book Review, Letter, Drama, or Poetry — never invent types like ocean or space), then choose a difficulty number, and finally press the airplane "Start" button at the bottom to begin. Do not talk about choosing a destination or packing items here; only talk about these visible controls.',
+      zh: "告诉他们把一种写作类型卡片拖到机票上盖章（只有故事、书评、书信、戏剧、诗歌，不要编造海洋、太空这类类型），再点选难度数字（1 最简单，5 最难），最后按底部的飞机「出发」按钮开始。不要说选目的地或打包行李；只说页面上能看到的这些操作。",
+    },
+    planTest: {
+      en: "Tell them to read each English question and tap the best answer. The questions stay in English because this is a writing-level check.",
+      zh: "告诉他们认真读每一道英文题目，点出最好的答案。题目保持英文，因为这是写作等级检测。",
+    },
+    navigation: {
+      en: "Tell them to tap a friend name in the list to visit that farm, or tap the back arrow to return to the map.",
+      zh: "告诉他们点名单里的朋友名字去参观农场，或点返回箭头回到地图。",
+    },
+    writing: {
+      en: "Tell them what section to write next and which visible button to press to continue/submit. Do not mention any secret codes.",
+      zh: "告诉他们下一段该写什么，以及要点哪个能看见的按钮继续/提交。不要提任何暗号。",
+    },
+    bookReviewWelcome: {
+      en: "Tell them to click the start button for book review.",
+      zh: "告诉他们点击书评的开始按钮。",
+    },
+    bookSelection: {
+      en: "Tell them to click one book card.",
+      zh: "告诉他们点选一张书卡。",
+    },
+    bookReviewTypeSelection: {
+      en: "Tell them to click one review type card.",
+      zh: "告诉他们点选一种书评类型。",
+    },
+    letterAdventure: {
+      en: "Tell them to fill input fields and click the continue/start button.",
+      zh: "告诉他们填好输入框，再点继续/开始。",
+    },
+    letterGame: {
+      en: "Tell them to click submit/continue after finishing each section.",
+      zh: "告诉他们每写完一部分，就点提交/继续。",
+    },
+    poetryWriting: {
+      en: "Tell them which visible button to click next in this page.",
+      zh: "告诉他们这一页下一步要点哪个能看见的按钮。",
+    },
+    dramaWriting: {
+      en: "Tell them which visible button to click next in this page.",
+      zh: "告诉他们这一页下一步要点哪个能看见的按钮。",
+    },
+    about: {
+      en: "This page is for reading only. Give a short, friendly introduction and do NOT ask the student to click any button.",
+      zh: "这一页只是阅读。用短短几句友好地介绍一下，不要让学生点任何按钮。",
+    },
+    aboutVision: {
+      en: "This page is for reading only. Briefly introduce the vision & philosophy. Do NOT tell the student to click any buttons.",
+      zh: "这一页只是阅读。简单介绍愿景与理念。不要让学生点任何按钮。",
+    },
+    aboutResearch: {
+      en: "This page is for reading only. Briefly introduce the research team. Do NOT tell the student to click any buttons.",
+      zh: "这一页只是阅读。简单介绍研究团队。不要让学生点任何按钮。",
+    },
+    research: {
+      en: "This page is for reading only. Briefly introduce what students can learn from these research books. Do NOT tell the student to click any buttons.",
+      zh: "这一页只是阅读。简单介绍这些研究书籍能学到什么。不要让学生点任何按钮。",
+    },
+    userProfileFarm: {
+      en: 'This is the farm overview. Write 3–5 short, warm sentences. Put a related emoji next to each action: back-arrow ⬅️ (map 🗺️), writing-board 📝 (stories 📖), settings ⚙️, and "Visit Others Farm" 🏡 (friends 👫). End with a cheerful emoji like 🌟 or 😊. Do not use only one emoji for the whole reply.',
+      zh: "这是农场总览。写 3–5 句温暖短句。每个操作旁边放相关表情：返回箭头 ⬅️（地图 🗺️）、写作板 📝（故事 📖）、设置 ⚙️，以及「参观别人的农场」🏡（朋友 👫）。最后用一个开心的表情，比如 🌟 或 😊。不要整段只用一个表情。",
+    },
+  }
+  const item = map[stage]
+  if (!item) {
+    return zh ? "告诉他们这一页下一步要点哪个按钮。" : "Tell them the exact next button they should click on this page."
+  }
+  return zh ? item.zh : item.en
 }
 
 export type StoryCopy = ReturnType<typeof getStoryCopy>
