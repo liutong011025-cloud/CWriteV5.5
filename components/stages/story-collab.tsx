@@ -20,7 +20,8 @@ import {
   getSectionLabel,
   getStructureDesc,
   getStructureLabel,
-  localizeSuggestionChips,
+  ensureEnglishSuggestionChip,
+  ensureEnglishSuggestionChips,
   matchStructureType,
   wantsStartWriting,
   stripAdvanceNextSectionPhrases,
@@ -364,7 +365,7 @@ export default function StoryCollab({
       id: "welcome",
       role: "assistant",
       content: t.welcome(charName),
-      suggestions: localizeSuggestionChips([...t.welcomeChips], language),
+      suggestions: ensureEnglishSuggestionChips([...t.welcomeChips]),
     }
     setMessages((prev) => {
       if (prev.length === 0) return [welcome]
@@ -506,7 +507,7 @@ export default function StoryCollab({
             data.revision_tags?.length
               ? cleaned || t.revisePadAgain
               : cleaned,
-          suggestions: data.revision_tags?.length ? [] : localizeSuggestionChips(data.suggestions, language),
+          suggestions: data.revision_tags?.length ? [] : ensureEnglishSuggestionChips(data.suggestions),
           storySnippet: data.story_snippet,
           structureCards: showStructureCards,
           revisionTags: data.revision_tags?.length ? data.revision_tags : undefined,
@@ -528,7 +529,7 @@ export default function StoryCollab({
             id: `err-${Date.now()}`,
             role: "assistant",
             content: t.hiccup,
-            suggestions: localizeSuggestionChips(["At school", "In a forest", "A magic problem"], language),
+            suggestions: ensureEnglishSuggestionChips(["At school", "In a forest", "A magic problem"]),
           },
         ])
       } finally {
@@ -771,17 +772,18 @@ export default function StoryCollab({
   const handleSuggestionClick = useCallback(
     (suggestion: string) => {
       if (isLoading) return
+      const englishOption = ensureEnglishSuggestionChip(suggestion)
       if (storyBlocks.length > 0 && mode === "ai") {
         setChatInput((prev) => {
           const p = prev.trim()
-          if (!p) return suggestion
-          if (p.toLowerCase().includes(suggestion.toLowerCase())) return p
-          return `${p} ${suggestion}`
+          if (!p) return englishOption
+          if (p.toLowerCase().includes(englishOption.toLowerCase())) return p
+          return `${p} ${englishOption}`
         })
         return
       }
-      updateWritingMoodFromText(suggestion)
-      void sendMessage(suggestion)
+      updateWritingMoodFromText(englishOption)
+      void sendMessage(englishOption)
     },
     [isLoading, sendMessage, updateWritingMoodFromText, storyBlocks.length, mode],
   )
