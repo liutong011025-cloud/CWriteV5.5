@@ -2155,6 +2155,7 @@ export default function Home() {
           mood={cagentMood}
           valuesMessage={valuesMessage}
           valuesSuggestion={valuesSuggestion}
+          language={language}
         />
       )}
       {showLevelBadge && writingAssessment && (
