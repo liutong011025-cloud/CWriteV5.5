@@ -7,6 +7,13 @@ import StageHeader from "@/components/stage-header"
 import { Eraser, PencilLine, Sparkles, Trash2 } from "lucide-react"
 import { EOB_TRAITS, type EobTrait } from "@/lib/character-eob-traits"
 import {
+  getStoryCopy,
+  getSpeciesLabel,
+  getTraitLabel,
+  getTraitExplanation,
+  getTraitTips,
+} from "@/lib/story-i18n"
+import {
   Dialog,
   DialogContent,
   DialogFooter,
@@ -62,6 +69,7 @@ const EOB_TRAIT_COLORS: Record<string, string> = {
 type DrawMode = "pen" | "eraser"
 
 export default function CharacterCreationNoAi({ language, onCharacterCreate, onBack, userId }: CharacterCreationNoAiProps) {
+  const t = getStoryCopy(language)
   const [name, setName] = useState("")
   const [species, setSpecies] = useState("")
   const [customSpecies, setCustomSpecies] = useState("")
@@ -269,15 +277,15 @@ export default function CharacterCreationNoAi({ language, onCharacterCreate, onB
           {traitDialogTrait && (
             <>
               <DialogHeader>
-                <DialogTitle>{traitDialogTrait.name}</DialogTitle>
+                <DialogTitle>{getTraitLabel(traitDialogTrait.name, language)}</DialogTitle>
               </DialogHeader>
               <p className="text-sm text-foreground">
-                {traitDialogTrait.explanationTemplate.replace(/\{\{name\}\}/g, name.trim() || "your character")}
+                {getTraitExplanation(traitDialogTrait.name, traitDialogTrait.explanationTemplate, language).replace(/\{\{name\}\}/g, name.trim() || (language === "zh" ? "你的角色" : "your character"))}
               </p>
               <div className="space-y-2">
-                <p className="text-sm font-semibold text-foreground">When writing, you can use:</p>
+                <p className="text-sm font-semibold text-foreground">{t.writingTips}</p>
                 <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
-                  {traitDialogTrait.writingTips.map((tip, i) => (
+                  {getTraitTips(traitDialogTrait.name, traitDialogTrait.writingTips, language).map((tip, i) => (
                     <li key={i}>"{tip}"</li>
                   ))}
                 </ul>
@@ -288,17 +296,17 @@ export default function CharacterCreationNoAi({ language, onCharacterCreate, onB
                     variant="outline"
                     onClick={() => { toggleTrait(traitDialogTrait.name); setTraitDialogOpen(false); setTraitDialogTrait(null) }}
                   >
-                    Unselect
+                    {t.unselect}
                   </Button>
                 ) : (
                   <Button
                     onClick={() => { toggleTrait(traitDialogTrait.name); setTraitDialogOpen(false); setTraitDialogTrait(null) }}
                   >
-                    Select this trait
+                    {t.selectTrait}
                   </Button>
                 )}
                 <Button variant="outline" onClick={() => { setTraitDialogOpen(false); setTraitDialogTrait(null) }}>
-                  Close
+                  {t.close}
                 </Button>
               </DialogFooter>
             </>
@@ -313,7 +321,7 @@ export default function CharacterCreationNoAi({ language, onCharacterCreate, onB
       </div>
 
       <div className="max-w-6xl mx-auto relative z-10">
-        <StageHeader stage={1} title="Create Your Character" onBack={onBack} />
+        <StageHeader stage={1} title={t.characterTitle} onBack={onBack} language={language} />
 
         <div className="grid lg:grid-cols-2 gap-8 mt-8">
           <div className="bg-gradient-to-br from-white to-blue-50 rounded-3xl p-8 border-4 border-blue-300 shadow-2xl backdrop-blur-sm">
@@ -323,17 +331,17 @@ export default function CharacterCreationNoAi({ language, onCharacterCreate, onB
 
             <div className="space-y-6">
               <div>
-                <label className="block text-lg font-bold mb-2 text-blue-700">Character Name</label>
+                <label className="block text-lg font-bold mb-2 text-blue-700">{t.noAiName}</label>
                 <Input
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="e.g., Sparky the Dragon"
+                  placeholder={t.noAiNamePh}
                   className="border-2 border-blue-200 focus:border-blue-500 rounded-xl p-3 text-base"
                 />
               </div>
 
               <div>
-                <label className="block text-lg font-bold mb-2 text-blue-700">Species</label>
+                <label className="block text-lg font-bold mb-2 text-blue-700">{t.noAiSpecies}</label>
                 <div className="grid grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3 max-h-64 overflow-y-auto p-2">
                   {SPECIES.map((spec) => {
                     const isSelected = species === spec.name
@@ -348,7 +356,7 @@ export default function CharacterCreationNoAi({ language, onCharacterCreate, onB
                         }`}
                       >
                         <span className="text-2xl mb-1">{spec.icon}</span>
-                        <span className="text-xs font-semibold">{spec.name}</span>
+                        <span className="text-xs font-semibold">{getSpeciesLabel(spec.name, language)}</span>
                       </Button>
                     )
                   })}
@@ -361,21 +369,21 @@ export default function CharacterCreationNoAi({ language, onCharacterCreate, onB
                     }`}
                   >
                     <span className="text-2xl mb-1">✏️</span>
-                    <span className="text-xs font-semibold">Custom</span>
+                    <span className="text-xs font-semibold">{t.custom}</span>
                   </Button>
                 </div>
                 {species === "Custom" && (
                   <Input
                     value={customSpecies}
                     onChange={(e) => setCustomSpecies(e.target.value)}
-                    placeholder="Enter custom species..."
+                    placeholder={t.customSpeciesPlaceholder}
                     className="mt-3 border-2 border-blue-200 focus:border-blue-500 rounded-xl p-3 text-base"
                   />
                 )}
               </div>
 
               <div>
-                <label className="block text-lg font-bold mb-2 text-blue-700">Traits (Select at least one)</label>
+                <label className="block text-lg font-bold mb-2 text-blue-700">{t.noAiTraits}</label>
                 <div className="flex flex-wrap gap-2">
                   {EOB_TRAITS.map((trait) => {
                     const isSelected = selectedTraits.includes(trait.name)
@@ -393,7 +401,7 @@ export default function CharacterCreationNoAi({ language, onCharacterCreate, onB
                             : "bg-white border-blue-200 text-gray-700 hover:bg-blue-50"
                         }`}
                       >
-                        {trait.name}
+                        {getTraitLabel(trait.name, language)}
                       </Button>
                     )
                   })}
@@ -401,11 +409,11 @@ export default function CharacterCreationNoAi({ language, onCharacterCreate, onB
               </div>
 
               <div>
-                <label className="block text-lg font-bold mb-2 text-blue-700">Description (Optional)</label>
+                <label className="block text-lg font-bold mb-2 text-blue-700">{t.noAiDesc}</label>
                 <textarea
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  placeholder="e.g., A friendly dragon who loves to read books and help others."
+                  placeholder={t.noAiDescPh}
                   rows={3}
                   className="w-full p-3 rounded-xl border-2 border-blue-200 focus:border-blue-500 bg-white text-foreground text-base"
                 />
@@ -417,7 +425,7 @@ export default function CharacterCreationNoAi({ language, onCharacterCreate, onB
                 className="w-full bg-gradient-to-r from-purple-600 via-pink-600 to-orange-600 hover:from-purple-700 hover:via-pink-700 hover:to-orange-700 text-white border-0 shadow-xl py-4 text-lg font-bold disabled:opacity-50"
               >
                 <Sparkles className="mr-2 h-5 w-5 inline" />
-                Continue
+                {language === "zh" ? "继续" : "Continue"}
               </Button>
             </div>
           </div>
@@ -443,7 +451,7 @@ export default function CharacterCreationNoAi({ language, onCharacterCreate, onB
                     <h3 className="text-3xl font-extrabold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent mb-2">
                       {name}
                     </h3>
-                    <p className="text-xl text-gray-700 font-semibold mb-4">{finalSpecies}</p>
+                    <p className="text-xl text-gray-700 font-semibold mb-4">{getSpeciesLabel(finalSpecies, language)}</p>
                     <div className="flex flex-wrap gap-2 justify-center">
                       {selectedTraits.map((trait) => {
                         const color = EOB_TRAIT_COLORS[trait] ?? "from-gray-400 to-gray-600"
@@ -452,7 +460,7 @@ export default function CharacterCreationNoAi({ language, onCharacterCreate, onB
                             key={trait}
                             className={`px-3 py-1 rounded-full text-sm font-bold bg-gradient-to-r ${color} text-white shadow-lg`}
                           >
-                            {trait}
+                            {getTraitLabel(trait, language)}
                           </span>
                         )
                       })}
@@ -465,7 +473,7 @@ export default function CharacterCreationNoAi({ language, onCharacterCreate, onB
               ) : (
                 <div className="text-center text-gray-500">
                   <div className="text-7xl mb-4">🥚</div>
-                  <p className="text-xl font-semibold">Fill in the form to see your character!</p>
+                  <p className="text-xl font-semibold">{t.noAiPreviewEmpty}</p>
                 </div>
               )}
             </div>
@@ -473,7 +481,7 @@ export default function CharacterCreationNoAi({ language, onCharacterCreate, onB
             <div className="bg-gradient-to-br from-white to-indigo-50 rounded-3xl p-6 border-4 border-indigo-300 shadow-2xl backdrop-blur-sm">
               <div className="flex items-start justify-between gap-4 flex-wrap">
                 <div>
-                  <h3 className="text-2xl font-bold text-indigo-700">Character Drawing Board</h3>
+                  <h3 className="text-2xl font-bold text-indigo-700">{t.noAiDrawTitle}</h3>
                   <p className="mt-1 text-sm text-indigo-700/80">
                     Draw your hero here. If you sketch something, it will be carried into the story flow as the character image.
                   </p>
@@ -493,7 +501,7 @@ export default function CharacterCreationNoAi({ language, onCharacterCreate, onB
                   className={drawMode === "pen" ? "bg-indigo-600 hover:bg-indigo-700" : "border-indigo-300 text-indigo-700"}
                 >
                   <PencilLine className="h-4 w-4 mr-2" />
-                  Pen
+                  {t.pen}
                 </Button>
                 <Button
                   type="button"
@@ -502,10 +510,10 @@ export default function CharacterCreationNoAi({ language, onCharacterCreate, onB
                   className={drawMode === "eraser" ? "bg-indigo-600 hover:bg-indigo-700" : "border-indigo-300 text-indigo-700"}
                 >
                   <Eraser className="h-4 w-4 mr-2" />
-                  Eraser
+                  {t.eraser}
                 </Button>
                 <div className="flex items-center gap-2 rounded-full border border-indigo-200 bg-white px-3 py-2">
-                  <span className="text-xs font-semibold text-indigo-700">Brush</span>
+                  <span className="text-xs font-semibold text-indigo-700">{t.brush}</span>
                   <input
                     type="range"
                     min={2}
@@ -534,7 +542,7 @@ export default function CharacterCreationNoAi({ language, onCharacterCreate, onB
                   className="border-rose-300 text-rose-700"
                 >
                   <Trash2 className="h-4 w-4 mr-2" />
-                  Clear Board
+                  {t.clearBoard}
                 </Button>
               </div>
 
