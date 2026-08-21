@@ -8,6 +8,7 @@ import { toast } from "sonner"
 import { Wand2, Check, HelpCircle, Sparkles, Loader2, CheckCircle2 } from "lucide-react"
 import { PixelStarRating } from "@/components/ui/pixel-star-rating"
 import { getStoryStructureLabel } from "@/lib/story-structure-display"
+import { getScoreDimLabel, getSpeciesLabel, getStoryCopy } from "@/lib/story-i18n"
 
 interface GrammarError {
   start: number
@@ -86,7 +87,8 @@ function storyBodyWithSoftBreaks(fullText: string): ReactNode {
   )
 }
 
-export default function StoryReview({ storyState, onReset, onEdit, onBack, userId, workId }: StoryReviewProps) {
+export default function StoryReview({ language, storyState, onReset, onEdit, onBack, userId, workId }: StoryReviewProps) {
+  const t = getStoryCopy(language)
   const uploadPromptShownRef = useRef(false)
   const grammarReviewDoneRef = useRef(false)
   const aiRatingDoneRef = useRef(false)
@@ -148,7 +150,7 @@ export default function StoryReview({ storyState, onReset, onEdit, onBack, userI
           if (!abortController.signal.aborted && data.success && data.errors) {
             setGrammarErrors(data.errors)
             if (data.errors.length > 0) {
-              toast.success(`Found ${data.errors.length} potential issue(s)`)
+              toast.success(t.foundIssues(data.errors.length))
             }
           }
         } catch (error) {
@@ -191,6 +193,7 @@ export default function StoryReview({ storyState, onReset, onEdit, onBack, userI
         plot: storyState.plot,
         structure: storyState.structure,
         user_id: userId,
+        language,
       }),
     })
       .then((r) => r.json())
@@ -244,10 +247,10 @@ export default function StoryReview({ storyState, onReset, onEdit, onBack, userI
       })
       const data = await res.json()
       if (!res.ok || !data?.success) throw new Error(data?.error || "Failed")
-      toast.success("Story uploaded to Luminai Library! ✨")
+      toast.success(t.uploaded)
       setShowUploadDialog(false)
     } catch (e: any) {
-      toast.error(e?.message || "Failed to upload")
+      toast.error(e?.message || t.uploadFail)
     } finally {
       setIsUploading(false)
     }
@@ -285,7 +288,7 @@ export default function StoryReview({ storyState, onReset, onEdit, onBack, userI
 
     setGrammarErrors(updatedErrors)
     setClickedErrorIndex(null)
-    toast.success("Correction applied!")
+    toast.success(t.correctionApplied)
   }
 
   const renderHighlightedText = () => {
@@ -375,7 +378,7 @@ export default function StoryReview({ storyState, onReset, onEdit, onBack, userI
                   color: "#f5e6c8",
                   border: "3px solid #8b6914"
                 }}>
-                  <div>Click to see correction</div>
+                  <div>{t.clickCorrection}</div>
                 </div>
               )}
               {isClicked && (
@@ -393,15 +396,15 @@ export default function StoryReview({ storyState, onReset, onEdit, onBack, userI
                       <div className="text-xs mb-2" style={{ color: "#d9c9a6" }}>{error.issue.split(':').slice(1).join(':').trim()}</div>
                     </>
                   ) : (
-                    <div className="font-bold mb-2" style={{ color: "#e74c3c" }}>Issue: {error.issue}</div>
+                    <div className="font-bold mb-2" style={{ color: "#e74c3c" }}>{t.issue} {error.issue}</div>
                   )}
                   <div className="mb-2 min-w-0">
-                    <span style={{ color: "#8b6914" }}>Original: </span>
+                    <span style={{ color: "#8b6914" }}>{t.original} </span>
                     <span style={{ color: "#d9c9a6", overflowWrap: "break-word", wordBreak: "normal" }}>{error.original}</span>
                   </div>
                   <div className="space-y-2">
                     <div className="min-w-0">
-                      <span style={{ color: "#8b6914" }}>Suggestion: </span>
+                      <span style={{ color: "#8b6914" }}>{t.suggestion} </span>
                       <span className="font-bold" style={{ color: "#7ec850", overflowWrap: "break-word", wordBreak: "normal" }}>{error.corrected}</span>
                     </div>
                     <span
@@ -428,7 +431,7 @@ export default function StoryReview({ storyState, onReset, onEdit, onBack, userI
                           color: "#fff",
                           border: "2px solid #3d8a3d"
                         }}>
-                          <div>Apply correction?</div>
+                          <div>{t.applyCorrection}</div>
                         </div>
                       )}
                     </span>
@@ -525,10 +528,10 @@ Created with Story Writer
               <div className="mb-6">
                 <Sparkles className="w-16 h-16 mx-auto mb-4 animate-pulse" style={{ color: "#e8c547" }} />
                 <h2 className="text-3xl font-bold mb-2 pixel-text" style={{ color: "#6b5210" }}>
-                  Upload to Luminai Library?
+                  {t.uploadTitle}
                 </h2>
                 <p className="text-lg pixel-text" style={{ color: "#5a4a2a" }}>
-                  Would you like to save this story to your Luminai Library? You can edit it later.
+                  {t.uploadBody}
                 </p>
               </div>
               <div className="flex gap-4 justify-center">
@@ -540,12 +543,12 @@ Created with Story Writer
                   {isUploading ? (
                     <>
                       <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                      Uploading...
+                      {t.uploading}
                     </>
                   ) : (
                     <>
                       <CheckCircle2 className="w-5 h-5 mr-2" />
-                      Yes, Upload
+                      {t.yesUpload}
                     </>
                   )}
                 </Button>
@@ -555,7 +558,7 @@ Created with Story Writer
                   variant="outline"
                   className="pixel-btn pixel-btn-wood shadow-lg font-bold py-3 px-8 text-lg hover:scale-105 transition-all disabled:opacity-50"
                 >
-                  Maybe Later
+                  {t.maybeLater}
                 </Button>
               </div>
             </div>
@@ -599,7 +602,7 @@ Created with Story Writer
       </div>
       
       <div className="max-w-7xl mx-auto relative z-10">
-        <StageHeader stage={5} title="Your Story is Complete!" onBack={onBack} />
+        <StageHeader stage={5} title={t.reviewTitle} onBack={onBack} language={language} />
 
         <div className="grid lg:grid-cols-12 gap-6 mt-8 min-w-0">
           {/* Story content with grammar highlights */}
@@ -612,7 +615,7 @@ Created with Story Writer
                   textShadow: "2px 2px 0 rgba(0,0,0,0.2)"
                 }}
               >
-                {storyState.character?.name}&apos;s Adventure
+                {t.adventureOf(storyState.character?.name || "")}
               </h2>
               <p
                 className="text-base font-bold mb-6 min-w-0 max-w-full break-words"
@@ -622,7 +625,7 @@ Created with Story Writer
                 {storyState.structure?.type ? (
                   <>
                     {" "}
-                    <span className="opacity-70">|</span> {getStoryStructureLabel(storyState.structure?.type)}
+                    <span className="opacity-70">|</span> {getStoryStructureLabel(storyState.structure?.type, language)}
                   </>
                 ) : null}
               </p>
@@ -647,10 +650,10 @@ Created with Story Writer
                         </div>
                       </div>
                       <p className="text-lg font-bold animate-pulse" style={{ color: "#5a4a2a" }}>
-                        Loading article...
+                        {t.loadingArticle}
                       </p>
                       <p className="text-sm mt-2 font-bold" style={{ color: "#6b5210" }}>
-                        Please wait
+                        {t.pleaseWait}
                       </p>
                     </div>
                 ) : (
@@ -665,7 +668,7 @@ Created with Story Writer
                 size="lg"
                 className="pixel-btn pixel-btn-green py-6 text-lg font-bold"
               >
-                Download Story
+                {t.downloadStory}
               </Button>
               <Button 
                 onClick={() => onEdit("storyEdit")} 
@@ -678,7 +681,7 @@ Created with Story Writer
                   boxShadow: "inset -2px -2px 0 rgba(0,0,0,0.2), inset 2px 2px 0 rgba(255,255,255,0.2), 4px 4px 0 rgba(0,0,0,0.25)"
                 }}
               >
-                Edit Story
+                {t.editStory}
               </Button>
             </div>
           </div>
@@ -687,7 +690,7 @@ Created with Story Writer
           <div className="lg:col-span-4 space-y-6 min-w-0">
             <div className="pixel-panel p-5">
               <h3 className="text-lg font-extrabold mb-3" style={{ color: "#5a4a2a", textShadow: "1px 1px 0 rgba(0,0,0,0.2)" }}>
-                Story Summary
+                {t.storySummary}
               </h3>
               <div className="space-y-2">
                 {/* AI评分（像素风星星）- 放在最上面 */}
@@ -705,7 +708,7 @@ Created with Story Writer
                   </div>
                   {aiRatingLoading && (
                     <div className="space-y-2">
-                      <p className="text-sm font-bold" style={{ color: "#6b5210" }}>Scoring...</p>
+                      <p className="text-sm font-bold" style={{ color: "#6b5210" }}>{t.scoring}</p>
                       <div className="h-2 w-full" style={{ background: "#d9c9a6", border: "2px solid #8b6914" }}>
                         <div className="ai-score-bar h-full" style={{ background: "#7ec850" }} />
                       </div>
@@ -717,7 +720,7 @@ Created with Story Writer
                         {(Object.keys(aiScores) as Array<keyof typeof aiScores>).map((k) => (
                           <div key={String(k)} className="flex items-center justify-between gap-3">
                             <span className="text-xs font-extrabold" style={{ color: "#6b5210" }}>
-                              {String(k)}
+                              {getScoreDimLabel(String(k), language)}
                             </span>
                             <div className="ai-star-wrap">
                               <PixelStarRating value={aiScores[k] as number} pixel={3} gap={6} />
@@ -751,7 +754,7 @@ Created with Story Writer
                           }}
                         >
                           <p className="text-sm font-extrabold mb-2" style={{ color: "#1a4a6a" }}>
-                            Tips to improve
+                            {t.tipsToImprove}
                           </p>
                           <div className="space-y-1.5">
                             {aiImprovements.slice(0, 4).map((tip, idx) => (
@@ -801,27 +804,27 @@ Created with Story Writer
                 </div>
 
                 <div className="p-2.5" style={{ background: "#d4e8b4", border: "3px solid #5a9a32" }}>
-                  <p className="text-xs font-bold mb-0.5" style={{ color: "#3d5a1f" }}>Character</p>
+                  <p className="text-xs font-bold mb-0.5" style={{ color: "#3d5a1f" }}>{t.character}</p>
                   <p className="text-sm font-extrabold" style={{ color: "#2d5016" }}>{storyState.character?.name}</p>
                 </div>
                 {storyState.character?.species && (
                   <div className="p-2.5" style={{ background: "#c5e4f5", border: "3px solid #5bc0de" }}>
-                    <p className="text-xs font-bold mb-0.5" style={{ color: "#2a5a7a" }}>Species</p>
-                    <p className="text-sm font-extrabold" style={{ color: "#1a4a6a" }}>{storyState.character.species}</p>
+                    <p className="text-xs font-bold mb-0.5" style={{ color: "#2a5a7a" }}>{t.species}</p>
+                    <p className="text-sm font-extrabold" style={{ color: "#1a4a6a" }}>{getSpeciesLabel(storyState.character.species, language)}</p>
                   </div>
                 )}
                 <div className="p-2.5 min-w-0" style={{ background: "#f5e6c8", border: "3px solid #c4a020" }}>
-                  <p className="text-xs font-bold mb-0.5" style={{ color: "#8b6914" }}>Setting</p>
+                  <p className="text-xs font-bold mb-0.5" style={{ color: "#8b6914" }}>{t.setting}</p>
                   <p className="text-sm font-extrabold break-words" style={{ color: "#6b5210", overflowWrap: "anywhere" }}>{storyState.plot?.setting}</p>
                 </div>
                 {storyState.structure?.type ? (
                   <div className="p-2.5 min-w-0" style={{ background: "#e8d4f5", border: "3px solid #9b59b6" }}>
-                    <p className="text-xs font-bold mb-0.5" style={{ color: "#7b3f96" }}>Structure</p>
+                    <p className="text-xs font-bold mb-0.5" style={{ color: "#7b3f96" }}>{t.structure}</p>
                     <p
                       className="text-sm font-extrabold leading-snug break-words"
                       style={{ color: "#5a2f76", overflowWrap: "anywhere" }}
                     >
-                      {getStoryStructureLabel(storyState.structure.type)}
+                      {getStoryStructureLabel(storyState.structure.type, language)}
                     </p>
                   </div>
                 ) : null}
@@ -833,7 +836,7 @@ Created with Story Writer
               size="lg" 
               className="w-full pixel-btn pixel-btn-blue py-4 text-sm font-bold"
             >
-              Back to Map
+              {t.backToMap}
             </Button>
           </div>
         </div>
