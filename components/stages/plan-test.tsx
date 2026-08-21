@@ -4,6 +4,7 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { BackButton } from "@/components/ui/back-button"
 import type { Language } from "@/app/page"
+import { getPlanTestCopy } from "@/lib/story-i18n"
 
 interface PlanTestProps {
   language?: Language
@@ -113,6 +114,7 @@ const getLevelFromScore = (score: number) => {
 }
 
 export default function PlanTest({ language = "en", onComplete, onBack }: PlanTestProps) {
+  const t = getPlanTestCopy(language)
   const [currentStep, setCurrentStep] = useState(0)
   const [answers, setAnswers] = useState<Record<number, string>>({})
   const isQuestionStep = currentStep < QUESTIONS.length
@@ -191,10 +193,10 @@ export default function PlanTest({ language = "en", onComplete, onBack }: PlanTe
             className="text-5xl md:text-6xl lg:text-7xl font-black mb-4"
             style={{ color: "#8b6914", textShadow: "3px 3px 0 #6b5210, 5px 5px 0 rgba(0,0,0,0.2)" }}
           >
-            Writing Level Quest
+            {t.title}
           </h1>
           <p className="text-lg md:text-xl font-bold" style={{ color: "#5a4a2a" }}>
-            Place your first pin, then clear these 7 questions to unlock your journey ticket.
+            {t.subtitle}
           </p>
         </div>
 
@@ -206,8 +208,8 @@ export default function PlanTest({ language = "en", onComplete, onBack }: PlanTe
             />
           </div>
           <div className="mt-3 flex items-center justify-between text-sm font-bold" style={{ color: "#5a4a2a" }}>
-            <span>{isQuestionStep ? `Question ${currentStep + 1} / ${QUESTIONS.length}` : "Quest Complete"}</span>
-            <span>{answeredCount} answered</span>
+            <span>{isQuestionStep ? t.questionN(currentStep + 1, QUESTIONS.length) : t.questComplete}</span>
+            <span>{t.answeredN(answeredCount)}</span>
           </div>
         </div>
 
@@ -216,8 +218,8 @@ export default function PlanTest({ language = "en", onComplete, onBack }: PlanTe
             {isQuestionStep && currentQuestion ? (
               <>
                 <div className="mb-6 flex items-center justify-center gap-3">
-                  <span className="pixel-btn pixel-btn-wood px-3 py-1 text-xs font-bold">LEVEL CHECK</span>
-                  <span className="pixel-btn pixel-btn-blue px-3 py-1 text-xs font-bold">FIRST PIN ONLY</span>
+                  <span className="pixel-btn pixel-btn-wood px-3 py-1 text-xs font-bold">{t.levelCheck}</span>
+                  <span className="pixel-btn pixel-btn-blue px-3 py-1 text-xs font-bold">{t.firstPinOnly}</span>
                 </div>
                 <h2 className="text-2xl md:text-3xl font-bold mb-8 text-center" style={{ color: "#5a4a2a" }}>
                   {currentQuestion.question}
@@ -256,26 +258,26 @@ export default function PlanTest({ language = "en", onComplete, onBack }: PlanTe
             ) : (
               <div className="space-y-6 text-center">
                 <div className="mx-auto w-fit pixel-btn pixel-btn-green px-4 py-2 text-sm font-bold">
-                  JOURNEY TICKET UNLOCKED
+                  {t.ticketUnlocked}
                 </div>
                 <h2 className="text-2xl md:text-3xl font-bold" style={{ color: "#5a4a2a" }}>
-                  Great job finishing the questions!
+                  {t.finishTitle}
                 </h2>
                 <p className="font-bold" style={{ color: "#6b5210" }}>
-                  We will use your answers to choose a good starting level for your writing journey.
+                  {t.finishHint}
                 </p>
                 <Button
                   onClick={handleFinish}
                   size="lg"
                   className="w-full pixel-btn pixel-btn-green py-6 text-xl md:text-2xl font-bold"
                 >
-                  Continue to Journey Ticket
+                  {t.continueToTicket}
                 </Button>
               </div>
             )}
           </div>
           <div className="mt-4 text-right text-xs font-bold" style={{ color: "#5a4a2a" }}>
-            Questions are designed based on CEFR writing levels (A2–B2).
+            {t.cefrNote}
           </div>
         </div>
       </div>
