@@ -1,6 +1,7 @@
 "use client"
 
 import { BackButton } from "@/components/ui/back-button"
+import { getStoryCopy, type StoryUiLang } from "@/lib/story-i18n"
 
 interface StageHeaderProps {
   stage: number
@@ -8,19 +9,21 @@ interface StageHeaderProps {
   onBack: () => void
   character?: string
   className?: string
+  language?: StoryUiLang
 }
 
-export default function StageHeader({ stage, title, onBack, character, className }: StageHeaderProps) {
+export default function StageHeader({ stage, title, onBack, character, className, language = "en" }: StageHeaderProps) {
+  const t = getStoryCopy(language)
   return (
     <div className={`flex items-center justify-between mb-8 mt-8 pl-20 lg:pl-24 ${className || ""}`}>
-      <BackButton onClick={onBack} variant="default" />
+      <BackButton onClick={onBack} variant="default" aria-label={t.back} />
       <div className="flex items-center gap-4 flex-1 min-w-0">
         <div>
           <div 
             className="text-sm font-bold"
             style={{ color: "#5a4a2a", textShadow: "1px 1px 0 rgba(0,0,0,0.15)" }}
           >
-            Stage {stage} of 5
+            {t.stageOf(stage)}
           </div>
           <h1 
             className="text-3xl font-extrabold"
