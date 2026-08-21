@@ -57,6 +57,7 @@ export async function POST(request: NextRequest) {
       plot?: any
       structure?: any
       user_id?: string
+      language?: string
     }
     const text = String(body.text || "").trim()
     if (!text) {
@@ -68,6 +69,10 @@ export async function POST(request: NextRequest) {
     }
 
     const characterName = body.character?.name || "the character"
+    const languageRule =
+      body.language === "zh"
+        ? `Write "praise" and "improvements" in Simplified Chinese. Keep JSON keys and score dimension names in English. The story itself is English — do not ask the student to rewrite it in Chinese.`
+        : `Write "praise" and "improvements" in English.`
     const prompt = `You are a kind elementary school English writing teacher.
 You will rate a student's COMPLETE story in 5 dimensions, each 1-5 stars:
 - Vocabulary
@@ -103,7 +108,8 @@ Return ONLY valid JSON in this exact shape:
 Rules:
 - Each score must be an integer 1..5.
 - Praise must be friendly and specific.
-- Improvements must be concrete and easy to do.`
+- Improvements must be concrete and easy to do.
+- ${languageRule}`
 
     let answer = ""
     try {
