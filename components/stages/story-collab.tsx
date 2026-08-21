@@ -15,6 +15,17 @@ import type { PlotConversationProgress } from "@/lib/story-plot-coach"
 import { sanitizeStoryAssistantText } from "@/lib/story-meta"
 import { cn } from "@/lib/utils"
 import StoryRevisionTags from "@/components/stages/story-revision-tags"
+import {
+  getStoryCopy,
+  getSectionLabel,
+  getStructureDesc,
+  getStructureLabel,
+  localizeSuggestionChips,
+  matchStructureType,
+  wantsStartWriting,
+  stripAdvanceNextSectionPhrases,
+  stripLastSectionGreatJobPhrases,
+} from "@/lib/story-i18n"
 
 /* ── Types ───────────────────────────────────────────── */
 
@@ -106,16 +117,6 @@ const countWords = (text: string): number => {
   return chineseChars + englishWords
 }
 
-/** 用户输入 start writing / let's start writing 等即进入结构选择 */
-function wantsStartWriting(raw: string): boolean {
-  const t = raw.toLowerCase().trim()
-  if (t === "start writing") return true
-  if (/^start\s+writing[!.\s]*$/i.test(t)) return true
-  if (/^let['']?s\s+(start\s+)?writing\b/i.test(t)) return true
-  if (/^begin\s+writing\b/i.test(t)) return true
-  return false
-}
-
 const cleanAiDisplayText = (text: string) =>
   sanitizeStoryAssistantText(text)
     .replace(/The plot is getting clearer![\s\S]*?talk about\?/gi, "")
@@ -123,57 +124,6 @@ const cleanAiDisplayText = (text: string) =>
     .replace(/Great choice!?/gi, "")
     .replace(/\s{2,}/g, " ")
     .trim()
-
-function detectAdvanceNextSectionSignal(answer: string): boolean {
-  if (!answer || typeof answer !== "string") return false
-  const t = answer.trim()
-  if (!t) return false
-  return (
-    /\byou can move on to the next part of your writing!/i.test(t) ||
-    /\byou can move to the next section\b/i.test(t) ||
-    /\byou may move to the next section\b/i.test(t) ||
-    /\byou'?re ready to move to the next section\b/i.test(t) ||
-    /\bready for the next section\b/i.test(t) ||
-    /可以进入下一节/.test(t) ||
-    /可以进入下一部分/.test(t) ||
-    /可以進入下一節/.test(t)
-  )
-}
-
-/** Last section: AI ends with this when the final beat is good enough → show Continue, hide Finish! */
-function detectLastSectionGreatJobSignal(answer: string): boolean {
-  if (!answer || typeof answer !== "string") return false
-  const t = answer.trim()
-  if (!t) return false
-  return /\bgreat job\b/i.test(t) || /太棒了/.test(t) || /做得好/.test(t)
-}
-
-function stripAdvanceNextSectionPhrases(text: string): string {
-  let t = text
-  const removals: RegExp[] = [
-    /\n*You can move on to the next part of your writing!\.?\s*$/i,
-    /\n*You can move to the next section\.?\s*$/i,
-    /\n*You may move to the next section\.?\s*$/i,
-    /\n*You'?re ready to move to the next section\.?\s*$/i,
-    /\n*Ready for the next section\.?\s*$/i,
-    /\n*可以进入下一节[。.]?\s*$/,
-    /\n*可以进入下一部分[。.]?\s*$/,
-    /\n*可以進入下一節[。.]?\s*$/,
-  ]
-  for (const re of removals) {
-    t = t.replace(re, "")
-  }
-  return t.replace(/\s{2,}/g, " ").trim()
-}
-
-function stripLastSectionGreatJobPhrases(text: string): string {
-  return text
-    .replace(/\n*Great job!?\.?\s*$/i, "")
-    .replace(/\n*太棒了[！!。.]?\s*$/, "")
-    .replace(/\n*做得好[！!。.]?\s*$/, "")
-    .replace(/\s{2,}/g, " ")
-    .trim()
-}
 
 function mergePadIntoSection(committed: string, pad: string): string {
   const c = committed.trim()
@@ -209,7 +159,9 @@ export default function StoryCollab({
   apiEndpoint = "/api/story-collab",
   promptTestMode = false,
 }: StoryCollabProps) {
+  const t = getStoryCopy(language)
   const levelForApi = writingLevelProp ?? getCurrentLevel()
+  const sectionLabel = (name: string) => getSectionLabel(name, language)
 
   /* ── State ── */
   const [phase, setPhase] = useState<CollabPhase>("explore")
@@ -406,18 +358,21 @@ export default function StoryCollab({
 
   /* ── Send welcome message on mount (AI mode) ── */
   useEffect(() => {
-    if (mode === "ai" && messages.length === 0) {
-      const charName = storyState.character?.name || "your character"
-      const welcome: CollabMessage = {
-        id: "welcome",
-        role: "assistant",
-        content: `Hi! Let's dream up a story for ${charName} together.\n\nWhat kind of story are you in the mood for?`,
-        suggestions: ["Adventure", "Magic", "Mystery", "Funny"],
-      }
-      setMessages([welcome])
+    if (mode !== "ai") return
+    const charName = storyState.character?.name || (language === "zh" ? "你的角色" : "your character")
+    const welcome: CollabMessage = {
+      id: "welcome",
+      role: "assistant",
+      content: t.welcome(charName),
+      suggestions: localizeSuggestionChips([...t.welcomeChips], language),
     }
+    setMessages((prev) => {
+      if (prev.length === 0) return [welcome]
+      if (prev.length === 1 && prev[0].id === "welcome") return [welcome]
+      return prev
+    })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [language, mode])
 
   /* ── API call ── */
   const sendMessage = useCallback(
@@ -467,11 +422,12 @@ export default function StoryCollab({
             user_id: promptTestMode ? undefined : userId || "anonymous",
             level: levelForApi,
             action: action || "chat",
+            language,
           }),
         })
 
         if (!res.ok) {
-          const err = await res.json().catch(() => ({ message: "Network error" }))
+          const err = await res.json().catch(() => ({ message: t.networkError }))
           throw new Error(err.message || `Server error ${res.status}`)
         }
 
@@ -500,12 +456,10 @@ export default function StoryCollab({
           setPlotReadyForStructure(true)
         }
 
-        // Handle structure_suggestion
+        // Handle structure_suggestion — match English ids and Chinese labels
         if (data.structure_suggestion) {
-          const matchType = data.structure_suggestion.toLowerCase()
-          if (matchType.includes("freytag")) handleStructureSelect("freytag")
-          else if (matchType.includes("three")) handleStructureSelect("threeAct")
-          else if (matchType.includes("fichtean")) handleStructureSelect("fichtean")
+          const picked = matchStructureType(data.structure_suggestion)
+          if (picked) handleStructureSelect(picked)
         }
 
         const rawAnswer = data.answer || ""
@@ -550,10 +504,9 @@ export default function StoryCollab({
           role: "assistant",
           content:
             data.revision_tags?.length
-              ? cleaned ||
-                "Revise your Writing Pad — tap each tag to see why, then tap Finish! again."
+              ? cleaned || t.revisePadAgain
               : cleaned,
-          suggestions: data.revision_tags?.length ? [] : data.suggestions,
+          suggestions: data.revision_tags?.length ? [] : localizeSuggestionChips(data.suggestions, language),
           storySnippet: data.story_snippet,
           structureCards: showStructureCards,
           revisionTags: data.revision_tags?.length ? data.revision_tags : undefined,
@@ -567,15 +520,15 @@ export default function StoryCollab({
           { role: "assistant", content: cleaned || rawAnswer },
         ])
       } catch (err) {
-        const errMsg = err instanceof Error ? err.message : "Something went wrong"
+        const errMsg = err instanceof Error ? err.message : t.somethingWrong
         toast.error(errMsg)
         setMessages((prev) => [
           ...prev,
           {
             id: `err-${Date.now()}`,
             role: "assistant",
-            content: "Oops, I had a little hiccup! Could you try saying that again? 😊",
-            suggestions: ["At school", "In a forest", "A magic problem"],
+            content: t.hiccup,
+            suggestions: localizeSuggestionChips(["At school", "In a forest", "A magic problem"], language),
           },
         ])
       } finally {
@@ -598,6 +551,8 @@ export default function StoryCollab({
       mode,
       apiEndpoint,
       promptTestMode,
+      language,
+      t,
     ],
   )
 
@@ -607,10 +562,10 @@ export default function StoryCollab({
     (userLine?: string) => {
       if (selectedStructure) return
       if (!plotComplete) {
-        toast.error("Finish setting, conflict, and goal first — chat a bit more with the AI!")
+        toast.error(t.toastNeedPlot)
         return
       }
-      const characterName = storyState.character?.name || "the hero"
+      const characterName = storyState.character?.name || (language === "zh" ? "主角" : "the hero")
       const nextPlot = {
         setting: plotData.setting.trim() || "a bright little town",
         conflict: plotData.conflict.trim() || `${characterName} faces a tricky problem`,
@@ -626,7 +581,7 @@ export default function StoryCollab({
       extra.push({
         id: `ai-struct-${Date.now()}`,
         role: "assistant",
-        content: "Great — choose a story structure for your story:",
+        content: t.chooseStructureChat,
         suggestions: [],
         structureCards: true,
       })
@@ -643,6 +598,8 @@ export default function StoryCollab({
       storyState.character?.name,
       onPlotCreate,
       onPlotFinalize,
+      t,
+      language,
     ],
   )
 
@@ -711,7 +668,7 @@ export default function StoryCollab({
       currentWritingSection === last &&
       sectionGateStatus[last] === "passed"
     ) {
-      toast.info("Tap Continue to save this part to the editor first.")
+      toast.info(t.toastTapContinue)
       return
     }
     if (text.toLowerCase() === "test") {
@@ -741,6 +698,7 @@ export default function StoryCollab({
     mode,
     currentWritingSection,
     sectionGateStatus,
+    t,
   ])
 
   const handleNextSection = useCallback(() => {
@@ -748,7 +706,7 @@ export default function StoryCollab({
     if (idx < 0 || idx >= storyBlocks.length) return
     const merged = mergePadIntoSection(storyBlocks[idx].text, chatInput).trim()
     if (!merged) {
-      toast.error("Write something in the Writing Pad first.")
+      toast.error(t.toastNeedPad)
       return
     }
     setStoryBlocks((prev) => {
@@ -759,7 +717,7 @@ export default function StoryCollab({
     gatePassSnapshotRef.current[idx] = merged
     setChatInput("")
     setCurrentWritingSection((prev) => prev + 1)
-  }, [currentWritingSection, storyBlocks, chatInput])
+  }, [currentWritingSection, storyBlocks, chatInput, t])
 
   const handleReviseWrittenSection = useCallback(
     (targetIndex: number) => {
@@ -787,9 +745,9 @@ export default function StoryCollab({
       setCurrentWritingSection(targetIndex)
       setSectionGateStatus((prev) => ({ ...prev, [targetIndex]: "idle" }))
       delete gatePassSnapshotRef.current[targetIndex]
-      toast.info(`Revising ${storyBlocks[targetIndex].sectionName}. Edit it in the Writing Pad.`)
+      toast.info(t.toastRevising(sectionLabel(storyBlocks[targetIndex].sectionName)))
     },
-    [mode, currentWritingSection, storyBlocks, chatInput],
+    [mode, currentWritingSection, storyBlocks, chatInput, t, sectionLabel],
   )
 
   const handleLastSectionContinue = useCallback(() => {
@@ -797,7 +755,7 @@ export default function StoryCollab({
     if (idx < 0 || currentWritingSection !== idx) return
     const merged = mergePadIntoSection(storyBlocks[idx].text, chatInput).trim()
     if (!merged) {
-      toast.error("Write something in the Writing Pad first.")
+      toast.error(t.toastNeedPad)
       return
     }
     setStoryBlocks((prev) => {
@@ -808,7 +766,7 @@ export default function StoryCollab({
     gatePassSnapshotRef.current[idx] = merged
     setChatInput("")
     setSectionGateStatus((prev) => ({ ...prev, [idx]: "idle" }))
-  }, [currentWritingSection, storyBlocks, chatInput])
+  }, [currentWritingSection, storyBlocks, chatInput, t])
 
   const handleSuggestionClick = useCallback(
     (suggestion: string) => {
@@ -882,21 +840,21 @@ export default function StoryCollab({
   const handleFinishStory = useCallback(() => {
     const finalStory = (mode === "ai" ? composedStoryCommitted : composedStory).trim()
     if (!finalStory) {
-      toast.error("Please write something before finishing the story.")
+      toast.error(t.toastNeedWrite)
       return
     }
 
     if (!everySectionHasContentForFinish) {
-      toast.error("Please write something in every structure section before finishing the story.")
+      toast.error(t.toastNeedEverySection)
       return
     }
 
     syncStoryStateBeforeFinish()
 
     if (totalWords < 20) {
-      toast("Your story is quite short! Are you sure you want to finish?", {
+      toast(t.toastShortStory, {
         action: {
-          label: "Yes, finish!",
+          label: t.toastYesFinish,
           onClick: () => {
             syncStoryStateBeforeFinish()
             onStoryWrite((mode === "ai" ? composedStoryCommitted : composedStory).trim())
@@ -914,6 +872,7 @@ export default function StoryCollab({
     onStoryWrite,
     syncStoryStateBeforeFinish,
     everySectionHasContentForFinish,
+    t,
   ])
 
   /* ── Plot auto-callback ── */
@@ -926,13 +885,13 @@ export default function StoryCollab({
   /* ── Manual mode: confirm plot ── */
   const handleManualPlotConfirm = useCallback(() => {
     if (!plotData.setting || !plotData.conflict || !plotData.goal) {
-      toast.error("Please fill in all three plot fields.")
+      toast.error(t.toastNeedThreeFields)
       return
     }
     setManualPlotDone(true)
     onPlotCreate({ setting: plotData.setting, conflict: plotData.conflict, goal: plotData.goal })
     onPlotFinalize?.({ setting: plotData.setting, conflict: plotData.conflict, goal: plotData.goal })
-  }, [plotData, onPlotCreate, onPlotFinalize])
+  }, [plotData, onPlotCreate, onPlotFinalize, t])
 
   /* ── Render ── */
 
@@ -984,9 +943,10 @@ export default function StoryCollab({
       <div className="max-w-7xl mx-auto relative z-10">
         <StageHeader
           stage={2}
-          title="Write Your Story"
+          title={t.writeTitle}
           onBack={onBack}
           character={storyState.character?.name || undefined}
+          language={language}
         />
         {promptTestMode && (
           <div className="mt-4 pixel-panel p-3" style={{ background: "#e8c547", border: "4px solid #c4a020" }}>
@@ -1018,11 +978,11 @@ export default function StoryCollab({
                     }}>
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-xs font-bold" style={{ color: "#5a4a2a" }}>
-                          Now writing:{" "}
+                          {t.nowWriting}{" "}
                           <span style={{ color: "#3d5a1f" }}>
                             {currentWritingSection < storyBlocks.length
-                              ? storyBlocks[currentWritingSection].sectionName
-                              : "All done!"}
+                              ? sectionLabel(storyBlocks[currentWritingSection].sectionName)
+                              : t.allDone}
                           </span>
                         </span>
                         <span className="text-xs font-bold" style={{ color: "#6b5210" }}>
@@ -1033,7 +993,7 @@ export default function StoryCollab({
                         {storyBlocks.map((block, idx) => (
                           <div
                             key={block.sectionName}
-                            title={block.sectionName}
+                            title={sectionLabel(block.sectionName)}
                             className="flex-1 h-3 transition-all duration-300"
                             style={{
                               background: idx < currentWritingSection
@@ -1074,7 +1034,7 @@ export default function StoryCollab({
                             </p>
 
                             {msg.role === "assistant" && msg.revisionTags && msg.revisionTags.length > 0 && (
-                              <StoryRevisionTags tags={msg.revisionTags} />
+                              <StoryRevisionTags tags={msg.revisionTags} language={language} />
                             )}
 
                             {msg.role === "assistant" && msg.sectionPassed && (
@@ -1082,7 +1042,7 @@ export default function StoryCollab({
                                 className="mt-2 text-sm font-bold"
                                 style={{ color: "#3d5a1f" }}
                               >
-                                ✓ This part looks good — you can move on when you are ready!
+                                {t.sectionLooksGood}
                               </p>
                             )}
 
@@ -1125,8 +1085,8 @@ export default function StoryCollab({
                                   boxShadow: "3px 3px 0 rgba(0,0,0,0.2)"
                                 }}
                               >
-                                <h4 className="text-sm font-extrabold" style={{ color: "#5a4a2a" }}>{struct.name}</h4>
-                                <p className="mt-1 text-xs" style={{ color: "#6b5210" }}>{struct.desc}</p>
+                                <h4 className="text-sm font-extrabold" style={{ color: "#5a4a2a" }}>{getStructureLabel(struct.type, language, struct.name)}</h4>
+                                <p className="mt-1 text-xs" style={{ color: "#6b5210" }}>{getStructureDesc(struct.type, struct.desc, language)}</p>
                                 <div className="mt-2 flex flex-wrap gap-1">
                                   {struct.outline.map((step) => (
                                     <span
@@ -1138,7 +1098,7 @@ export default function StoryCollab({
                                         border: "2px solid #5a9a32"
                                       }}
                                     >
-                                      {step}
+                                      {sectionLabel(step)}
                                     </span>
                                   ))}
                                 </div>
@@ -1173,7 +1133,7 @@ export default function StoryCollab({
                           }}
                         >
                           <p className="mb-2 text-xs font-extrabold uppercase tracking-wider" style={{ color: "#6b5210" }}>
-                            Writing Pad
+                            {t.writingPad}
                           </p>
                           <Textarea
                             value={chatInput}
@@ -1187,9 +1147,9 @@ export default function StoryCollab({
                             placeholder={
                               currentWritingSection < storyBlocks.length
                                 ? currentWritingSection === storyBlocks.length - 1
-                                  ? `Last part (${storyBlocks[currentWritingSection].sectionName}): Finish! to submit. Fix the colored tags, then Finish! again. When you see the green check, tap Continue.`
-                                  : `Write your ${storyBlocks[currentWritingSection].sectionName} in the pad… Tap Finish! to get revision tags (hover / tap each tag). Revise and Finish! again until you can go to the next section.`
-                                : "Write the ending touch for your story..."
+                                  ? t.padLastPlaceholder(sectionLabel(storyBlocks[currentWritingSection].sectionName))
+                                  : t.padSectionPlaceholder(sectionLabel(storyBlocks[currentWritingSection].sectionName))
+                                : t.padEndingPlaceholder
                             }
                             disabled={isLoading}
                             className="min-h-[150px] resize-y pixel-input text-base leading-relaxed"
@@ -1204,7 +1164,7 @@ export default function StoryCollab({
                               disabled={isLoading}
                               className="w-full py-3 text-sm font-extrabold pixel-btn pixel-btn-blue"
                             >
-                              Choose story structure
+                              {t.chooseStructure}
                             </Button>
                           )}
                           <div className="flex gap-3">
@@ -1217,7 +1177,7 @@ export default function StoryCollab({
                                   handleSendChat()
                                 }
                               }}
-                              placeholder="Type your message… (or tap the button above)"
+                              placeholder={t.chatPlaceholder}
                               disabled={isLoading}
                               className="min-w-0 flex-1 pixel-input"
                             />
@@ -1234,7 +1194,7 @@ export default function StoryCollab({
                               onClick={handleHelpMe}
                               disabled={isLoading}
                               className="pixel-btn pixel-btn-wood"
-                              title="Get a creative idea!"
+                              title={t.helpMeTitle}
                             >
                               <Lightbulb className="h-4 w-4" />
                             </Button>
@@ -1249,14 +1209,14 @@ export default function StoryCollab({
                             disabled={isLoading || !chatInput.trim()}
                             className="flex-1 pixel-btn pixel-btn-green"
                           >
-                            Finish!
+                            {t.finish}
                           </Button>
                           <Button
                             type="button"
                             onClick={handleHelpMe}
                             disabled={isLoading}
                             className="pixel-btn pixel-btn-wood"
-                            title="Get a creative idea!"
+                            title={t.helpMeTitle}
                           >
                             <Lightbulb className="h-4 w-4" />
                           </Button>
@@ -1274,7 +1234,7 @@ export default function StoryCollab({
                             onClick={handleNextSection}
                             className="w-full text-xs pixel-btn pixel-btn-blue"
                           >
-                            Next Section: {storyBlocks[currentWritingSection + 1].sectionName}
+                            {t.nextSection(sectionLabel(storyBlocks[currentWritingSection + 1].sectionName))}
                           </Button>
                         </div>
                       )}
@@ -1289,7 +1249,7 @@ export default function StoryCollab({
                             onClick={handleLastSectionContinue}
                             className="w-full text-xs pixel-btn pixel-btn-blue"
                           >
-                            Continue
+                            {t.continueSection}
                           </Button>
                         </div>
                       )}
@@ -1312,7 +1272,7 @@ export default function StoryCollab({
                           border: "2px solid #f87171",
                         }}
                       >
-                        Please rewrite with safer and kinder words.
+                        {t.saferWords}
                       </div>
                     )}
                     <img
@@ -1325,50 +1285,50 @@ export default function StoryCollab({
               ) : (
                 /* ──── Manual mode: static guides ──── */
                 <div className="p-6 space-y-6" style={{ background: "#f5e6c8" }}>
-                  <h3 className="text-lg font-extrabold" style={{ color: "#5a4a2a", textShadow: "1px 1px 0 rgba(0,0,0,0.2)" }}>Plan Your Story</h3>
+                  <h3 className="text-lg font-extrabold" style={{ color: "#5a4a2a", textShadow: "1px 1px 0 rgba(0,0,0,0.2)" }}>{t.planYourStory}</h3>
 
                   {!manualPlotDone ? (
                     <div className="space-y-4">
                       <p className="text-sm font-bold" style={{ color: "#6b5210" }}>
-                        Fill in the three elements of your plot:
+                        {t.fillThree}
                       </p>
                       <div className="space-y-3">
                         <div>
-                          <label className="text-sm font-extrabold" style={{ color: "#5a4a2a" }}>Setting (where & when)</label>
+                          <label className="text-sm font-extrabold" style={{ color: "#5a4a2a" }}>{t.settingLabel}</label>
                           <Input
                             value={plotData.setting}
                             onChange={(e) => setPlotData((prev) => ({ ...prev, setting: e.target.value }))}
-                            placeholder="e.g. A magical forest at night"
+                            placeholder={t.settingPh}
                             className="pixel-input"
                           />
                         </div>
                         <div>
-                          <label className="text-sm font-extrabold" style={{ color: "#5a4a2a" }}>Conflict (the problem)</label>
+                          <label className="text-sm font-extrabold" style={{ color: "#5a4a2a" }}>{t.conflictLabel}</label>
                           <Input
                             value={plotData.conflict}
                             onChange={(e) => setPlotData((prev) => ({ ...prev, conflict: e.target.value }))}
-                            placeholder="e.g. A dragon stole the village's water"
+                            placeholder={t.conflictPh}
                             className="pixel-input"
                           />
                         </div>
                         <div>
-                          <label className="text-sm font-extrabold" style={{ color: "#5a4a2a" }}>Goal (what the hero wants)</label>
+                          <label className="text-sm font-extrabold" style={{ color: "#5a4a2a" }}>{t.goalLabel}</label>
                           <Input
                             value={plotData.goal}
                             onChange={(e) => setPlotData((prev) => ({ ...prev, goal: e.target.value }))}
-                            placeholder="e.g. Get the water back and befriend the dragon"
+                            placeholder={t.goalPh}
                             className="pixel-input"
                           />
                         </div>
                         <Button onClick={handleManualPlotConfirm} className="w-full pixel-btn pixel-btn-green">
-                          Confirm Plot
+                          {t.confirmPlot}
                         </Button>
                       </div>
                     </div>
                   ) : !selectedStructure ? (
                     <div className="space-y-4">
                       <p className="text-sm font-bold" style={{ color: "#6b5210" }}>
-                        Great plot! Now choose a story structure:
+                        {t.greatPlotChoose}
                       </p>
                       <div className="grid gap-3">
                         {STRUCTURES.map((struct) => (
@@ -1383,8 +1343,8 @@ export default function StoryCollab({
                               boxShadow: "3px 3px 0 rgba(0,0,0,0.2)"
                             }}
                           >
-                            <h4 className="text-sm font-extrabold" style={{ color: "#5a4a2a" }}>{struct.name}</h4>
-                            <p className="mt-1 text-xs" style={{ color: "#6b5210" }}>{struct.desc}</p>
+                            <h4 className="text-sm font-extrabold" style={{ color: "#5a4a2a" }}>{getStructureLabel(struct.type, language, struct.name)}</h4>
+                            <p className="mt-1 text-xs" style={{ color: "#6b5210" }}>{getStructureDesc(struct.type, struct.desc, language)}</p>
                             <div className="mt-2 flex flex-wrap gap-1">
                               {struct.outline.map((step) => (
                                 <span
@@ -1396,7 +1356,7 @@ export default function StoryCollab({
                                     border: "2px solid #5a9a32"
                                   }}
                                 >
-                                  {step}
+                                  {sectionLabel(step)}
                                 </span>
                               ))}
                             </div>
@@ -1408,10 +1368,10 @@ export default function StoryCollab({
                     <div className="space-y-3">
                       <div className="flex items-center gap-2" style={{ color: "#3d5a1f" }}>
                         <Check className="h-4 w-4" />
-                        <span className="text-sm font-bold">Plot & structure ready!</span>
+                        <span className="text-sm font-bold">{t.plotStructureReady}</span>
                       </div>
                       <p className="text-sm font-bold" style={{ color: "#6b5210" }}>
-                        Write your story in the editor on the right. Fill in each section and click &ldquo;Finish Story&rdquo; when you&apos;re done.
+                        {t.writeOnRight}
                       </p>
                     </div>
                   )}
@@ -1426,26 +1386,26 @@ export default function StoryCollab({
               <div className="p-6 space-y-4 min-w-0" style={{ background: "#f5e6c8" }}>
                 <h3 className="text-lg font-extrabold flex items-center gap-2" style={{ color: "#5a4a2a", textShadow: "1px 1px 0 rgba(0,0,0,0.2)" }}>
                   <Sparkles className="h-5 w-5" style={{ color: "#7ec850" }} />
-                  Story Editor
+                  {t.storyEditor}
                 </h3>
 
                 {/* Plot summary */}
                 {(plotData.setting || plotData.conflict || plotData.goal) && (
                   <div className="p-3 space-y-1" style={{ background: "#d4e8b4", border: "3px solid #5a9a32" }}>
-                    <h4 className="text-xs font-extrabold uppercase tracking-wider" style={{ color: "#3d5a1f" }}>Plot Summary</h4>
+                    <h4 className="text-xs font-extrabold uppercase tracking-wider" style={{ color: "#3d5a1f" }}>{t.plotSummary}</h4>
                     {plotData.setting && (
                       <p className="text-xs" style={{ color: "#5a4a2a" }}>
-                        <span className="font-bold">Setting:</span> {plotData.setting}
+                        <span className="font-bold">{t.settingShort}</span> {plotData.setting}
                       </p>
                     )}
                     {plotData.conflict && (
                       <p className="text-xs" style={{ color: "#5a4a2a" }}>
-                        <span className="font-bold">Problem:</span> {plotData.conflict}
+                        <span className="font-bold">{t.problemShort}</span> {plotData.conflict}
                       </p>
                     )}
                     {plotData.goal && (
                       <p className="text-xs" style={{ color: "#5a4a2a" }}>
-                        <span className="font-bold">Goal:</span> {plotData.goal}
+                        <span className="font-bold">{t.goalShort}</span> {plotData.goal}
                       </p>
                     )}
                   </div>
@@ -1459,7 +1419,7 @@ export default function StoryCollab({
                       color: "#2a5a7a",
                       border: "2px solid #5bc0de"
                     }}>
-                      {structureForDisplay.name}
+                      {getStructureLabel(structureForDisplay.type, language, structureForDisplay.name)}
                     </span>
                   </div>
                 )}
@@ -1477,17 +1437,17 @@ export default function StoryCollab({
                             <label className="text-xs font-bold uppercase tracking-wider" style={{
                               color: isDone ? "#3d5a1f" : isActive ? "#c4a020" : "#8b6914"
                             }}>
-                              {block.sectionName}
+                              {sectionLabel(block.sectionName)}
                             </label>
                             {isDone && <Check className="h-3 w-3" style={{ color: "#5a9a32" }} />}
-                            {isActive && <span className="text-[10px] font-bold" style={{ color: "#c4a020" }}>writing now</span>}
+                            {isActive && <span className="text-[10px] font-bold" style={{ color: "#c4a020" }}>{t.writingNow}</span>}
                           </div>
                           {mode === "ai" ? (
                             /* Click a finished section to revise it again */
                             <div
                               role={isDone && !isActive ? "button" : undefined}
                               tabIndex={isDone && !isActive ? 0 : undefined}
-                              title={isDone && !isActive ? "Revise again?" : undefined}
+                              title={isDone && !isActive ? t.reviseAgain : undefined}
                               onClick={() => {
                                 if (isDone && !isActive) handleReviseWrittenSection(index)
                               }}
@@ -1514,9 +1474,9 @@ export default function StoryCollab({
                               {block.text ||
                                 (isActive
                                   ? index === storyBlocks.length - 1
-                                    ? "Finish Story only counts text saved here. After Great job!, tap Continue to move your pad writing to this box."
-                                    : "Text stays in the Writing Pad until you tap Next Section."
-                                  : "Not written yet")}
+                                    ? t.padUntilNext
+                                    : t.padUntilNextMid
+                                  : t.notWritten)}
                               {isDone && !isActive && (
                                 <span
                                   className="pointer-events-none absolute left-1/2 top-2 z-10 -translate-x-1/2 rounded-md px-2 py-1 text-[11px] font-extrabold opacity-0 shadow-md transition-opacity group-hover:opacity-100"
@@ -1527,7 +1487,7 @@ export default function StoryCollab({
                                     whiteSpace: "nowrap",
                                   }}
                                 >
-                                  Revise again?
+                                  {t.reviseAgain}
                                 </span>
                               )}
                             </div>
@@ -1536,7 +1496,7 @@ export default function StoryCollab({
                             <Textarea
                               value={block.text}
                               onChange={(e) => handleStoryBlockChange(index, e.target.value)}
-                              placeholder={`Write the ${block.sectionName.toLowerCase()} of your story...`}
+                              placeholder={t.writeSectionPh(sectionLabel(block.sectionName))}
                               className="min-h-[80px] resize-none pixel-input text-sm"
                             />
                           )}
@@ -1547,18 +1507,18 @@ export default function StoryCollab({
                 ) : (
                   <div className="flex items-center justify-center h-[200px] text-sm font-bold" style={{ color: "#8b6914" }}>
                     {selectedStructure
-                      ? "Loading sections..."
-                      : "Talk with the AI to summarize your plot."}
+                      ? t.loadingSections
+                      : t.talkToSummarize}
                   </div>
                 )}
 
                 {/* Footer stats + Finish */}
                 <div className="flex items-center justify-between pt-2" style={{ borderTop: "3px solid #8b6914" }}>
                   <div className="text-xs font-bold" style={{ color: "#6b5210" }}>
-                    Words: <span style={{ color: "#5a4a2a" }}>{totalWords}</span>
+                    {t.words} <span style={{ color: "#5a4a2a" }}>{totalWords}</span>
                     {storyBlocks.length > 0 && (
                       <>
-                        {" | "}Sections: <span style={{ color: "#5a4a2a" }}>{sectionsProgressCount}/{storyBlocks.length}</span>
+                        {" | "}{t.sections} <span style={{ color: "#5a4a2a" }}>{sectionsProgressCount}/{storyBlocks.length}</span>
                       </>
                     )}
                   </div>
@@ -1569,7 +1529,7 @@ export default function StoryCollab({
                     className="pixel-btn pixel-btn-green"
                   >
                     <Sparkles className="h-4 w-4 mr-1" />
-                    Finish Story
+                    {t.finishStory}
                   </Button>
                 </div>
 
