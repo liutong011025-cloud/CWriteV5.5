@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { BackButton } from "@/components/ui/back-button"
 import type { Language } from "@/app/page"
 import Image from "next/image"
+import { getJourneyTicketCopy } from "@/lib/story-i18n"
 
 export type JourneyType = "story" | "bookReview" | "letter" | "drama" | "poetry"
 
@@ -19,11 +20,11 @@ interface JourneyTicketProps {
 }
 
 const journeyOptions = [
-  { id: "story" as const, title: "Story", icon: "📖", accent: "#c4a574", border: "#8b6914" },
-  { id: "bookReview" as const, title: "Book Review", icon: "📝", accent: "#87ceeb", border: "#3a8aa3" },
-  { id: "letter" as const, title: "Letter", icon: "✉️", accent: "#7ec850", border: "#3d8a3d" },
-  { id: "drama" as const, title: "Drama", icon: "🎭", accent: "#e8c547", border: "#a58b3d" },
-  { id: "poetry" as const, title: "Poetry", icon: "🪶", accent: "#dda0dd", border: "#9932cc" },
+  { id: "story" as const, icon: "📖", accent: "#c4a574", border: "#8b6914" },
+  { id: "bookReview" as const, icon: "📝", accent: "#87ceeb", border: "#3a8aa3" },
+  { id: "letter" as const, icon: "✉️", accent: "#7ec850", border: "#3d8a3d" },
+  { id: "drama" as const, icon: "🎭", accent: "#e8c547", border: "#a58b3d" },
+  { id: "poetry" as const, icon: "🪶", accent: "#dda0dd", border: "#9932cc" },
 ]
 
 const TICKET = {
@@ -38,6 +39,7 @@ const TICKET = {
 }
 
 export default function JourneyTicket({
+  language = "en",
   userName,
   level,
   score,
@@ -45,6 +47,7 @@ export default function JourneyTicket({
   onBack,
   onRetest,
 }: JourneyTicketProps) {
+  const t = getJourneyTicketCopy(language)
   const [selectedType, setSelectedType] = useState<JourneyType | null>(null)
   const [difficulty, setDifficulty] = useState<number | null>(null)
   const [isDeparting, setIsDeparting] = useState(false)
@@ -53,19 +56,21 @@ export default function JourneyTicket({
   const [showStamp, setShowStamp] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
 
+  const typeTitle = (id: JourneyType) => t.types[id]
+
   const notice = useMemo(() => {
     if (!difficulty) return ""
     const gap = difficulty - level
     if (gap < 0) {
-      if (Math.abs(gap) >= 3) return "This looks much easier than your level. Want a bigger challenge?"
-      return "This might be a little too easy. Want a bigger challenge?"
+      if (Math.abs(gap) >= 3) return t.noticeEasierMuch
+      return t.noticeEasier
     }
     if (gap > 0) {
-      if (gap >= 3) return "This looks much harder than your level. You can try, but it may be tough."
-      return "This might be a bit challenging. Are you sure you want to try it?"
+      if (gap >= 3) return t.noticeHarderMuch
+      return t.noticeHarder
     }
-    return "Great match for your current level."
-  }, [difficulty, level])
+    return t.noticeMatch
+  }, [difficulty, level, t])
 
   const handleStart = () => {
     if (!selectedType || !difficulty) return
@@ -100,17 +105,17 @@ export default function JourneyTicket({
         className="relative z-10 min-h-screen px-4 md:px-8 xl:px-14 py-8 md:py-10"
         style={{ paddingTop: "var(--stage-top-padding)", paddingBottom: "var(--stage-bottom-padding)" }}
       >
-        {onBack && <BackButton onClick={onBack} variant="purple" aria-label="Back to Map" />}
+        {onBack && <BackButton onClick={onBack} variant="purple" aria-label={t.backToMap} />}
 
         <div className="mb-5 md:mb-6 text-center max-w-4xl mx-auto">
           <h1
             className="text-3xl md:text-4xl xl:text-5xl font-black mb-2 pixel-title"
             style={{ color: "#8b6914", textShadow: "3px 3px 0 #6b5210, 4px 4px 0 rgba(0,0,0,0.15)" }}
           >
-            Your Journey Ticket
+            {t.title}
           </h1>
           <p className="text-sm md:text-base pixel-text" style={{ color: "#5a4a2a" }}>
-            Pick a writing type on your boarding pass, set difficulty, then depart.
+            {t.subtitle}
           </p>
         </div>
 
@@ -134,7 +139,7 @@ export default function JourneyTicket({
                   className="text-base md:text-lg uppercase tracking-[0.15em] font-bold px-3 py-1.5 pixel-chip"
                   style={{ color: TICKET.label, background: "#e8d4a8" }}
                 >
-                  Boarding Pass
+                  {t.boardingPass}
                 </span>
                 <span className="text-base md:text-lg uppercase tracking-widest font-bold pixel-text" style={{ color: TICKET.muted }}>
                   CW · LUNA AIR
@@ -166,7 +171,7 @@ export default function JourneyTicket({
                   />
                   <div className="absolute inset-0 flex items-center justify-center">
                     <span className="text-xl md:text-2xl font-extrabold pixel-text" style={{ color: TICKET.label }}>
-                      Lv {difficulty}
+                      {t.stampLevel(difficulty)}
                     </span>
                   </div>
                 </div>
@@ -179,7 +184,7 @@ export default function JourneyTicket({
                   <div className="ticket-firework" />
                   <div className="ticket-firework ticket-firework-delayed" />
                   <div className="ticket-firework-label">
-                    {selectedType ? journeyOptions.find((o) => o.id === selectedType)?.title : "Journey"}
+                    {selectedType ? typeTitle(selectedType) : t.journey}
                   </div>
                 </div>
               </div>
@@ -196,7 +201,7 @@ export default function JourneyTicket({
                   className="text-lg md:text-xl uppercase tracking-widest font-bold pixel-text text-center"
                   style={{ color: TICKET.label }}
                 >
-                  Pick Journey
+                  {t.pickJourney}
                 </p>
                 <div className="flex flex-row md:flex-col gap-2 md:gap-2.5 w-full overflow-x-auto md:overflow-visible pb-1 md:pb-0">
                   {journeyOptions.map((option, idx) => {
@@ -232,7 +237,7 @@ export default function JourneyTicket({
                             {option.icon}
                           </span>
                           <span className="text-xs md:text-sm font-extrabold text-white pixel-text text-center leading-tight">
-                            {option.title}
+                            {typeTitle(option.id)}
                           </span>
                         </div>
                       </div>
@@ -248,10 +253,10 @@ export default function JourneyTicket({
                   }}
                 >
                   <p className="text-sm md:text-base font-extrabold pixel-text leading-snug" style={{ color: TICKET.label }}>
-                    Drag to stamp →
+                    {t.dragToStamp}
                   </p>
                   <p className="text-xs md:text-sm font-semibold pixel-text mt-1" style={{ color: TICKET.muted }}>
-                    or tap a type
+                    {t.orTap}
                   </p>
                 </div>
               </div>
@@ -278,7 +283,7 @@ export default function JourneyTicket({
                 <div className="grid sm:grid-cols-3 gap-4 md:gap-6 mb-4 md:mb-5">
                   <div>
                     <p className="text-base md:text-lg uppercase tracking-widest font-bold pixel-text mb-1" style={{ color: TICKET.label }}>
-                      Passenger
+                      {t.passenger}
                     </p>
                     <p className="text-2xl md:text-3xl xl:text-4xl font-bold pixel-text truncate leading-tight" style={{ color: TICKET.value }}>
                       {userName}
@@ -286,14 +291,14 @@ export default function JourneyTicket({
                   </div>
                   <div>
                     <p className="text-base md:text-lg uppercase tracking-widest font-bold pixel-text mb-1" style={{ color: TICKET.label }}>
-                      Writing Level
+                      {t.writingLevel}
                     </p>
                     <p className="text-2xl md:text-3xl xl:text-4xl font-bold pixel-text leading-tight" style={{ color: TICKET.accent }}>
-                      Level {level}
+                      {t.levelN(level)}
                     </p>
                     <div className="flex items-center gap-2 flex-wrap mt-1">
                       <p className="text-base md:text-lg pixel-text font-semibold" style={{ color: TICKET.muted }}>
-                        Score {score}/7
+                        {t.scoreN(score)}
                       </p>
                       {onRetest && (
                         <button
@@ -301,26 +306,26 @@ export default function JourneyTicket({
                           className="px-4 py-1.5 text-sm md:text-base font-bold text-white pixel-btn pixel-btn-blue"
                           onClick={onRetest}
                         >
-                          Retest
+                          {t.retest}
                         </button>
                       )}
                     </div>
                   </div>
                   <div>
                     <p className="text-base md:text-lg uppercase tracking-widest font-bold pixel-text mb-1" style={{ color: TICKET.label }}>
-                      Journey
+                      {t.journey}
                     </p>
                     <p className="text-2xl md:text-3xl xl:text-4xl font-bold pixel-text leading-tight" style={{ color: TICKET.value }}>
-                      {selectedType ? journeyOptions.find((o) => o.id === selectedType)?.title : "—"}
+                      {selectedType ? typeTitle(selectedType) : "—"}
                     </p>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-3 gap-3 md:gap-4 mb-4 md:mb-5">
                   {[
-                    ["Flight", "YL-2024"],
-                    ["Gate", "LUNA"],
-                    ["Seat", "A1"],
+                    [t.flight, "YL-2024"],
+                    [t.gate, "LUNA"],
+                    [t.seat, "A1"],
                   ].map(([label, val]) => (
                     <div
                       key={label}
@@ -344,7 +349,7 @@ export default function JourneyTicket({
                 <div className="flex flex-col lg:flex-row gap-5 lg:gap-6 lg:items-stretch">
                   <div className="flex-1 min-w-0 flex flex-col">
                     <p className="text-sm md:text-base uppercase tracking-widest font-bold mb-2.5 pixel-text" style={{ color: TICKET.label }}>
-                      Choose Difficulty
+                      {t.chooseDifficulty}
                     </p>
                     <div className="flex flex-wrap gap-2.5 md:gap-3">
                       {[1, 2, 3, 4, 5].map((value) => (
@@ -374,11 +379,11 @@ export default function JourneyTicket({
                         className="w-full pixel-btn pixel-btn-green text-lg md:text-xl xl:text-2xl font-bold py-4 md:py-5 disabled:opacity-50 disabled:cursor-not-allowed"
                         style={{ borderRadius: 0, textShadow: "2px 2px 0 rgba(0,0,0,0.3)" }}
                       >
-                        ✈️ Start
+                        {t.start}
                       </Button>
                       {(!selectedType || !difficulty) && (
                         <p className="mt-2 text-center text-sm md:text-base font-semibold pixel-text" style={{ color: TICKET.muted }}>
-                          {!selectedType ? "Pick a journey type and stamp it" : "Choose a difficulty level"}
+                          {!selectedType ? t.pickTypeHint : t.pickDifficultyHint}
                         </p>
                       )}
                     </div>
@@ -394,7 +399,7 @@ export default function JourneyTicket({
                   >
                     <div className="flex-1 lg:flex-none w-full text-center">
                       <p className="text-xs md:text-sm uppercase tracking-widest font-bold mb-2" style={{ color: TICKET.label }}>
-                        Boarding
+                        {t.boarding}
                       </p>
                       <div
                         className="h-11 md:h-12 mx-auto max-w-[180px]"
@@ -403,7 +408,7 @@ export default function JourneyTicket({
                         }}
                       />
                       <p className="mt-2 text-xs uppercase tracking-widest font-bold" style={{ color: TICKET.label }}>
-                        Code
+                        {t.code}
                       </p>
                       <p className="text-sm md:text-base font-bold pixel-text" style={{ color: TICKET.value }}>
                         CW-LUNA
@@ -412,7 +417,7 @@ export default function JourneyTicket({
 
                     <div className="flex flex-col items-center w-full">
                       <p className="text-sm md:text-base uppercase tracking-widest font-extrabold mb-2.5 pixel-text text-center" style={{ color: TICKET.label }}>
-                        Stamp Here
+                        {t.stampHere}
                       </p>
                       <div
                         className={`w-[88px] h-[88px] md:w-24 md:h-24 flex items-center justify-center text-center text-sm md:text-base font-bold transition-all ${
@@ -442,10 +447,10 @@ export default function JourneyTicket({
                       >
                         {selectedType ? (
                           <span className="pixel-text leading-tight px-2">
-                            {journeyOptions.find((o) => o.id === selectedType)?.title}
+                            {typeTitle(selectedType)}
                           </span>
                         ) : (
-                          <span className="pixel-text text-xs md:text-sm leading-snug px-1">Drop journey here</span>
+                          <span className="pixel-text text-xs md:text-sm leading-snug px-1">{t.dropHere}</span>
                         )}
                       </div>
                     </div>
