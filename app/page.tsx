@@ -1,3286 +1,784 @@
-"use client"
+"use client";
 
-import { useState, useEffect, useMemo, useCallback, useRef } from "react"
-import WelcomePage from "@/components/stages/welcome-page"
-import BookReviewWelcome from "@/components/stages/book-review-welcome"
-import CharacterCreation from "@/components/stages/character-creation"
-import CharacterCreationNoAi from "@/components/stages/character-creation-no-ai"
-import StoryChatbot from "@/components/stages/story-chatbot"
-import StoryCollab from "@/components/stages/story-collab"
-import PlotBrainstorm from "@/components/stages/plot-brainstorm"
-import PlotBrainstormNoAi from "@/components/stages/plot-brainstorm-no-ai"
-import StoryStructure from "@/components/stages/story-structure"
-import StoryStructureNoAi from "@/components/stages/story-structure-no-ai"
-import GuidedWriting from "@/components/stages/guided-writing"
-import GuidedWritingNoAi from "@/components/stages/guided-writing-no-ai"
-import StoryReview from "@/components/stages/story-review"
-import LoginPage from "@/components/auth/login-page"
-import Dashboard from "@/components/teacher/dashboard-v2"
-import JourneyTicket, { type JourneyType } from "@/components/stages/journey-ticket"
-import PlanTest from "@/components/stages/plan-test"
-import JourneyMap from "@/components/stages/journey-map"
-import WriteTypeSelection from "@/components/stages/write-type-selection"
-import BookReviewTypeSelection from "@/components/stages/book-review-type-selection"
-import BookSelection from "@/components/stages/book-selection"
-import BookSelectionNoAi from "@/components/stages/book-selection-no-ai"
-import BookReviewLoading from "@/components/stages/book-review-loading"
-import BookReviewWriting from "@/components/stages/book-review-writing"
-import BookReviewWritingNoAi from "@/components/stages/book-review-writing-no-ai"
-import BookReviewComplete from "@/components/stages/book-review-complete"
-import AboutPage from "@/components/stages/about-page"
-import GalleryPage from "@/components/stages/gallery-page"
-import UserProfilePage from "@/components/stages/user-profile-page"
-import UserSettingsPage from "@/components/stages/user-settings-page"
-import LevelBadge from "@/components/level-badge"
-import LetterAdventure from "@/components/stages/letter-adventure"
-import LetterGame from "@/components/stages/letter-game"
-import LetterGameNoAi from "@/components/stages/letter-game-no-ai"
-import LetterPuzzle from "@/components/stages/letter-puzzle"
-import LetterComplete from "@/components/stages/letter-complete"
-// ContinueWorksDialog removed: login now goes straight to home
-import StoryEdit from "@/components/stages/story-edit"
-import BookReviewEdit from "@/components/stages/book-review-edit"
-import LetterEdit from "@/components/stages/letter-edit"
-import DramaWriting from "@/components/stages/drama-writing"
-import PoetryWriting from "@/components/stages/poetry-writing"
-import ResearchRoom from "@/components/stages/research-room"
-import NavigationPage from "@/components/stages/navigation-page"
-import CopywritingToolbar from "@/components/copywriting-toolbar"
-import { useDramaStore } from "@/lib/drama-store"
-import { usePoetryStore } from "@/lib/poetry-store"
-import Cagent, { type CagentMood } from "@/components/cagent/Cagent"
-import RedFlashOverlay from "@/components/cagent/RedFlashOverlay"
-import {
-  buildContextSummary,
-  buildValuesCheckContent,
-  VALUES_CHECK_STAGES,
-} from "@/lib/cagent-context"
-import { toast } from "sonner"
-import { preloadGalleryData } from "@/lib/use-gallery-data"
-import { buildWritingMapTitle, getStoryWritingMapTitle, uniqueWritingMapTitle } from "@/lib/story-writing-map-title"
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { COURSES, getCourseMeta, getPrompts, normalizeRoom } from "@/lib/prompts";
+import { getSupabase, isSupabaseConfigured } from "@/lib/supabase";
+import { clearTeacherSession, listTeacherNames, loginTeacher, readTeacherSession, registerTeacher } from "@/lib/teacherAuth";
+const safeKey = (s) => s.trim().replace(/[.#$[\]/]/g, "_");
+const norm = (s) => s.trim().toLowerCase().replace(/\s+/g, " ");
 
-export type Language = "en" | "zh"
-
-export interface StoryState {
-  character: {
-    name: string
-    age: number
-    traits: string[]
-    description: string
-    imageUrl?: string
-    species?: string
-  } | null
-  plot: {
-    setting: string
-    conflict: string
-    goal: string
-  } | null
-  structure: {
-    type: "freytag" | "threeAct" | "fichtean"
-    outline: string[]
-    imageUrl?: string
-  } | null
-  story: string
+function statsFromAnswers(answers) {
+  const all = Object.values(answers).flat().map((x) => String(x).trim()).filter(Boolean);
+  const unique = new Set(all.map(norm));
+  const filled = Object.values(answers).filter((a) => (a || []).some((v) => String(v).trim())).length;
+  return { all, unique: unique.size, entries: all.length, filled };
 }
 
-export interface BookReviewState {
-  reviewType: "recommendation" | "critical" | "literary" | null
-  bookTitle: string | null
-  structure: {
-    type: "recommendation" | "critical" | "literary"
-    outline: string[]
-  } | null
-  review: string
-  bookCoverUrl?: string
-  bookSummary?: string
+function namedCount(vals) {
+  return (vals || []).filter((v) => String(v).trim()).length;
 }
 
-export interface LetterState {
-  recipient: string | null
-  occasion: string | null
-  guidance: string | null
-  readerImageUrl: string | null
-  sections: string[]
-  letter: string
-}
-
-interface WritingMetricsSnapshot {
-  vocabRichness: number
-  descriptiveAccuracy: number
-  logicalCoherence: number
-}
-
-interface WritingAssessment {
-  score: number
-  level: number
-  mapImageStatus: "idle" | "loading" | "ready" | "error"
-}
-
-export type MapWorkType = "story" | "review" | "letter" | "drama" | "poetry"
-
-type ValuesGrowthDiagnostics = {
-  code?: string
-  title?: string
-  detail?: string
-  tips?: string[]
-  missingEnv?: string[]
-}
-
-export interface MapFlagItem {
-  id: string
-  x: number
-  y: number
-  title: string
-  content?: string
-  workType?: MapWorkType
-}
-
-interface PersistedMapState {
-  mapImageUrl?: string
-  mapFlags: MapFlagItem[]
-  currentPin: { x: number; y: number } | null
-  /** First pin placement for this chapter — kept after map updates clear currentPin */
-  journeyStartPin?: { x: number; y: number } | null
-  journeySelection: { type: JourneyType; difficulty: number } | null
-  journeyActive: boolean
-  levelBadgeUnlocked: boolean
-}
-
-const getMapStateKey = (username: string) => `cwriteMapState:${username}`
-const getPlanTestResultKey = (username: string) => `cwritePlanTestResult:${username}`
-
-const getChapterBaseMapImageUrl = (chapterIndex: number) => {
-  return chapterIndex <= 0 ? "/firstmap.webp" : "/secondmap.webp"
-}
-
-const isChapterBaseMapImageUrl = (url?: string | null) => {
-  const trimmed = (url || "").trim()
-  return !trimmed || trimmed === "/firstmap.webp" || trimmed === "/secondmap.webp"
-}
-
-/** Prefer the latest AI-edited map URL; fall back to static chapter base only when none exists. */
-const pickBestPreviousMapImageUrl = (
-  liveUrl: string | undefined,
-  chapterUrl: string | undefined,
-  chapterIndex: number,
-) => {
-  const candidates = [liveUrl, chapterUrl].filter((u): u is string => Boolean(u?.trim()))
-  for (const url of candidates) {
-    if (!isChapterBaseMapImageUrl(url)) return url
-  }
-  return candidates[0] || getChapterBaseMapImageUrl(chapterIndex)
-}
-
-interface PersistedMapChaptersState {
-  activeChapterIndex?: number
-  chapters?: PersistedMapState[]
-}
-
-const pickJourneyStartPin = (state: Partial<PersistedMapState>): { x: number; y: number } | null => {
-  if (
-    state.journeyStartPin &&
-    typeof state.journeyStartPin.x === "number" &&
-    typeof state.journeyStartPin.y === "number"
-  ) {
-    return state.journeyStartPin
-  }
-  if (state.currentPin && typeof state.currentPin.x === "number" && typeof state.currentPin.y === "number") {
-    return state.currentPin
-  }
-  const first = state.mapFlags?.[0]
-  if (first && typeof first.x === "number" && typeof first.y === "number") {
-    return { x: first.x, y: first.y }
-  }
-  return null
-}
-
-const normalizeMapState = (raw: unknown): Partial<PersistedMapState> => {
-  if (!raw || typeof raw !== "object") return {}
-  const parsed = raw as Partial<PersistedMapState>
-  const safe: Partial<PersistedMapState> = {}
-
-  if (typeof parsed.mapImageUrl === "string" && parsed.mapImageUrl.trim()) {
-    safe.mapImageUrl = parsed.mapImageUrl
-  }
-  if (Array.isArray(parsed.mapFlags)) {
-    safe.mapFlags = parsed.mapFlags
-      .filter((f) => f && typeof f.id === "string")
-      .map((f) => {
-        const item: MapFlagItem = {
-          id: f.id,
-          x: typeof f.x === "number" ? f.x : 50,
-          y: typeof f.y === "number" ? f.y : 50,
-          title: typeof f.title === "string" ? f.title : "Journey",
-        }
-        if (typeof (f as MapFlagItem).content === "string") item.content = (f as MapFlagItem).content
-        if (["story", "review", "letter", "drama", "poetry"].includes((f as MapFlagItem).workType as string)) {
-          item.workType = (f as MapFlagItem).workType
-        }
-        return item
-      })
-  }
-  if (parsed.currentPin && typeof parsed.currentPin.x === "number" && typeof parsed.currentPin.y === "number") {
-    safe.currentPin = parsed.currentPin
-  }
-  if (
-    parsed.journeyStartPin &&
-    typeof parsed.journeyStartPin.x === "number" &&
-    typeof parsed.journeyStartPin.y === "number"
-  ) {
-    safe.journeyStartPin = parsed.journeyStartPin
-  }
-  if (
-    parsed.journeySelection &&
-    typeof parsed.journeySelection.difficulty === "number" &&
-    typeof parsed.journeySelection.type === "string"
-  ) {
-    safe.journeySelection = parsed.journeySelection
-  }
-  if (typeof parsed.journeyActive === "boolean") {
-    safe.journeyActive = parsed.journeyActive
-  }
-  if (typeof parsed.levelBadgeUnlocked === "boolean") {
-    safe.levelBadgeUnlocked = parsed.levelBadgeUnlocked
-  }
-  return safe
-}
-
-const normalizeMapChaptersState = (
-  raw: unknown,
-): {
-  activeChapterIndex: number
-  chapters: PersistedMapState[]
-} => {
-  const defaults: PersistedMapState = {
-    mapImageUrl: getChapterBaseMapImageUrl(0),
-    mapFlags: [],
-    currentPin: null,
-    journeyStartPin: null,
-    journeySelection: null,
-    journeyActive: false,
-    levelBadgeUnlocked: false,
-  }
-
-  if (!raw || typeof raw !== "object") {
-    return { activeChapterIndex: 0, chapters: [defaults] }
-  }
-
-  const parsed = raw as PersistedMapChaptersState & Partial<PersistedMapState>
-  const activeChapterIndex = Number.isFinite(Number(parsed.activeChapterIndex)) ? Math.max(0, Math.floor(Number(parsed.activeChapterIndex))) : 0
-
-  if (Array.isArray(parsed.chapters)) {
-    const chapters = parsed.chapters.map((c, idx) => {
-      const safe = normalizeMapState(c)
-      return {
-        mapImageUrl: typeof safe.mapImageUrl === "string" ? safe.mapImageUrl : getChapterBaseMapImageUrl(idx),
-        mapFlags: safe.mapFlags ?? [],
-        currentPin: safe.currentPin ?? null,
-        journeyStartPin: pickJourneyStartPin(safe),
-        journeySelection: safe.journeySelection ?? null,
-        journeyActive: typeof safe.journeyActive === "boolean" ? safe.journeyActive : false,
-        levelBadgeUnlocked: typeof safe.levelBadgeUnlocked === "boolean" ? safe.levelBadgeUnlocked : false,
-      } satisfies PersistedMapState
-    })
-
-    return {
-      activeChapterIndex: Math.min(activeChapterIndex, Math.max(0, chapters.length - 1)),
-      chapters: chapters.length > 0 ? chapters : [defaults],
-    }
-  }
-
-  const safe = normalizeMapState(raw)
-  const chapter0: PersistedMapState = {
-    mapImageUrl: typeof safe.mapImageUrl === "string" ? safe.mapImageUrl : getChapterBaseMapImageUrl(0),
-    mapFlags: safe.mapFlags ?? [],
-    currentPin: safe.currentPin ?? null,
-    journeyStartPin: pickJourneyStartPin(safe),
-    journeySelection: safe.journeySelection ?? null,
-    journeyActive: typeof safe.journeyActive === "boolean" ? safe.journeyActive : false,
-    levelBadgeUnlocked: typeof safe.levelBadgeUnlocked === "boolean" ? safe.levelBadgeUnlocked : false,
-  }
-
-  return { activeChapterIndex: 0, chapters: [chapter0] }
-}
-
-const getTreesStateKey = (username: string) => `cwriteTreesState:${username}`
-const RESUME_KEY = (username: string) => `cwriteJourneyResume:${username}`
-const VALUES_DIMENSION_COUNT = 12
-const VALUES_DIMENSION_NAMES = [
-  "Perseverance",
-  "Respect for Others",
-  "Responsibility",
-  "National Identity",
-  "Commitment",
-  "Integrity",
-  "Benevolence",
-  "Law-abidingness",
-  "Empathy",
-  "Diligence",
-  "Filial Piety",
-  "Unity",
-] as const
-
-const normalizeTreeStage = (stage: number) => {
-  if (stage >= 4) return 4
-  if (stage >= 3) return 3
-  return 2
-}
-
-const buildStoryPlotSummary = (
-  character: StoryState["character"],
-  plot: StoryState["plot"] | null,
-) => {
-  if (!plot) return ""
-  return [
-    character?.name ? `Character: ${character.name}` : "",
-    character?.species ? `Species: ${character.species}` : "",
-    plot.setting ? `Setting: ${plot.setting}` : "",
-    plot.conflict ? `Conflict: ${plot.conflict}` : "",
-    plot.goal ? `Goal: ${plot.goal}` : "",
-  ]
-    .filter(Boolean)
-    .join("\n")
-}
-
-const buildStoryStructureMapPrompt = (
-  character: StoryState["character"],
-  plot: NonNullable<StoryState["plot"]>,
-  structureType: string,
-  options?: { freePlacement?: boolean },
-) => {
-  const species = character?.species?.trim() || "story character"
-  const name = character?.name?.trim() || "hero"
-  return [
-    options?.freePlacement
-      ? "Keep ALL existing map art. Place the tiny new hint anywhere that fits — do not target a pin or coordinate."
-      : "Keep ALL existing map art. Micro-edit only at the pin.",
-    "New marks must be pin-head sized or smaller — never large buildings or trees.",
-    `Tiny hints only: ${plot.setting || "place"}, ${plot.conflict || "trouble"}, ${plot.goal || "wish"}.`,
-    `${species} (${name}), structure ${structureType}.`,
-  ].join(" ")
-}
-
-const buildDramaMapSummary = (
-  scenes: Array<{ backgroundPrompt?: string; notes?: string }>,
-  dramaTitle: string,
-  fallbackText?: string,
-) => {
-  const backgrounds = scenes
-    .map((scene) => scene.backgroundPrompt?.trim())
-    .filter((prompt): prompt is string => Boolean(prompt))
-  const notes = scenes
-    .map((scene, index) => {
-      const note = scene.notes?.trim()
-      return note ? `Scene ${index + 1} notes: ${note}` : null
-    })
-    .filter((note): note is string => Boolean(note))
-
+function cardLook(idx, count) {
+  const hue = (idx * 47 + 12) % 360;
+  const lightness = Math.max(32, 90 - count * 11);
+  const saturation = Math.min(78, 48 + count * 7);
+  const borderLight = Math.max(22, lightness - 16);
   return {
-    topic: backgrounds[0] || dramaTitle || "Drama",
-    content: [
-      backgrounds.length > 0 ? `Drama backgrounds: ${backgrounds.join(" | ")}` : null,
-      ...notes,
-      fallbackText?.trim() ? fallbackText.trim() : null,
-    ]
-      .filter((item): item is string => Boolean(item))
-      .join("\n"),
-    mapPrompt: [
-      backgrounds.length > 0
-        ? `The new map update must primarily reflect these selected drama backgrounds: ${backgrounds.join("; ")}.`
-        : null,
-      notes.length > 0 ? `Subtly reflect these scene notes as environmental details: ${notes.join(" ; ")}.` : null,
-      "Do not focus mainly on the script text. Use the selected drama background information as the key source for the map evolution.",
-    ]
-      .filter((item): item is string => Boolean(item))
-      .join(" "),
-  }
+    background: `hsl(${hue} ${saturation}% ${lightness}%)`,
+    borderColor: `hsl(${hue} ${Math.min(85, saturation + 8)}% ${borderLight}%)`,
+    dark: lightness < 78,
+    darker: lightness < 52
+  };
 }
 
-const createDefaultValuesTrees = () =>
-  Array.from({ length: VALUES_DIMENSION_COUNT }, (_, i) => ({ id: i + 1, stage: 2 }))
-
-const normalizeValuesTrees = (rawTrees: { id: number; stage: number }[] | null | undefined) => {
-  if (!rawTrees || rawTrees.length === 0) return createDefaultValuesTrees()
-  const byId = new Map<number, { id: number; stage: number }>()
-  rawTrees.forEach((tree, idx) => {
-    const id = Number(tree?.id) || idx + 1
-    byId.set(id, { id, stage: normalizeTreeStage(Number(tree?.stage) || 2) })
-  })
-  return Array.from({ length: VALUES_DIMENSION_COUNT }, (_, i) => {
-    const id = i + 1
-    return byId.get(id) || { id, stage: 2 }
-  })
-}
-
-const readLocalTrees = (username: string) => {
-  if (typeof window === "undefined") return null
-  try {
-    const raw = localStorage.getItem(getTreesStateKey(username))
-    if (!raw) return null
-    const parsed = JSON.parse(raw) as { id: number; stage: number }[] | null
-    return Array.isArray(parsed) ? normalizeValuesTrees(parsed) : null
-  } catch {
-    return null
-  }
-}
-
-const writeLocalTrees = (username: string, trees: { id: number; stage: number }[]) => {
-  if (typeof window === "undefined") return
-  try {
-    localStorage.setItem(getTreesStateKey(username), JSON.stringify(normalizeValuesTrees(trees)))
-  } catch {
-    // ignore storage errors
-  }
-}
-
-/** 單次成長記錄：哪篇文章、類型、觸發成長的句子摘錄 */
-export type TreeGrowthDetail = {
-  workTitle: string
-  workType: "story" | "review" | "letter"
-  excerpt: string
-  triggerSentence?: string
-  overallEvidence?: string
-  reason?: string
-  timestamp: number
-}
-
-const TREE_GROWTH_DETAILS_KEY = (username: string) => `cwriteTreeGrowthDetails:${username}`
-
-function normalizeTreeGrowthDetails(raw: unknown): Record<number, TreeGrowthDetail[]> {
-  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {}
-  const out: Record<number, TreeGrowthDetail[]> = {}
-  Object.entries(raw as Record<string, unknown>).forEach(([k, arr]) => {
-    const id = Number(k)
-    if (Number.isFinite(id) && id >= 1 && id <= 12 && Array.isArray(arr)) {
-      out[id] = arr
-        .filter(
-          (x) => {
-            const workType = (x as { workType?: unknown }).workType
-            return (
-              !!x &&
-              typeof (x as { workTitle?: unknown }).workTitle === "string" &&
-              (workType === "story" || workType === "review" || workType === "letter") &&
-              typeof (x as { excerpt?: unknown }).excerpt === "string" &&
-              typeof (x as { timestamp?: unknown }).timestamp === "number"
-            )
-          }
-        )
-        .map((x) => ({
-          ...(x as TreeGrowthDetail),
-          triggerSentence:
-            typeof (x as { triggerSentence?: unknown }).triggerSentence === "string"
-              ? (x as { triggerSentence?: string }).triggerSentence
-              : undefined,
-          overallEvidence:
-            typeof (x as { overallEvidence?: unknown }).overallEvidence === "string"
-              ? (x as { overallEvidence?: string }).overallEvidence
-              : undefined,
-          reason:
-            typeof (x as { reason?: unknown }).reason === "string"
-              ? (x as { reason?: string }).reason
-              : undefined,
-        }))
-    }
-  })
-  return out
-}
-
-function readLocalTreeGrowthDetails(username: string): Record<number, TreeGrowthDetail[]> {
-  if (typeof window === "undefined") return {}
-  try {
-    const raw = localStorage.getItem(TREE_GROWTH_DETAILS_KEY(username))
-    if (!raw) return {}
-    return normalizeTreeGrowthDetails(JSON.parse(raw))
-  } catch {
-    return {}
-  }
-}
-
-type JourneyResumeSnapshot = {
-  username: string
-  savedAt: number
-  stage: string
-  journeySelection: { type: JourneyType; difficulty: number } | null
-  /** True only when this writing session started from a placed map pin. */
-  mapPinAnchored?: boolean
-  writingAssessment: WritingAssessment | null
-  storyState: StoryState
-  bookReviewState: BookReviewState
-  letterState: LetterState
-  editingWorkId: string | null
-  drama: {
-    scenes: unknown[]
-    characters: unknown[]
-    title: string
-    activeSceneIndex: number
-    dramaBook: unknown | null
-  }
-  poetry: {
-    form: unknown | null
-    topic: string
-    lines: unknown[]
-    aiLog: unknown[]
-    snapshots: unknown[]
-    aiUsageCount: number
-    maxAIUsage: number
-    showedOriginalityNotice: boolean
-    phase: string
-  }
-}
-
-function writeLocalTreeGrowthDetails(username: string, details: Record<number, TreeGrowthDetail[]>) {
-  if (typeof window === "undefined") return
-  try {
-    localStorage.setItem(TREE_GROWTH_DETAILS_KEY(username), JSON.stringify(details))
-  } catch {
-    // ignore
-  }
-}
-
-function hasTreeGrowthDetails(details: Record<number, TreeGrowthDetail[]> | null | undefined) {
-  return Object.values(details ?? {}).some((records) => Array.isArray(records) && records.length > 0)
-}
-
-function mergeTreeGrowthDetails(
-  current: Record<number, TreeGrowthDetail[]>,
-  matchedIds: number[],
-  payload: {
-    workTitle: string
-    workType: "story" | "review" | "letter"
-    excerpt: string
-    triggerSentence?: string
-    evidenceByDimension?: Record<number, { sentence?: string; overallEvidence?: string; reason?: string }>
-  }
-) {
-  const detail: TreeGrowthDetail = {
-    ...payload,
-    timestamp: Date.now(),
-  }
-  const next = { ...current }
-  matchedIds.forEach((id) => {
-    const list = next[id] ?? []
-    const evidence = payload.evidenceByDimension?.[id]
-    const evidenceSentence = (evidence?.sentence || "").trim()
-    const overallEvidence = (evidence?.overallEvidence || "").trim()
-    const evidenceReason = (evidence?.reason || "").trim()
-    if ((!evidenceSentence && !overallEvidence) || !evidenceReason) return
-    next[id] = [
-      ...list,
-      {
-        ...detail,
-        ...(evidenceSentence ? { triggerSentence: evidenceSentence } : {}),
-        ...(overallEvidence ? { overallEvidence } : {}),
-        reason: evidenceReason,
-      },
-    ]
-  })
-  return next
-}
-
-function getFirstSentenceOrExcerpt(text: string, maxLen = 180): string {
-  const trimmed = text.trim()
-  if (!trimmed) return ""
-  const match = trimmed.match(/^[^.!?]*[.!?]?/)
-  const first = match ? match[0].trim() : trimmed.slice(0, maxLen)
-  return first.length > maxLen ? first.slice(0, maxLen) + "…" : first
-}
-
-function getBestGrowthSentence(text: string, maxLen = 180): string {
-  const trimmed = text.trim()
-  if (!trimmed) return ""
-  const lines = trimmed
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter(Boolean)
-  const richLine = lines.find((line) => line.length >= 25) || lines[0] || trimmed
-  const sentenceMatch = richLine.match(/[^.!?。！？\n]+[.!?。！？]?/)
-  const sentence = sentenceMatch ? sentenceMatch[0].trim() : richLine
-  return sentence.length > maxLen ? `${sentence.slice(0, maxLen)}…` : sentence
-}
-
-type AppUser = {
-  username: string
-  role: "teacher" | "student"
-  noAi?: boolean
-  // 文案專用帳號（copywriting），用於開啟站內所有文字編輯與匯出功能
-  isCopywriter?: boolean
-}
-
-export default function Home() {
-  const [user, setUser] = useState<AppUser | null>(null)
-  const [stage, setStage] = useState<"login" | "home" | "planTest" | "journeyMap" | "journeyTicket" | "writeTypeSelection" | "bookReviewWelcome" | "bookReviewTypeSelection" | "bookSelection" | "bookSelectionNoAi" | "bookReviewLoading" | "bookReviewWriting" | "bookReviewComplete" | "bookReviewWritingNoAi" | "bookReviewCompleteNoAi" | "letterAdventure" | "letterGame" | "letterPuzzle" | "letterComplete" | "character" | "storyCollab" | "storyChatbot" | "plot" | "structure" | "writing" | "review" | "dashboard" | "about" | "aboutVision" | "aboutResearch" | "gallery" | "userProfile" | "userSettings" | "storyEdit" | "bookReviewEdit" | "letterEdit" | "dramaWriting" | "dramaBook" | "poetryWriting" | "poetryForm" | "poetryTopic" | "poetryEditor" | "poetryReview" | "research" | "navigation" | "otherFarm">("login")
-  const [language, setLanguage] = useState<Language>("en")
-  const [writingAssessment, setWritingAssessment] = useState<WritingAssessment | null>(null)
-  const [journeySelection, setJourneySelection] = useState<{ type: JourneyType; difficulty: number } | null>(null)
-  const [storyState, setStoryState] = useState<StoryState>({
-    character: null,
-    plot: null,
-    structure: null,
-    story: "",
-  })
-  const [bookReviewState, setBookReviewState] = useState<BookReviewState>({
-    reviewType: null,
-    bookTitle: null,
-    structure: null,
-    review: "",
-    bookCoverUrl: undefined,
-    bookSummary: undefined,
-  })
-
-  const [letterState, setLetterState] = useState<LetterState>({
-    recipient: null,
-    occasion: null,
-    guidance: null,
-    readerImageUrl: null,
-    sections: [],
-    letter: "",
-  })
-
-  const [showContinueDialog, setShowContinueDialog] = useState(false)
-  const [editingWorkId, setEditingWorkId] = useState<string | null>(null)
-  const [galleryFromEdit, setGalleryFromEdit] = useState<{ type: 'story' | 'review' | 'letter' } | null>(null)
-  const [selectedOtherFarmUser, setSelectedOtherFarmUser] = useState<string | null>(null)
-  const [planTestResult, setPlanTestResult] = useState<{ score: number; level: number } | null>(null)
-  const [cagentMood, setCagentMood] = useState<CagentMood>("normal")
-  const [valuesMessage, setValuesMessage] = useState<string | null>(null)
-  const [valuesSuggestion, setValuesSuggestion] = useState<string | null>(null)
-  const [redFlashActive, setRedFlashActive] = useState(false)
-  const valuesCheckTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const [levelBadgeUnlocked, setLevelBadgeUnlocked] = useState(false)
-  const [journeyActive, setJourneyActive] = useState(false)
-  const [currentPin, setCurrentPin] = useState<{ x: number; y: number } | null>(null)
-  const [journeyStartPin, setJourneyStartPin] = useState<{ x: number; y: number } | null>(null)
-  const [mapFlags, setMapFlags] = useState<MapFlagItem[]>([])
-  const [mapImageUrl, setMapImageUrl] = useState<string | undefined>(undefined)
-  const [activeMapChapterIndex, setActiveMapChapterIndex] = useState(0)
-  const [mapChapters, setMapChapters] = useState<PersistedMapState[]>([])
-  const mapStateHydratedRef = useRef(false)
-  const [mapStateHydrated, setMapStateHydrated] = useState(false)
-  const mapImageUrlRef = useRef<string | undefined>(undefined)
-  const mapUpdateInFlightRef = useRef(false)
-  const pendingMapUpdateRef = useRef<{
-    title: string
-    topic: string
-    mapPrompt?: string
-    summaryKey?: string
-    summaryValue?: Record<string, unknown>
-    content?: string
-    workType?: MapWorkType
-    source: string
-    skipNewFlag?: boolean
-  } | null>(null)
-  const structureMapTriggeredRef = useRef<string | null>(null)
-  const mapLocalUpdatedAtRef = useRef(0)
-  const pendingStoryFlagFinalizationRef = useRef<{ title: string; content: string } | null>(null)
-  /** Pin/title for the story flag — created only when the full story is finished. */
-  const pendingStoryMapPinRef = useRef<{ x: number; y: number; title: string } | null>(null)
-  /** 首次地圖迭代成功後會清空 currentPin；後續 Fal 請求仍用此座標 */
-  const lastJourneyPinRef = useRef<{ x: number; y: number } | null>(null)
-  /** Header New Writing 沒有插針：地圖仍迭代，但不帶座標、不插旗 */
-  const mapPinAnchoredRef = useRef(false)
-  const [pendingDramaMapTitle, setPendingDramaMapTitle] = useState<string | null>(null)
-  // 12 价值观维度小树：每棵 stage 2->3->4（最多成长两次）
-  const [trees, setTrees] = useState<{ id: number; stage: number }[] | null>(null)
-  // 上一次写作三指标，用于判断哪一项提升最大
-  const [lastMetrics, setLastMetrics] = useState<WritingMetricsSnapshot | null>(null)
-  // 最近一次长高的树，供 Profile 页面把所有实际成长的小树一起闪光
-  const [lastGrownTreeIds, setLastGrownTreeIds] = useState<number[]>([])
-  // 每棵樹的成長記錄（哪篇文章、哪句話讓它長高）
-  const [treeGrowthDetails, setTreeGrowthDetails] = useState<Record<number, TreeGrowthDetail[]>>({})
-  // 进入 farm 的次数：用于强制“闪光长大”动画每次都能重新触发
-  const [farmEntryNonce, setFarmEntryNonce] = useState(0)
-
-  // 每次切换到自己的 farm 都增加一次 nonce，确保闪光动画必定重新播放
-  useEffect(() => {
-    if (stage === "userProfile" && user?.username) {
-      setFarmEntryNonce((n: number) => n + 1)
-    }
-  }, [stage, user?.username])
+function BingoApp() {
+  const searchParams = useSearchParams();
+  const [view, setView] = useState("setup");
+  const [roomInput, setRoomInput] = useState("");
+  const [nameInput, setNameInput] = useState("");
+  const [roomCode, setRoomCode] = useState("");
+  const [studentName, setStudentName] = useState("");
+  const [answers, setAnswers] = useState({});
+  const [students, setStudents] = useState([]);
+  const [busy, setBusy] = useState(false);
+  const [passwordInput, setPasswordInput] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+  const [usernameInput, setUsernameInput] = useState("Nicole");
+  const [authMode, setAuthMode] = useState("login");
+  const [teacher, setTeacher] = useState(null);
+  const [teacherNames, setTeacherNames] = useState(["Nicole"]);
+  const [customCourses, setCustomCourses] = useState([]);
+  const [editCode, setEditCode] = useState("");
+  const [editBlurb, setEditBlurb] = useState("");
+  const [editPrompts, setEditPrompts] = useState([""]);
+  const [courseStats, setCourseStats] = useState({});
+  const channelRef = useRef(null);
+  const studentRef = useRef({ roomCode: "", studentName: "" });
+  const answersRef = useRef({});
 
   useEffect(() => {
-    if (stage === "home" && user) {
-      setStage("userProfile")
-    }
-  }, [stage, user])
+    studentRef.current = { roomCode, studentName };
+  }, [roomCode, studentName]);
 
   useEffect(() => {
-    if (typeof window === "undefined") return
+    answersRef.current = answers;
+  }, [answers]);
 
-    const resetScroll = () => {
-      window.scrollTo({ top: 0, behavior: "auto" })
-      document.documentElement.scrollTop = 0
-      document.body.scrollTop = 0
+  const mine = useMemo(() => statsFromAnswers(answers), [answers]);
+  const prompts = useMemo(
+    () => getPrompts(roomCode || roomInput, customCourses),
+    [roomCode, roomInput, customCourses]
+  );
+  const courseMeta = useMemo(
+    () => getCourseMeta(roomCode || roomInput, customCourses),
+    [roomCode, roomInput, customCourses]
+  );
 
-      const main = document.querySelector("main")
-      if (main instanceof HTMLElement) {
-        main.scrollTop = 0
-      }
+  const unsubscribe = useCallback(async () => {
+    const supabase = isSupabaseConfigured() ? getSupabase() : null;
+    if (channelRef.current && supabase) {
+      await supabase.removeChannel(channelRef.current);
+      channelRef.current = null;
     }
+  }, []);
 
-    resetScroll()
-    const rafId = window.requestAnimationFrame(resetScroll)
-    return () => window.cancelAnimationFrame(rafId)
-  }, [stage])
+  const persist = useCallback(async (nextAnswers) => {
+    const { roomCode: room, studentName: name } = studentRef.current;
+    if (!room || !name) return;
+    const s = statsFromAnswers(nextAnswers);
+    const { error } = await getSupabase()
+      .from("students")
+      .update({
+        display_name: name,
+        answers: nextAnswers,
+        unique_count: s.unique,
+        entry_count: s.entries,
+        filled_count: s.filled,
+        last_active: new Date().toISOString()
+      })
+      .eq("room_code", normalizeRoom(room))
+      .eq("student_key", safeKey(name));
+    if (error) throw error;
+  }, []);
 
-  // 自动记录“上次旅程进度”，用于首页 Continue past journey 一键恢复
-  useEffect(() => {
-    if (!user?.username || typeof window === "undefined") return
-    if (["login", "home", "dashboard", "userProfile", "otherFarm", "navigation", "userSettings"].includes(stage)) return
-    const save = () => {
-      try {
-        const dramaState = useDramaStore.getState()
-        const poetryState = usePoetryStore.getState()
-        const snap: JourneyResumeSnapshot = {
-          username: user.username,
-          savedAt: Date.now(),
-          stage,
-          journeySelection,
-          mapPinAnchored: mapPinAnchoredRef.current,
-          writingAssessment: writingAssessment ?? null,
-          storyState,
-          bookReviewState,
-          letterState,
-          editingWorkId,
-          drama: {
-            scenes: dramaState.scenes as unknown[],
-            characters: dramaState.characters as unknown[],
-            title: dramaState.title,
-            activeSceneIndex: dramaState.activeSceneIndex,
-            dramaBook: dramaState.dramaBook as unknown,
+  const loadRoom = useCallback(async (room) => {
+    const want = normalizeRoom(room);
+    const { data, error } = await getSupabase()
+      .from("students")
+      .select("display_name, answers, unique_count, entry_count, filled_count, room_code")
+      .order("unique_count", { ascending: false });
+    if (error) throw error;
+    setStudents((data || []).filter((row) => normalizeRoom(row.room_code) === want));
+  }, []);
+
+  const subscribeRoom = useCallback(async (room, onChange, filter) => {
+    await unsubscribe();
+    const query = { event: "*", schema: "public", table: "students" };
+    if (filter) query.filter = filter;
+    const channel = getSupabase()
+      .channel(`room:${room}:${filter || "all"}`)
+      .on("postgres_changes", query, onChange)
+      .subscribe();
+    channelRef.current = channel;
+  }, [unsubscribe]);
+
+  const loadCustomCourses = useCallback(async () => {
+    const { data, error } = await getSupabase()
+      .from("courses")
+      .select("id, code, title, blurb, intro_title, instructions, closing, prompts, created_by")
+      .order("created_at", { ascending: true });
+    if (error) {
+      console.error(error);
+      setCustomCourses([]);
+      return;
+    }
+    setCustomCourses(data || []);
+  }, []);
+
+  const loadCourses = useCallback(async () => {
+    const { data, error } = await getSupabase()
+      .from("students")
+      .select("room_code, unique_count, entry_count");
+    if (error) throw error;
+    const next = {};
+    for (const row of data || []) {
+      const code = normalizeRoom(row.room_code);
+      if (!code) continue;
+      if (!next[code]) next[code] = { students: 0, entries: 0, uniqueSum: 0 };
+      next[code].students += 1;
+      next[code].entries += +row.entry_count || 0;
+      next[code].uniqueSum += +row.unique_count || 0;
+    }
+    setCourseStats(next);
+  }, []);
+
+  const showCoursePicker = useCallback(async () => {
+    if (!isSupabaseConfigured()) return alert("Supabase is not configured yet.");
+    setBusy(true);
+    try {
+      setView("teacherCourses");
+      await Promise.all([loadCourses(), loadCustomCourses()]);
+      await subscribeRoom("all-courses", () => {
+        loadCourses().catch(console.error);
+        loadCustomCourses().catch(console.error);
+      });
+    } catch (err) {
+      console.error(err);
+      alert(err.message || "Could not load courses.");
+    } finally {
+      setBusy(false);
+    }
+  }, [loadCourses, loadCustomCourses, subscribeRoom]);
+
+  const joinRoom = useCallback(async () => {
+    const room = normalizeRoom(roomInput);
+    const name = nameInput.trim();
+    if (!room || !name) return alert("Enter room code and your name.");
+    if (!isSupabaseConfigured()) return alert("Supabase is not configured. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.");
+    setBusy(true);
+    try {
+      localStorage.setItem("hb_room", room);
+      localStorage.setItem("hb_student", name);
+      const { data, error } = await getSupabase()
+        .from("students")
+        .upsert(
+          {
+            room_code: room,
+            student_key: safeKey(name),
+            display_name: name,
+            last_active: new Date().toISOString()
           },
-          poetry: {
-            form: poetryState.form as unknown,
-            topic: poetryState.topic,
-            lines: poetryState.lines as unknown[],
-            aiLog: poetryState.aiLog as unknown[],
-            snapshots: poetryState.snapshots as unknown[],
-            aiUsageCount: poetryState.aiUsageCount,
-            maxAIUsage: poetryState.maxAIUsage,
-            showedOriginalityNotice: poetryState.showedOriginalityNotice,
-            phase: poetryState.phase,
-          },
-        }
-        localStorage.setItem(RESUME_KEY(user.username), JSON.stringify(snap))
-      } catch {
-        // ignore storage errors
-      }
-    }
-    const t = window.setTimeout(save, 350)
-    return () => window.clearTimeout(t)
-  }, [
-    user?.username,
-    stage,
-    journeySelection,
-    writingAssessment,
-    storyState,
-    bookReviewState,
-    letterState,
-    editingWorkId,
-  ])
-
-  const continuePastJourney = useCallback(async () => {
-    if (!user?.username || typeof window === "undefined") return
-    const username = user.username
-
-    // 1) 优先：恢复“上次退出的页面快照”（最符合“从哪个页面退出就回到哪个页面”）
-    try {
-      const raw = localStorage.getItem(RESUME_KEY(username))
-      if (!raw) {
-        throw new Error("no_local_snapshot")
-      }
-      const snap = JSON.parse(raw) as JourneyResumeSnapshot
-      if (!snap || snap.username !== username || !snap.stage) {
-        throw new Error("invalid_local_snapshot")
-      }
-      setJourneySelection(snap.journeySelection ?? null)
-      mapPinAnchoredRef.current = snap.mapPinAnchored ?? Boolean(snap.journeySelection)
-      setWritingAssessment(snap.writingAssessment ?? null)
-      setStoryState(snap.storyState)
-      setBookReviewState(snap.bookReviewState)
-      setLetterState(snap.letterState)
-      setEditingWorkId(snap.editingWorkId ?? null)
-
-      try {
-        useDramaStore.setState((prev) => ({
-          ...prev,
-          scenes: (snap.drama?.scenes as any) ?? prev.scenes,
-          characters: (snap.drama?.characters as any) ?? prev.characters,
-          title: (snap.drama?.title as any) ?? prev.title,
-          activeSceneIndex: (snap.drama?.activeSceneIndex as any) ?? prev.activeSceneIndex,
-          dramaBook: (snap.drama?.dramaBook as any) ?? prev.dramaBook,
-        }))
-      } catch {}
-      try {
-        usePoetryStore.setState((prev) => ({
-          ...prev,
-          form: (snap.poetry?.form as any) ?? prev.form,
-          topic: (snap.poetry?.topic as any) ?? prev.topic,
-          lines: (snap.poetry?.lines as any) ?? prev.lines,
-          aiLog: (snap.poetry?.aiLog as any) ?? prev.aiLog,
-          snapshots: (snap.poetry?.snapshots as any) ?? prev.snapshots,
-          aiUsageCount: (snap.poetry?.aiUsageCount as any) ?? prev.aiUsageCount,
-          maxAIUsage: (snap.poetry?.maxAIUsage as any) ?? prev.maxAIUsage,
-          showedOriginalityNotice: (snap.poetry?.showedOriginalityNotice as any) ?? prev.showedOriginalityNotice,
-          phase: (snap.poetry?.phase as any) ?? prev.phase,
-        }))
-      } catch {}
-
-      setStage(snap.stage as any)
-      return
-    } catch {
-      // ignore, fallback to server
-    }
-
-    // 2) 兜底：从数据库取最新 interaction（可覆盖“未完成写作”的场景）
-    try {
-      const res = await fetch(`/api/latest-progress?user_id=${encodeURIComponent(username)}`)
-      const data = await res.json()
-      const i = data?.interaction
-      if (!res.ok || !i) {
-        toast.error("No past journey found yet.")
-        return
-      }
-
-      // story flow
-      if (["character", "plot", "structure", "writing", "review", "storyEdit"].includes(i.stage)) {
-        setStoryState({
-          character: (i.character || i.input?.character) as any,
-          plot: (i.plot || i.input?.plot) as any,
-          structure: (i.structure || i.input?.structure) as any,
-          story: (i.story || i.output?.story || "") as any,
-        })
-        setStage(i.stage as any)
-        return
-      }
-
-      // book review flow
-      if (
-        [
-          "bookReviewWelcome",
-          "bookReviewTypeSelection",
-          "bookSelection",
-          "bookSelectionNoAi",
-          "bookReviewLoading",
-          "bookReviewWriting",
-          "bookReviewWritingNoAi",
-          "bookReviewComplete",
-          "bookReviewCompleteNoAi",
-          "bookReviewEdit",
-        ].includes(i.stage)
-      ) {
-        setBookReviewState({
-          reviewType: (i.reviewType || i.input?.reviewType || null) as any,
-          bookTitle: (i.bookTitle || i.input?.bookTitle || null) as any,
-          structure: (i.structure || i.input?.structure || null) as any,
-          review: (i.review || i.output?.review || "") as any,
-          bookCoverUrl: (i.bookCoverUrl || i.output?.bookCoverUrl) as any,
-          bookSummary: (i.bookSummary || i.output?.bookSummary) as any,
-        })
-        setStage(i.stage as any)
-        return
-      }
-
-      // letter flow
-      if (["letterAdventure", "letterGame", "letterPuzzle", "letterComplete", "letterEdit"].includes(i.stage)) {
-        setLetterState({
-          recipient: (i.recipient || i.input?.recipient || null) as any,
-          occasion: (i.occasion || i.input?.occasion || null) as any,
-          guidance: (i.guidance || i.output?.guidance || null) as any,
-          readerImageUrl: (i.readerImageUrl || i.output?.readerImageUrl || null) as any,
-          sections: (i.sections || i.input?.sections || []) as any,
-          letter: (i.letter || i.output?.letter || "") as any,
-        })
-        setStage(i.stage as any)
-        return
-      }
-
-      // drama / poetry
-      if (["dramaWriting", "dramaBook"].includes(i.stage)) {
-        setStage(i.stage as any)
-        return
-      }
-      if (["poetryWriting", "poetryForm", "poetryTopic", "poetryEditor", "poetryReview"].includes(i.stage)) {
-        setStage(i.stage as any)
-        return
-      }
-
-      // unknown stage: go to farm
-      setStage("userProfile")
-    } catch {
-      toast.error("Failed to continue past journey.")
-    }
-  }, [user?.username])
-
-  // Hydration safety: only use store-derived progress after mount
-  const [isReady, setIsReady] = useState(false)
-  const hasDramaBook = useDramaStore((s) => !!s.dramaBook)
-  const poetryForm = usePoetryStore((s) => !!s.form)
-  const poetryTopic = usePoetryStore((s) => !!s.topic)
-  const poetryHasLines = usePoetryStore((s) => s.lines.length > 0)
-  const poetryPhase = usePoetryStore((s) => s.phase)
-  const dramaProgress = useMemo(
-    () => (isReady ? { hasDramaBook } : undefined),
-    [isReady, hasDramaBook]
-  )
-  const poetryProgress = useMemo(
-    () =>
-      isReady
-        ? {
-            hasForm: poetryForm,
-            hasTopic: poetryTopic,
-            hasLines: poetryHasLines,
-            phase: poetryPhase,
-          }
-        : undefined,
-    [isReady, poetryForm, poetryTopic, poetryHasLines, poetryPhase]
-  )
-  const dramaBook = useDramaStore((s) => s.dramaBook)
-  const dramaTitle = useDramaStore((s) => s.title)
-  const dramaScenes = useDramaStore((s) => s.scenes)
-  const dramaCharacters = useDramaStore((s) => s.characters)
-  const dramaScenesCount = useDramaStore((s) => s.scenes.length)
-  const poetryLines = usePoetryStore((s) => s.lines)
-  const poetryLinesText = useMemo(() => poetryLines.map((l) => l.text).join("\n"), [poetryLines])
-
-  const poetryTopicValue = usePoetryStore((s) => s.topic)
-  const cagentContextSummary = useMemo(
-    () =>
-      buildContextSummary(stage, {
-        storyState,
-        bookReviewState,
-        letterState,
-        dramaTitle,
-        dramaScenesCount,
-        poetryTopic: poetryTopicValue,
-        poetryLinesCount: poetryLines.length,
-      }),
-    [
-      stage,
-      storyState,
-      bookReviewState,
-      letterState,
-      dramaTitle,
-      dramaScenesCount,
-      poetryTopicValue,
-      poetryLines.length,
-    ]
-  )
-
-  const runValuesCheck = useCallback(
-    async (content: string, currentStage: string) => {
-      if (!content.trim() || !user?.username) return
-      try {
-        const res = await fetch("/api/dify-cagent-values", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            stage: currentStage,
-            content,
-            user_id: user.username,
-          }),
-        })
-        const data = await res.json()
-        if (data.compliant === false) {
-          setCagentMood("angry")
-          setValuesMessage(data.message || "This content does not align with our values.")
-          setValuesSuggestion(data.suggestion || null)
-          setRedFlashActive(true)
-        } else {
-          const signal = typeof data.valueSignal === "string" ? data.valueSignal : "SIT"
-          setCagentMood(signal === "CAGENTLIKE" ? "like" : "normal")
-          setValuesMessage(null)
-          setValuesSuggestion(null)
-        }
-      } catch {
-        setCagentMood("normal")
-      }
-    },
-    [user?.username]
-  )
-
-  const lastValuesWordCountRef = useRef(0)
-  const lastValuesGrowthDiagKeyRef = useRef<string>("")
-
-  useEffect(() => {
-    if (!user || !VALUES_CHECK_STAGES.includes(stage as any)) {
-      setCagentMood("normal")
-      setValuesMessage(null)
-      setValuesSuggestion(null)
-      lastValuesWordCountRef.current = 0
-      return
-    }
-    const content = buildValuesCheckContent(stage, {
-      storyState,
-      bookReviewState,
-      letterState,
-      dramaScript: dramaBook?.script,
-      poetryText: poetryLinesText,
-    })
-    if (!content.trim()) {
-      setCagentMood("normal")
-      setValuesMessage(null)
-      setValuesSuggestion(null)
-      lastValuesWordCountRef.current = 0
-      return
-    }
-    const words = content.trim().split(/\s+/).filter(Boolean)
-    const currentWordCount = words.length
-    if (currentWordCount - lastValuesWordCountRef.current < 2) {
-      return
-    }
-    lastValuesWordCountRef.current = currentWordCount
-    if (valuesCheckTimeoutRef.current) clearTimeout(valuesCheckTimeoutRef.current)
-    valuesCheckTimeoutRef.current = setTimeout(() => {
-      runValuesCheck(content, stage)
-      valuesCheckTimeoutRef.current = null
-    }, 800)
-    return () => {
-      if (valuesCheckTimeoutRef.current) clearTimeout(valuesCheckTimeoutRef.current)
-    }
-  }, [
-    user,
-    stage,
-    storyState,
-    bookReviewState,
-    letterState,
-    dramaBook?.script,
-    poetryLinesText,
-    runValuesCheck,
-  ])
-
-  useEffect(() => {
-    setIsReady(true)
-    
-    // 从localStorage读取语言设置和登录用户，默认英语
-    if (typeof window !== 'undefined') {
-      // 語言
-      const savedLang = localStorage.getItem('siteLanguage') as Language | null
-      if (savedLang === 'yue') {
-        setLanguage('zh')
-        localStorage.setItem('siteLanguage', 'zh')
-      } else if (savedLang && (savedLang === 'en' || savedLang === 'zh')) {
-        setLanguage(savedLang)
-      } else {
-        setLanguage('en')
-        localStorage.setItem('siteLanguage', 'en')
-      }
-
-      // 嘗試恢復已登入用戶，讓刷新後 Header 仍能顯示頭像
-      try {
-        const savedUser = localStorage.getItem('cwriteUser')
-        if (savedUser && !user) {
-          const parsed = JSON.parse(savedUser) as AppUser
-          if (parsed && parsed.username && parsed.role) {
-            setUser(parsed)
-          }
-        }
-      } catch {
-        // ignore parse errors
-      }
-    }
-    
-    // 监听Header的Write!按钮点击事件
-    const handleNavigateToWriteTypeSelection = () => {
-      if (user) {
-        setJourneySelection(null)
-        mapPinAnchoredRef.current = false
-        setStage("writeTypeSelection")
-      }
-    }
-
-    const handleNavigateToHome = () => {
-      if (user) setStage("userProfile")
-      setJourneySelection(null)
-      setLevelBadgeUnlocked(false)
-    }
-    
-    const handleNavigateToAbout = () => {
-      setStage("about")
-      window.scrollTo({ top: 0, behavior: "auto" })
-    }
-
-    const handleNavigateToAboutVision = () => {
-      setStage("aboutVision")
-      window.scrollTo({ top: 0, behavior: "auto" })
-    }
-
-    const handleNavigateToAboutResearchTeam = () => {
-      setStage("aboutResearch")
-      window.scrollTo({ top: 0, behavior: "auto" })
-    }
-
-    const handleNavigateToGallery = () => {
-      setStage("gallery")
-    }
-
-    const handleNavigateToResearch = () => {
-      if (user) {
-        setStage("research")
-      }
-    }
-
-    const handleNavigateToUserProfile = () => {
-      if (user) setStage("userProfile")
-    }
-
-    const handleNavigateToUserSettings = () => {
-      if (user) setStage("userSettings")
-    }
-    
-    const handleLanguageChange = (event: CustomEvent<Language>) => {
-      const newLang = event.detail
-      console.log('Main page received language change event:', newLang)
-      // 兼容旧数据：将 "yue" 转换为 "zh"
-      if (newLang === 'yue') {
-        setLanguage('zh')
-        localStorage.setItem('siteLanguage', 'zh')
-      } else {
-        setLanguage(newLang)
-      }
-    }
-    
-    window.addEventListener('navigateToWriteTypeSelection', handleNavigateToWriteTypeSelection as EventListener)
-    window.addEventListener('navigateToHome', handleNavigateToHome as EventListener)
-    window.addEventListener('navigateToAbout', handleNavigateToAbout as EventListener)
-    window.addEventListener('navigateToAboutVision', handleNavigateToAboutVision as EventListener)
-    window.addEventListener('navigateToAboutResearchTeam', handleNavigateToAboutResearchTeam as EventListener)
-    window.addEventListener('navigateToGallery', handleNavigateToGallery as EventListener)
-    window.addEventListener('navigateToResearch', handleNavigateToResearch as EventListener)
-    window.addEventListener('navigateToUserProfile', handleNavigateToUserProfile as EventListener)
-    window.addEventListener('navigateToUserSettings', handleNavigateToUserSettings as EventListener)
-    window.addEventListener('headerLanguageChange', handleLanguageChange as EventListener)
-    
-    return () => {
-      window.removeEventListener('navigateToWriteTypeSelection', handleNavigateToWriteTypeSelection as EventListener)
-      window.removeEventListener('navigateToHome', handleNavigateToHome as EventListener)
-      window.removeEventListener('navigateToAbout', handleNavigateToAbout as EventListener)
-      window.removeEventListener('navigateToAboutVision', handleNavigateToAboutVision as EventListener)
-      window.removeEventListener('navigateToAboutResearchTeam', handleNavigateToAboutResearchTeam as EventListener)
-      window.removeEventListener('navigateToGallery', handleNavigateToGallery as EventListener)
-      window.removeEventListener('navigateToResearch', handleNavigateToResearch as EventListener)
-      window.removeEventListener('navigateToUserProfile', handleNavigateToUserProfile as EventListener)
-      window.removeEventListener('navigateToUserSettings', handleNavigateToUserSettings as EventListener)
-      window.removeEventListener('headerLanguageChange', handleLanguageChange as EventListener)
-    }
-  }, [user])
-
-  useEffect(() => {
-    if (!user?.username || typeof window === "undefined") return
-    // 切换用户时重置旅程状态
-    setJourneySelection(null)
-    setLevelBadgeUnlocked(false)
-  }, [user?.username])
-
-  useEffect(() => {
-    if (currentPin) lastJourneyPinRef.current = currentPin
-  }, [currentPin])
-
-  const syncJourneyStartPin = useCallback((pin: { x: number; y: number } | null) => {
-    if (!pin) return
-    setJourneyStartPin(pin)
-    lastJourneyPinRef.current = pin
-  }, [])
-
-  const resolveJourneyPin = useCallback((): { x: number; y: number } => {
-    return (
-      journeyStartPin ??
-      currentPin ??
-      lastJourneyPinRef.current ??
-      (pendingStoryMapPinRef.current
-        ? { x: pendingStoryMapPinRef.current.x, y: pendingStoryMapPinRef.current.y }
-        : null) ??
-      pickJourneyStartPin({ mapFlags }) ??
-      { x: 50, y: 50 }
-    )
-  }, [journeyStartPin, currentPin, mapFlags])
-
-  const handlePinChange = useCallback(
-    (pin: { x: number; y: number } | null) => {
-      setCurrentPin(pin)
-      if (pin) syncJourneyStartPin(pin)
-    },
-    [syncJourneyStartPin],
-  )
-
-  // Load planTestResult from localStorage
-  useEffect(() => {
-    if (!user?.username || typeof window === "undefined") return
-    try {
-      const raw = localStorage.getItem(getPlanTestResultKey(user.username))
-      if (!raw) {
-        setPlanTestResult(null)
-        return
-      }
-      const parsed = JSON.parse(raw) as { score?: number; level?: number }
-      if (typeof parsed.score === "number" && typeof parsed.level === "number") {
-        setPlanTestResult({ score: parsed.score, level: parsed.level })
-      } else {
-        setPlanTestResult(null)
-      }
-    } catch {
-      setPlanTestResult(null)
-    }
-  }, [user?.username])
-
-  useEffect(() => {
-    mapImageUrlRef.current = mapImageUrl
-  }, [mapImageUrl])
-
-  // Load map state from DB / localStorage
-  useEffect(() => {
-    mapStateHydratedRef.current = false
-    setMapStateHydrated(false)
-    if (!user?.username || typeof window === "undefined") return
-    setMapImageUrl(undefined)
-    setMapFlags([])
-    setCurrentPin(null)
-    setJourneyStartPin(null)
-    lastJourneyPinRef.current = null
-    setJourneySelection(null)
-    setJourneyActive(false)
-    mapPinAnchoredRef.current = false
-    setLevelBadgeUnlocked(false)
-    setActiveMapChapterIndex(0)
-    setMapChapters([])
-    let cancelled = false
-    void (async () => {
-      let loadedFromDb = false
-      try {
-        const dbRes = await fetch(`/api/user-map-state?user_id=${encodeURIComponent(user.username)}`)
-        if (dbRes.ok) {
-          const dbJson = await dbRes.json()
-          const normalized = normalizeMapChaptersState(dbJson?.state)
-          if (!cancelled) {
-            setMapChapters(normalized.chapters)
-            setActiveMapChapterIndex(normalized.activeChapterIndex)
-            const active = normalized.chapters[normalized.activeChapterIndex] || normalized.chapters[0]
-            const hydratedMapUrl = active?.mapImageUrl || getChapterBaseMapImageUrl(normalized.activeChapterIndex)
-            setMapImageUrl(hydratedMapUrl)
-            mapImageUrlRef.current = hydratedMapUrl
-            setMapFlags(active?.mapFlags ?? [])
-            setCurrentPin(active?.currentPin ?? null)
-            const restoredPin = active?.journeyStartPin ?? pickJourneyStartPin(active ?? {})
-            setJourneyStartPin(restoredPin)
-            if (restoredPin) lastJourneyPinRef.current = restoredPin
-            else if (active?.currentPin) lastJourneyPinRef.current = active.currentPin
-            setJourneySelection(active?.journeySelection ?? null)
-            setJourneyActive(typeof active?.journeyActive === "boolean" ? active?.journeyActive : false)
-            setLevelBadgeUnlocked(typeof active?.levelBadgeUnlocked === "boolean" ? active?.levelBadgeUnlocked : false)
-            loadedFromDb = (active?.mapFlags?.length ?? 0) > 0 || !!active?.currentPin || !!active?.journeySelection
-          }
-        }
-      } catch {
-        // ignore db fetch errors
-      }
-
-      if (!cancelled && !loadedFromDb) {
-        try {
-          const raw = localStorage.getItem(getMapStateKey(user.username))
-          if (raw) {
-            const normalized = normalizeMapChaptersState(JSON.parse(raw))
-            setMapChapters(normalized.chapters)
-            setActiveMapChapterIndex(normalized.activeChapterIndex)
-            const active = normalized.chapters[normalized.activeChapterIndex] || normalized.chapters[0]
-            const hydratedMapUrl = active?.mapImageUrl || getChapterBaseMapImageUrl(normalized.activeChapterIndex)
-            setMapImageUrl(hydratedMapUrl)
-            mapImageUrlRef.current = hydratedMapUrl
-            setMapFlags(active?.mapFlags ?? [])
-            setCurrentPin(active?.currentPin ?? null)
-            const restoredPin = active?.journeyStartPin ?? pickJourneyStartPin(active ?? {})
-            setJourneyStartPin(restoredPin)
-            if (restoredPin) lastJourneyPinRef.current = restoredPin
-            else if (active?.currentPin) lastJourneyPinRef.current = active.currentPin
-            setJourneySelection(active?.journeySelection ?? null)
-            setJourneyActive(typeof active?.journeyActive === "boolean" ? active?.journeyActive : false)
-            setLevelBadgeUnlocked(typeof active?.levelBadgeUnlocked === "boolean" ? active?.levelBadgeUnlocked : false)
-          }
-        } catch {
-          // ignore parse/storage errors
-        }
-      }
-
-      if (!cancelled) {
-        mapStateHydratedRef.current = true
-        setMapStateHydrated(true)
-      }
-    })()
-    return () => { cancelled = true }
-  }, [user?.username])
-
-  const refreshMapStateFromServer = useCallback(async () => {
-    if (!user?.username) return
-    try {
-      const dbRes = await fetch(`/api/user-map-state?user_id=${encodeURIComponent(user.username)}`)
-      if (!dbRes.ok) return
-      const dbJson = await dbRes.json()
-      const normalized = normalizeMapChaptersState(dbJson?.state)
-      setMapChapters(normalized.chapters)
-      setActiveMapChapterIndex(normalized.activeChapterIndex)
-      const active = normalized.chapters[normalized.activeChapterIndex] || normalized.chapters[0]
-      setMapImageUrl(active?.mapImageUrl || getChapterBaseMapImageUrl(normalized.activeChapterIndex))
-      setMapFlags(active?.mapFlags ?? [])
-      setCurrentPin(active?.currentPin ?? null)
-      const restoredPin = active?.journeyStartPin ?? pickJourneyStartPin(active ?? {})
-      setJourneyStartPin(restoredPin)
-      if (restoredPin) lastJourneyPinRef.current = restoredPin
-      else if (active?.currentPin) lastJourneyPinRef.current = active.currentPin
-      setJourneySelection(active?.journeySelection ?? null)
-      setJourneyActive(typeof active?.journeyActive === "boolean" ? active?.journeyActive : false)
-      setLevelBadgeUnlocked(typeof active?.levelBadgeUnlocked === "boolean" ? active?.levelBadgeUnlocked : false)
-    } catch {
-      // ignore refresh errors
-    }
-  }, [user?.username])
-
-  useEffect(() => {
-    if (stage !== "journeyMap" || !user?.username || !mapStateHydratedRef.current) return
-    if (mapUpdateInFlightRef.current) return
-    if (Date.now() - mapLocalUpdatedAtRef.current < 60_000) return
-    void refreshMapStateFromServer()
-  }, [stage, user?.username, refreshMapStateFromServer])
-
-  const persistMapStateNow = useCallback(
-    (override?: Partial<PersistedMapState>) => {
-      if (!user?.username || typeof window === "undefined" || !mapStateHydratedRef.current) return
-      const currentChapter: PersistedMapState = {
-        mapImageUrl: override?.mapImageUrl ?? mapImageUrl,
-        mapFlags: override?.mapFlags ?? mapFlags,
-        currentPin: override?.currentPin ?? currentPin,
-        journeyStartPin: override?.journeyStartPin ?? journeyStartPin ?? pickJourneyStartPin({ mapFlags, currentPin }),
-        journeySelection: override?.journeySelection ?? journeySelection,
-        journeyActive: override?.journeyActive ?? journeyActive,
-        levelBadgeUnlocked: override?.levelBadgeUnlocked ?? levelBadgeUnlocked,
-      }
-      const chapters = Array.isArray(mapChapters) ? [...mapChapters] : []
-      const needLen = Math.max(activeMapChapterIndex + 1, chapters.length)
-      for (let i = chapters.length; i < needLen; i++) {
-        chapters.push({
-          mapImageUrl: getChapterBaseMapImageUrl(i),
-          mapFlags: [],
-          currentPin: null,
-          journeyStartPin: null,
-          journeySelection: null,
-          journeyActive: false,
-          levelBadgeUnlocked: false,
-        })
-      }
-      chapters[activeMapChapterIndex] = {
-        ...currentChapter,
-        mapImageUrl: currentChapter.mapImageUrl || getChapterBaseMapImageUrl(activeMapChapterIndex),
-      }
-      const payload: PersistedMapChaptersState = { activeChapterIndex: activeMapChapterIndex, chapters }
-      try {
-        localStorage.setItem(getMapStateKey(user.username), JSON.stringify(payload))
-      } catch {
-        // ignore
-      }
-      void fetch("/api/user-map-state", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user_id: user.username, state: payload }),
-      }).catch(() => {})
-    },
-    [
-      user?.username,
-      mapImageUrl,
-      mapFlags,
-      currentPin,
-      journeyStartPin,
-      journeySelection,
-      journeyActive,
-      levelBadgeUnlocked,
-      mapChapters,
-      activeMapChapterIndex,
-    ],
-  )
-
-  const queueJourneyMapUpdate = useCallback(
-    (params: {
-      title: string
-      topic: string
-      mapPrompt?: string
-      summaryKey?: string
-      summaryValue?: Record<string, unknown>
-      content?: string
-      workType?: MapWorkType
-      source: string
-      /** When true, only refresh map image — flag was already added (e.g. structure select). */
-      skipNewFlag?: boolean
-    }) => {
-      if (!user) return
-      const pinAnchored = mapPinAnchoredRef.current
-      if (mapUpdateInFlightRef.current) {
-        pendingMapUpdateRef.current = params
-        return
-      }
-      const pinSnapshot = pinAnchored ? resolveJourneyPin() : null
-      if (pinSnapshot) lastJourneyPinRef.current = pinSnapshot
-      const mapTitle = uniqueWritingMapTitle(
-        params.title,
-        mapFlags.map((flag) => flag.title),
-      )
-      const chapterSnapshot = mapChapters[activeMapChapterIndex]
-      const previousMapImageUrl = pickBestPreviousMapImageUrl(
-        mapImageUrlRef.current ?? mapImageUrl,
-        chapterSnapshot?.mapImageUrl,
-        activeMapChapterIndex,
-      )
-      const isBackgroundStructure = params.source === "storyStructure"
-      const skipNewFlag = params.skipNewFlag || !pinAnchored
-
-      void (async () => {
-        mapUpdateInFlightRef.current = true
-        if (!isBackgroundStructure) {
-          toast.info("Updating your writing map in the background…", { duration: 4000 })
-        }
-        try {
-          const payload: Record<string, unknown> = {
-            userId: user.username,
-            title: mapTitle,
-            topic: params.topic,
-            previousMapImageUrl,
-            freePlacement: !pinAnchored,
-          }
-          if (pinSnapshot) {
-            payload.mapX = pinSnapshot.x
-            payload.mapY = pinSnapshot.y
-          }
-          if (params.mapPrompt) payload.mapPrompt = params.mapPrompt
-          if (params.summaryKey && params.summaryValue) payload[params.summaryKey] = params.summaryValue
-
-          const mapRes = await fetch("/api/map-update", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
-          })
-          const mapJson = await mapRes.json()
-
-          if (mapRes.ok && !mapJson?.error && mapJson?.imageUrl) {
-            const newImageUrl = mapJson.imageUrl as string
-            mapLocalUpdatedAtRef.current = Date.now()
-            mapImageUrlRef.current = newImageUrl
-            setMapImageUrl(newImageUrl)
-            if (pinAnchored) setCurrentPin(null)
-            if (!skipNewFlag && pinSnapshot) {
-              const pendingStoryFinal = params.workType === "story" ? pendingStoryFlagFinalizationRef.current : null
-              if (pendingStoryFinal) pendingStoryFlagFinalizationRef.current = null
-              setMapFlags((prev: MapFlagItem[]) => {
-                const next = [
-                  ...prev,
-                  {
-                    id: mapJson.userId && mapJson.title ? `${mapJson.userId}-${mapJson.title}-${Date.now()}` : `${Date.now()}`,
-                    x: pinSnapshot.x,
-                    y: pinSnapshot.y,
-                    title: pendingStoryFinal?.title || mapJson.title || mapTitle,
-                    content: pendingStoryFinal?.content || params.content,
-                    workType: params.workType,
-                  },
-                ]
-                persistMapStateNow({ mapImageUrl: newImageUrl, mapFlags: next, currentPin: null })
-                return next
-              })
-            } else {
-              setMapFlags((prev: MapFlagItem[]) => {
-                persistMapStateNow({
-                  mapImageUrl: newImageUrl,
-                  mapFlags: prev,
-                  ...(pinAnchored ? { currentPin: null } : {}),
-                })
-                return prev
-              })
-            }
-            if (!isBackgroundStructure) {
-              toast.success("Writing map updated!")
-            }
-            return
-          }
-          console.error(`[map-update] ${params.source} failed:`, { status: mapRes.status, body: mapJson })
-          toast.warning("Map was not changed — your previous map is still there. You can try again later.")
-        } catch (error) {
-          console.error(`[map-update] ${params.source} error:`, error)
-        } finally {
-          mapUpdateInFlightRef.current = false
-          const pending = pendingMapUpdateRef.current
-          if (pending) {
-            pendingMapUpdateRef.current = null
-            queueJourneyMapUpdate(pending)
-          }
-        }
-      })()
-    },
-    [user, resolveJourneyPin, mapImageUrl, mapChapters, mapFlags, activeMapChapterIndex, persistMapStateNow],
-  )
-
-  const runStoryJourneyMapAtStructureSelect = useCallback(
-    (
-      character: StoryState["character"],
-      plot: NonNullable<StoryState["plot"]>,
-      structure: { type: string },
-    ) => {
-      if (!user) return
-      const storyTitle = uniqueWritingMapTitle(
-        getStoryWritingMapTitle(character),
-        mapFlags.map((flag) => flag.title),
-      )
-      const topic = plot.setting || character?.name || storyTitle
-      const plotSummary = buildStoryPlotSummary(character, plot)
-      const pinAnchored = mapPinAnchoredRef.current
-      pendingStoryFlagFinalizationRef.current = null
-      if (pinAnchored) {
-        const pinSnapshot = resolveJourneyPin()
-        pendingStoryMapPinRef.current = { x: pinSnapshot.x, y: pinSnapshot.y, title: storyTitle }
-      } else {
-        pendingStoryMapPinRef.current = null
-      }
-      toast.info("Updating your writing map in the background…", { duration: 3500 })
-
-      void queueJourneyMapUpdate({
-        title: storyTitle,
-        topic,
-        mapPrompt: buildStoryStructureMapPrompt(character, plot, structure.type, {
-          freePlacement: !pinAnchored,
-        }),
-        workType: "story",
-        source: "storyStructure",
-        skipNewFlag: true,
-        summaryKey: "storySummary",
-        summaryValue: {
-          characterName: character?.name || null,
-          species: character?.species || null,
-          setting: plot.setting || null,
-          conflict: plot.conflict || null,
-          goal: plot.goal || null,
-          plotSummary: plotSummary || null,
-          structureType: structure.type,
-        },
-      })
-    },
-    [user, queueJourneyMapUpdate, resolveJourneyPin, mapFlags],
-  )
-
-  /** Fire map edit immediately when the student picks a structure (not when opening Writing Map). */
-  const triggerMapOnStructureSelect = useCallback(
-    (
-      structure: { type: string },
-      character?: StoryState["character"],
-      plot?: StoryState["plot"] | null,
-    ) => {
-      const char = character ?? storyState.character
-      const pl = plot ?? storyState.plot
-      if (!char || !pl) return
-      structureMapTriggeredRef.current = [
-        "manual",
-        structure.type,
-        pl.setting,
-        pl.conflict,
-        pl.goal,
-        char.name,
-        activeMapChapterIndex,
-      ].join("|")
-      runStoryJourneyMapAtStructureSelect(char, pl, structure)
-    },
-    [
-      storyState.character,
-      storyState.plot,
-      activeMapChapterIndex,
-      runStoryJourneyMapAtStructureSelect,
-    ],
-  )
-
-  useEffect(() => {
-    if (!storyState.plot) structureMapTriggeredRef.current = null
-  }, [storyState.plot])
-
-  /** Start map image edit as soon as structure is chosen — do not wait for Writing Map screen. */
-  useEffect(() => {
-    if (!user?.username || !mapStateHydrated) return
-    const structure = storyState.structure
-    const plot = storyState.plot
-    const character = storyState.character
-    if (!structure || !plot || !character) return
-
-    const dedupeKey = [
-      "hydrated",
-      structure.type,
-      plot.setting,
-      plot.conflict,
-      plot.goal,
-      character.name,
-      activeMapChapterIndex,
-      mapPinAnchoredRef.current ? "pin" : "free",
-    ].join("|")
-    if (structureMapTriggeredRef.current === dedupeKey) return
-    structureMapTriggeredRef.current = dedupeKey
-    runStoryJourneyMapAtStructureSelect(character, plot, structure)
-  }, [
-    storyState.structure,
-    storyState.plot,
-    storyState.character,
-    user?.username,
-    mapStateHydrated,
-    activeMapChapterIndex,
-    runStoryJourneyMapAtStructureSelect,
-  ])
-
-  const canMoveToNextChapter = (mapFlags?.length ?? 0) >= 10
-
-  const handleMoveToChapter = useCallback(
-    (targetChapterIndex: number) => {
-      if (!user?.username) return
-      if (targetChapterIndex === activeMapChapterIndex) return
-      if (targetChapterIndex < 0) return
-
-      const currentChapter: PersistedMapState = {
-        mapImageUrl,
-        mapFlags,
-        currentPin,
-        journeyStartPin,
-        journeySelection,
-        journeyActive,
-        levelBadgeUnlocked,
-      }
-
-      setMapChapters((prev) => {
-        const updated = Array.isArray(prev) ? [...prev] : []
-        const maxIndex = Math.max(activeMapChapterIndex, targetChapterIndex)
-        while (updated.length <= maxIndex) {
-          const i = updated.length
-          updated.push({
-            mapImageUrl: getChapterBaseMapImageUrl(i),
-            mapFlags: [],
-            currentPin: null,
-            journeyStartPin: null,
-            journeySelection,
-            journeyActive,
-            levelBadgeUnlocked,
-          })
-        }
-        updated[activeMapChapterIndex] = { ...currentChapter, currentPin: null }
-        if (!updated[targetChapterIndex]) {
-          updated[targetChapterIndex] = {
-            mapImageUrl: getChapterBaseMapImageUrl(targetChapterIndex),
-            mapFlags: [],
-            currentPin: null,
-            journeyStartPin: null,
-            journeySelection,
-            journeyActive,
-            levelBadgeUnlocked,
-          }
-        } else {
-          updated[targetChapterIndex] = { ...updated[targetChapterIndex], currentPin: null }
-        }
-        return updated
-      })
-
-      setPendingDramaMapTitle(null)
-      setActiveMapChapterIndex(targetChapterIndex)
-      const target = mapChapters[targetChapterIndex]
-      setMapImageUrl(target?.mapImageUrl || getChapterBaseMapImageUrl(targetChapterIndex))
-      setMapFlags(target?.mapFlags ?? [])
-      setCurrentPin(null)
-      const targetStartPin = target?.journeyStartPin ?? pickJourneyStartPin(target ?? {})
-      setJourneyStartPin(targetStartPin)
-      lastJourneyPinRef.current = targetStartPin
-    },
-    [activeMapChapterIndex, currentPin, journeyStartPin, journeyActive, journeySelection, levelBadgeUnlocked, mapChapters, mapFlags, mapImageUrl, user?.username],
-  )
-
-  // Save map state to localStorage + DB
-  useEffect(() => {
-    if (!user?.username || typeof window === "undefined") return
-    if (!mapStateHydratedRef.current) return
-    const currentChapter: PersistedMapState = {
-      mapImageUrl,
-      mapFlags,
-      currentPin,
-      journeyStartPin,
-      journeySelection,
-      journeyActive,
-      levelBadgeUnlocked,
-    }
-
-    const chapters = Array.isArray(mapChapters) ? [...mapChapters] : []
-    const needLen = Math.max(activeMapChapterIndex + 1, chapters.length)
-    for (let i = chapters.length; i < needLen; i++) {
-      chapters.push({
-        mapImageUrl: getChapterBaseMapImageUrl(i),
-        mapFlags: [],
-        currentPin: null,
-        journeyStartPin: null,
-        journeySelection: null,
-        journeyActive: false,
-        levelBadgeUnlocked: false,
-      })
-    }
-    chapters[activeMapChapterIndex] = {
-      ...currentChapter,
-      mapImageUrl: currentChapter.mapImageUrl || getChapterBaseMapImageUrl(activeMapChapterIndex),
-    }
-
-    const payload: PersistedMapChaptersState = { activeChapterIndex: activeMapChapterIndex, chapters }
-    try {
-      localStorage.setItem(getMapStateKey(user.username), JSON.stringify(payload))
-    } catch {
-      // ignore storage errors
-    }
-    void fetch("/api/user-map-state", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ user_id: user.username, state: payload }),
-    }).catch(() => {
-      // ignore network errors
-    })
-  }, [user?.username, activeMapChapterIndex, mapChapters, mapImageUrl, mapFlags, currentPin, journeyStartPin, journeySelection, journeyActive, levelBadgeUnlocked])
-
-  // Notify header of current user + profile + unread reviews count
-  const [headerUserInfo, setHeaderUserInfo] = useState<{ username: string; avatarUrl?: string | null; avatarEmoji?: string | null; unreadCount: number } | null>(null)
-  useEffect(() => {
-    if (!user) {
-      setHeaderUserInfo(null)
-      if (typeof window !== "undefined") {
-        window.dispatchEvent(new CustomEvent("headerUserInfo", { detail: null }))
-      }
-      return
-    }
-    // 立即通知 header 显示用户（头像先用 username 首字母），避免等接口才出现
-    const initialInfo = { username: user.username, avatarUrl: null as string | null, avatarEmoji: null as string | null, unreadCount: 0 }
-    setHeaderUserInfo(initialInfo)
-    if (typeof window !== "undefined") {
-      window.dispatchEvent(new CustomEvent("headerUserInfo", { detail: initialInfo }))
-    }
-    let cancelled = false
-    Promise.all([
-      fetch(`/api/user-profile?user_id=${user.username}`).then((r) => r.json()),
-      fetch(`/api/reviews?user_id=${user.username}`).then((r) => r.json()),
-    ]).then(([profileRes, reviewsRes]) => {
-      if (cancelled) return
-      const avatarUrl = profileRes.error ? null : (profileRes.avatarUrl ?? null)
-      const avatarEmoji = profileRes.error ? null : (profileRes.avatarEmoji ?? null)
-      const unreadCount = reviewsRes.error ? 0 : (reviewsRes.unreadCount ?? 0)
-      const info = { username: user.username, avatarUrl, avatarEmoji, unreadCount }
-      setHeaderUserInfo(info)
-      if (typeof window !== "undefined") {
-        window.dispatchEvent(new CustomEvent("headerUserInfo", { detail: info }))
-      }
-      // 初始化 12 维度小树（若后端已有则做标准化，否则创建 12 棵 stage=2）
-      if (!profileRes.error) {
-        const rawTrees = Array.isArray(profileRes.trees) ? profileRes.trees as { id: number; stage: number }[] : null
-        const localTrees = readLocalTrees(user.username)
-        const initialTrees = normalizeValuesTrees(rawTrees && rawTrees.length > 0 ? rawTrees : localTrees)
-        const remoteTreeGrowthDetails = normalizeTreeGrowthDetails(profileRes.treeGrowthDetails)
-        const localTreeGrowthDetails = readLocalTreeGrowthDetails(user.username)
-        const initialTreeGrowthDetails = hasTreeGrowthDetails(remoteTreeGrowthDetails)
-          ? remoteTreeGrowthDetails
-          : localTreeGrowthDetails
-        setTrees(initialTrees)
-        writeLocalTrees(user.username, initialTrees)
-        setTreeGrowthDetails(initialTreeGrowthDetails)
-        writeLocalTreeGrowthDetails(user.username, initialTreeGrowthDetails)
-        const lm = profileRes.lastMetrics as WritingMetricsSnapshot | undefined
-        if (lm && typeof lm.vocabRichness === "number") {
-          setLastMetrics(lm)
-        }
-        // 若后端还没有 12 维度数据（或旧格式），写回一次标准化森林
-        const shouldBackfillTrees =
-          !rawTrees ||
-          rawTrees.length !== VALUES_DIMENSION_COUNT ||
-          rawTrees.some((tree, idx) => Number(tree?.id) !== idx + 1 || normalizeTreeStage(Number(tree?.stage) || 2) !== Number(tree?.stage))
-        const shouldBackfillTreeGrowthDetails =
-          !hasTreeGrowthDetails(remoteTreeGrowthDetails) && hasTreeGrowthDetails(localTreeGrowthDetails)
-        if (shouldBackfillTrees || shouldBackfillTreeGrowthDetails) {
-          fetch("/api/user-profile", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              user_id: user.username,
-              trees: initialTrees,
-              treeGrowthDetails: initialTreeGrowthDetails,
-            }),
-          }).catch(() => {})
-        }
-      }
-    }).catch(() => {
-      if (!cancelled && user) {
-        const info = { username: user.username, avatarUrl: null, avatarEmoji: null, unreadCount: 0 }
-        setHeaderUserInfo(info)
-        if (typeof window !== "undefined") {
-          window.dispatchEvent(new CustomEvent("headerUserInfo", { detail: info }))
-        }
-      }
-    })
-    return () => { cancelled = true }
-  }, [user?.username])
-
-  // 登录后后台预取：全站 Feed + 当前用户自己的全部作品（合并键与图书馆页一致）
-  useEffect(() => {
-    preloadGalleryData(user?.username)
-  }, [user?.username])
-
-  const allocateWritingMapTitle = useCallback(
-    (kind: Parameters<typeof buildWritingMapTitle>[0], subject?: string | null) => {
-      return uniqueWritingMapTitle(
-        buildWritingMapTitle(kind, subject),
-        mapFlags.map((flag) => flag.title),
-      )
-    },
-    [mapFlags],
-  )
-
-  const goToWritingMap = useCallback(() => {
-    setStage("journeyMap")
-  }, [])
-
-  const finalizeLatestMapFlag = useCallback((workType: MapWorkType, _title: string, content: string) => {
-    const targetIndex = [...mapFlags]
-      .map((_, index) => index)
-      .reverse()
-      .find((index) => mapFlags[index]?.workType === workType)
-    if (targetIndex === undefined) return false
-    setMapFlags((prev: MapFlagItem[]) => prev.map((flag: MapFlagItem, index: number) => (
-      index === targetIndex ? { ...flag, content, workType } : flag
-    )))
-    return true
-  }, [mapFlags])
-
-  const finalizeLatestStoryFlag = useCallback((title: string, content: string) => {
-    return finalizeLatestMapFlag("story", title, content)
-  }, [finalizeLatestMapFlag])
-
-  /** Map flag shows the finished story text — not plot outline metadata. */
-  const upsertStoryMapFlag = useCallback(
-    (title: string, fullStory: string) => {
-      const body = fullStory.trim()
-      if (!body || !mapPinAnchoredRef.current) return false
-      const pin = resolveJourneyPin()
-      const safeTitle = title.trim() || pendingStoryMapPinRef.current?.title || "My Story"
-
-      setMapFlags((prev: MapFlagItem[]) => {
-        const reverseIdx = [...prev]
-          .map((_, index) => index)
-          .reverse()
-          .find((index) => prev[index]?.workType === "story")
-        let next: MapFlagItem[]
-        if (reverseIdx !== undefined) {
-          const uniqueTitle = uniqueWritingMapTitle(
-            safeTitle,
-            prev.filter((_, index) => index !== reverseIdx).map((flag) => flag.title),
-          )
-          next = prev.map((flag, index) =>
-            index === reverseIdx ? { ...flag, title: uniqueTitle, content: body, x: pin.x, y: pin.y } : flag,
-          )
-        } else {
-          const uniqueTitle = uniqueWritingMapTitle(safeTitle, prev.map((flag) => flag.title))
-          next = [
-            ...prev,
-            {
-              id: `story-${Date.now()}`,
-              x: pin.x,
-              y: pin.y,
-              title: uniqueTitle,
-              content: body,
-              workType: "story",
-            },
-          ]
-        }
-        persistMapStateNow({ mapFlags: next })
-        return next
-      })
-      pendingStoryMapPinRef.current = null
-      return true
-    },
-    [resolveJourneyPin, persistMapStateNow],
-  )
-
-  // Refetch and update header when profile/reviews change (e.g. after marking reviews read)
-  useEffect(() => {
-    if (!user) return
-    const onRefresh = () => {
-      Promise.all([
-        fetch(`/api/user-profile?user_id=${user.username}`).then((r) => r.json()),
-        fetch(`/api/reviews?user_id=${user.username}`).then((r) => r.json()),
-      ]).then(([profileRes, reviewsRes]) => {
-        const avatarUrl = profileRes.error ? null : (profileRes.avatarUrl ?? null)
-        const avatarEmoji = profileRes.error ? null : (profileRes.avatarEmoji ?? null)
-        const unreadCount = reviewsRes.error ? 0 : (reviewsRes.unreadCount ?? 0)
-        const info = { username: user.username, avatarUrl, avatarEmoji, unreadCount }
-        setHeaderUserInfo(info)
-        if (typeof window !== "undefined") {
-          window.dispatchEvent(new CustomEvent("headerUserInfo", { detail: info }))
-        }
-        if (!profileRes.error) {
-          const rawTrees = Array.isArray(profileRes.trees) ? profileRes.trees as { id: number; stage: number }[] : null
-          const localTrees = readLocalTrees(user.username)
-          const nextTrees = normalizeValuesTrees(rawTrees && rawTrees.length > 0 ? rawTrees : localTrees)
-          const remoteTreeGrowthDetails = normalizeTreeGrowthDetails(profileRes.treeGrowthDetails)
-          const localTreeGrowthDetails = readLocalTreeGrowthDetails(user.username)
-          const nextTreeGrowthDetails = hasTreeGrowthDetails(remoteTreeGrowthDetails)
-            ? remoteTreeGrowthDetails
-            : localTreeGrowthDetails
-          setTrees(nextTrees)
-          writeLocalTrees(user.username, nextTrees)
-          setTreeGrowthDetails(nextTreeGrowthDetails)
-          writeLocalTreeGrowthDetails(user.username, nextTreeGrowthDetails)
-          const lm = profileRes.lastMetrics as WritingMetricsSnapshot | undefined
-          if (lm && typeof lm.vocabRichness === "number") {
-            setLastMetrics(lm)
-          }
-        }
-      }).catch(() => {})
-    }
-    window.addEventListener("headerRefreshUserInfo", onRefresh)
-    return () => window.removeEventListener("headerRefreshUserInfo", onRefresh)
-  }, [user?.username])
-
-  const currentLevel = journeySelection?.difficulty ?? writingAssessment?.level ?? 1
-  useEffect(() => {
-    try {
-      if (typeof window !== "undefined") {
-        (window as unknown as { __cwrite_level?: number }).__cwrite_level = currentLevel
-      }
-    } catch {
-      // ignore
-    }
-  }, [currentLevel])
-
-  // 根据 12 价值观命中维度更新森林：命中的树 stage +1（上限 4），並記錄是哪篇文章/哪句話讓它長高
-  const applyTreeGrowthFromMetrics = useCallback(
-    async (
-      matchedDimensions: number[],
-      payload?: {
-        workTitle: string
-        workType: "story" | "review" | "letter"
-        excerpt: string
-        triggerSentence?: string
-        evidenceByDimension?: Record<number, { sentence?: string; overallEvidence?: string; reason?: string }>
-      }
-    ) => {
-      if (!user) return
-      const hasStrictEvidence = (id: number) => {
-        const evidence = payload?.evidenceByDimension?.[id]
-        const sentence = String(evidence?.sentence || "").trim()
-        const overall = String(evidence?.overallEvidence || "").trim()
-        const reason = String(evidence?.reason || "").trim()
-        return (!!sentence || !!overall) && !!reason
-      }
-      const evidenceMatchedDimensions = payload?.evidenceByDimension
-        ? matchedDimensions.filter((n) => hasStrictEvidence(Number(n)))
-        : matchedDimensions
-      if (evidenceMatchedDimensions.length === 0) return
-
-      const currentTrees = normalizeValuesTrees(trees)
-      const matchedIds = Array.from(
-        new Set(
-          evidenceMatchedDimensions
-            .map((n) => Number(n))
-            .filter((n) => Number.isFinite(n) && n >= 1 && n <= VALUES_DIMENSION_COUNT)
-            .map((n) => Math.round(n))
+          { onConflict: "room_code,student_key" }
         )
-      )
-      if (matchedIds.length === 0) return
-
-      const grownTreeIds: number[] = []
-      const nextTrees = currentTrees.map((tree) => {
-        if (!matchedIds.includes(tree.id)) return tree
-        const nextStage = Math.min(4, tree.stage + 1)
-        if (nextStage > tree.stage) grownTreeIds.push(tree.id)
-        return { ...tree, stage: nextStage }
-      })
-
-      if (grownTreeIds.length === 0) return
-      setTrees(nextTrees)
-      writeLocalTrees(user.username, nextTrees)
-      setLastGrownTreeIds(grownTreeIds)
-      const nextTreeGrowthDetails = payload
-        ? mergeTreeGrowthDetails(treeGrowthDetails, grownTreeIds, payload)
-        : treeGrowthDetails
-
-      if (payload) {
-        setTreeGrowthDetails(nextTreeGrowthDetails)
-        writeLocalTreeGrowthDetails(user.username, nextTreeGrowthDetails)
-      }
-
-      try {
-        await fetch("/api/user-profile", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            user_id: user.username,
-            trees: nextTrees,
-            treeGrowthDetails: nextTreeGrowthDetails,
-          }),
-        })
-      } catch {
-        // 后端失败不阻塞前端体验
-      }
-    },
-    [treeGrowthDetails, trees, user]
-  )
-
-  const evaluateValuesGrowth = useCallback(
-    async (text: string, type: "story" | "review" | "letter", workTitle?: string) => {
-      if (!user || !text.trim()) return
-      const excerpt = getFirstSentenceOrExcerpt(text)
-      const triggerSentence = getBestGrowthSentence(text)
-      const title = workTitle?.trim() || (type === "story" ? "My Story" : type === "review" ? "Book Review" : "My Letter")
-      try {
-        const valuesRes = await fetch("/api/writing-values-growth", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            text,
-            type,
-            user_id: user.username,
-          }),
-        })
-        const valuesJson = await valuesRes.json()
-        const diagnostics =
-          valuesJson?.diagnostics && typeof valuesJson.diagnostics === "object"
-            ? (valuesJson.diagnostics as ValuesGrowthDiagnostics)
-            : null
-        const source = typeof valuesJson?.source === "string" ? valuesJson.source : ""
-        const diagCode = diagnostics?.code || source
-        if (diagCode && diagCode !== "dify") {
-          const missing = Array.isArray(diagnostics?.missingEnv) ? diagnostics?.missingEnv.join(", ") : ""
-          const tips = Array.isArray(diagnostics?.tips) ? diagnostics?.tips.slice(0, 2).join(" ") : ""
-          const title = diagnostics?.title || "Values growth diagnostic"
-          const detail = diagnostics?.detail || "Values growth returned fallback result."
-          const dedupeKey = `${diagCode}|${missing}`
-          if (lastValuesGrowthDiagKeyRef.current !== dedupeKey) {
-            lastValuesGrowthDiagKeyRef.current = dedupeKey
-            toast.warning(`${title}: ${detail}${missing ? ` Missing env: ${missing}.` : ""}${tips ? ` ${tips}` : ""}`)
-          }
-        }
-
-        const matchedDimensions = Array.isArray(valuesJson?.matchedDimensions)
-          ? valuesJson.matchedDimensions
-          : []
-        const rawEvidenceByDimension =
-          valuesJson?.evidenceByDimension && typeof valuesJson.evidenceByDimension === "object"
-            ? (valuesJson.evidenceByDimension as Record<string, { sentence?: string; overallEvidence?: string; overall_evidence?: string; reason?: string }>)
-            : {}
-        const evidenceByDimension = Object.fromEntries(
-          Object.entries(rawEvidenceByDimension).map(([id, evidence]) => [
-            Number(id),
-            {
-              sentence: evidence?.sentence,
-              overallEvidence: evidence?.overallEvidence || evidence?.overall_evidence,
-              reason: evidence?.reason,
-            },
-          ])
-        ) as Record<number, { sentence?: string; overallEvidence?: string; reason?: string }>
-        await applyTreeGrowthFromMetrics(matchedDimensions, {
-          workTitle: title,
-          workType: type,
-          excerpt: excerpt || text.slice(0, 120) + (text.length > 120 ? "…" : ""),
-          triggerSentence,
-          evidenceByDimension,
-        })
-      } catch (error) {
-        console.error("Error evaluating values growth:", error)
-      }
-    },
-    [user, applyTreeGrowthFromMetrics]
-  )
-
-  const commitDramaMapUpdate = useCallback(() => {
-    if (!dramaBook) return
-    const script = dramaBook.script || dramaBook.summary || ""
-    const subject =
-      dramaTitle?.trim() ||
-      dramaCharacters.find((character) => character.name?.trim())?.name ||
-      dramaScenes.find((scene) => scene.backgroundPrompt?.trim())?.backgroundPrompt ||
-      null
-    const title = allocateWritingMapTitle("drama", subject)
-    const dramaMapSummary = buildDramaMapSummary(
-      dramaScenes,
-      title,
-      script,
-    )
-    if (script.trim()) {
-      void evaluateValuesGrowth(script, "story", title)
+        .select("id, answers")
+        .single();
+      if (error) throw error;
+      setRoomCode(room);
+      setStudentName(name);
+      setAnswers(data?.answers || {});
+      setView("student");
+      await subscribeRoom(room, (payload) => {
+        const row = payload.new;
+        if (row?.answers) setAnswers(row.answers);
+      }, data?.id ? `id=eq.${data.id}` : `room_code=eq.${room}`);
+    } catch (err) {
+      console.error(err);
+      alert(err.message || "Could not join the room.");
+    } finally {
+      setBusy(false);
     }
-    void queueJourneyMapUpdate({
-      title,
-      topic: dramaMapSummary.topic,
-      content: dramaMapSummary.content,
-      mapPrompt: dramaMapSummary.mapPrompt,
-      workType: "drama",
-      source: "drama",
-    })
-  }, [allocateWritingMapTitle, dramaBook, dramaCharacters, dramaScenes, dramaTitle, evaluateValuesGrowth, queueJourneyMapUpdate])
+  }, [nameInput, roomInput, subscribeRoom]);
 
-  const commitPoetryMapUpdate = useCallback(() => {
-    const topic = poetryTopicValue || "Poetry"
-    const title = allocateWritingMapTitle("poetry", poetryTopicValue)
-    void evaluateValuesGrowth(poetryLinesText, "story", title)
-    void queueJourneyMapUpdate({
-      title,
-      topic,
-      content: poetryLinesText,
-      workType: "poetry",
-      source: "poetry",
-    })
-  }, [allocateWritingMapTitle, evaluateValuesGrowth, poetryLinesText, poetryTopicValue, queueJourneyMapUpdate])
+  const openTeacher = useCallback(async (roomOverride) => {
+    const room = normalizeRoom(roomOverride);
+    if (!room) return alert("Choose a course first.");
+    if (!isSupabaseConfigured()) return alert("Supabase is not configured yet.");
+    setBusy(true);
+    try {
+      setRoomCode(room);
+      setView("teacher");
+      await loadRoom(room);
+      await subscribeRoom(room, (payload) => {
+        const row = payload.new || payload.old;
+        if (!row || normalizeRoom(row.room_code) === room) {
+          loadRoom(room).catch(console.error);
+        }
+      });
+    } catch (err) {
+      console.error(err);
+      alert(err.message || "Could not open the dashboard.");
+    } finally {
+      setBusy(false);
+    }
+  }, [loadRoom, subscribeRoom]);
 
-  if (!isReady) {
-    return null
+  const loadTeacherNames = useCallback(async () => {
+    try {
+      const names = await listTeacherNames();
+      const next = names.includes("Nicole") ? names : ["Nicole", ...names];
+      setTeacherNames(next.length ? next : ["Nicole"]);
+      setUsernameInput((current) => current || next[0] || "Nicole");
+    } catch (err) {
+      console.error(err);
+      setTeacherNames(["Nicole"]);
+      setUsernameInput((current) => current || "Nicole");
+    }
+  }, []);
+
+  const requestTeacher = useCallback(() => {
+    const session = readTeacherSession();
+    if (session) {
+      setTeacher(session);
+      return showCoursePicker();
+    }
+    setPasswordInput("");
+    setPasswordError("");
+    setAuthMode("login");
+    setView("teacherLock");
+    loadTeacherNames();
+  }, [loadTeacherNames, showCoursePicker]);
+
+  async function submitTeacherAuth(e) {
+    e?.preventDefault?.();
+    setBusy(true);
+    setPasswordError("");
+    try {
+      const next = authMode === "register"
+        ? await registerTeacher(usernameInput, passwordInput)
+        : await loginTeacher(usernameInput, passwordInput);
+      setTeacher(next);
+      await loadTeacherNames();
+      await showCoursePicker();
+    } catch (err) {
+      setPasswordError(err.message || "Could not continue.");
+    } finally {
+      setBusy(false);
+    }
   }
 
-  const showLevelBadge =
-    !!user &&
-    !!writingAssessment &&
-    !!journeySelection &&
-    levelBadgeUnlocked &&
-    writingAssessment.level >= 1 &&
-    writingAssessment.level <= 5 &&
-    !["login", "home", "planTest", "journeyTicket", "journeyMap"].includes(stage)
+  function signOutTeacher() {
+    clearTeacherSession();
+    setTeacher(null);
+    unsubscribe();
+    setView("setup");
+  }
 
-  const isCopywriter = !!user?.isCopywriter || user?.username === "copywriting"
+  useEffect(() => {
+    const savedRoom = typeof window !== "undefined" ? normalizeRoom(localStorage.getItem("hb_room") || "") : "";
+    const savedName = typeof window !== "undefined" ? localStorage.getItem("hb_student") || "" : "";
+    const urlRoom = normalizeRoom(searchParams.get("room") || "");
+    setRoomInput(urlRoom || savedRoom);
+    setNameInput(savedName);
+    setTeacher(readTeacherSession());
+    if (isSupabaseConfigured()) loadCustomCourses().catch(console.error);
+    if (searchParams.get("teacher") === "1") {
+      requestTeacher();
+    }
+    return () => { unsubscribe(); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function addName(idx) {
+    const cur = [...(answers[idx] || [""])];
+    cur.push("");
+    setAnswers({ ...answers, [idx]: cur });
+  }
+
+  async function removeName(idx, i) {
+    const cur = [...(answers[idx] || [""])];
+    cur.splice(i, 1);
+    const next = { ...answers, [idx]: cur.length ? cur : [""] };
+    setAnswers(next);
+    try { await persist(next); }
+    catch (err) { console.error(err); alert(err.message || "Could not save."); }
+  }
+
+  function goBack() {
+    if (view === "teacher" || view === "teacherEditor") {
+      showCoursePicker();
+      return;
+    }
+    unsubscribe();
+    setView("setup");
+    if (view === "student") {
+      setRoomInput(roomCode);
+      setNameInput(studentName);
+    }
+  }
+
+  function openCourseEditor() {
+    setEditCode("");
+    setEditBlurb("");
+    setEditPrompts([""]);
+    setView("teacherEditor");
+  }
+
+  async function saveCustomCourse(e) {
+    e?.preventDefault?.();
+    const code = normalizeRoom(editCode);
+    const boxes = editPrompts.map((p) => String(p).trim()).filter(Boolean);
+    if (!code) return alert("Enter a course code.");
+    if (!boxes.length) return alert("Add at least one bingo box.");
+    if (COURSES.some((c) => c.code === code)) {
+      return alert("This course code is already used by a built-in class.");
+    }
+    setBusy(true);
+    try {
+      const { error } = await getSupabase().from("courses").insert({
+        code,
+        title: code,
+        blurb: editBlurb.trim(),
+        prompts: boxes,
+        created_by: teacher?.id || null
+      });
+      if (error) {
+        if (error.code === "23505") throw new Error("This course code already exists.");
+        throw error;
+      }
+      await showCoursePicker();
+    } catch (err) {
+      console.error(err);
+      alert(err.message || "Could not save the class.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function copyStudentLink() {
+    const u = new URL(location.href);
+    u.searchParams.set("room", roomCode);
+    u.searchParams.delete("teacher");
+    await navigator.clipboard.writeText(u.toString());
+    alert("Student link copied.");
+  }
+
+  async function deleteClass(code) {
+    const room = normalizeRoom(code);
+    if (!room) return;
+    const meta = getCourseMeta(room, customCourses);
+    const count = courseStats[room]?.students || (normalizeRoom(roomCode) === room ? students.length : 0);
+    const first = confirm(
+      `Delete class ${meta.title}?\n\nThis will permanently remove ${count} student record(s) and all bingo answers.\nThis cannot be undone.`
+    );
+    if (!first) return;
+    const second = confirm(`Please confirm again: delete ${meta.title} now?`);
+    if (!second) return;
+    setBusy(true);
+    try {
+      const { data, error: readErr } = await getSupabase()
+        .from("students")
+        .select("id, room_code");
+      if (readErr) throw readErr;
+      const ids = (data || [])
+        .filter((row) => normalizeRoom(row.room_code) === room)
+        .map((row) => row.id);
+      if (ids.length) {
+        const { error } = await getSupabase().from("students").delete().in("id", ids);
+        if (error) throw error;
+      }
+      if (!COURSES.some((c) => c.code === room)) {
+        const { error: courseErr } = await getSupabase().from("courses").delete().eq("code", room);
+        if (courseErr) throw courseErr;
+        await loadCustomCourses();
+      }
+      if (normalizeRoom(roomCode) === room) setStudents([]);
+      await loadCourses();
+      if (view === "teacher" && normalizeRoom(roomCode) === room) await showCoursePicker();
+    } catch (err) {
+      console.error(err);
+      alert(err.message || "Could not delete the class.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const ranked = useMemo(() => {
+    return [...students]
+      .map((s) => ({
+        name: s.display_name || "Anonymous",
+        unique: +s.unique_count || 0,
+        entries: +s.entry_count || 0,
+        filled: +s.filled_count || 0,
+        answers: s.answers || {}
+      }))
+      .sort((a, b) => b.unique - a.unique || b.entries - a.entries);
+  }, [students]);
+
+  const courseList = useMemo(() => {
+    if (!teacher?.id) return [];
+    return customCourses
+      .filter((c) => String(c.created_by) === String(teacher.id))
+      .map((c) => {
+        const code = normalizeRoom(c.code);
+        return {
+          code,
+          title: c.title || code,
+          blurb: c.blurb || "",
+          students: courseStats[code]?.students || 0,
+          entries: courseStats[code]?.entries || 0,
+          uniqueSum: courseStats[code]?.uniqueSum || 0,
+          custom: !COURSES.some((built) => built.code === code)
+        };
+      });
+  }, [courseStats, customCourses, teacher]);
+
+  const classConnections = ranked.reduce((x, s) => x + s.entries, 0);
+  const classAvg = ranked.length
+    ? (ranked.reduce((x, s) => x + s.unique, 0) / ranked.length).toFixed(1)
+    : "0";
+  const promptCounts = prompts
+    .map((p, idx) => ({
+      p,
+      c: ranked.reduce((sum, s) => sum + ((s.answers[idx] || []).filter((v) => String(v).trim()).length), 0)
+    }))
+    .sort((a, b) => b.c - a.c)
+    .slice(0, 10);
+
+  const headerLabel =
+    view === "teacher" ? `Teacher dashboard · ${courseMeta.title}` :
+    view === "teacherCourses" ? "All courses" :
+    view === "teacherEditor" ? "Add a class" :
+    view === "teacherLock" ? "Teacher login" :
+    view === "student" ? `Room: ${roomCode}` :
+    "Realtime classroom edition";
 
   return (
-    <main className="min-h-screen" data-stage={stage}>
-      <RedFlashOverlay active={redFlashActive} duration={2000} />
-      {user &&
-        stage !== "login" &&
-        stage !== "home" &&
-        stage !== "dashboard" &&
-        stage !== "userProfile" &&
-        stage !== "otherFarm" &&
-        stage !== "navigation" &&
-        !["character", "storyCollab", "storyChatbot", "writing", "bookReviewWriting", "bookReviewWritingNoAi", "letterGame"].includes(stage) && (
-        <Cagent
-          stage={stage}
-          contextSummary={cagentContextSummary}
-          userId={user.username}
-          mood={cagentMood}
-          valuesMessage={valuesMessage}
-          valuesSuggestion={valuesSuggestion}
-          language={language}
-        />
-      )}
-      {showLevelBadge && writingAssessment && (
-        <div className="fixed right-3 top-16 md:right-4 md:top-14 xl:right-6 xl:top-6 z-[100]">
-          <LevelBadge level={Math.min(5, Math.max(1, writingAssessment.level))} className="text-sm xl:text-lg" />
+    <>
+      <header>
+        <div className="wrap top">
+          <div>
+            <h1>Human Bingo Live</h1>
+            <div className="sub">{headerLabel}</div>
+          </div>
+          <div className="pills">
+            {view !== "setup" && (
+              <button className="secondary" onClick={goBack} disabled={busy}>Back</button>
+            )}
+            <div className="pill">Unique people: <b>{mine.unique}</b></div>
+            <div className="pill">My entries: <b>{mine.entries}</b></div>
+          </div>
         </div>
-      )}
-      {stage === "login" && (
-        <LoginPage
-          onLogin={(userData, showDialog = false) => {
-            setUser(userData)
-            // 持久化當前用戶，讓刷新後可以自動恢復並驅動 Header 顯示頭像
-            if (typeof window !== "undefined") {
-              try {
-                localStorage.setItem("cwriteUser", JSON.stringify(userData))
-              } catch {
-                // ignore
-              }
-            }
-            // copywriting 專用賬號：即使是 teacher 角色，也直接进入农场
-            if (userData.username === "copywriting") {
-              setStage("userProfile")
-              return
-            }
+      </header>
 
-            if (userData.role === "teacher") {
-              setStage("dashboard")
-            } else {
-              // 取消“继续作品”弹窗：登录后直接进入农场
-              setShowContinueDialog(false)
-              setStage("userProfile")
-            }
-          }}
-        />
-      )}
-
-      {stage === "planTest" && user && (
-        <PlanTest
-          language={language}
-          onBack={() => setStage("journeyMap")}
-          onComplete={async (result) => {
-            setWritingAssessment({
-              score: result.score,
-              level: result.level,
-              mapImageStatus: "idle",
-            })
-            if (typeof window !== "undefined" && user?.username) {
-              localStorage.setItem(
-                getPlanTestResultKey(user.username),
-                JSON.stringify({ score: result.score, level: result.level }),
-              )
-            }
-            setPlanTestResult({ score: result.score, level: result.level })
-            setStage("journeyTicket")
-          }}
-        />
-      )}
-      {stage === "journeyTicket" && user && writingAssessment && (
-        <JourneyTicket
-          language={language}
-          userName={user.username}
-          level={writingAssessment.level}
-          score={writingAssessment.score}
-          onBack={() => {
-            setStage("journeyMap")
-          }}
-          onRetest={() => {
-            setWritingAssessment(null)
-            setPlanTestResult(null)
-            setStage("planTest")
-          }}
-          onStart={({ type, difficulty }) => {
-            setJourneySelection({ type, difficulty })
-            setWritingAssessment((prev) => ({
-              score: prev?.score ?? 0,
-              level: difficulty,
-              mapImageStatus: prev?.mapImageStatus ?? "idle",
-            }))
-            setLevelBadgeUnlocked(true)
-            setJourneyActive(true)
-            mapPinAnchoredRef.current = true
-            if (type === "story") {
-              setStoryState({ character: null, plot: null, structure: null, story: "" })
-              setStage("character")
-            } else if (type === "bookReview") {
-              setBookReviewState({
-                reviewType: null,
-                bookTitle: null,
-                structure: null,
-                review: "",
-                bookCoverUrl: undefined,
-                bookSummary: undefined,
-              })
-              setStage("bookReviewWelcome")
-            } else if (type === "letter") {
-              setLetterState({
-                recipient: null,
-                occasion: null,
-                guidance: null,
-                readerImageUrl: null,
-                sections: [],
-                letter: "",
-              })
-              setStage("letterAdventure")
-            } else if (type === "drama") {
-              setStage("dramaWriting")
-            } else if (type === "poetry") {
-              setStage("poetryWriting")
-            }
-          }}
-        />
-      )}
-      {stage === "journeyMap" && user && (
-        <JourneyMap
-          language={language}
-          type={journeySelection?.type}
-          mapImageUrl={mapImageUrl}
-          mapFlags={mapFlags}
-          pin={currentPin}
-          onPinChange={handlePinChange}
-          chapterIndex={activeMapChapterIndex}
-          onPrevChapter={activeMapChapterIndex > 0 ? () => handleMoveToChapter(activeMapChapterIndex - 1) : undefined}
-          onNextChapter={canMoveToNextChapter ? () => handleMoveToChapter(activeMapChapterIndex + 1) : undefined}
-          canMoveToNextChapter={canMoveToNextChapter}
-          storyState={storyState}
-          bookReviewState={bookReviewState}
-          letterState={letterState}
-          dramaProgress={journeySelection?.type === "drama" ? dramaProgress : undefined}
-          poetryProgress={journeySelection?.type === "poetry" ? poetryProgress : undefined}
-          noAi={user.noAi}
-          onBack={() => setStage("userProfile")}
-          onStartJourney={() => {
-            if (planTestResult) {
-              setWritingAssessment({
-                score: planTestResult.score,
-                level: planTestResult.level,
-                mapImageStatus: "idle",
-              })
-              setStage("journeyTicket")
-              return
-            }
-            setStage("planTest")
-          }}
-          onNavigate={(targetStage) => {
-            setStage(targetStage as any)
-          }}
-          onGoProfile={() => setStage("userProfile")}
-          onFlagUpdate={(flagId, updates) => {
-            setMapFlags((prev) => prev.map((f) => (f.id === flagId ? { ...f, ...updates } : f)))
-          }}
-        />
-      )}
-      {stage === "writeTypeSelection" && user && (
-        <WriteTypeSelection
-          language={language}
-          onSelectStory={() => {
-            setStoryState({ character: null, plot: null, structure: null, story: "" })
-            setStage("character")
-          }}
-          onSelectBookReview={() => setStage("bookReviewWelcome")}
-          onSelectLetter={() => setStage("letterAdventure")}
-          onSelectDrama={() => setStage("dramaWriting")}
-          onSelectPoetry={() => setStage("poetryWriting")}
-          onBack={() => setStage("userProfile")}
-        />
-      )}
-      {stage === "bookReviewWelcome" && user && (
-        <BookReviewWelcome
-          language={language}
-          onStartBookReview={() => {
-            setBookReviewState({
-              reviewType: null,
-              bookTitle: null,
-              structure: null,
-              review: "",
-              bookCoverUrl: undefined,
-              bookSummary: undefined,
-            })
-            // 有 AI 的情況：先選書，再讓 AI 幫選最合適的書評類型
-            // noAi 的情況維持原來流程：先選類型再選書
-            if (user.noAi) {
-              setStage("bookReviewTypeSelection")
-            } else {
-              setStage("bookSelection")
-            }
-          }}
-          onBack={() => setStage("userProfile")}
-        />
-      )}
-      {stage === "bookReviewTypeSelection" && user && (
-        <BookReviewTypeSelection
-          language={language}
-          bookTitle={bookReviewState.bookTitle || undefined}
-          onSelectType={(type) => {
-            setBookReviewState(prev => ({ ...prev, reviewType: type }))
-            // 如果已經選好書，這一頁是「AI 推薦類型」→ 選完類型直接進入 Outline / Writing
-            if (bookReviewState.bookTitle) {
-              if (user.noAi) {
-                // noAi：直接用固定結構進入寫作
-                const getStructureForReviewType = (reviewType: "recommendation" | "critical" | "literary") => {
-                  const baseStructures = {
-                    recommendation: {
-                      type: "recommendation" as const,
-                      outline: [
-                        "Introduction - Hook your readers",
-                        "What I Loved - Share your favorite parts",
-                        "Why You Should Read It - Make your case",
-                        "Who Would Enjoy This - Help readers decide",
-                        "Conclusion - Final recommendation",
-                      ],
-                    },
-                    critical: {
-                      type: "critical" as const,
-                      outline: [
-                        "Introduction - Set the stage",
-                        "Strengths - What worked well",
-                        "Weaknesses - What didn't work",
-                        "Examples - Support your points",
-                        "Conclusion - Overall assessment",
-                      ],
-                    },
-                    literary: {
-                      type: "literary" as const,
-                      outline: [
-                        "Introduction - Present the book",
-                        "Themes - Explore deeper meanings",
-                        "Literary Devices - Analyze techniques",
-                        "Character Analysis - Understand development",
-                        "Conclusion - Reflect on significance",
-                      ],
-                    },
-                  }
-                  return baseStructures[reviewType]
-                }
-                const structure = getStructureForReviewType(type)
-                setBookReviewState(prev => ({ ...prev, structure }))
-                setStage("bookReviewWritingNoAi")
-              } else {
-                setStage("bookReviewLoading")
-              }
-              return
-            }
-
-            // 尚未選書的情況（主要給 noAi 舊流程或從地圖直接進入）
-            if (user.noAi) {
-              setStage("bookSelectionNoAi")
-            } else {
-              setStage("bookSelection")
-            }
-          }}
-          onBack={() => {
-            if (bookReviewState.bookTitle) {
-              // 在 AI 推薦類型頁面按 back → 回到選書頁重新選書
-              setStage("bookSelection")
-            } else {
-              setStage("bookReviewWelcome")
-            }
-          }}
-        />
-      )}
-      {stage === "bookSelection" && user && (
-        <BookSelection
-          language={language}
-          userId={user.username}
-          onBookSelected={(title) => {
-            setBookReviewState(prev => ({ ...prev, bookTitle: title }))
-            if (mapPinAnchoredRef.current) {
-              void queueJourneyMapUpdate({
-                title: allocateWritingMapTitle("review", title),
-                topic: title,
-                content: `Selected book for review: ${title}`,
-                workType: "review",
-                source: "bookSelection",
-              })
-            }
-            // 選完書後，讓 AI 推薦適合的書評類型
-            setStage("bookReviewTypeSelection")
-          }}
-          onBack={() => setStage("bookReviewWelcome")}
-        />
-      )}
-      {stage === "bookSelectionNoAi" && user && bookReviewState.reviewType && (
-        <BookSelectionNoAi
-          reviewType={bookReviewState.reviewType}
-          onBookSelected={(title) => {
-            console.log("BookSelectionNoAi - Book selected:", title)
-            // 生成structure（非AI版本不需要打乱，使用原始顺序）
-            const getStructureForReviewType = (reviewType: "recommendation" | "critical" | "literary") => {
-              const baseStructures = {
-                recommendation: {
-                  type: "recommendation" as const,
-                  outline: [
-                    "Introduction - Hook your readers",
-                    "What I Loved - Share your favorite parts",
-                    "Why You Should Read It - Make your case",
-                    "Who Would Enjoy This - Help readers decide",
-                    "Conclusion - Final recommendation"
-                  ]
-                },
-                critical: {
-                  type: "critical" as const,
-                  outline: [
-                    "Introduction - Set the stage",
-                    "Strengths - What worked well",
-                    "Weaknesses - What didn't work",
-                    "Examples - Support your points",
-                    "Conclusion - Overall assessment"
-                  ]
-                },
-                literary: {
-                  type: "literary" as const,
-                  outline: [
-                    "Introduction - Present the book",
-                    "Themes - Explore deeper meanings",
-                    "Literary Devices - Analyze techniques",
-                    "Character Analysis - Understand development",
-                    "Conclusion - Reflect on significance"
-                  ]
-                }
-              }
-              return baseStructures[reviewType]
-            }
-            const structure = getStructureForReviewType(bookReviewState.reviewType)
-            setBookReviewState(prev => ({ ...prev, bookTitle: title, structure }))
-            if (mapPinAnchoredRef.current) {
-              void queueJourneyMapUpdate({
-                title: allocateWritingMapTitle("review", title),
-                topic: title,
-                content: `Selected book for review: ${title}`,
-                workType: "review",
-                source: "bookSelectionNoAi",
-              })
-            }
-            if (user.noAi) {
-              setStage("bookReviewWritingNoAi")
-            } else {
-              setStage("bookReviewLoading")
-            }
-          }}
-          onBack={() => setStage("bookReviewTypeSelection")}
-        />
-      )}
-      {stage === "bookReviewLoading" && user && bookReviewState.bookTitle && bookReviewState.reviewType && (
-        <BookReviewLoading
-          reviewType={bookReviewState.reviewType}
-          bookTitle={bookReviewState.bookTitle}
-          userId={user.username}
-          onComplete={(structure, coverUrl, summary) => {
-            console.log("=== Page.tsx Receiving Structure ===")
-            console.log("Structure outline:", structure?.outline)
-            console.log("Structure originalOutline:", structure?.originalOutline)
-            console.log("====================================")
-            setBookReviewState(prev => ({
-              ...prev,
-              structure,
-              bookCoverUrl: coverUrl,
-              bookSummary: summary,
-            }))
-            setStage("bookReviewWriting")
-          }}
-          onBack={() => setStage("bookSelection")}
-        />
-      )}
-      {stage === "bookReviewWriting" && user && bookReviewState.structure && bookReviewState.bookTitle && (
-        <BookReviewWriting
-            reviewType={bookReviewState.reviewType!}
-            bookTitle={bookReviewState.bookTitle}
-            structure={bookReviewState.structure}
-            initialCoverUrl={bookReviewState.bookCoverUrl}
-            initialBookSummary={bookReviewState.bookSummary}
-            onReviewWrite={(review, bookCoverUrl) => {
-              setBookReviewState(prev => ({ ...prev, review, bookCoverUrl: bookCoverUrl || prev.bookCoverUrl }))
-              setStage("bookReviewComplete")
-            }}
-            onBack={() => setStage("bookReviewLoading")}
-            userId={user.username}
-            onDraftChange={(draft) => {
-              setBookReviewState(prev => ({ ...prev, review: draft }))
-            }}
-        />
-      )}
-      {stage === "bookReviewWritingNoAi" && user && bookReviewState.bookTitle && bookReviewState.reviewType && (
-        <BookReviewWritingNoAi
-            reviewType={bookReviewState.reviewType}
-            bookTitle={bookReviewState.bookTitle}
-            structure={bookReviewState.structure || {
-              type: bookReviewState.reviewType,
-              outline: []
-            }}
-            initialCoverUrl={bookReviewState.bookCoverUrl}
-            onReviewWrite={(review, bookCoverUrl) => {
-              setBookReviewState(prev => ({ ...prev, review, bookCoverUrl: bookCoverUrl || prev.bookCoverUrl }))
-              setStage("bookReviewCompleteNoAi")
-            }}
-            onBack={() => setStage("bookSelectionNoAi")}
-            userId={user.username}
-            onDraftChange={(draft) => {
-              setBookReviewState(prev => ({ ...prev, review: draft }))
-            }}
-        />
-      )}
-      {stage === "bookReviewComplete" && user && bookReviewState.review && bookReviewState.bookTitle && (
-        <BookReviewComplete
-          reviewType={bookReviewState.reviewType!}
-          bookTitle={bookReviewState.bookTitle}
-          review={bookReviewState.review}
-          bookCoverUrl={bookReviewState.bookCoverUrl}
-          bookSummary={bookReviewState.bookSummary}
-          structure={bookReviewState.structure}
-          onReset={async (finalReview) => {
-            const bookTitle = bookReviewState.bookTitle || "Book Review"
-            const reviewTitle = allocateWritingMapTitle("review", bookTitle)
-            void evaluateValuesGrowth(finalReview, "review", reviewTitle)
-            const updatedExistingReviewFlag = finalizeLatestMapFlag("review", reviewTitle, finalReview)
-            if (!updatedExistingReviewFlag) {
-              void queueJourneyMapUpdate({
-                title: reviewTitle,
-                topic: bookTitle,
-                content: finalReview,
-                workType: "review",
-                source: "bookReview",
-              })
-            }
-
-            setBookReviewState({
-              reviewType: null,
-              bookTitle: null,
-              structure: null,
-              review: "",
-              bookCoverUrl: undefined,
-              bookSummary: undefined,
-            })
-            goToWritingMap()
-          }}
-          onBack={async () => {
-            // 如果正在编辑已保存的作品，加载之前的内容
-            if (editingWorkId && user) {
-              try {
-                const response = await fetch(`/api/user-works?user_id=${user.username}&type=review`)
-                const data = await response.json()
-                if (data.success && data.reviews) {
-                  const work = data.reviews.find((r: any) => r.id === editingWorkId)
-                  if (work) {
-                    setBookReviewState({
-                      reviewType: work.reviewType as any,
-                      bookTitle: work.bookTitle || null,
-                      structure: work.structure as any,
-                      review: work.content || "",
-                      bookCoverUrl: work.bookCoverUrl,
-                      bookSummary: work.bookSummary,
-                    })
-                  }
-                }
-              } catch (error) {
-                console.error('Error loading work:', error)
-              }
-            }
-            setStage("bookReviewWriting")
-          }}
-          onEdit={() => setStage("bookReviewEdit")}
-          userId={user.username}
-          workId={editingWorkId}
-        />
-      )}
-      {stage === "bookReviewCompleteNoAi" && user && bookReviewState.review && bookReviewState.bookTitle && (
-        <BookReviewComplete
-          reviewType={bookReviewState.reviewType!}
-          bookTitle={bookReviewState.bookTitle}
-          review={bookReviewState.review}
-          onReset={async (finalReview) => {
-            const bookTitle = bookReviewState.bookTitle || "Book Review"
-            const reviewTitle = allocateWritingMapTitle("review", bookTitle)
-            void evaluateValuesGrowth(finalReview, "review", reviewTitle)
-            const updatedExistingReviewFlag = finalizeLatestMapFlag("review", reviewTitle, finalReview)
-            if (!updatedExistingReviewFlag) {
-              void queueJourneyMapUpdate({
-                title: reviewTitle,
-                topic: bookTitle,
-                content: finalReview,
-                workType: "review",
-                source: "bookReview",
-              })
-            }
-
-            setBookReviewState({
-              reviewType: null,
-              bookTitle: null,
-              structure: null,
-              review: "",
-              bookCoverUrl: undefined,
-              bookSummary: undefined,
-            })
-            goToWritingMap()
-          }}
-          onBack={() => setStage("bookReviewWritingNoAi")}
-          userId={user.username}
-        />
-      )}
-      {stage === "character" && user && (
-        user.noAi ? (
-          <CharacterCreationNoAi
-            language={language}
-            onCharacterCreate={(character) => {
-              setStoryState({ character, plot: null, structure: null, story: "" })
-              setStage("storyCollab")
-            }}
-            onBack={() => setStage("writeTypeSelection")}
-          />
-        ) : (
-          <CharacterCreation
-            language={language}
-            onCharacterCreate={(character) => {
-              setStoryState({ character, plot: null, structure: null, story: "" })
-              setStage("storyCollab")
-            }}
-            onBack={() => setStage("writeTypeSelection")}
-            userId={user.username}
-            level={writingAssessment?.level || 1}
-          />
-        )
-      )}
-      {stage === "storyChatbot" && user && storyState.character && (
-        <StoryChatbot
-          language={language}
-          storyState={storyState}
-          mode={user.noAi ? "manual" : "ai"}
-          onPlotCreate={(plot) => {
-            setStoryState((prev) => ({ ...prev, plot, structure: null, story: prev.story }))
-          }}
-          onStructureSelect={(structure) => {
-            setStoryState((prev) => ({ ...prev, structure, story: prev.story }))
-            triggerMapOnStructureSelect(structure)
-          }}
-          onStoryWrite={(story) => {
-            setStoryState((prev) => ({ ...prev, story }))
-            setStage("review")
-          }}
-          onBack={() => setStage("character")}
-          userId={user.username}
-          onDraftChange={(draft) => {
-            setStoryState((prev) => ({ ...prev, story: draft }))
-          }}
-        />
-      )}
-      {stage === "storyCollab" && user && storyState.character && (
-        <StoryCollab
-          language={language}
-          storyState={storyState}
-          writingLevel={writingAssessment?.level ?? planTestResult?.level ?? 1}
-          mode={user.noAi ? "manual" : "ai"}
-          onPlotCreate={(plot) => {
-            setStoryState((prev) => ({ ...prev, plot, structure: null, story: prev.story }))
-          }}
-          onStructureSelect={(structure) => {
-            setStoryState((prev) => ({ ...prev, structure, story: prev.story }))
-            triggerMapOnStructureSelect(structure)
-          }}
-          onStoryWrite={(story) => {
-            setStoryState((prev) => ({ ...prev, story }))
-            setStage("review")
-          }}
-          onBack={() => setStage("character")}
-          userId={user.username}
-          onDraftChange={(draft) => {
-            setStoryState((prev) => ({ ...prev, story: draft }))
-          }}
-        />
-      )}
-      {stage === "plot" && user && storyState.character && (
-        user.noAi ? (
-          <PlotBrainstormNoAi
-            language={language}
-            character={storyState.character}
-            onPlotCreate={(plot) => {
-              setStoryState(prev => ({ ...prev, plot }))
-              setStage("structure")
-            }}
-            onBack={() => setStage("character")}
-            userId={user.username}
-          />
-        ) : (
-          <PlotBrainstorm
-            language={language}
-            character={storyState.character}
-            onPlotCreate={(plot) => {
-              setStoryState((prev) => ({ ...prev, plot }))
-              setStage("structure")
-            }}
-            onBack={() => setStage("character")}
-            userId={user.username}
-          />
-        )
-      )}
-      {stage === "structure" && user && storyState.plot && storyState.character && (
-        user.noAi ? (
-            <StoryStructureNoAi
-              language={language}
-              character={storyState.character}
-              plot={storyState.plot}
-              onStructureSelect={(structure) => {
-                setStoryState(prev => ({ ...prev, structure }))
-                triggerMapOnStructureSelect(structure, storyState.character, storyState.plot)
-                setStage("writing")
-              }}
-              onBack={() => setStage("plot")}
-            />
-          ) : (
-            <StoryStructure
-              language={language}
-              character={storyState.character}
-              plot={storyState.plot}
-              onStructureSelect={(structure) => {
-                setStoryState(prev => ({ ...prev, structure }))
-                triggerMapOnStructureSelect(structure, storyState.character, storyState.plot)
-                setStage("writing")
-              }}
-              onBack={() => setStage("plot")}
-              userId={user.username}
-            />
-          )
+      <main className="wrap">
+        {view === "setup" && (
+          <section className="panel">
+            <h2>Join the room</h2>
+            <div className="setup-grid">
+              <div>
+                <div className="sub">Room code</div>
+                <input value={roomInput} onChange={(e) => setRoomInput(e.target.value)} placeholder="e.g. INT6066, INT6136P, INT6136E, LAW6003" />
+              </div>
+              <div>
+                <div className="sub">Your name</div>
+                <input value={nameInput} onChange={(e) => setNameInput(e.target.value)} placeholder="e.g. Amy" />
+              </div>
+            </div>
+            <div className="actions">
+              <button onClick={joinRoom} disabled={busy}>Start Bingo</button>
+              <button className="secondary" onClick={requestTeacher} disabled={busy}>Teacher dashboard</button>
+            </div>
+            <p className="notice">Students use the same room code. INT6066, INT6136P, INT6136E, and LAW6003 use different bingo cards. Progress appears on the teacher dashboard in real time.</p>
+          </section>
         )}
-      {stage === "writing" && user && storyState.character && storyState.plot && storyState.structure && (
-        user.noAi ? (
-            <GuidedWritingNoAi
-              language={language}
-              storyState={storyState}
-              onStoryWrite={(story) => {
-                setStoryState(prev => ({ ...prev, story }))
-                setStage("review")
-              }}
-              onBack={() => setStage("structure")}
-              userId={user.username}
-              onDraftChange={(draft) => {
-                setStoryState(prev => ({ ...prev, story: draft }))
-              }}
-            />
-          ) : (
-            <GuidedWriting
-              language={language}
-              storyState={storyState}
-              onStoryWrite={(story) => {
-                setStoryState(prev => ({ ...prev, story }))
-                setStage("review")
-              }}
-              onBack={() => setStage("structure")}
-              userId={user.username}
-              onDraftChange={(draft) => {
-                setStoryState(prev => ({ ...prev, story: draft }))
-              }}
-            />
-          )
+
+        {view === "teacherLock" && (
+          <section className="panel">
+            <h2>{authMode === "register" ? "Teacher register" : "Teacher login"}</h2>
+            <p className="notice">
+              {authMode === "register"
+                ? "Create a username and password to manage classes."
+                : "Sign in with your teacher username and password."}
+            </p>
+            <form onSubmit={submitTeacherAuth}>
+              <div className="sub">Teacher</div>
+              {authMode === "login" ? (
+                <select
+                  value={usernameInput}
+                  onChange={(e) => { setUsernameInput(e.target.value); setPasswordError(""); }}
+                >
+                  {teacherNames.map((name) => (
+                    <option key={name} value={name}>{name}</option>
+                  ))}
+                </select>
+              ) : (
+                <input
+                  autoFocus
+                  value={usernameInput}
+                  onChange={(e) => { setUsernameInput(e.target.value); setPasswordError(""); }}
+                  placeholder="Username"
+                />
+              )}
+              <div className="sub" style={{ marginTop: 10 }}>Password</div>
+              <input
+                type="password"
+                value={passwordInput}
+                onChange={(e) => { setPasswordInput(e.target.value); setPasswordError(""); }}
+                placeholder="Password"
+              />
+              {passwordError ? <p className="notice warn" style={{ marginTop: 8 }}>{passwordError}</p> : null}
+              <div className="actions">
+                <button type="submit" disabled={busy}>{authMode === "register" ? "Register" : "Log in"}</button>
+                <button type="button" className="secondary" onClick={() => { setAuthMode(authMode === "register" ? "login" : "register"); setPasswordError(""); if (authMode === "register") loadTeacherNames(); }}>
+                  {authMode === "register" ? "I already have an account" : "Create an account"}
+                </button>
+                <button type="button" className="secondary" onClick={goBack}>Back</button>
+              </div>
+            </form>
+          </section>
         )}
-      {stage === "review" && user && storyState.story && (
-        <StoryReview
-          language={language}
-          storyState={storyState}
-          onReset={async (finalStory) => {
-            const storyTitle =
-              pendingStoryMapPinRef.current?.title ||
-              allocateWritingMapTitle("story", storyState.character?.name)
-            const topic = storyState.character?.name || storyState.plot?.setting || storyTitle
-            void evaluateValuesGrowth(finalStory, "story", storyTitle)
-            upsertStoryMapFlag(storyTitle, finalStory)
-            pendingStoryFlagFinalizationRef.current = null
-            void queueJourneyMapUpdate({
-              title: storyTitle,
-              topic,
-              workType: "story",
-              source: "storyReview",
-              skipNewFlag: true,
-              summaryKey: "storySummary",
-              summaryValue: {
-                characterName: storyState.character?.name || null,
-                species: storyState.character?.species || null,
-                setting: storyState.plot?.setting || null,
-                conflict: storyState.plot?.conflict || null,
-                goal: storyState.plot?.goal || null,
-                plotSummary: buildStoryPlotSummary(storyState.character, storyState.plot) || null,
-              },
-            })
 
-            setStoryState({ character: null, plot: null, structure: null, story: "" })
-            goToWritingMap()
-          }}
-          onEdit={async (editStage) => {
-            // 如果正在编辑已保存的作品，加载之前的内容
-            if (editingWorkId && user) {
-              try {
-                const response = await fetch(`/api/user-works?user_id=${user.username}&type=story`)
-                const data = await response.json()
-                if (data.success && data.stories) {
-                  const work = data.stories.find((s: any) => s.id === editingWorkId)
-                  if (work) {
-                    setStoryState({
-                      character: work.character as any,
-                      plot: work.plot as any,
-                      structure: work.structure as any,
-                      story: work.content || "",
-                    })
-                  }
-                }
-              } catch (error) {
-                console.error('Error loading work:', error)
-              }
-            }
-            setStage(editStage)
-          }}
-          onBack={() => setStage("storyChatbot")}
-          userId={user.username}
-          workId={editingWorkId}
-        />
-      )}
-      {stage === "dashboard" && user && user.role === "teacher" && (
-        <Dashboard user={user} onBack={() => setStage("login")} />
-      )}
-      {(stage === "about" || stage === "aboutVision" || stage === "aboutResearch") && user && (
-        <AboutPage
-          language={language}
-          initialSection={
-            stage === "aboutVision" ? "vision" : stage === "aboutResearch" ? "research" : undefined
-          }
-        />
-      )}
+        {view === "teacherCourses" && (
+          <section className="panel">
+            <div className="top">
+              <div>
+                <h2 style={{ margin: 0 }}>Choose a course</h2>
+                <div className="sub">{teacher ? `Signed in as ${teacher.username}` : "Select a class to open its live dashboard."}</div>
+              </div>
+              <div className="actions" style={{ marginTop: 0 }}>
+                <button onClick={openCourseEditor} disabled={busy}>Add class</button>
+                <button className="secondary" onClick={signOutTeacher}>Sign out</button>
+                <button className="secondary" onClick={goBack}>Back</button>
+              </div>
+            </div>
+            <div className="course-grid">
+              {courseList.map((course) => (
+                <div className="course-card" key={course.code}>
+                  <b>{course.title}</b>
+                  <div className="notice" style={{ margin: 0 }}>{course.blurb}</div>
+                  <div className="course-meta">
+                    <span>{course.students || 0} students</span>
+                    <span>{course.entries || 0} entries</span>
+                  </div>
+                  <div className="course-card-actions">
+                    <button onClick={() => openTeacher(course.code)} disabled={busy}>Open dashboard</button>
+                    <button className="danger" onClick={() => deleteClass(course.code)} disabled={busy}>Delete class</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+            {!courseList.length ? (
+              <p className="notice">No classes yet. Add a class to get started.</p>
+            ) : null}
+          </section>
+        )}
 
-      {stage === "gallery" && (
-        <GalleryPage 
-          currentUser={user?.username ?? null}
-          currentUserRole={user?.role ?? null}
-          fromEdit={!!galleryFromEdit}
-          editType={galleryFromEdit?.type}
-          onBackToEdit={() => {
-            if (galleryFromEdit) {
-              if (galleryFromEdit.type === 'story') {
-                setStage("storyEdit")
-              } else if (galleryFromEdit.type === 'review') {
-                setStage("bookReviewEdit")
-              } else if (galleryFromEdit.type === 'letter') {
-                setStage("letterEdit")
-              }
-              setGalleryFromEdit(null)
-            }
-          }}
-        />
-      )}
+        {view === "teacherEditor" && (
+          <section className="panel">
+            <div className="top">
+              <div>
+                <h2 style={{ margin: 0 }}>Add a class</h2>
+                <div className="sub">Students will join with this course code.</div>
+              </div>
+              <button className="secondary" onClick={goBack}>Back</button>
+            </div>
+            <form onSubmit={saveCustomCourse} style={{ marginTop: 14 }}>
+              <div className="sub">Course code</div>
+              <input
+                value={editCode}
+                onChange={(e) => setEditCode(e.target.value)}
+                placeholder="e.g. LAW6004"
+              />
+              <div className="sub" style={{ marginTop: 10 }}>Description</div>
+              <textarea
+                className="area"
+                rows={3}
+                value={editBlurb}
+                onChange={(e) => setEditBlurb(e.target.value)}
+                placeholder="Short intro for this class"
+              />
+              <div className="sub" style={{ marginTop: 14 }}>Bingo boxes</div>
+              <div className="names" style={{ marginTop: 8 }}>
+                {editPrompts.map((text, i) => (
+                  <div className="row" key={i}>
+                    <input
+                      value={text}
+                      onChange={(e) => {
+                        const next = [...editPrompts];
+                        next[i] = e.target.value;
+                        setEditPrompts(next);
+                      }}
+                      placeholder={`Box ${i + 1}`}
+                    />
+                    <button
+                      type="button"
+                      className="secondary mini"
+                      onClick={() => {
+                        if (i === editPrompts.length - 1) {
+                          setEditPrompts([...editPrompts, ""]);
+                          return;
+                        }
+                        const next = editPrompts.filter((_, idx) => idx !== i);
+                        setEditPrompts(next.length ? next : [""]);
+                      }}
+                    >
+                      {i === editPrompts.length - 1 ? "＋" : "×"}
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <div className="actions">
+                <button type="submit" disabled={busy}>Save class</button>
+                <button type="button" className="secondary" onClick={goBack}>Cancel</button>
+              </div>
+            </form>
+          </section>
+        )}
 
-      {stage === "userProfile" && user && (
-        <UserProfilePage
-          userId={user.username}
-          userRole={user.role}
-          currentUsername={user.username}
-          currentUserRole={user.role}
-          avatarUrl={headerUserInfo?.avatarUrl}
-          avatarEmoji={headerUserInfo?.avatarEmoji}
-          onBack={() => setStage("journeyMap")}
-          onOpenSettings={() => setStage("userSettings")}
-          trees={trees ?? undefined}
-          treeGrowthDetails={treeGrowthDetails}
-          recentGrowthTreeIds={lastGrownTreeIds}
-          farmEntryNonce={farmEntryNonce}
-          onVisitOthersFarm={() => setStage("navigation")}
-        />
-      )}
+        {view === "student" && (
+          <section>
+            <div className="panel">
+              <div className="top">
+                <div>
+                  <b>Hi, {studentName} 👋</b>
+                  <div className="sub">Walk around, talk, and add names.</div>
+                </div>
+                <button className="secondary" onClick={goBack}>Back</button>
+              </div>
+              <div className="progress" style={{ marginTop: 12 }}>
+                <div className="bar" style={{ width: `${(mine.filled / prompts.length) * 100}%` }} />
+              </div>
+              <div className="sub" style={{ marginTop: 6 }}>{mine.filled} / {prompts.length} prompts completed</div>
+            </div>
+            {courseMeta.instructions?.length ? (
+              <div className="panel">
+                <h3>{courseMeta.introTitle || "How to play"}</h3>
+                <ol className="howto">
+                  {courseMeta.instructions.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ol>
+                {courseMeta.closing ? (
+                  <p className="howto-close"><b>{courseMeta.closing}</b></p>
+                ) : null}
+              </div>
+            ) : null}
+            <div className="grid">
+              {prompts.map((prompt, idx) => {
+                const vals = answers[idx]?.length ? answers[idx] : [""];
+                const count = namedCount(vals);
+                const look = cardLook(idx, count);
+                const tone = look.darker ? " is-darker" : look.dark ? " is-dark" : "";
+                return (
+                  <div className={`card${tone}`} key={idx} style={{ background: look.background, borderColor: look.borderColor }}>
+                    <div className="q">{prompt}</div>
+                    <div className="names">
+                      {vals.map((v, i) => (
+                        <div className="row" key={`${idx}-${i}`}>
+                          <input
+                            placeholder="Classmate name"
+                            value={v}
+                            onChange={(e) => {
+                              const next = { ...answersRef.current, [idx]: [...(answersRef.current[idx] || [""])] };
+                              next[idx][i] = e.target.value;
+                              setAnswers(next);
+                            }}
+                            onBlur={() => persist(answersRef.current).catch((err) => {
+                              console.error(err);
+                              alert(err.message || "Could not save.");
+                            })}
+                          />
+                          <button className="secondary mini" onClick={() => (i === vals.length - 1 ? addName(idx) : removeName(idx, i))}>
+                            {i === vals.length - 1 ? "＋" : "×"}
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
 
-      {stage === "userSettings" && user && (
-        <UserSettingsPage
-          userId={user.username}
-          backLabel="Back to Farm"
-          onBack={() => setStage("userProfile")}
-          onProfileUpdated={(profile) => {
-            setHeaderUserInfo((prev) => (prev ? { ...prev, ...profile } : null))
-            if (typeof window !== "undefined" && user) {
-              window.dispatchEvent(new CustomEvent("headerUserInfo", {
-                detail: { username: user.username, unreadCount: headerUserInfo?.unreadCount ?? 0, ...profile },
-              }))
-            }
-          }}
-        />
-      )}
+        {view === "teacher" && (
+          <section>
+            <div className="panel">
+              <div className="top">
+                <div>
+                  <h2 style={{ margin: 0 }}>Live Dashboard</h2>
+                  <div className="sub">{courseMeta.title}</div>
+                </div>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  <button className="secondary" onClick={goBack} disabled={busy}>Back</button>
+                  <button className="secondary" onClick={copyStudentLink}>Copy student link</button>
+                  <button className="danger" onClick={() => deleteClass(roomCode)} disabled={busy}>Delete class</button>
+                </div>
+              </div>
+            </div>
+            <div className="statsline">
+              <div className="stat"><b>{ranked.length}</b><span>students joined</span></div>
+              <div className="stat"><b>{classConnections}</b><span>name entries made</span></div>
+              <div className="stat"><b>{classAvg}</b><span>avg. unique people</span></div>
+            </div>
+            <div className="panel">
+              <h3>Leaderboard</h3>
+              <table className="table">
+                <thead>
+                  <tr><th>Rank</th><th>Student</th><th>Unique people</th><th>Entries</th><th>Prompts</th></tr>
+                </thead>
+                <tbody>
+                  {ranked.map((s, i) => (
+                    <tr key={`${s.name}-${i}`}>
+                      <td>{i + 1}</td>
+                      <td>{s.name}</td>
+                      <td><b>{s.unique}</b></td>
+                      <td>{s.entries}</td>
+                      <td>{s.filled}/{prompts.length}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="panel">
+              <h3>Most common Bingo items</h3>
+              <table className="table">
+                <thead>
+                  <tr><th>Prompt</th><th>Matches</th></tr>
+                </thead>
+                <tbody>
+                  {promptCounts.map((x) => (
+                    <tr key={x.p}>
+                      <td>{x.p}</td>
+                      <td><b>{x.c}</b></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        )}
+      </main>
+      <footer />
+    </>
+  );
+}
 
-      {/* Letter Writing Adventure - Complete Flow */}
-      {stage === "letterAdventure" && user && (
-        <LetterAdventure
-          onStart={(recipient, occasion, guidance, readerImageUrl) => {
-            setLetterState({
-              recipient,
-              occasion,
-              guidance,
-              readerImageUrl,
-              sections: [],
-              letter: "",
-            })
-            setStage("letterGame")
-          }}
-          onBack={() => setStage("writeTypeSelection")}
-          userId={user.username}
-          noAi={user.noAi}
-        />
-      )}
-
-      {stage === "letterGame" && user && letterState.recipient && letterState.occasion && (
-        user.noAi ? (
-            <LetterGameNoAi
-              recipient={letterState.recipient}
-              occasion={letterState.occasion}
-              onComplete={(sections) => {
-                setLetterState(prev => ({
-                  ...prev,
-                  sections,
-                }))
-                setStage("letterPuzzle")
-              }}
-              onBack={() => setStage("letterAdventure")}
-              userId={user.username}
-              onDraftChange={(draft) => {
-                setLetterState(prev => ({ ...prev, letter: draft }))
-              }}
-            />
-          ) : letterState.guidance !== null ? (
-            <LetterGame
-              recipient={letterState.recipient}
-              occasion={letterState.occasion}
-              guidance={letterState.guidance || ""}
-              readerImageUrl={letterState.readerImageUrl}
-              onComplete={(sections) => {
-                setLetterState(prev => ({
-                  ...prev,
-                  sections,
-                }))
-                setStage("letterPuzzle")
-              }}
-              onBack={() => setStage("letterAdventure")}
-              userId={user.username}
-              onDraftChange={(draft) => {
-                setLetterState(prev => ({ ...prev, letter: draft }))
-              }}
-            />
-          ) : null
-      )}
-
-      {stage === "letterPuzzle" && user && letterState.sections.length > 0 && (
-        <LetterPuzzle
-          sections={letterState.sections}
-          structure={["Greeting", "Opening", "Body", "Closing", "Signature"]}
-          onPuzzleComplete={(reorderedSections) => {
-            const fullLetter = reorderedSections.join('\n\n')
-            setLetterState(prev => ({
-              ...prev,
-              letter: fullLetter,
-            }))
-            setStage("letterComplete")
-          }}
-          onBack={() => setStage("letterGame")}
-        />
-      )}
-
-      {stage === "letterComplete" && user && letterState.letter && letterState.recipient && letterState.occasion && (
-        <LetterComplete
-          recipient={letterState.recipient}
-          occasion={letterState.occasion}
-          letter={letterState.letter}
-          guidance={letterState.guidance}
-          readerImageUrl={letterState.readerImageUrl}
-          sections={letterState.sections}
-          onReset={async (finalLetter) => {
-            const letterTitle = allocateWritingMapTitle("letter", letterState.recipient)
-            const topic = letterState.recipient || letterState.occasion || letterTitle
-            void evaluateValuesGrowth(finalLetter, "letter", letterTitle)
-            void queueJourneyMapUpdate({
-              title: letterTitle,
-              topic,
-              content: finalLetter,
-              workType: "letter",
-              source: "letter",
-            })
-
-            setLetterState({
-              recipient: null,
-              occasion: null,
-              guidance: null,
-              readerImageUrl: null,
-              sections: [],
-              letter: "",
-            })
-            goToWritingMap()
-          }}
-          onBack={async () => {
-            // 如果正在编辑已保存的作品，加载之前的内容
-            if (editingWorkId && user) {
-              try {
-                const response = await fetch(`/api/user-works?user_id=${user.username}&type=letter`)
-                const data = await response.json()
-                if (data.success && data.letters) {
-                  const work = data.letters.find((l: any) => l.id === editingWorkId)
-                  if (work) {
-                    setLetterState({
-                      recipient: work.recipient || null,
-                      occasion: work.occasion || null,
-                      guidance: work.guidance || null,
-                      readerImageUrl: work.readerImageUrl || null,
-                      sections: (work.sections as string[]) || [],
-                      letter: work.content || "",
-                    })
-                  }
-                }
-              } catch (error) {
-                console.error('Error loading work:', error)
-              }
-            }
-            setStage("letterPuzzle")
-          }}
-          onEdit={() => setStage("letterEdit")}
-          userId={user.username}
-          workId={editingWorkId}
-        />
-      )}
-
-      {/* 编辑页面 */}
-      {stage === "storyEdit" && user && storyState.story && (
-        <StoryEdit
-          language={language}
-          storyState={storyState}
-          onSave={(updatedStoryState) => {
-            setStoryState(updatedStoryState)
-            setStage("review")
-          }}
-          onBack={() => setStage("review")}
-          onNavigateToGallery={() => {
-            setGalleryFromEdit({ type: 'story' })
-            setStage("gallery")
-          }}
-          userId={user.username}
-          workId={editingWorkId}
-        />
-      )}
-
-      {stage === "bookReviewEdit" && user && bookReviewState.review && bookReviewState.bookTitle && (
-        <BookReviewEdit
-          language={language}
-          reviewType={bookReviewState.reviewType!}
-          bookTitle={bookReviewState.bookTitle}
-          review={bookReviewState.review}
-          bookCoverUrl={bookReviewState.bookCoverUrl}
-          bookSummary={bookReviewState.bookSummary}
-          structure={bookReviewState.structure}
-          onSave={(updatedReview) => {
-            setBookReviewState(prev => ({ ...prev, review: updatedReview }))
-            setStage("bookReviewComplete")
-          }}
-          onBack={() => setStage("bookReviewComplete")}
-          onNavigateToGallery={() => {
-            setGalleryFromEdit({ type: 'review' })
-            setStage("gallery")
-          }}
-          userId={user.username}
-          workId={editingWorkId}
-        />
-      )}
-
-      {stage === "letterEdit" && user && letterState.letter && letterState.recipient && letterState.occasion && (
-        <LetterEdit
-          language={language}
-          recipient={letterState.recipient}
-          occasion={letterState.occasion}
-          letter={letterState.letter}
-          guidance={letterState.guidance}
-          readerImageUrl={letterState.readerImageUrl}
-          sections={letterState.sections}
-          onSave={(updatedLetter) => {
-            setLetterState(prev => ({ ...prev, letter: updatedLetter }))
-            setStage("letterComplete")
-          }}
-          onBack={() => setStage("letterComplete")}
-          onNavigateToGallery={() => {
-            setGalleryFromEdit({ type: 'letter' })
-            setStage("gallery")
-          }}
-          userId={user.username}
-          workId={editingWorkId}
-        />
-      )}
-
-      {/* Drama Writing Flow (V0: builder + book; dramaWriting, dramaBook) */}
-      {stage === "dramaWriting" && user && (
-        <DramaWriting
-          language={language}
-          userId={user.username}
-          initialView="builder"
-          onBackToMap={() => {
-            commitDramaMapUpdate()
-            goToWritingMap()
-          }}
-          onBack={() => {
-            commitDramaMapUpdate()
-            setStage(journeyActive ? "journeyMap" : "writeTypeSelection")
-          }}
-        />
-      )}
-      {stage === "dramaBook" && user && (
-        <DramaWriting
-          language={language}
-          userId={user.username}
-          initialView="book"
-          onBackToMap={() => {
-            commitDramaMapUpdate()
-            goToWritingMap()
-          }}
-          onBack={() => {
-            commitDramaMapUpdate()
-            setStage(journeyActive ? "journeyMap" : "writeTypeSelection")
-          }}
-        />
-      )}
-
-      {/* Poetry Writing Flow (地图任务点: poetryForm, poetryTopic, poetryEditor, poetryReview) */}
-      {stage === "poetryWriting" && user && (
-        <PoetryWriting
-          userId={user.username}
-          onBackToMap={() => {
-            commitPoetryMapUpdate()
-            goToWritingMap()
-          }}
-          onBack={() => setStage("writeTypeSelection")}
-          onComplete={() => {
-            commitPoetryMapUpdate()
-            goToWritingMap()
-          }}
-        />
-      )}
-      {stage === "poetryForm" && user && (
-        <PoetryWriting
-          userId={user.username}
-          initialPhase="choose-form"
-          onBackToMap={() => {
-            commitPoetryMapUpdate()
-            goToWritingMap()
-          }}
-          onBack={() => setStage("writeTypeSelection")}
-          onComplete={() => {
-            commitPoetryMapUpdate()
-            goToWritingMap()
-          }}
-        />
-      )}
-      {stage === "poetryTopic" && user && (
-        <PoetryWriting
-          userId={user.username}
-          initialPhase="setup-topic"
-          onBackToMap={() => {
-            commitPoetryMapUpdate()
-            goToWritingMap()
-          }}
-          onBack={() => setStage("writeTypeSelection")}
-          onComplete={() => {
-            commitPoetryMapUpdate()
-            goToWritingMap()
-          }}
-        />
-      )}
-      {stage === "poetryEditor" && user && (
-        <PoetryWriting
-          userId={user.username}
-          initialPhase="editor"
-          onBackToMap={() => {
-            commitPoetryMapUpdate()
-            goToWritingMap()
-          }}
-          onBack={() => setStage("writeTypeSelection")}
-          onComplete={() => {
-            commitPoetryMapUpdate()
-            goToWritingMap()
-          }}
-        />
-      )}
-      {stage === "poetryReview" && user && (
-        <PoetryWriting
-          userId={user.username}
-          initialPhase="review"
-          onBackToMap={() => {
-            commitPoetryMapUpdate()
-            goToWritingMap()
-          }}
-          onBack={() => setStage("writeTypeSelection")}
-          onComplete={() => {
-            commitPoetryMapUpdate()
-            goToWritingMap()
-          }}
-        />
-      )}
-      {stage === "research" && user && (
-        <ResearchRoom
-          onBack={() => setStage("userProfile")}
-        />
-      )}
-
-      {stage === "navigation" && user && (
-        <NavigationPage
-          currentUsername={user.username}
-          onBack={() => setStage("userProfile")}
-          onSelectFarm={(friendName) => {
-            setSelectedOtherFarmUser(friendName)
-            setStage("otherFarm")
-          }}
-        />
-      )}
-      {stage === "otherFarm" && user && selectedOtherFarmUser && (
-        <UserProfilePage
-          userId={selectedOtherFarmUser}
-          userRole="student"
-          currentUsername={user.username}
-          currentUserRole={user.role}
-          onBack={() => {
-            setStage("userProfile")
-          }}
-          onOpenSettings={() => {
-            setStage("userProfile")
-          }}
-          onVisitOthersFarm={() => setStage("navigation")}
-          isOtherFarm
-        />
-      )}
-
-      {/* 文案帳號工具條：僅 copywriting 登錄且非 login 頁面時顯示 */}
-      {isCopywriter && user && stage !== "login" && (
-        <CopywritingToolbar username={user.username} stage={stage} />
-      )}
-    </main>
-  )
+export default function Page() {
+  return (
+    <Suspense fallback={<main className="wrap"><section className="panel">Loading…</section></main>}>
+      <BingoApp />
+    </Suspense>
+  );
 }
