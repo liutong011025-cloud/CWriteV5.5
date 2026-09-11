@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
+import { ensureProcessEventsTable } from "@/lib/ensure-research-tables"
 import { isMissingDatabaseTableError } from "@/lib/prisma-errors"
 import { lookupProcessEvent } from "@/lib/process-coding"
 
@@ -52,6 +53,7 @@ export async function POST(request: NextRequest) {
           payload?: unknown
         }
         rows.push({
+          id: `pe_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}_${rows.length}`,
           userId: user.id,
           sessionId,
           workType: def.workType,
@@ -74,11 +76,25 @@ export async function POST(request: NextRequest) {
     }
 
     if (rows.length > 0) {
-      await prisma.processEvent.createMany({ data: rows }).catch((error) => {
-        if (!isMissingDatabaseTableError(error)) {
+      try {
+        await ensureProcessEventsTable()
+      } catch (error) {
+        console.warn("process_events ensure skipped:", error)
+      }
+      try {
+        await prisma.processEvent.createMany({ data: rows })
+      } catch (error) {
+        if (isMissingDatabaseTableError(error)) {
+          try {
+            await ensureProcessEventsTable()
+            await prisma.processEvent.createMany({ data: rows })
+          } catch (retryError) {
+            console.warn("process-events insert skipped:", retryError)
+          }
+        } else {
           console.warn("process-events insert skipped:", error)
         }
-      })
+      }
     }
 
     return ok()
