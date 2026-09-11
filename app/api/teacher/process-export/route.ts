@@ -1,27 +1,11 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
+import { ensureProcessEventsTable, ensureTeacherResearchSettingsTable } from "@/lib/ensure-research-tables"
 import { isMissingDatabaseTableError } from "@/lib/prisma-errors"
 import { PROCESS_CODING_LEGEND } from "@/lib/process-coding"
 import { resolveTeacher, UNASSIGNED_CLASS_ID } from "@/lib/teacher-classes"
 
 export const dynamic = "force-dynamic"
-
-async function ensureTeacherResearchSettingsTable() {
-  await prisma.$executeRawUnsafe(`
-    CREATE TABLE IF NOT EXISTS "teacher_research_settings" (
-      "id" TEXT NOT NULL PRIMARY KEY,
-      "teacherId" TEXT NOT NULL,
-      "exportEnabled" BOOLEAN NOT NULL DEFAULT false,
-      "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      CONSTRAINT "teacher_research_settings_teacherId_fkey"
-        FOREIGN KEY ("teacherId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE
-    )
-  `)
-  await prisma.$executeRawUnsafe(`
-    CREATE UNIQUE INDEX IF NOT EXISTS "teacher_research_settings_teacherId_key"
-    ON "teacher_research_settings"("teacherId")
-  `)
-}
 
 async function readExportEnabled(teacherId: string): Promise<boolean> {
   try {
@@ -156,6 +140,11 @@ export async function GET(request: NextRequest) {
       payload: unknown
       clientTs: Date
     }> = []
+    try {
+      await ensureProcessEventsTable()
+    } catch (error) {
+      console.warn("process_events ensure skipped:", error)
+    }
     try {
       events = await prisma.processEvent.findMany({
         where: { userId: { in: studentIds } },
