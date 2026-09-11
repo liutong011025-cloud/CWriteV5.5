@@ -248,6 +248,8 @@ export default function DashboardV2({ user, onBack }: DashboardProps) {
   const refreshSeqRef = useRef(0)
   const [researchExportEnabled, setResearchExportEnabled] = useState(false)
   const [exportingProcess, setExportingProcess] = useState(false)
+  const [researchExportSaving, setResearchExportSaving] = useState(false)
+  const researchExportUserToggledRef = useRef(false)
 
   useEffect(() => {
     document.documentElement.classList.add("teacher-dashboard-active")
@@ -299,6 +301,7 @@ export default function DashboardV2({ user, onBack }: DashboardProps) {
       )
       if (!res.ok) return
       const json = (await res.json()) as { exportEnabled?: boolean }
+      if (researchExportUserToggledRef.current) return
       setResearchExportEnabled(!!json.exportEnabled)
     } catch {
       // ignore — export is optional
@@ -306,20 +309,34 @@ export default function DashboardV2({ user, onBack }: DashboardProps) {
   }
 
   async function toggleResearchExport() {
-    if (!user?.username) return
+    if (!user?.username || researchExportSaving) return
     const next = !researchExportEnabled
+    researchExportUserToggledRef.current = true
     setResearchExportEnabled(next)
+    setResearchExportSaving(true)
     try {
       const res = await fetch("/api/teacher/process-export", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ teacherUsername: user.username, enabled: next }),
       })
-      const json = (await res.json().catch(() => ({}))) as { exportEnabled?: boolean }
+      const json = (await res.json().catch(() => ({}))) as {
+        exportEnabled?: boolean
+        skipped?: boolean
+        error?: string
+      }
+      if (!res.ok || json.skipped) {
+        setResearchExportEnabled(!next)
+        toast.error(json.error || "Could not save export switch.")
+        return
+      }
       if (typeof json.exportEnabled === "boolean") setResearchExportEnabled(json.exportEnabled)
+      toast.success(json.exportEnabled ? "Research export is on." : "Research export is off.")
     } catch {
       setResearchExportEnabled(!next)
       toast.error("Could not update export switch.")
+    } finally {
+      setResearchExportSaving(false)
     }
   }
 
@@ -727,9 +744,10 @@ export default function DashboardV2({ user, onBack }: DashboardProps) {
               <Button
                 className={`pixel-btn text-sm font-bold ${researchExportEnabled ? "pixel-btn-green" : "pixel-btn-wood"}`}
                 variant="outline"
+                disabled={researchExportSaving}
                 onClick={() => void toggleResearchExport()}
               >
-                Research export: {researchExportEnabled ? "On" : "Off"}
+                Research export: {researchExportSaving ? "…" : researchExportEnabled ? "On" : "Off"}
               </Button>
               {researchExportEnabled && (
                 <>
