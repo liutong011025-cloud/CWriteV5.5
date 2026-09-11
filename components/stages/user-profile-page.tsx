@@ -197,14 +197,53 @@ const normalizeOtherMapState = (raw: unknown): OtherMapChaptersState => {
 }
 
 const getDefaultFarmButtonStates = (otherFarm: boolean): Record<FarmElementId, FarmElementState> => ({
-  // Start writing sits below Visit Others' Farm on the same post — keep Y separated
-  // so the two arrow signs do not share a click box.
-  farmbacktomap: otherFarm ? { x: 74, y: 44.6, scale: 0.75 } : { x: 74.1, y: 42.4, scale: 0.47 },
+  // Same post, same visual size: Visit Others' Farm on top, Start writing below.
+  farmbacktomap: otherFarm ? { x: 73.6, y: 44.2, scale: 0.74 } : { x: 73.6, y: 43.8, scale: 0.74 },
   farmsetting: otherFarm ? { x: 34.1, y: 49.6, scale: 0.8 } : { x: 34.3, y: 49.5, scale: 0.8 },
   farmwrittingboard: otherFarm ? { x: 62.8, y: 50.5, scale: 1.1 } : { x: 62.9, y: 51.0, scale: 1.15 },
-  vistothersfarm: { x: 73.2, y: 35.4, scale: 0.81 },
+  vistothersfarm: { x: 73.6, y: 36.2, scale: 0.74 },
   theirmap: otherFarm ? { x: 34.5, y: 48.7, scale: 0.42 } : { x: 34.5, y: 48.7, scale: 0.42 },
 })
+
+const FARM_LAYOUT_STORAGE_PREFIX = "cwrite-farm-button-layout-v1"
+
+const farmLayoutStorageKey = (otherFarm: boolean) =>
+  `${FARM_LAYOUT_STORAGE_PREFIX}:${otherFarm ? "other" : "own"}`
+
+const roundFarmValue = (value: number, digits = 2) => {
+  const factor = 10 ** digits
+  return Math.round(value * factor) / factor
+}
+
+const loadStoredFarmButtonStates = (otherFarm: boolean): Record<FarmElementId, FarmElementState> => {
+  const defaults = getDefaultFarmButtonStates(otherFarm)
+  try {
+    const raw = window.localStorage.getItem(farmLayoutStorageKey(otherFarm))
+    if (!raw) return defaults
+    const parsed = JSON.parse(raw) as Partial<Record<FarmElementId, Partial<FarmElementState>>>
+    const next = { ...defaults }
+    ;(Object.keys(defaults) as FarmElementId[]).forEach((id) => {
+      const item = parsed[id]
+      if (!item) return
+      next[id] = {
+        x: typeof item.x === "number" ? item.x : defaults[id].x,
+        y: typeof item.y === "number" ? item.y : defaults[id].y,
+        scale: typeof item.scale === "number" ? item.scale : defaults[id].scale,
+      }
+    })
+    return next
+  } catch {
+    return defaults
+  }
+}
+
+const persistFarmButtonStates = (otherFarm: boolean, states: Record<FarmElementId, FarmElementState>) => {
+  try {
+    window.localStorage.setItem(farmLayoutStorageKey(otherFarm), JSON.stringify(states))
+  } catch {
+    // ignore quota / private mode
+  }
+}
 
 const DEFAULT_TREE_LAYOUT: FarmElementState[] = [
   { x: 35.2, y: 74.1, scale: 0.4 },
@@ -255,6 +294,139 @@ function FarmMuteButton({
         draggable={false}
       />
     </button>
+  )
+}
+
+function FarmLayoutTunePanel({
+  elements,
+  states,
+  selectedId,
+  copied,
+  onSelect,
+  onChange,
+  onCopy,
+  onReset,
+}: {
+  elements: FarmElementConfig[]
+  states: Record<FarmElementId, FarmElementState>
+  selectedId: FarmElementId
+  copied: boolean
+  onSelect: (id: FarmElementId) => void
+  onChange: (id: FarmElementId, patch: Partial<FarmElementState>) => void
+  onCopy: () => void
+  onReset: () => void
+}) {
+  const selected = states[selectedId] ?? { x: 50, y: 50, scale: 1 }
+  const nudge = (axis: "x" | "y" | "scale", delta: number) => {
+    onChange(selectedId, { [axis]: selected[axis] + delta })
+  }
+
+  return (
+    <div
+      className="fixed bottom-20 left-6 z-[60] w-80 max-h-[72vh] overflow-y-auto rounded-2xl p-4 text-xs shadow-2xl"
+      style={{ background: "#f5e6c8", border: "4px solid #c4a35a" }}
+    >
+      <h4 className="mb-2 text-sm font-bold" style={{ color: "#8b6914" }}>
+        Farm sign layout
+      </h4>
+      <p className="mb-3 leading-relaxed" style={{ color: "#5a4a2a" }}>
+        Drag a sign, or pick one below. Saved in this browser. Copy JSON when it looks right.
+      </p>
+      <div className="mb-3 flex flex-wrap gap-1">
+        {elements.map((element) => (
+          <button
+            key={element.id}
+            type="button"
+            onClick={() => onSelect(element.id)}
+            className="rounded-full px-2 py-1 font-semibold"
+            style={{
+              background: selectedId === element.id ? "#7ec850" : "#fff",
+              color: "#5a4a2a",
+              border: "2px solid #c4a35a",
+            }}
+          >
+            {element.label}
+          </button>
+        ))}
+      </div>
+      <div className="space-y-3">
+        <div>
+          <label className="mb-1 block" style={{ color: "#5a4a2a" }}>
+            X: {selected.x.toFixed(1)}
+          </label>
+          <input
+            type="range"
+            min={0}
+            max={100}
+            step={0.1}
+            value={selected.x}
+            onChange={(event) => onChange(selectedId, { x: Number(event.target.value) })}
+            className="w-full"
+            style={{ accentColor: "#7ec850" }}
+          />
+        </div>
+        <div>
+          <label className="mb-1 block" style={{ color: "#5a4a2a" }}>
+            Y: {selected.y.toFixed(1)}
+          </label>
+          <input
+            type="range"
+            min={0}
+            max={100}
+            step={0.1}
+            value={selected.y}
+            onChange={(event) => onChange(selectedId, { y: Number(event.target.value) })}
+            className="w-full"
+            style={{ accentColor: "#7ec850" }}
+          />
+        </div>
+        <div>
+          <label className="mb-1 block" style={{ color: "#5a4a2a" }}>
+            Size: {selected.scale.toFixed(2)}
+          </label>
+          <input
+            type="range"
+            min={20}
+            max={180}
+            value={Math.round(selected.scale * 100)}
+            onChange={(event) => onChange(selectedId, { scale: Number(event.target.value) / 100 })}
+            className="w-full"
+            style={{ accentColor: "#7ec850" }}
+          />
+        </div>
+        <div className="grid grid-cols-4 gap-1">
+          <button type="button" className="rounded-md bg-white py-1 font-bold" onClick={() => nudge("x", -0.4)}>←</button>
+          <button type="button" className="rounded-md bg-white py-1 font-bold" onClick={() => nudge("x", 0.4)}>→</button>
+          <button type="button" className="rounded-md bg-white py-1 font-bold" onClick={() => nudge("y", -0.4)}>↑</button>
+          <button type="button" className="rounded-md bg-white py-1 font-bold" onClick={() => nudge("y", 0.4)}>↓</button>
+        </div>
+        <div className="grid grid-cols-2 gap-1">
+          <button type="button" className="rounded-md bg-white py-1 font-bold" onClick={() => nudge("scale", -0.03)}>Smaller</button>
+          <button type="button" className="rounded-md bg-white py-1 font-bold" onClick={() => nudge("scale", 0.03)}>Bigger</button>
+        </div>
+      </div>
+      <pre className="mt-3 max-h-28 overflow-auto rounded-md bg-white p-2 font-mono text-[10px] text-zinc-700">
+        {JSON.stringify(states[selectedId], null, 2)}
+      </pre>
+      <div className="mt-3 flex gap-2">
+        <button
+          type="button"
+          onClick={onCopy}
+          className="flex-1 rounded-md py-2 font-bold text-white"
+          style={{ background: copied ? "#5a9a3a" : "#8b6914" }}
+        >
+          {copied ? "Copied" : "Copy JSON"}
+        </button>
+        <button
+          type="button"
+          onClick={onReset}
+          className="rounded-md bg-white px-3 py-2 font-bold"
+          style={{ color: "#8b6914" }}
+        >
+          Reset
+        </button>
+      </div>
+    </div>
   )
 }
 
@@ -396,7 +568,20 @@ export default function UserProfilePage({
   const [hoveredTreeId, setHoveredTreeId] = useState<number | null>(null)
   const farmContainerRef = useRef<HTMLDivElement | null>(null)
   const [hoveredFarmElement, setHoveredFarmElement] = useState<FarmElementId | null>(null)
-  const [farmElementStates, setFarmElementStates] = useState<Record<FarmElementId, FarmElementState>>(() => getDefaultFarmButtonStates(isOtherFarm))
+  const [farmElementStates, setFarmElementStates] = useState<Record<FarmElementId, FarmElementState>>(() =>
+    typeof window === "undefined" ? getDefaultFarmButtonStates(isOtherFarm) : loadStoredFarmButtonStates(isOtherFarm),
+  )
+  const [showFarmTune, setShowFarmTune] = useState(false)
+  const [selectedFarmTuneId, setSelectedFarmTuneId] = useState<FarmElementId>("farmbacktomap")
+  const [farmLayoutCopied, setFarmLayoutCopied] = useState(false)
+  const farmTuneDragRef = useRef<{
+    id: FarmElementId
+    startClientX: number
+    startClientY: number
+    origX: number
+    origY: number
+    moved: boolean
+  } | null>(null)
   const [isMuted, setIsMuted] = useState(false)
   const backgroundMusicRef = useRef<HTMLAudioElement | null>(null)
   const hoverAudioRef = useRef<HTMLAudioElement | null>(null)
@@ -522,7 +707,7 @@ export default function UserProfilePage({
   }
 
   useEffect(() => {
-    setFarmElementStates(getDefaultFarmButtonStates(isOtherFarm))
+    setFarmElementStates(loadStoredFarmButtonStates(isOtherFarm))
     setShowOtherWritingMap(false)
   }, [isOtherFarm, userId])
 
@@ -540,17 +725,58 @@ export default function UserProfilePage({
 
   const farmElements: FarmElementConfig[] = isOtherFarm
     ? [
-        { id: "farmbacktomap", label: "Start writing!", imageSrc: "/farmbacktomap.png", baseWidthPercent: 14, useNaturalAspect: true },
+        { id: "farmbacktomap", label: "Start writing!", imageSrc: "/farmbacktomap.png", baseWidthPercent: 16, useNaturalAspect: true },
         { id: "theirmap", label: "Writing Map", imageSrc: "/theirmap.webp", baseWidthPercent: 16, useNaturalAspect: true },
         { id: "farmwrittingboard", label: "Writing Board", imageSrc: "/farmwritingboard.webp" },
         { id: "vistothersfarm", label: "Visit Others' Farms", imageSrc: "/visitothersfarm.webp", baseWidthPercent: 16, useNaturalAspect: true },
       ]
     : [
-    { id: "farmbacktomap", label: "Start writing!", imageSrc: "/farmbacktomap.png", baseWidthPercent: 14, useNaturalAspect: true },
+    { id: "farmbacktomap", label: "Start writing!", imageSrc: "/farmbacktomap.png", baseWidthPercent: 16, useNaturalAspect: true },
     { id: "farmsetting", label: "Settings", imageSrc: "/farmsetting.webp" },
     { id: "farmwrittingboard", label: "Writing Board", imageSrc: "/farmwritingboard.webp" },
     { id: "vistothersfarm", label: "Visit Others' Farms", imageSrc: "/visitothersfarm.webp", baseWidthPercent: 16, useNaturalAspect: true },
   ]
+
+  const updateFarmElementState = useCallback(
+    (id: FarmElementId, patch: Partial<FarmElementState>) => {
+      setFarmElementStates((prev) => {
+        const current = prev[id]
+        if (!current) return prev
+        const next = {
+          ...prev,
+          [id]: {
+            x: patch.x != null ? roundFarmValue(patch.x) : current.x,
+            y: patch.y != null ? roundFarmValue(patch.y) : current.y,
+            scale: patch.scale != null ? roundFarmValue(Math.max(0.15, patch.scale), 3) : current.scale,
+          },
+        }
+        persistFarmButtonStates(isOtherFarm, next)
+        return next
+      })
+    },
+    [isOtherFarm],
+  )
+
+  const resetFarmLayout = useCallback(() => {
+    const next = getDefaultFarmButtonStates(isOtherFarm)
+    setFarmElementStates(next)
+    persistFarmButtonStates(isOtherFarm, next)
+  }, [isOtherFarm])
+
+  const copyFarmLayoutJson = useCallback(async () => {
+    const payload = farmElements.reduce<Record<string, FarmElementState>>((acc, element) => {
+      acc[element.id] = farmElementStates[element.id]
+      return acc
+    }, {})
+    const text = JSON.stringify(payload, null, 2)
+    try {
+      await navigator.clipboard.writeText(text)
+      setFarmLayoutCopied(true)
+      window.setTimeout(() => setFarmLayoutCopied(false), 1600)
+    } catch {
+      window.prompt("Copy farm layout JSON:", text)
+    }
+  }, [farmElementStates, farmElements])
 
   const farmTreeStates = DEFAULT_TREE_LAYOUT
   const forestById = new Map(forest.map((tree) => [tree.id, tree] as const))
@@ -1402,7 +1628,8 @@ export default function UserProfilePage({
               const state = farmElementStates[element.id]
               if (!state) return null
               const isHovered = hoveredFarmElement === element.id
-              const sizePercent = Math.min(32, (element.baseWidthPercent ?? 8) * state.scale)
+              const isTuneSelected = showFarmTune && selectedFarmTuneId === element.id
+              const sizePercent = Math.min(70, (element.baseWidthPercent ?? 8) * state.scale)
               return (
                 <button
                   key={element.id}
@@ -1413,20 +1640,65 @@ export default function UserProfilePage({
                     top: `${state.y}%`,
                     width: `${sizePercent}%`,
                     aspectRatio: element.useNaturalAspect ? undefined : "1 / 1",
-                    transform: `translate(-50%, -50%) scale(${isHovered ? 1.08 : 1})`,
+                    transform: `translate(-50%, -50%) scale(${!showFarmTune && isHovered ? 1.08 : 1})`,
                     transformOrigin: "center center",
-                    transition: "transform 0.25s ease-in-out",
+                    transition: showFarmTune ? "none" : "transform 0.25s ease-in-out",
+                    outline: isTuneSelected ? "3px dashed #fff8dc" : undefined,
+                    outlineOffset: 4,
+                    cursor: showFarmTune ? "move" : "pointer",
                     // Start writing is the lower sign; keep it above Visit Others' Farm
                     // so a click on that plank always goes to the map, not the farm list.
                     zIndex:
-                      element.id === "farmbacktomap" ? 28 : element.id === "vistothersfarm" ? 16 : 20,
+                      isTuneSelected
+                        ? 40
+                        : element.id === "farmbacktomap"
+                          ? 28
+                          : element.id === "vistothersfarm"
+                            ? 16
+                            : 20,
                   }}
                   onMouseEnter={() => {
                     setHoveredFarmElement(element.id)
                     playFarmHoverSound(element.id)
                   }}
                   onMouseLeave={() => setHoveredFarmElement((prev) => (prev === element.id ? null : prev))}
+                  onPointerDown={(event) => {
+                    if (!showFarmTune) return
+                    event.preventDefault()
+                    event.currentTarget.setPointerCapture(event.pointerId)
+                    setSelectedFarmTuneId(element.id)
+                    farmTuneDragRef.current = {
+                      id: element.id,
+                      startClientX: event.clientX,
+                      startClientY: event.clientY,
+                      origX: state.x,
+                      origY: state.y,
+                      moved: false,
+                    }
+                  }}
+                  onPointerMove={(event) => {
+                    const drag = farmTuneDragRef.current
+                    if (!showFarmTune || !drag || drag.id !== element.id) return
+                    const overlay = coverOverlayRect
+                    if (!overlay?.width || !overlay?.height) return
+                    const dx = ((event.clientX - drag.startClientX) / overlay.width) * 100
+                    const dy = ((event.clientY - drag.startClientY) / overlay.height) * 100
+                    if (Math.abs(dx) > 0.15 || Math.abs(dy) > 0.15) drag.moved = true
+                    updateFarmElementState(element.id, {
+                      x: Math.min(98, Math.max(2, drag.origX + dx)),
+                      y: Math.min(98, Math.max(2, drag.origY + dy)),
+                    })
+                  }}
+                  onPointerUp={() => {
+                    farmTuneDragRef.current = farmTuneDragRef.current?.id === element.id
+                      ? { ...farmTuneDragRef.current, moved: farmTuneDragRef.current.moved }
+                      : farmTuneDragRef.current
+                  }}
                   onClick={() => {
+                    if (showFarmTune) {
+                      setSelectedFarmTuneId(element.id)
+                      return
+                    }
                     if (element.id === "farmbacktomap") onBack()
                     else if (element.id === "farmsetting") {
                       if (!isOtherFarm) onOpenSettings()
@@ -1445,7 +1717,7 @@ export default function UserProfilePage({
                     }`}
                     style={{
                       animationDelay: `${elementIndex * 0.35}s`,
-                      animationPlayState: isHovered ? "paused" : "running",
+                      animationPlayState: isHovered || showFarmTune ? "paused" : "running",
                     }}
                   >
                     <img
@@ -1818,6 +2090,33 @@ export default function UserProfilePage({
             </div>
           </div>
         )}
+      {!showOtherWritingMap && (
+        <>
+          <button
+            type="button"
+            onClick={() => setShowFarmTune((open) => !open)}
+            className="fixed bottom-6 left-6 z-[60] rounded-full bg-white/90 px-4 py-2 text-sm font-bold text-amber-900 shadow-lg backdrop-blur-sm hover:scale-105"
+            style={{
+              border: "4px solid #c4a35a",
+              boxShadow: "0 6px 0 #8b6914, 0 10px 22px rgba(0,0,0,0.18)",
+            }}
+          >
+            {showFarmTune ? "Hide layout tool" : "Adjust signs"}
+          </button>
+          {showFarmTune && (
+            <FarmLayoutTunePanel
+              elements={farmElements}
+              states={farmElementStates}
+              selectedId={selectedFarmTuneId}
+              copied={farmLayoutCopied}
+              onSelect={setSelectedFarmTuneId}
+              onChange={updateFarmElementState}
+              onCopy={() => void copyFarmLayoutJson()}
+              onReset={resetFarmLayout}
+            />
+          )}
+        </>
+      )}
       {!isOtherFarm && (
         <FarmMuteButton isMuted={isMuted} onToggle={() => setIsMuted((prev) => !prev)} />
       )}
