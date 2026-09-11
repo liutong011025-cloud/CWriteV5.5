@@ -18,20 +18,17 @@ interface NavigationPageProps {
   currentUsername?: string
 }
 
-interface DashboardClassUser {
-  id: string
-  username: string
-  avatarUrl: string | null
-  avatarEmoji: string | null
-  grade: string | null
-  totalWorks: number
-  latestActiveAt: string | null
-}
-
-interface DashboardPayload {
-  classGroups?: Array<{
-    users?: DashboardClassUser[]
+interface ClassmatesPayload {
+  users?: Array<{
+    username: string
+    avatarUrl: string | null
+    avatarEmoji: string | null
+    grade: string | null
+    totalWorks: number
+    latestActiveAt: string | null
   }>
+  scope?: "class" | "unassigned"
+  error?: string
 }
 
 /** 與 object-cover 背景對齊的 overlay 矩形（px） */
@@ -46,6 +43,7 @@ export default function NavigationPage({ onBack, onSelectFarm, currentUsername }
   const [listOpen, setListOpen] = useState(false)
   const [preferFullImage, setPreferFullImage] = useState(false)
   const [friends, setFriends] = useState<FriendFarm[]>([])
+  const [friendsScope, setFriendsScope] = useState<"class" | "unassigned">("unassigned")
   const [loadingFriends, setLoadingFriends] = useState(false)
   const [friendsError, setFriendsError] = useState<string | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -53,34 +51,34 @@ export default function NavigationPage({ onBack, onSelectFarm, currentUsername }
   const [coverOverlayRect, setCoverOverlayRect] = useState<CoverOverlayRect | null>(null)
 
   const refreshFriends = useCallback(async () => {
+    const username = currentUsername?.trim()
+    if (!username) {
+      setFriends([])
+      setFriendsScope("unassigned")
+      setFriendsError(null)
+      return
+    }
     setLoadingFriends(true)
     try {
-      const response = await fetch("/api/teacher/dashboard", { cache: "no-store" })
+      const response = await fetch(`/api/classmates?username=${encodeURIComponent(username)}`, {
+        cache: "no-store",
+      })
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}`)
       }
-      const payload = (await response.json()) as DashboardPayload
-      const lowerCurrent = currentUsername?.toLowerCase().trim()
-      const allClassmates = (payload.classGroups ?? []).flatMap((group) => group.users ?? [])
-      const me = allClassmates.find((item) => item.username?.trim().toLowerCase() === lowerCurrent)
-      const myGrade = me?.grade?.trim()
-      const peerPool = myGrade
-        ? allClassmates.filter((item) => (item.grade?.trim() || "") === myGrade)
-        : (payload.classGroups?.[0]?.users ?? allClassmates)
-      const liveFriends = peerPool
-        .filter((item) => {
-          const username = item.username?.trim()
-          return username && (!lowerCurrent || username.toLowerCase() !== lowerCurrent)
-        })
+      const payload = (await response.json()) as ClassmatesPayload
+      const liveFriends = (payload.users ?? [])
         .map((item) => ({
-          name: item.username.trim(),
+          name: item.username?.trim() || "",
           avatarUrl: item.avatarUrl,
           avatarEmoji: item.avatarEmoji,
           grade: item.grade,
           totalWorks: item.totalWorks,
           latestActiveAt: item.latestActiveAt,
         }))
+        .filter((item) => item.name && item.name.toLowerCase() !== username.toLowerCase())
       setFriends(liveFriends)
+      setFriendsScope(payload.scope === "class" ? "class" : "unassigned")
       setFriendsError(null)
     } catch (error) {
       console.error("[navigation] failed to refresh users:", error)
@@ -162,9 +160,9 @@ export default function NavigationPage({ onBack, onSelectFarm, currentUsername }
       .map((friend) => (friend.latestActiveAt ? new Date(friend.latestActiveAt).getTime() : 0))
       .filter((value) => Number.isFinite(value) && value > 0)
       .sort((a, b) => b - a)[0]
-    if (!latest) return "Live class list"
+    if (!latest) return friendsScope === "unassigned" ? "Live unassigned list" : "Live class list"
     return `Latest activity ${new Date(latest).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`
-  }, [friends])
+  }, [friends, friendsScope])
 
   return (
     <div className="min-h-screen w-full" data-stage="navigation">
@@ -227,7 +225,9 @@ export default function NavigationPage({ onBack, onSelectFarm, currentUsername }
               {friendsError ? (
                 <p className="px-3 py-2 text-center text-xs font-semibold text-rose-700">{friendsError}</p>
               ) : friends.length === 0 && !loadingFriends ? (
-                <p className="px-3 py-2 text-center text-xs font-semibold text-slate-600">No classmates found yet.</p>
+                <p className="px-3 py-2 text-center text-xs font-semibold text-slate-600">
+                  {friendsScope === "unassigned" ? "No unassigned classmates found yet." : "No classmates found yet."}
+                </p>
               ) : (
                 <ul className="space-y-2 text-sm sm:text-base">
                   {friends.map((friend) => (
