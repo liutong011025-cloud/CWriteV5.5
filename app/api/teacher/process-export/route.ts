@@ -6,7 +6,29 @@ import { resolveTeacher, UNASSIGNED_CLASS_ID } from "@/lib/teacher-classes"
 
 export const dynamic = "force-dynamic"
 
+async function ensureTeacherResearchSettingsTable() {
+  await prisma.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS "teacher_research_settings" (
+      "id" TEXT NOT NULL PRIMARY KEY,
+      "teacherId" TEXT NOT NULL,
+      "exportEnabled" BOOLEAN NOT NULL DEFAULT false,
+      "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      CONSTRAINT "teacher_research_settings_teacherId_fkey"
+        FOREIGN KEY ("teacherId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE
+    )
+  `)
+  await prisma.$executeRawUnsafe(`
+    CREATE UNIQUE INDEX IF NOT EXISTS "teacher_research_settings_teacherId_key"
+    ON "teacher_research_settings"("teacherId")
+  `)
+}
+
 async function readExportEnabled(teacherId: string): Promise<boolean> {
+  try {
+    await ensureTeacherResearchSettingsTable()
+  } catch (error) {
+    console.warn("teacher_research_settings ensure skipped:", error)
+  }
   try {
     const row = await prisma.teacherResearchSetting.findUnique({
       where: { teacherId },
@@ -17,7 +39,17 @@ async function readExportEnabled(teacherId: string): Promise<boolean> {
     if (!isMissingDatabaseTableError(error)) {
       console.warn("teacher research setting read skipped:", error)
     }
-    return false
+    try {
+      const rows = await prisma.$queryRaw<Array<{ exportEnabled: boolean }>>`
+        SELECT "exportEnabled" FROM "teacher_research_settings" WHERE "teacherId" = ${teacherId} LIMIT 1
+      `
+      return !!rows[0]?.exportEnabled
+    } catch (rawError) {
+      if (!isMissingDatabaseTableError(rawError)) {
+        console.warn("teacher research setting raw read skipped:", rawError)
+      }
+      return false
+    }
   }
 }
 
@@ -230,6 +262,12 @@ export async function PATCH(request: NextRequest) {
 
     const enabled = !!body?.enabled
     try {
+      await ensureTeacherResearchSettingsTable()
+    } catch (error) {
+      console.warn("teacher_research_settings ensure skipped:", error)
+    }
+
+    try {
       const row = await prisma.teacherResearchSetting.upsert({
         where: { teacherId: teacher.id },
         update: { exportEnabled: enabled },
@@ -237,13 +275,29 @@ export async function PATCH(request: NextRequest) {
       })
       return NextResponse.json({ exportEnabled: row.exportEnabled })
     } catch (error) {
-      if (isMissingDatabaseTableError(error)) {
-        return NextResponse.json({ exportEnabled: false, skipped: true })
+      try {
+        const id = `trs_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`
+        await prisma.$executeRaw`
+          INSERT INTO "teacher_research_settings" ("id", "teacherId", "exportEnabled", "updatedAt")
+          VALUES (${id}, ${teacher.id}, ${enabled}, NOW())
+          ON CONFLICT ("teacherId") DO UPDATE SET
+            "exportEnabled" = EXCLUDED."exportEnabled",
+            "updatedAt" = NOW()
+        `
+        return NextResponse.json({ exportEnabled: enabled })
+      } catch (rawError) {
+        console.warn("process-export toggle failed:", error, rawError)
+        return NextResponse.json(
+          { exportEnabled: false, skipped: true, error: "Could not save export switch" },
+          { status: 500 },
+        )
       }
-      throw error
     }
   } catch (error) {
     console.warn("process-export toggle failed:", error)
-    return NextResponse.json({ exportEnabled: false, skipped: true })
+    return NextResponse.json(
+      { exportEnabled: false, skipped: true, error: "Could not save export switch" },
+      { status: 500 },
+    )
   }
 }
