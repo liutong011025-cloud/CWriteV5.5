@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react"
 import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
-import { ArrowLeft, Bot, ChevronDown, ChevronRight, LogOut, Plus, RefreshCw, Trash2, Upload, UserPlus } from "lucide-react"
+import { ArrowLeft, Bot, ChevronDown, ChevronRight, Download, LogOut, Plus, RefreshCw, Trash2, Upload, UserPlus } from "lucide-react"
 import { Button } from "@/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/ui/avatar"
@@ -246,6 +246,8 @@ export default function DashboardV2({ user, onBack }: DashboardProps) {
   const detailRequestRef = useRef(0)
   const summaryRequestRef = useRef(0)
   const refreshSeqRef = useRef(0)
+  const [researchExportEnabled, setResearchExportEnabled] = useState(false)
+  const [exportingProcess, setExportingProcess] = useState(false)
 
   useEffect(() => {
     document.documentElement.classList.add("teacher-dashboard-active")
@@ -259,6 +261,7 @@ export default function DashboardV2({ user, onBack }: DashboardProps) {
   useEffect(() => {
     if (!user?.username) return
     void refresh()
+    void loadResearchExportSetting()
     const timer = window.setInterval(() => void refresh(), 15000)
     return () => window.clearInterval(timer)
   }, [user?.username])
@@ -285,6 +288,71 @@ export default function DashboardV2({ user, onBack }: DashboardProps) {
       if (firstReal) return firstReal.id
       return classGroups[0]?.id ?? null
     })
+  }
+
+  async function loadResearchExportSetting() {
+    if (!user?.username) return
+    try {
+      const res = await fetch(
+        `/api/teacher/process-export?teacher=${encodeURIComponent(user.username)}&settings=1`,
+        { cache: "no-store" },
+      )
+      if (!res.ok) return
+      const json = (await res.json()) as { exportEnabled?: boolean }
+      setResearchExportEnabled(!!json.exportEnabled)
+    } catch {
+      // ignore — export is optional
+    }
+  }
+
+  async function toggleResearchExport() {
+    if (!user?.username) return
+    const next = !researchExportEnabled
+    setResearchExportEnabled(next)
+    try {
+      const res = await fetch("/api/teacher/process-export", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ teacherUsername: user.username, enabled: next }),
+      })
+      const json = (await res.json().catch(() => ({}))) as { exportEnabled?: boolean }
+      if (typeof json.exportEnabled === "boolean") setResearchExportEnabled(json.exportEnabled)
+    } catch {
+      setResearchExportEnabled(!next)
+      toast.error("Could not update export switch.")
+    }
+  }
+
+  async function exportProcessData(format: "json" | "csv") {
+    if (!user?.username || !researchExportEnabled) return
+    setExportingProcess(true)
+    try {
+      const classQuery = selectedClassId ? `&classId=${encodeURIComponent(selectedClassId)}` : ""
+      const res = await fetch(
+        `/api/teacher/process-export?teacher=${encodeURIComponent(user.username)}${classQuery}&format=${format}`,
+        { cache: "no-store" },
+      )
+      if (res.status === 403) {
+        toast.error("Turn on Research export first.")
+        return
+      }
+      if (!res.ok) {
+        toast.error("Export failed.")
+        return
+      }
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = format === "csv" ? "process-events.csv" : "process-export.json"
+      a.click()
+      URL.revokeObjectURL(url)
+      toast.success("Process data downloaded.")
+    } catch {
+      toast.error("Export failed.")
+    } finally {
+      setExportingProcess(false)
+    }
   }
 
   async function refresh(preferClassId?: string | null) {
@@ -656,6 +724,33 @@ export default function DashboardV2({ user, onBack }: DashboardProps) {
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
+              <Button
+                className={`pixel-btn text-sm font-bold ${researchExportEnabled ? "pixel-btn-green" : "pixel-btn-wood"}`}
+                variant="outline"
+                onClick={() => void toggleResearchExport()}
+              >
+                Research export: {researchExportEnabled ? "On" : "Off"}
+              </Button>
+              {researchExportEnabled && (
+                <>
+                  <Button
+                    className="pixel-btn pixel-btn-blue text-sm font-bold"
+                    disabled={exportingProcess}
+                    onClick={() => void exportProcessData("json")}
+                  >
+                    <Download className="mr-2 h-4 w-4" />
+                    {exportingProcess ? "Exporting…" : "Export JSON"}
+                  </Button>
+                  <Button
+                    className="pixel-btn pixel-btn-blue text-sm font-bold"
+                    disabled={exportingProcess}
+                    onClick={() => void exportProcessData("csv")}
+                  >
+                    <Download className="mr-2 h-4 w-4" />
+                    CSV
+                  </Button>
+                </>
+              )}
               <Button className="pixel-btn pixel-btn-blue text-sm font-bold" onClick={() => void refresh()}>
                 <RefreshCw className="mr-2 h-4 w-4" />
                 Refresh
