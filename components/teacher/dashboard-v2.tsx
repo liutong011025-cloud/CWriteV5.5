@@ -344,9 +344,8 @@ export default function DashboardV2({ user, onBack }: DashboardProps) {
     if (!user?.username || !researchExportEnabled) return
     setExportingProcess(true)
     try {
-      const classQuery = selectedClassId ? `&classId=${encodeURIComponent(selectedClassId)}` : ""
       const res = await fetch(
-        `/api/teacher/process-export?teacher=${encodeURIComponent(user.username)}${classQuery}&format=${format}`,
+        `/api/teacher/process-export?teacher=${encodeURIComponent(user.username)}&format=${format}`,
         { cache: "no-store" },
       )
       if (res.status === 403) {
@@ -364,7 +363,12 @@ export default function DashboardV2({ user, onBack }: DashboardProps) {
       a.download = format === "csv" ? "process-events.csv" : "process-export.json"
       a.click()
       URL.revokeObjectURL(url)
-      toast.success("Process data downloaded.")
+      const eventCount = Number(res.headers.get("X-Process-Event-Count") || "")
+      toast.success(
+        Number.isFinite(eventCount) && eventCount >= 0
+          ? `Process data downloaded (${eventCount} events).`
+          : "Process data downloaded.",
+      )
     } catch {
       toast.error("Export failed.")
     } finally {
