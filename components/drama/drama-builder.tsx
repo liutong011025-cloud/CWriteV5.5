@@ -12,6 +12,7 @@ import {
   Wand2,
 } from "lucide-react";
 import { useState } from "react";
+import { trackProcess } from "@/lib/process-logger";
 
 interface DramaBuilderProps {
   onBack?: () => void;
@@ -100,7 +101,10 @@ export function DramaBuilder({ onBack, backLabel, onGenerateDrama }: DramaBuilde
                   <div className="absolute -inset-1 animate-pulse-glow rounded-2xl bg-primary/20 blur-md" />
                 )}
                 <Button
-                  onClick={onGenerateDrama}
+                  onClick={() => {
+                    trackProcess("DRAMA_036", {}, { stage: "dramaWriting" })
+                    onGenerateDrama()
+                  }}
                   disabled={!canGenerateDrama || isGeneratingBook}
                   size="lg"
                   className="relative w-full gap-2.5 rounded-2xl px-6 py-5 font-hand text-lg shadow-lg transition-transform hover:scale-[1.02] active:scale-95 disabled:opacity-60"
