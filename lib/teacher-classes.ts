@@ -270,3 +270,99 @@ export async function fetchDashboardClassGroups(teacherUsername: string): Promis
 
   return resolveClassGroupsForTeacher(teacherUsername, students, latestActivityMap)
 }
+
+const studentDashboardSelect = {
+  id: true,
+  username: true,
+  role: true,
+  createdAt: true,
+  profile: {
+    select: {
+      avatarUrl: true,
+      avatarEmoji: true,
+      grade: true,
+    },
+  },
+  _count: {
+    select: {
+      stories: true,
+      reviews: true,
+      letters: true,
+      dramas: true,
+      poetries: true,
+    },
+  },
+} as const
+
+function toLatestActivityMap(
+  interactions: Array<{ userId: string; timestamp: Date }>,
+): Map<string, Date> {
+  const latestActivityMap = new Map<string, Date>()
+  for (const interaction of interactions) {
+    const previous = latestActivityMap.get(interaction.userId)
+    if (!previous || interaction.timestamp > previous) {
+      latestActivityMap.set(interaction.userId, interaction.timestamp)
+    }
+  }
+  return latestActivityMap
+}
+
+export interface PeerFarmList {
+  users: ClassUserSummary[]
+  scope: "class" | "unassigned"
+}
+
+/**
+ * Classmates for Visit Others' Farms:
+ * - In a real class → other members of that class (union if in multiple)
+ * - Not in any class → every other student who is also unassigned
+ */
+export async function fetchPeerFarmUsers(username: string): Promise<PeerFarmList> {
+  const normalized = username.trim()
+  if (!normalized) return { users: [], scope: "unassigned" }
+
+  const me = await prisma.user.findFirst({
+    where: { username: { equals: normalized, mode: "insensitive" } },
+    select: {
+      id: true,
+      classMemberships: { select: { classId: true } },
+    },
+  })
+  if (!me) return { users: [], scope: "unassigned" }
+
+  const myClassIds = [...new Set(me.classMemberships.map((item) => item.classId))]
+  const scope: PeerFarmList["scope"] = myClassIds.length > 0 ? "class" : "unassigned"
+
+  const peers = (await prisma.user.findMany({
+    where:
+      scope === "class"
+        ? {
+            role: "student",
+            id: { not: me.id },
+            classMemberships: { some: { classId: { in: myClassIds } } },
+          }
+        : {
+            role: "student",
+            id: { not: me.id },
+            classMemberships: { none: {} },
+          },
+    orderBy: { username: "asc" },
+    select: studentDashboardSelect,
+  })) as StudentDashboardRow[]
+
+  const peerIds = peers.map((item) => item.id)
+  const interactions =
+    peerIds.length === 0
+      ? []
+      : await prisma.interaction.findMany({
+          where: { userId: { in: peerIds } },
+          select: { userId: true, timestamp: true },
+          orderBy: { timestamp: "desc" },
+        })
+
+  const latestActivityMap = toLatestActivityMap(interactions)
+  return {
+    scope,
+    users: peers.map((item) => toClassUserSummary(item, latestActivityMap)),
+  }
+}
