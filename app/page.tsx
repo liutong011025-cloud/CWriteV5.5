@@ -48,6 +48,7 @@ import NavigationPage from "@/components/stages/navigation-page"
 import CopywritingToolbar from "@/components/copywriting-toolbar"
 import { useDramaStore } from "@/lib/drama-store"
 import { usePoetryStore } from "@/lib/poetry-store"
+import { startProcessSession, trackProcess } from "@/lib/process-logger"
 import Cagent, { type CagentMood } from "@/components/cagent/Cagent"
 import RedFlashOverlay from "@/components/cagent/RedFlashOverlay"
 import {
@@ -2237,10 +2238,12 @@ export default function Home() {
             setLevelBadgeUnlocked(true)
             setJourneyActive(true)
             mapPinAnchoredRef.current = true
+            startProcessSession()
             if (type === "story") {
               setStoryState({ character: null, plot: null, structure: null, story: "" })
               setStage("character")
             } else if (type === "bookReview") {
+              trackProcess("BOOK_001", {}, { stage: "bookReviewWelcome" })
               setBookReviewState({
                 reviewType: null,
                 bookTitle: null,
@@ -2251,6 +2254,7 @@ export default function Home() {
               })
               setStage("bookReviewWelcome")
             } else if (type === "letter") {
+              trackProcess("LETTER_001", {}, { stage: "letterAdventure" })
               setLetterState({
                 recipient: null,
                 occasion: null,
@@ -2261,8 +2265,10 @@ export default function Home() {
               })
               setStage("letterAdventure")
             } else if (type === "drama") {
+              trackProcess("DRAMA_001", {}, { stage: "dramaWriting" })
               setStage("dramaWriting")
             } else if (type === "poetry") {
+              trackProcess("POETRY_001", {}, { stage: "poetryWriting" })
               setStage("poetryWriting")
             }
           }}
@@ -2312,13 +2318,30 @@ export default function Home() {
         <WriteTypeSelection
           language={language}
           onSelectStory={() => {
+            startProcessSession()
             setStoryState({ character: null, plot: null, structure: null, story: "" })
             setStage("character")
           }}
-          onSelectBookReview={() => setStage("bookReviewWelcome")}
-          onSelectLetter={() => setStage("letterAdventure")}
-          onSelectDrama={() => setStage("dramaWriting")}
-          onSelectPoetry={() => setStage("poetryWriting")}
+          onSelectBookReview={() => {
+            startProcessSession()
+            trackProcess("BOOK_001", {}, { stage: "writeTypeSelection" })
+            setStage("bookReviewWelcome")
+          }}
+          onSelectLetter={() => {
+            startProcessSession()
+            trackProcess("LETTER_001", {}, { stage: "writeTypeSelection" })
+            setStage("letterAdventure")
+          }}
+          onSelectDrama={() => {
+            startProcessSession()
+            trackProcess("DRAMA_001", {}, { stage: "writeTypeSelection" })
+            setStage("dramaWriting")
+          }}
+          onSelectPoetry={() => {
+            startProcessSession()
+            trackProcess("POETRY_001", {}, { stage: "writeTypeSelection" })
+            setStage("poetryWriting")
+          }}
           onBack={() => setStage("userProfile")}
         />
       )}
