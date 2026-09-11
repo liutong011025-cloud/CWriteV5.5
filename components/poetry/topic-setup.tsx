@@ -7,6 +7,7 @@ import { ArrowLeft, ArrowRight, Palette } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BackButton } from "@/components/ui/back-button";
 import { Input } from "@/components/ui/input";
+import { trackProcess, trackProcessInput } from "@/lib/process-logger";
 
 interface TopicSetupProps {
   onBack?: () => void;
@@ -34,6 +35,7 @@ export function TopicSetup({ onBack, onTopicSelected }: TopicSetupProps) {
     onTopicSelected?.(topic);
     initLines(lineCount);
     setPhase("editor");
+    trackProcess("POETRY_008", { form, topic }, { stage: "poetryTopic" })
   };
 
   const activeTopic = selectedPreset || customTopic.trim();
