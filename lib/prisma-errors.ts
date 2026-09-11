@@ -17,5 +17,10 @@ export function isDatabaseConnectionError(error: unknown): boolean {
 export function isMissingDatabaseTableError(error: unknown): boolean {
   const code =
     error && typeof error === "object" && "code" in error ? (error as { code?: string }).code ?? "" : ""
-  return code === "P2021"
+  const message = error instanceof Error ? error.message : String(error)
+  return (
+    code === "P2021" ||
+    code === "P2010" ||
+    /does not exist|relation .* does not exist|Unknown table|no such table/i.test(message)
+  )
 }
