@@ -197,15 +197,14 @@ const normalizeOtherMapState = (raw: unknown): OtherMapChaptersState => {
 }
 
 const getDefaultFarmButtonStates = (otherFarm: boolean): Record<FarmElementId, FarmElementState> => ({
-  // Same post, same visual size: Visit Others' Farm on top, Start writing below.
-  farmbacktomap: otherFarm ? { x: 73.6, y: 44.2, scale: 0.74 } : { x: 73.6, y: 43.8, scale: 0.74 },
+  farmbacktomap: otherFarm ? { x: 74, y: 41.3, scale: 0.42 } : { x: 74, y: 40.9, scale: 0.42 },
   farmsetting: otherFarm ? { x: 34.1, y: 49.6, scale: 0.8 } : { x: 34.3, y: 49.5, scale: 0.8 },
-  farmwrittingboard: otherFarm ? { x: 62.8, y: 50.5, scale: 1.1 } : { x: 62.9, y: 51.0, scale: 1.15 },
-  vistothersfarm: { x: 73.6, y: 36.2, scale: 0.74 },
+  farmwrittingboard: otherFarm ? { x: 62.8, y: 50.5, scale: 1.1 } : { x: 62.9, y: 51, scale: 1.15 },
+  vistothersfarm: { x: 72.9, y: 33.5, scale: 0.38 },
   theirmap: otherFarm ? { x: 34.5, y: 48.7, scale: 0.42 } : { x: 34.5, y: 48.7, scale: 0.42 },
 })
 
-const FARM_LAYOUT_STORAGE_PREFIX = "cwrite-farm-button-layout-v1"
+const FARM_LAYOUT_STORAGE_PREFIX = "cwrite-farm-button-layout-v2"
 
 const farmLayoutStorageKey = (otherFarm: boolean) =>
   `${FARM_LAYOUT_STORAGE_PREFIX}:${otherFarm ? "other" : "own"}`
