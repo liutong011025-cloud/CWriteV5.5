@@ -26,6 +26,8 @@ model User {
   reviewsGiven   WorkReview[] @relation("ReviewerReviews")
   teacherClasses TeacherClass[] @relation("TeacherOwnedClasses")
   classMemberships ClassMember[] @relation("StudentClassMemberships")
+  processEvents  ProcessEvent[]
+  researchSetting TeacherResearchSetting?
 
   @@map("users")
 }
@@ -225,6 +227,43 @@ model ClassMember {
   @@unique([classId, studentId])
   @@index([studentId])
   @@map("class_members")
+}
+
+/// Fine-grained writing-process events for research coding (fail-open; never blocks writing).
+model ProcessEvent {
+  id             String   @id @default(cuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessionId      String
+  workType       String // "story" | "review" | "letter" | "drama" | "poetry"
+  eventId        String // e.g. STORY_021
+  functionalCode String
+  category       String // planning | independent_writing | ai_help_seeking | ai_output_evaluation | revision | completion | pause_temporal
+  stage          String?
+  phase          String?
+  rawType        String?
+  trigger        String?
+  payload        Json?
+  durationMs     Int?
+  clientTs       DateTime
+  createdAt      DateTime @default(now())
+
+  @@index([userId, clientTs])
+  @@index([sessionId])
+  @@index([workType, eventId])
+  @@index([category])
+  @@map("process_events")
+}
+
+/// Teacher HQ export toggle. Isolated so a missing table cannot break login/writing.
+model TeacherResearchSetting {
+  id            String   @id @default(cuid())
+  teacherId     String   @unique
+  teacher       User     @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  exportEnabled Boolean  @default(false)
+  updatedAt     DateTime @updatedAt
+
+  @@map("teacher_research_settings")
 }
 
 // ─── ADMIN MODELS ───────────────────────────────────────────────────────────
