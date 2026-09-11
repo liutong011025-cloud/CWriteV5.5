@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma"
 import { ensureProcessEventsTable, ensureTeacherResearchSettingsTable } from "@/lib/ensure-research-tables"
 import { isMissingDatabaseTableError } from "@/lib/prisma-errors"
 import { PROCESS_CODING_LEGEND } from "@/lib/process-coding"
-import { resolveTeacher, UNASSIGNED_CLASS_ID } from "@/lib/teacher-classes"
+import { resolveTeacher } from "@/lib/teacher-classes"
 
 export const dynamic = "force-dynamic"
 
@@ -53,7 +53,6 @@ export async function GET(request: NextRequest) {
   try {
     const url = new URL(request.url)
     const teacherUsername = url.searchParams.get("teacher")?.trim() ?? ""
-    const classId = url.searchParams.get("classId")?.trim() ?? ""
     const format = url.searchParams.get("format")?.trim() || "json"
     const settingsOnly = url.searchParams.get("settings") === "1"
 
@@ -71,63 +70,13 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Export is turned off" }, { status: 403 })
     }
 
-    let studentIds: string[] = []
-    let className = "all"
-
-    if (classId && classId !== UNASSIGNED_CLASS_ID) {
-      const cls = await prisma.teacherClass.findFirst({
-        where: { id: classId, teacherId: teacher.id },
-        include: { members: { select: { studentId: true } } },
-      })
-      if (!cls) return NextResponse.json({ error: "Class not found" }, { status: 404 })
-      studentIds = cls.members.map((m) => m.studentId)
-      className = cls.name
-    } else {
-      const classes = await prisma.teacherClass.findMany({
-        where: { teacherId: teacher.id },
-        include: { members: { select: { studentId: true } } },
-      })
-      const assigned = new Set(classes.flatMap((c) => c.members.map((m) => m.studentId)))
-      if (classId === UNASSIGNED_CLASS_ID) {
-        const students = await prisma.user.findMany({
-          where: { role: "student", id: { notIn: Array.from(assigned) } },
-          select: { id: true },
-        })
-        studentIds = students.map((s) => s.id)
-        className = "unassigned"
-      } else {
-        studentIds = Array.from(assigned)
-        className = "all-classes"
-      }
+    try {
+      await ensureProcessEventsTable()
+    } catch (error) {
+      console.warn("process_events ensure skipped:", error)
     }
 
-    if (studentIds.length === 0) {
-      const empty = { className, students: [], events: [], sequences: [], writings: [], legend: PROCESS_CODING_LEGEND }
-      if (format === "csv") {
-        return new NextResponse("username,sessionId,clientTs,eventId,category,functionalCode,stage,phase,durationMs,payload\n", {
-          headers: {
-            "Content-Type": "text/csv; charset=utf-8",
-            "Content-Disposition": `attachment; filename="process-events-${className}.csv"`,
-          },
-        })
-      }
-      return NextResponse.json(empty)
-    }
-
-    const users = await prisma.user.findMany({
-      where: { id: { in: studentIds } },
-      select: {
-        id: true,
-        username: true,
-        stories: { select: { id: true, content: true, updatedAt: true } },
-        reviews: { select: { id: true, content: true, bookTitle: true, updatedAt: true } },
-        letters: { select: { id: true, content: true, recipient: true, occasion: true, updatedAt: true } },
-        dramas: { select: { id: true, content: true, title: true, updatedAt: true } },
-        poetries: { select: { id: true, content: true, form: true, topic: true, updatedAt: true } },
-      },
-    })
-
-    let events: Array<{
+    type EventRow = {
       userId: string
       sessionId: string
       workType: string
@@ -139,28 +88,53 @@ export async function GET(request: NextRequest) {
       durationMs: number | null
       payload: unknown
       clientTs: Date
-    }> = []
-    try {
-      await ensureProcessEventsTable()
-    } catch (error) {
-      console.warn("process_events ensure skipped:", error)
     }
+
+    let events: EventRow[] = []
     try {
       events = await prisma.processEvent.findMany({
-        where: { userId: { in: studentIds } },
         orderBy: { clientTs: "asc" },
       })
     } catch (error) {
-      if (!isMissingDatabaseTableError(error)) {
-        console.warn("process-export events skipped:", error)
+      try {
+        events = await prisma.$queryRaw<EventRow[]>`
+          SELECT "userId", "sessionId", "workType", "eventId", "functionalCode", "category",
+                 "stage", "phase", "durationMs", "payload", "clientTs"
+          FROM "process_events"
+          ORDER BY "clientTs" ASC
+        `
+      } catch (rawError) {
+        console.warn("process-export events skipped:", error, rawError)
       }
     }
 
+    const eventUserKeys = Array.from(new Set(events.map((ev) => ev.userId)))
+    const users = eventUserKeys.length
+      ? await prisma.user.findMany({
+          where: {
+            OR: [
+              { id: { in: eventUserKeys } },
+              { username: { in: eventUserKeys } },
+            ],
+          },
+          select: {
+            id: true,
+            username: true,
+            stories: { select: { id: true, content: true, updatedAt: true } },
+            reviews: { select: { id: true, content: true, bookTitle: true, updatedAt: true } },
+            letters: { select: { id: true, content: true, recipient: true, occasion: true, updatedAt: true } },
+            dramas: { select: { id: true, content: true, title: true, updatedAt: true } },
+            poetries: { select: { id: true, content: true, form: true, topic: true, updatedAt: true } },
+          },
+        })
+      : []
+
     const usernameById = new Map(users.map((u) => [u.id, u.username]))
+    const usernameByName = new Map(users.map((u) => [u.username, u.username]))
     const eventRows = events.map((ev) => ({
-      username: usernameById.get(ev.userId) ?? ev.userId,
+      username: usernameById.get(ev.userId) ?? usernameByName.get(ev.userId) ?? ev.userId,
       sessionId: ev.sessionId,
-      clientTs: ev.clientTs.toISOString(),
+      clientTs: ev.clientTs instanceof Date ? ev.clientTs.toISOString() : String(ev.clientTs),
       workType: ev.workType,
       eventId: ev.eventId,
       functionalCode: ev.functionalCode,
@@ -218,19 +192,24 @@ export async function GET(request: NextRequest) {
       return new NextResponse(csv, {
         headers: {
           "Content-Type": "text/csv; charset=utf-8",
-          "Content-Disposition": `attachment; filename="process-events-${className}.csv"`,
+          "Content-Disposition": `attachment; filename="process-events-all-students.csv"`,
+          "X-Process-Event-Count": String(eventRows.length),
         },
       })
     }
 
-    return NextResponse.json({
-      className,
-      exportedAt: new Date().toISOString(),
-      legend: PROCESS_CODING_LEGEND,
-      events: eventRows,
-      sequences,
-      writings,
-    })
+    return NextResponse.json(
+      {
+        className: "all-students",
+        eventCount: eventRows.length,
+        exportedAt: new Date().toISOString(),
+        legend: PROCESS_CODING_LEGEND,
+        events: eventRows,
+        sequences,
+        writings,
+      },
+      { headers: { "X-Process-Event-Count": String(eventRows.length) } },
+    )
   } catch (error) {
     console.warn("process-export failed:", error)
     return NextResponse.json({ error: "Export failed" }, { status: 500 })
