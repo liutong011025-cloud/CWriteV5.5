@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { getCurrentLevel } from "@/lib/current-level";
+import { trackProcess } from "@/lib/process-logger";
 
 interface PoetryReviewProps {
   onBack?: () => void;
@@ -124,7 +125,10 @@ export function PoetryReview({ onBack, onBackToMap, onComplete, userId }: Poetry
       <div className="relative z-10 w-full max-w-2xl animate-fade-in-up pl-16 lg:pl-20">
         <div className="mb-6 flex flex-wrap items-center gap-2">
           <Button
-            onClick={() => store.setPhase("editor")}
+            onClick={() => {
+              trackProcess("POETRY_036", {}, { stage: "poetryReview" })
+              store.setPhase("editor")
+            }}
             variant="ghost"
             size="sm"
             className="gap-1.5 rounded-xl font-hand text-xs text-muted-foreground bg-transparent"
@@ -203,7 +207,10 @@ export function PoetryReview({ onBack, onBackToMap, onComplete, userId }: Poetry
 
           {!feedback && (
             <Button
-              onClick={fetchReview}
+              onClick={() => {
+                trackProcess("POETRY_037", {}, { stage: "poetryReview" })
+                fetchReview()
+              }}
               disabled={loading}
               className="w-full gap-2 py-3 font-hand text-sm shadow-lg pixel-btn pixel-btn-green"
             >
@@ -270,7 +277,10 @@ export function PoetryReview({ onBack, onBackToMap, onComplete, userId }: Poetry
 
               <div className="flex flex-col gap-2 sm:flex-row">
                 <Button
-                  onClick={() => store.setPhase("editor")}
+                  onClick={() => {
+                    trackProcess("POETRY_039", {}, { stage: "poetryReview" })
+                    store.setPhase("editor")
+                  }}
                   variant="outline"
                   className="flex-1 gap-2 font-hand text-sm bg-transparent pixel-btn pixel-btn-wood"
                 >
