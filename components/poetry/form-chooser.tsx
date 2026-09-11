@@ -6,6 +6,7 @@ import { BookOpen, Sparkles, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BackButton } from "@/components/ui/back-button";
 import { GlowCard } from "@/components/ui/glow-card";
+import { trackProcess } from "@/lib/process-logger";
 
 const CARD_STYLES: Record<PoetryForm, { border: string; iconBg: string; accent: string }> = {
   couplets: { border: "border-primary/20 hover:border-primary/50", iconBg: "bg-primary/10", accent: "text-primary" },
@@ -23,6 +24,7 @@ export function FormChooser({ onBack, backLabel }: FormChooserProps) {
   const setPhase = usePoetryStore((s) => s.setPhase);
 
   const handleChoose = (form: PoetryForm) => {
+    trackProcess("POETRY_003", { form }, { stage: "poetryForm" })
     setForm(form);
     setPhase("setup-topic");
   };
