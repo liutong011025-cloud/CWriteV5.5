@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma, isDatabaseUrlConfigured } from "@/lib/prisma"
 import { loginLteTrialAccount, syncLteTrialRosterAfterLogin } from "@/lib/lte-trial-roster"
+import { loginInt6136Account } from "@/lib/int6136-roster"
 
 // 新用户注册开关（学生 + 教师）
 const REGISTRATION_ENABLED = true
@@ -182,6 +183,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: true, user: lteTrialUser }, { status: 200 })
     }
 
+    // 3c) INT6136E2627 班级账号（拼音大写无空格，密码 123321）
+    const int6136User = await loginInt6136Account(username, password)
+    if (int6136User) {
+      return NextResponse.json({ success: true, user: int6136User }, { status: 200 })
+    }
+
     // 4) 其他帳號：需要資料庫
     if (!isDatabaseUrlConfigured()) {
       console.error("Database URL is not configured")
@@ -195,11 +202,18 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // 3) 從資料庫查詢
+    // 3) 從資料庫查詢（忽略大小写与姓名空格，例如 LEUNG KAM YING → LEUNGKAMYING）
+    const trimmedUsername = username.trim()
+    const compactUsername = trimmedUsername.replace(/\s+/g, "")
     let user
     try {
-      user = await prisma.user.findUnique({
-        where: { username },
+      user = await prisma.user.findFirst({
+        where: {
+          OR: [
+            { username: { equals: trimmedUsername, mode: "insensitive" } },
+            { username: { equals: compactUsername, mode: "insensitive" } },
+          ],
+        },
       })
     } catch (dbError) {
       const dbErrorMessage = dbError instanceof Error ? dbError.message : String(dbError)
@@ -222,7 +236,7 @@ export async function POST(request: NextRequest) {
       throw dbError
     }
 
-    if (user && user.password === password) {
+    if (user && user.password === password.trim()) {
       await syncLteTrialRosterAfterLogin(user.username)
       const fresh = await prisma.user.findUnique({ where: { id: user.id } })
       const resolved = fresh ?? user
