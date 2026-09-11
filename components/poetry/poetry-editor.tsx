@@ -21,6 +21,7 @@ import {
   Sparkles,
   Star,
 } from "lucide-react";
+import { trackProcess, trackProcessInput } from "@/lib/process-logger";
 
 interface PoetryEditorProps {
   onBack?: () => void;
@@ -76,6 +77,7 @@ export function PoetryEditor({ onBack }: PoetryEditorProps) {
   };
 
   const handleFinish = () => {
+    trackProcess("POETRY_034", {}, { stage: "poetryEditor" })
     store.saveSnapshot(false);
     store.setPhase("review");
   };
@@ -243,7 +245,10 @@ export function PoetryEditor({ onBack }: PoetryEditorProps) {
                       ref={(el) => { inputRefs.current[i] = el; }}
                       type="text"
                       value={line.text}
-                      onChange={(e) => store.updateLine(line.id, e.target.value)}
+                      onChange={(e) => {
+                        store.updateLine(line.id, e.target.value)
+                        trackProcessInput("POETRY_015", e.target.value, { line_index: i }, { stage: "poetryEditor" })
+                      }}
                       onFocus={() => setActiveLineIndex(i)}
                       placeholder={
                         form === "haiku" ? `${haikuTargets[i]} syllables...` :
