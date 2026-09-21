@@ -23,7 +23,7 @@ interface LoginPageProps {
 const REGISTRATION_ENABLED = true
 const TEACHER_REGISTRATION_ENABLED = true
 const REGISTRATION_DISABLED_MESSAGE = "New user registration: Function is not available."
-const LOGIN_BACKGROUND_SRC = "/Background1.png"
+const LOGIN_BACKGROUND_SRC = "/Background1.webp"
 
 export default function LoginPage({ onLogin }: LoginPageProps) {
   const [mode, setMode] = useState<"login" | "register">("login")
@@ -226,7 +226,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
       {!bgReady && (
         <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-[#8ec8ea]">
           <img
-            src="/Cagentsit.png"
+            src="/Cagentsit.webp"
             alt="Cagent"
             className="h-48 w-48 object-contain drop-shadow-lg sm:h-56 sm:w-56"
             style={{ animation: "login-cagent-bob 1.4s ease-in-out infinite" }}
@@ -249,7 +249,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
               <div className="text-center mb-2">
                 <div className="mb-2 mt-4 flex justify-center">
                   <Image
-                    src="/logo.gif"
+                    src="/logo.webp"
                     alt="CWrite Logo"
                     width={200}
                     height={200}
@@ -289,7 +289,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
               <div className="text-center mb-4">
                 <div className="mb-2 mt-4 flex justify-center">
                   <Image
-                    src="/logo.gif"
+                    src="/logo.webp"
                     alt="CWrite Logo"
                     width={220}
                     height={220}
