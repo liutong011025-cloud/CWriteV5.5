@@ -35,35 +35,69 @@ function paragraphs(text: string) {
 
 export async function POST(request: NextRequest) {
   try {
-    const body = (await request.json()) as { user_id?: string; language?: string; testLevel?: number }
+    const body = (await request.json()) as {
+      user_id?: string
+      testLevel?: number
+      writings?: { type?: string; text?: string }[]
+    }
     const username = body.user_id?.trim()
     if (!username) {
       return NextResponse.json({ error: "user_id is required" }, { status: 400 })
     }
 
-    const user = await prisma.user.findUnique({ where: { username } })
-    if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 })
+    const fromClient: Piece[] = (body.writings || [])
+      .map((item) => ({
+        type: item.type || "writing",
+        text: String(item.text || "").replace(/\s+/g, " ").trim(),
+      }))
+      .filter((item) => item.text.length >= 20)
+
+    let fromDb: Piece[] = []
+    const user = await prisma.user.findUnique({ where: { username } }).catch(() => null)
+    if (user) {
+      const safeFind = async (loader: () => Promise<Piece[]>) => {
+        try {
+          return await loader()
+        } catch (error) {
+          console.error("[writing-level] skip source", error)
+          return []
+        }
+      }
+      const groups = await Promise.all([
+        safeFind(async () =>
+          (await prisma.story.findMany({ where: { userId: user.id }, orderBy: { updatedAt: "desc" }, take: 4, select: { content: true } })).map(
+            (item) => ({ type: "story", text: item.content }),
+          ),
+        ),
+        safeFind(async () =>
+          (await prisma.review.findMany({ where: { userId: user.id }, orderBy: { updatedAt: "desc" }, take: 3, select: { content: true, bookTitle: true } })).map(
+            (item) => ({ type: "book review", text: `${item.bookTitle || ""}\n${item.content}` }),
+          ),
+        ),
+        safeFind(async () =>
+          (await prisma.letter.findMany({ where: { userId: user.id }, orderBy: { updatedAt: "desc" }, take: 3, select: { content: true } })).map(
+            (item) => ({ type: "letter", text: item.content }),
+          ),
+        ),
+        safeFind(async () =>
+          (await prisma.drama.findMany({ where: { userId: user.id }, orderBy: { updatedAt: "desc" }, take: 2, select: { content: true, title: true } })).map(
+            (item) => ({ type: "drama", text: `${item.title || ""}\n${item.content}` }),
+          ),
+        ),
+        safeFind(async () =>
+          (await prisma.poetry.findMany({ where: { userId: user.id }, orderBy: { updatedAt: "desc" }, take: 2, select: { content: true, topic: true } })).map(
+            (item) => ({ type: "poetry", text: `${item.topic || ""}\n${item.content}` }),
+          ),
+        ),
+      ])
+      fromDb = groups.flat()
     }
 
-    const [stories, reviews, letters, dramas, poetries] = await Promise.all([
-      prisma.story.findMany({ where: { userId: user.id }, orderBy: { updatedAt: "desc" }, take: 3, select: { content: true } }),
-      prisma.review.findMany({ where: { userId: user.id }, orderBy: { updatedAt: "desc" }, take: 2, select: { content: true, bookTitle: true } }),
-      prisma.letter.findMany({ where: { userId: user.id }, orderBy: { updatedAt: "desc" }, take: 2, select: { content: true } }),
-      prisma.drama.findMany({ where: { userId: user.id }, orderBy: { updatedAt: "desc" }, take: 2, select: { content: true, title: true } }),
-      prisma.poetry.findMany({ where: { userId: user.id }, orderBy: { updatedAt: "desc" }, take: 2, select: { content: true, topic: true } }),
-    ])
-
-    const pieces: Piece[] = [
-      ...stories.map((item) => ({ type: "story", text: item.content })),
-      ...reviews.map((item) => ({ type: "book review", text: `${item.bookTitle || ""}\n${item.content}` })),
-      ...letters.map((item) => ({ type: "letter", text: item.content })),
-      ...dramas.map((item) => ({ type: "drama", text: `${item.title || ""}\n${item.content}` })),
-      ...poetries.map((item) => ({ type: "poetry", text: `${item.topic || ""}\n${item.content}` })),
-    ]
+    const pieces = [...fromDb, ...fromClient]
       .map((piece) => ({ ...piece, text: piece.text.replace(/\s+/g, " ").trim() }))
-      .filter((piece) => piece.text.length >= 40)
-      .slice(0, 4)
+      .filter((piece) => piece.text.length >= 20)
+      .filter((piece, index, list) => list.findIndex((other) => other.text.slice(0, 180) === piece.text.slice(0, 180)) === index)
+      .slice(0, 6)
 
     const testLevel = clampLevel(body.testLevel || 1)
     if (!pieces.length) {
