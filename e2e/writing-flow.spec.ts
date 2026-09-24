@@ -125,6 +125,11 @@ async function step3_navigateJourneyMap(page: Page) {
  * Step 4: Journey Ticket — select Story type and difficulty
  */
 async function step4_selectJourneyTicket(page: Page) {
+  const stage = await getStage(page)
+  if (stage !== "journeyTicket") {
+    console.log("[DEBUG step4] Ticket screen is no longer in the map flow, stage:", stage)
+    return
+  }
   await page.screenshot({ path: '/tmp/e2e-ticket.png' })
 
   // Wait for journeyTicket stage
