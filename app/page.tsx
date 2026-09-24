@@ -151,6 +151,43 @@ interface PersistedMapState {
 const getMapStateKey = (username: string) => `cwriteMapState:${username}`
 const getPlanTestResultKey = (username: string) => `cwritePlanTestResult:${username}`
 const getShelfLevelKey = (username: string) => `cwriteShelfLevel:${username}`
+const getPausedStageKey = (username: string) => `cwritePausedStage:${username}`
+
+const WRITING_PAUSE_STAGES = new Set([
+  "character",
+  "storyCollab",
+  "storyChatbot",
+  "plot",
+  "structure",
+  "writing",
+  "storyEdit",
+  "bookReviewWelcome",
+  "bookReviewTypeSelection",
+  "bookSelection",
+  "bookSelectionNoAi",
+  "bookReviewLoading",
+  "bookReviewWriting",
+  "bookReviewWritingNoAi",
+  "bookReviewEdit",
+  "letterAdventure",
+  "letterGame",
+  "letterPuzzle",
+  "letterEdit",
+  "dramaWriting",
+  "poetryWriting",
+  "poetryForm",
+  "poetryTopic",
+  "poetryEditor",
+])
+
+const WRITING_DONE_STAGES = new Set([
+  "review",
+  "bookReviewComplete",
+  "bookReviewCompleteNoAi",
+  "letterComplete",
+  "dramaBook",
+  "poetryReview",
+])
 
 const getChapterBaseMapImageUrl = (chapterIndex: number) => {
   return chapterIndex <= 0 ? "/firstmap.webp" : "/secondmap.webp"
@@ -655,6 +692,7 @@ export default function Home() {
   const valuesCheckTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [levelBadgeUnlocked, setLevelBadgeUnlocked] = useState(false)
   const [journeyActive, setJourneyActive] = useState(false)
+  const [pausedStage, setPausedStage] = useState<string | null>(null)
   const [currentPin, setCurrentPin] = useState<{ x: number; y: number } | null>(null)
   const [journeyStartPin, setJourneyStartPin] = useState<{ x: number; y: number } | null>(null)
   const [mapFlags, setMapFlags] = useState<MapFlagItem[]>([])
@@ -1232,6 +1270,24 @@ export default function Home() {
       setLevelOverride(null)
     }
   }, [user?.username])
+
+  useEffect(() => {
+    if (!user?.username || typeof window === "undefined") return
+    const saved = localStorage.getItem(getPausedStageKey(user.username))
+    setPausedStage(saved && WRITING_PAUSE_STAGES.has(saved) ? saved : null)
+  }, [user?.username])
+
+  useEffect(() => {
+    if (!user?.username || typeof window === "undefined") return
+    const key = getPausedStageKey(user.username)
+    if (WRITING_PAUSE_STAGES.has(stage)) {
+      setPausedStage(stage)
+      localStorage.setItem(key, stage)
+    } else if (WRITING_DONE_STAGES.has(stage)) {
+      setPausedStage(null)
+      localStorage.removeItem(key)
+    }
+  }, [stage, user?.username])
 
   useEffect(() => {
     mapImageUrlRef.current = mapImageUrl
@@ -2253,7 +2309,7 @@ export default function Home() {
           valuesSuggestion={valuesSuggestion}
           language={language}
           openingMessage={
-            stage === "journeyMap" && !currentPin
+            stage === "journeyMap" && !currentPin && !pausedStage
               ? "Please drag the writing pin you want from the right side onto the map to start a writing adventure."
               : null
           }
@@ -2326,7 +2382,7 @@ export default function Home() {
           type={journeySelection?.type}
           mapImageUrl={mapImageUrl}
           mapFlags={mapFlags}
-          pin={currentPin}
+          pin={pausedStage ? (currentPin ?? journeyStartPin) : currentPin}
           onPinChange={handlePinChange}
           chapterIndex={activeMapChapterIndex}
           onPrevChapter={activeMapChapterIndex > 0 ? () => handleMoveToChapter(activeMapChapterIndex - 1) : undefined}
@@ -2359,6 +2415,10 @@ export default function Home() {
               return
             }
             beginJourney(type, shelfLevel ?? planTestResult.level)
+          }}
+          resumeJourney={Boolean(pausedStage && journeySelection)}
+          onContinue={() => {
+            if (pausedStage) setStage(pausedStage as typeof stage)
           }}
           onNavigate={(targetStage) => {
             setStage(targetStage as any)
