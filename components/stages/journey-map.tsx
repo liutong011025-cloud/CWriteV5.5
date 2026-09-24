@@ -396,7 +396,7 @@ export default function JourneyMap({
               alt="Writing pin"
               width={92}
               height={52}
-              className="h-auto w-16 drop-shadow-lg transition-transform duration-200 group-hover:scale-110"
+              className="h-auto w-48 drop-shadow-lg transition-transform duration-200 group-hover:scale-110"
             />
             <span className="mt-1 inline-flex rounded-full bg-white/95 px-3 py-1 text-xs font-bold text-purple-700 shadow transition-transform duration-200 group-hover:scale-110">
               Continue
@@ -422,7 +422,7 @@ export default function JourneyMap({
               alt="Writing pin"
               width={92}
               height={52}
-              className="h-auto w-16 drop-shadow-lg"
+              className="h-auto w-48 drop-shadow-lg"
             />
           </div>
         )}
