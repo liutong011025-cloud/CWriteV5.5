@@ -77,7 +77,6 @@ export async function POST(request: NextRequest) {
     }
 
     const fallback = localScores(pieces)
-    const language = body.language === "zh" ? "Simplified Chinese" : "simple English a child can understand"
 
     if (!isConfigured()) {
       return NextResponse.json({
@@ -108,7 +107,7 @@ Score these four dimensions from 0 to 100 using the past writings:
 Then choose one level. 1 is short simple sentences. 5 is richer, accurate, well organized writing.
 Reply with ONE JSON object only:
 {"level":1-5,"grammarFluency":0-100,"contentCoverage":0-100,"stageAlignment":0-100,"lengthDensity":0-100,"reason":"2-4 short sentences"}
-The reason must be in ${language}, name the four dimensions in plain words, and mention what in the past writing led to this level. Do not mention scores as the only evidence.`,
+The reason MUST be in simple English only, even if the writing is discussed in another language. Name the four dimensions in plain words, and mention what in the past writing led to this level. Do not mention scores as the only evidence.`,
           },
           { role: "user", content: `Current tested level: ${testLevel}\n\n${samples}` },
         ],
