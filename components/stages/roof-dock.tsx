@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useRef } from "react"
 import {
   ROOF_PINS,
   roofHeightFromWidth,
@@ -56,8 +56,15 @@ export default function RoofDock({
   onDragPinEnd,
 }: RoofDockProps) {
   const [showWhy, setShowWhy] = useState(false)
+  const dragImageRef = useRef<HTMLImageElement | null>(null)
   const height = roofHeightFromWidth(layout.roofWidth)
   const levelLabel = level ? `Level ${level}` : "Test"
+
+  useEffect(() => {
+    const img = new Image()
+    img.src = "/pin.png"
+    dragImageRef.current = img
+  }, [])
 
   return (
     <>
@@ -93,6 +100,8 @@ export default function RoofDock({
               onDragStart={(event) => {
                 event.dataTransfer.setData("text/plain", pin.id)
                 event.dataTransfer.effectAllowed = "copy"
+                const ghost = dragImageRef.current
+                if (ghost) event.dataTransfer.setDragImage(ghost, 28, 48)
                 onDragPinStart(pin.id)
               }}
               onDragEnd={() => onDragPinEnd?.()}
@@ -105,7 +114,7 @@ export default function RoofDock({
               }}
               aria-label={`Drag ${pin.label} pin onto the map`}
             >
-              <img src={pin.src} alt={pin.label} className="h-auto w-full select-none" draggable={false} />
+              <img src={pin.src} alt={pin.label} className="h-auto w-full select-none transition-transform duration-200 hover:scale-110" draggable={false} />
             </button>
           )
         })}
