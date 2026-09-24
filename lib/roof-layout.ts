@@ -28,18 +28,18 @@ export const ROOF_PINS: { id: RoofPinId; src: string; label: string }[] = [
 
 /** Shelf art is 1024×1536. Pin offsets are percentages of that image. */
 export const DEFAULT_ROOF_LAYOUT: RoofLayout = {
-  roofWidth: 280,
-  roofRight: 18,
-  roofBottom: 12,
-  levelLeft: 50,
-  levelTop: 4.6,
-  levelFont: 28,
+  roofWidth: 487,
+  roofRight: -113,
+  roofBottom: 363,
+  levelLeft: 50.5,
+  levelTop: 8.8,
+  levelFont: 32,
   pins: {
-    story: { left: 8, top: 14, width: 84 },
-    drama: { left: 8, top: 30, width: 84 },
-    bookReview: { left: 6, top: 46, width: 88 },
-    letter: { left: 8, top: 62, width: 84 },
-    poetry: { left: 8, top: 78, width: 84 },
+    story: { left: 32.3, top: 16.2, width: 35.4 },
+    drama: { left: 30.6, top: 30, width: 39 },
+    bookReview: { left: 30.6, top: 43.1, width: 42.4 },
+    letter: { left: 34, top: 58.1, width: 33.7 },
+    poetry: { left: 32.3, top: 73, width: 37.2 },
   },
 }
 
