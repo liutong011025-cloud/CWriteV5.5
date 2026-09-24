@@ -2069,7 +2069,7 @@ export default function Home() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         user_id: user.username,
-        language,
+        language: "en",
         testLevel: planTestResult.level,
       }),
     })
@@ -2092,7 +2092,7 @@ export default function Home() {
     return () => {
       cancelled = true
     }
-  }, [stage, user?.username, planTestResult, language])
+  }, [stage, user?.username, planTestResult])
 
   // 根据 12 价值观命中维度更新森林：命中的树 stage +1（上限 4），並記錄是哪篇文章/哪句話讓它長高
   const applyTreeGrowthFromMetrics = useCallback(
@@ -3422,3 +3422,4 @@ export default function Home() {
     </main>
   )
 }
+
