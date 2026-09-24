@@ -129,7 +129,11 @@ export default function RoofDock({
           <div className="relative w-full max-w-lg rounded-3xl border-4 border-[#8b6914] bg-[#fff8ea] p-5 shadow-2xl">
             <h2 className="font-hand text-3xl font-extrabold text-[#5c3317]">Why Level {level}</h2>
             <p className="mt-2 text-base leading-relaxed text-[#5a4a2a]">
-              {report?.reason || "This level comes from your level check."}
+              {levelLoading
+                ? "Reading your past writing..."
+                : report?.sampleCount
+                  ? report.reason
+                  : report?.reason || "This level comes from your first level check. Finish a piece of writing and the shelf will judge the next level from that writing."}
             </p>
             {report?.scores && (
               <ul className="mt-4 space-y-2">
