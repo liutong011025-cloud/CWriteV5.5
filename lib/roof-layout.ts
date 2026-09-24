@@ -12,6 +12,7 @@ export type RoofLayout = {
   roofWidth: number
   roofRight: number
   roofBottom: number
+  levelLeft: number
   levelTop: number
   levelFont: number
   pins: Record<RoofPinId, RoofPinLayout>
@@ -30,6 +31,7 @@ export const DEFAULT_ROOF_LAYOUT: RoofLayout = {
   roofWidth: 280,
   roofRight: 18,
   roofBottom: 12,
+  levelLeft: 50,
   levelTop: 4.6,
   levelFont: 28,
   pins: {
