@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
-import Image from "next/image"
 import { Button } from "@/components/ui/button"
 
 type HeaderLanguage = "en" | "zh"
@@ -17,7 +16,6 @@ type HeaderUserInfo = {
 
 export default function Header() {
   const [isScrolled, setIsScrolled] = useState(false)
-  const [isAtTop, setIsAtTop] = useState(true)
   const [isHovering, setIsHovering] = useState(false)
   const [currentStage, setCurrentStage] = useState<string | null>(null)
   const [language, setLanguage] = useState<HeaderLanguage>("en") // 默认英语
@@ -114,7 +112,6 @@ export default function Header() {
       const scrollTop = window.scrollY || document.documentElement.scrollTop
       // 更早折叠：降低阈值，让header在更早的滚动位置就变成窄的
       setIsScrolled(scrollTop > 15)
-      setIsAtTop(scrollTop < 5)
     }
 
     window.addEventListener('scroll', handleScroll, { passive: true })
@@ -180,7 +177,6 @@ export default function Header() {
   const isAboutPage = currentStage?.startsWith('about') || false
   const isGalleryPage = currentStage === 'gallery' || pathname === '/gallery' || pathname?.includes('gallery')
   const showBackground = isScrolled || isAboutPage || isGalleryPage || isFarmPage
-  const showLogo = isHomePage && isAtTop && !isHovering && !isAboutPage && !isGalleryPage // 只在首页顶部且未悬停时显示logo
 
   // 处理导航点击
   const handleNavClick = (item: typeof navItems[0], e: React.MouseEvent) => {
@@ -224,59 +220,12 @@ export default function Header() {
             }}
             className="transition-all duration-200 flex items-center h-full"
           >
-            {isHomePage && showLogo ? (
-              // 首页顶部显示 logosmall
-              <Image
-                src="/logosmall.webp"
-                alt="CWrite"
-                width={96}
-                height={96}
-                className="object-contain w-auto"
-                priority
-                style={{ maxHeight: '100%', height: '100%', objectFit: 'contain', width: 'auto' }}
-              />
-             ) : isHomePage ? (
-               // 首页：在顶部悬停时显示 logobig，滚动压缩后显示白色 logo
-               isAtTop ? (
-                 <Image
-                   src="/logobig.webp"
-                   alt="CWrite"
-                   width={120}
-                   height={40}
-                   className="object-contain h-full w-auto max-w-[110px] md:max-w-[118px] xl:max-w-none"
-                   style={{ maxHeight: '100%', height: '100%', objectFit: 'contain', width: 'auto' }}
-                 />
-               ) : (
-                 <Image
-                   src="/logo-white.webp"
-                   alt="CWrite"
-                   width={120}
-                   height={40}
-                   className="object-contain h-full w-auto max-w-[110px] md:max-w-[118px] xl:max-w-none"
-                   style={{ maxHeight: '100%', height: '100%', objectFit: 'contain', width: 'auto' }}
-                 />
-               )
-             ) : isGalleryPage ? (
-               // Gallery 页面使用白色 logo
-               <Image
-                 src="/logo-white.webp"
-                 alt="CWrite"
-                 width={120}
-                 height={40}
-                 className="object-contain h-full w-auto max-w-[110px] md:max-w-[118px] xl:max-w-none"
-                 style={{ maxHeight: '100%', height: '100%', objectFit: 'contain', width: 'auto' }}
-               />
-             ) : (
-               // 其他非首页压缩状态使用白色 logo
-               <Image
-                 src="/logo-white.webp"
-                 alt="CWrite"
-                 width={120}
-                 height={40}
-                 className="object-contain h-full w-auto max-w-[110px] md:max-w-[118px] xl:max-w-none"
-                 style={{ maxHeight: '100%', height: '100%', objectFit: 'contain', width: 'auto' }}
-               />
-             )}
+            <img
+              src="/logobig.webp"
+              alt="CWrite"
+              className="h-full w-auto max-h-10 object-contain md:max-h-11 xl:max-h-12"
+              draggable={false}
+            />
           </Link>
         </div>
 
