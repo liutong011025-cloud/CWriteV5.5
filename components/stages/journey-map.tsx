@@ -109,6 +109,9 @@ export default function JourneyMap({
   const [internalPin, setInternalPin] = useState<{ x: number; y: number } | null>(pin ?? null)
   const [draggingType, setDraggingType] = useState<JourneyType | null>(null)
   const [placedType, setPlacedType] = useState<JourneyType | null>(type ?? null)
+  useEffect(() => {
+    if (type) setPlacedType(type)
+  }, [type])
   const [showCoach, setShowCoach] = useState(!pin && !resumeJourney)
   const [selectedFlag, setSelectedFlag] = useState<MapFlagItem | null>(null)
   const [editContent, setEditContent] = useState("")
@@ -392,13 +395,13 @@ export default function JourneyMap({
             aria-label="Continue writing"
           >
             <Image
-              src={ROOF_PINS.find((item) => item.id === (placedType ?? type))?.src || "/pin.webp"}
+              src={ROOF_PINS.find((item) => item.id === (placedType ?? type))?.src || "/storypin.webp"}
               alt="Writing pin"
               width={92}
               height={52}
               className="h-auto w-48 drop-shadow-lg transition-transform duration-200 group-hover:scale-110"
             />
-            <span className="mt-1 inline-flex rounded-full bg-white/95 px-3 py-1 text-xs font-bold text-purple-700 shadow transition-transform duration-200 group-hover:scale-110">
+            <span className="mt-2 inline-flex rounded-full bg-white px-6 py-2 font-hand text-3xl font-extrabold text-purple-800 shadow-xl transition-transform duration-200 group-hover:scale-110">
               Continue
             </span>
           </button>
@@ -407,7 +410,7 @@ export default function JourneyMap({
           <button
             type="button"
             onClick={() => onContinue?.()}
-            className="pointer-events-auto fixed left-1/2 top-1/2 z-[40] -translate-x-1/2 -translate-y-1/2 rounded-full bg-white px-5 py-2 font-hand text-xl font-extrabold text-purple-800 shadow-xl transition-transform duration-200 hover:scale-110"
+            className="pointer-events-auto fixed left-1/2 top-1/2 z-[40] -translate-x-1/2 -translate-y-1/2 rounded-full bg-white px-10 py-4 font-hand text-4xl font-extrabold text-purple-800 shadow-xl transition-transform duration-200 hover:scale-110"
           >
             Continue
           </button>
@@ -418,7 +421,7 @@ export default function JourneyMap({
             style={imagePercentToOverlayStyle(pinPosition.x, pinPosition.y)}
           >
             <Image
-              src={ROOF_PINS.find((item) => item.id === (placedType ?? type))?.src || "/pin.webp"}
+              src={ROOF_PINS.find((item) => item.id === (placedType ?? type))?.src || "/storypin.webp"}
               alt="Writing pin"
               width={92}
               height={52}
