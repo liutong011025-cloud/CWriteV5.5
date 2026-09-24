@@ -734,9 +734,9 @@ export function getCagentStageButtonHint(stage: string, lang: StoryUiLang | stri
       en: "Tell them to pick a structure card and click the next/continue button.",
       zh: "告诉他们选一张结构卡片，再点下一步/继续。",
     },
-    journeyTicket: {
-      en: 'Tell them to drag one journey type card onto the ticket (only Story, Book Review, Letter, Drama, or Poetry — never invent types like ocean or space), then choose a difficulty number, and finally press the airplane "Start" button at the bottom to begin. Do not talk about choosing a destination or packing items here; only talk about these visible controls.',
-      zh: "告诉他们把一种写作类型卡片拖到机票上盖章（只有故事、书评、书信、戏剧、诗歌，不要编造海洋、太空这类类型），再点选难度数字（1 最简单，5 最难），最后按底部的飞机「出发」按钮开始。不要说选目的地或打包行李；只说页面上能看到的这些操作。",
+    journeyMap: {
+      en: "Tell them to drag a Story, Drama, Book Review, Letter, or Poetry pin from the wooden shelf on the right onto the map. The level is written at the top of the shelf. They can tap the level to read why it was chosen and pick another level. Do not mention a ticket.",
+      zh: "告诉他们把右侧木架上的故事、戏剧、书评、书信或诗歌图钉拖到地图上。等级写在木架最上面，点等级可以看到原因并改选。不要提机票。",
     },
     planTest: {
       en: "Tell them to read each English question and tap the best answer. The questions stay in English because this is a writing-level check.",
