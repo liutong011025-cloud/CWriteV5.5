@@ -218,9 +218,8 @@ export default function Header() {
             href="/" 
             onClick={(e) => {
               e.preventDefault()
-              // 如果点击CWrite，跳转到About页面
               if (typeof window !== 'undefined') {
-                window.dispatchEvent(new CustomEvent('navigateToAbout'))
+                window.dispatchEvent(new CustomEvent('navigateToUserProfile'))
               }
             }}
             className="transition-all duration-200 flex items-center h-full"
@@ -249,7 +248,7 @@ export default function Header() {
                  />
                ) : (
                  <Image
-                   src="/logo 白.webp"
+                   src="/logo-white.webp"
                    alt="CWrite"
                    width={120}
                    height={40}
@@ -260,7 +259,7 @@ export default function Header() {
              ) : isGalleryPage ? (
                // Gallery 页面使用白色 logo
                <Image
-                 src="/logo 白.webp"
+                 src="/logo-white.webp"
                  alt="CWrite"
                  width={120}
                  height={40}
@@ -270,7 +269,7 @@ export default function Header() {
              ) : (
                // 其他非首页压缩状态使用白色 logo
                <Image
-                 src="/logo 白.webp"
+                 src="/logo-white.webp"
                  alt="CWrite"
                  width={120}
                  height={40}
