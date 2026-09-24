@@ -2061,7 +2061,14 @@ export default function Home() {
   }, [stage])
 
   useEffect(() => {
-    if (stage !== "journeyMap" || !user?.username || !planTestResult) return
+    if (stage !== "journeyMap" || !user?.username) return
+    const writings = mapFlags
+      .map((flag) => ({
+        type: flag.workType || "story",
+        text: (flag.content || "").trim(),
+      }))
+      .filter((item) => item.text.length >= 20)
+      .slice(0, 6)
     let cancelled = false
     setLevelLoading(true)
     void fetch("/api/writing-level", {
@@ -2070,7 +2077,8 @@ export default function Home() {
       body: JSON.stringify({
         user_id: user.username,
         language: "en",
-        testLevel: planTestResult.level,
+        testLevel: planTestResult?.level ?? levelOverride ?? 1,
+        writings,
       }),
     })
       .then((res) => (res.ok ? res.json() : null))
@@ -2092,7 +2100,7 @@ export default function Home() {
     return () => {
       cancelled = true
     }
-  }, [stage, user?.username, planTestResult])
+  }, [stage, user?.username, planTestResult?.level, levelOverride, mapFlags])
 
   // 根据 12 价值观命中维度更新森林：命中的树 stage +1（上限 4），並記錄是哪篇文章/哪句話讓它長高
   const applyTreeGrowthFromMetrics = useCallback(
@@ -3422,4 +3430,3 @@ export default function Home() {
     </main>
   )
 }
-
