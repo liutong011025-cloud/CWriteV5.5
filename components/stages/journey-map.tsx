@@ -8,7 +8,7 @@ import Image from "next/image"
 import type { Language, StoryState, BookReviewState, LetterState, MapFlagItem, MapWorkType } from "@/app/page"
 import type { JourneyType } from "@/components/stages/journey-ticket"
 import RoofDock, { type LevelReport } from "@/components/stages/roof-dock"
-import { DEFAULT_ROOF_LAYOUT, ROOF_PINS, type RoofLayout } from "@/lib/roof-layout"
+import { DEFAULT_ROOF_LAYOUT, ROOF_PINS } from "@/lib/roof-layout"
 import Antigravity from "@/components/effects/antigravity"
 import ShapeBlur from "@/components/effects/shape-blur"
 import Particles from "@/components/effects/Particles"
@@ -103,11 +103,9 @@ export default function JourneyMap({
   onRequestLevelTest,
 }: JourneyMapProps) {
   const [internalPin, setInternalPin] = useState<{ x: number; y: number } | null>(pin ?? null)
-  const [isPlacingPin, setIsPlacingPin] = useState(false)
   const [draggingType, setDraggingType] = useState<JourneyType | null>(null)
   const [placedType, setPlacedType] = useState<JourneyType | null>(type ?? null)
   const [showCoach, setShowCoach] = useState(!pin)
-  const [roofLayout, setRoofLayout] = useState<RoofLayout>(DEFAULT_ROOF_LAYOUT)
   const [selectedFlag, setSelectedFlag] = useState<MapFlagItem | null>(null)
   const [editContent, setEditContent] = useState("")
   const [editTitle, setEditTitle] = useState("")
@@ -232,11 +230,9 @@ export default function JourneyMap({
     if (pin) {
       setInternalPin(pin)
       setShowCoach(false)
-      setIsPlacingPin(true)
       return
     }
     setInternalPin(null)
-    setIsPlacingPin(false)
   }, [pin])
 
   const dropPinAt = (clientX: number, clientY: number, nextType: JourneyType) => {
@@ -263,21 +259,8 @@ export default function JourneyMap({
     setPlacedType(nextType)
     setDraggingType(null)
     setShowCoach(false)
-    setIsPlacingPin(true)
-  }
-
-  const handleStartJourney = () => {
-    const nextType = placedType ?? type
-    if (!pinPosition || !nextType) {
-      setShowCoach(true)
-      return
-    }
-    setIsPlacingPin(false)
-    if (onStartJourney) {
-      onStartJourney(nextType)
-      return
-    }
-    onNavigate("planTest")
+    if (onStartJourney) onStartJourney(nextType)
+    else onNavigate("planTest")
   }
 
   return (
@@ -396,35 +379,18 @@ export default function JourneyMap({
       {/* Pin + flags above UI shell so Start / markers stay clickable */}
       <div className="fixed inset-0 z-[20] pointer-events-none">
         {pinPosition && (
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation()
-              handleStartJourney()
-            }}
-            className="absolute -translate-x-1/2 -translate-y-full group pointer-events-auto"
+          <div
+            className="absolute -translate-x-1/2 -translate-y-full"
             style={imagePercentToOverlayStyle(pinPosition.x, pinPosition.y)}
-            aria-label="Start writing from here"
           >
-            <div className="flex flex-col items-center gap-1">
-              <Image
-                src={ROOF_PINS.find((item) => item.id === (placedType ?? type))?.src || "/pin.webp"}
-                alt="Writing start pin"
-                width={92}
-                height={52}
-                className="h-auto w-16 drop-shadow-lg group-hover:scale-110 transition-transform"
-              />
-              <span className="inline-flex items-center gap-1 rounded-full bg-white/95 px-3 py-1 text-xs font-semibold text-purple-700 shadow">
-                <Flag className="w-3 h-3 text-purple-500" />
-                Start
-              </span>
-              {isPlacingPin && (
-                <span className="mt-1 text-[11px] text-white bg-purple-500/80 rounded-full px-3 py-0.5 shadow">
-                  Click the START flag to begin!
-                </span>
-              )}
-            </div>
-          </button>
+            <Image
+              src={ROOF_PINS.find((item) => item.id === (placedType ?? type))?.src || "/pin.webp"}
+              alt="Writing pin"
+              width={92}
+              height={52}
+              className="h-auto w-16 drop-shadow-lg"
+            />
+          </div>
         )}
 
         {flags.map((flag, idx) => {
@@ -473,7 +439,7 @@ export default function JourneyMap({
           <div
             className="absolute inset-0 bg-black/45 backdrop-blur-[3px]"
             style={{
-              clipPath: `inset(0 ${roofLayout.roofWidth + roofLayout.roofRight + 28}px 0 0)`,
+              clipPath: `inset(0 ${DEFAULT_ROOF_LAYOUT.roofWidth + DEFAULT_ROOF_LAYOUT.roofRight + 28}px 0 0)`,
             }}
           />
           <div className="absolute left-1/2 top-1/2 -translate-x-[70%] -translate-y-1/2 text-[#3a3a3a]">
@@ -626,8 +592,7 @@ export default function JourneyMap({
       )}
 
       <RoofDock
-        layout={roofLayout}
-        onLayoutChange={setRoofLayout}
+        layout={DEFAULT_ROOF_LAYOUT}
         showCoach={showCoach}
         level={level}
         suggestedLevel={suggestedLevel}
