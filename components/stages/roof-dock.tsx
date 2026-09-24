@@ -2,7 +2,6 @@
 
 import { useState } from "react"
 import {
-  DEFAULT_ROOF_LAYOUT,
   ROOF_PINS,
   roofHeightFromWidth,
   type RoofLayout,
@@ -26,7 +25,6 @@ export type LevelReport = {
 
 type RoofDockProps = {
   layout: RoofLayout
-  onLayoutChange: (layout: RoofLayout) => void
   showCoach: boolean
   level: number | null
   suggestedLevel: number | null
@@ -47,7 +45,6 @@ const SCORE_ROWS: { key: keyof LevelScoreCard; label: string }[] = [
 
 export default function RoofDock({
   layout,
-  onLayoutChange,
   showCoach,
   level,
   suggestedLevel,
@@ -59,28 +56,8 @@ export default function RoofDock({
   onDragPinEnd,
 }: RoofDockProps) {
   const [showWhy, setShowWhy] = useState(false)
-  const [showTuner, setShowTuner] = useState(true)
-  const [copied, setCopied] = useState(false)
   const height = roofHeightFromWidth(layout.roofWidth)
   const levelLabel = level ? `Level ${level}` : "Test"
-
-  const updatePin = (id: RoofPinId, patch: Partial<RoofLayout["pins"][RoofPinId]>) => {
-    onLayoutChange({
-      ...layout,
-      pins: { ...layout.pins, [id]: { ...layout.pins[id], ...patch } },
-    })
-  }
-
-  const copyLayout = async () => {
-    const text = JSON.stringify(layout, null, 2)
-    try {
-      await navigator.clipboard.writeText(text)
-      setCopied(true)
-      window.setTimeout(() => setCopied(false), 1600)
-    } catch {
-      window.prompt("Copy these roof layout parameters:", text)
-    }
-  }
 
   return (
     <>
@@ -181,80 +158,6 @@ export default function RoofDock({
           </div>
         </div>
       )}
-
-      <div className="pointer-events-auto fixed left-4 top-24 z-[90] w-[min(92vw,340px)] rounded-2xl border border-white/40 bg-black/75 p-3 text-xs text-white shadow-2xl">
-        <div className="mb-2 flex items-center justify-between gap-2">
-          <p className="font-bold">Roof layout tuner</p>
-          <button type="button" className="rounded-full bg-white/15 px-2 py-1" onClick={() => setShowTuner((open) => !open)}>
-            {showTuner ? "Hide" : "Show"}
-          </button>
-        </div>
-        {showTuner && (
-          <div className="max-h-[70vh] space-y-2 overflow-y-auto pr-1">
-            <TunerRow label="roof width" min={80} max={980} value={layout.roofWidth} onChange={(roofWidth) => onLayoutChange({ ...layout, roofWidth })} />
-            <TunerRow label="roof right" min={-500} max={800} value={layout.roofRight} onChange={(roofRight) => onLayoutChange({ ...layout, roofRight })} />
-            <TunerRow label="roof bottom" min={-500} max={800} value={layout.roofBottom} onChange={(roofBottom) => onLayoutChange({ ...layout, roofBottom })} />
-            <TunerRow label="level left %" min={-40} max={140} step={0.1} value={layout.levelLeft} onChange={(levelLeft) => onLayoutChange({ ...layout, levelLeft })} />
-            <TunerRow label="level top %" min={-40} max={120} step={0.1} value={layout.levelTop} onChange={(levelTop) => onLayoutChange({ ...layout, levelTop })} />
-            <TunerRow label="level font" min={10} max={120} value={layout.levelFont} onChange={(levelFont) => onLayoutChange({ ...layout, levelFont })} />
-            {ROOF_PINS.map((pin) => (
-              <div key={pin.id} className="rounded-xl bg-white/10 p-2">
-                <p className="mb-1 font-semibold">{pin.label}</p>
-                <TunerRow label="left %" min={-80} max={120} step={0.1} value={layout.pins[pin.id].left} onChange={(left) => updatePin(pin.id, { left })} />
-                <TunerRow label="top %" min={-40} max={140} step={0.1} value={layout.pins[pin.id].top} onChange={(top) => updatePin(pin.id, { top })} />
-                <TunerRow label="width %" min={10} max={220} step={0.1} value={layout.pins[pin.id].width} onChange={(width) => updatePin(pin.id, { width })} />
-              </div>
-            ))}
-            <button type="button" onClick={copyLayout} className="w-full rounded-full bg-amber-500 px-3 py-2 font-bold text-black">
-              {copied ? "Copied" : "Copy parameters"}
-            </button>
-            <button type="button" onClick={() => onLayoutChange(DEFAULT_ROOF_LAYOUT)} className="w-full rounded-full bg-white/15 px-3 py-2">
-              Reset
-            </button>
-          </div>
-        )}
-      </div>
     </>
-  )
-}
-
-function TunerRow({
-  label,
-  min,
-  max,
-  step = 1,
-  value,
-  onChange,
-}: {
-  label: string
-  min: number
-  max: number
-  step?: number
-  value: number
-  onChange: (value: number) => void
-}) {
-  return (
-    <label className="flex items-center gap-2">
-      <span className="w-20 shrink-0">{label}</span>
-      <input
-        type="range"
-        min={min}
-        max={max}
-        step={step}
-        value={value}
-        onChange={(event) => onChange(Number(event.target.value))}
-        className="min-w-0 flex-1"
-      />
-      <input
-        type="number"
-        value={Number(value.toFixed(1))}
-        step={step}
-        onChange={(event) => {
-          const next = Number(event.target.value)
-          if (Number.isFinite(next)) onChange(next)
-        }}
-        className="w-16 rounded bg-white/15 px-1 py-0.5 text-right"
-      />
-    </label>
   )
 }
