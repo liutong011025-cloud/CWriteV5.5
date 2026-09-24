@@ -99,8 +99,8 @@ export default function RoofDock({
             }
             setShowWhy(true)
           }}
-          className="pointer-events-auto absolute left-1/2 z-10 -translate-x-1/2 font-hand font-extrabold text-[#5c3317] drop-shadow-[0_1px_0_rgba(255,248,230,0.9)]"
-          style={{ top: `${layout.levelTop}%`, fontSize: layout.levelFont, lineHeight: 1 }}
+          className="pointer-events-auto absolute z-10 -translate-x-1/2 font-hand font-extrabold text-[#5c3317] drop-shadow-[0_1px_0_rgba(255,248,230,0.9)]"
+          style={{ left: `${layout.levelLeft}%`, top: `${layout.levelTop}%`, fontSize: layout.levelFont, lineHeight: 1 }}
           aria-label={level ? "Why this level" : "Take the level check"}
         >
           {levelLoading ? "..." : levelLabel}
@@ -190,18 +190,19 @@ export default function RoofDock({
           </button>
         </div>
         {showTuner && (
-          <div className="max-h-[46vh] space-y-2 overflow-y-auto pr-1">
-            <TunerRow label="roof width" min={160} max={520} value={layout.roofWidth} onChange={(roofWidth) => onLayoutChange({ ...layout, roofWidth })} />
-            <TunerRow label="roof right" min={0} max={240} value={layout.roofRight} onChange={(roofRight) => onLayoutChange({ ...layout, roofRight })} />
-            <TunerRow label="roof bottom" min={0} max={240} value={layout.roofBottom} onChange={(roofBottom) => onLayoutChange({ ...layout, roofBottom })} />
-            <TunerRow label="level top %" min={0} max={20} step={0.1} value={layout.levelTop} onChange={(levelTop) => onLayoutChange({ ...layout, levelTop })} />
-            <TunerRow label="level font" min={16} max={48} value={layout.levelFont} onChange={(levelFont) => onLayoutChange({ ...layout, levelFont })} />
+          <div className="max-h-[70vh] space-y-2 overflow-y-auto pr-1">
+            <TunerRow label="roof width" min={80} max={980} value={layout.roofWidth} onChange={(roofWidth) => onLayoutChange({ ...layout, roofWidth })} />
+            <TunerRow label="roof right" min={-500} max={800} value={layout.roofRight} onChange={(roofRight) => onLayoutChange({ ...layout, roofRight })} />
+            <TunerRow label="roof bottom" min={-500} max={800} value={layout.roofBottom} onChange={(roofBottom) => onLayoutChange({ ...layout, roofBottom })} />
+            <TunerRow label="level left %" min={-40} max={140} step={0.1} value={layout.levelLeft} onChange={(levelLeft) => onLayoutChange({ ...layout, levelLeft })} />
+            <TunerRow label="level top %" min={-40} max={120} step={0.1} value={layout.levelTop} onChange={(levelTop) => onLayoutChange({ ...layout, levelTop })} />
+            <TunerRow label="level font" min={10} max={120} value={layout.levelFont} onChange={(levelFont) => onLayoutChange({ ...layout, levelFont })} />
             {ROOF_PINS.map((pin) => (
               <div key={pin.id} className="rounded-xl bg-white/10 p-2">
                 <p className="mb-1 font-semibold">{pin.label}</p>
-                <TunerRow label="left %" min={-10} max={40} value={layout.pins[pin.id].left} onChange={(left) => updatePin(pin.id, { left })} />
-                <TunerRow label="top %" min={0} max={90} value={layout.pins[pin.id].top} onChange={(top) => updatePin(pin.id, { top })} />
-                <TunerRow label="width %" min={40} max={120} value={layout.pins[pin.id].width} onChange={(width) => updatePin(pin.id, { width })} />
+                <TunerRow label="left %" min={-80} max={120} step={0.1} value={layout.pins[pin.id].left} onChange={(left) => updatePin(pin.id, { left })} />
+                <TunerRow label="top %" min={-40} max={140} step={0.1} value={layout.pins[pin.id].top} onChange={(top) => updatePin(pin.id, { top })} />
+                <TunerRow label="width %" min={10} max={220} step={0.1} value={layout.pins[pin.id].width} onChange={(width) => updatePin(pin.id, { width })} />
               </div>
             ))}
             <button type="button" onClick={copyLayout} className="w-full rounded-full bg-amber-500 px-3 py-2 font-bold text-black">
@@ -244,7 +245,16 @@ function TunerRow({
         onChange={(event) => onChange(Number(event.target.value))}
         className="min-w-0 flex-1"
       />
-      <span className="w-10 text-right">{Number(value.toFixed(1))}</span>
+      <input
+        type="number"
+        value={Number(value.toFixed(1))}
+        step={step}
+        onChange={(event) => {
+          const next = Number(event.target.value)
+          if (Number.isFinite(next)) onChange(next)
+        }}
+        className="w-16 rounded bg-white/15 px-1 py-0.5 text-right"
+      />
     </label>
   )
 }
