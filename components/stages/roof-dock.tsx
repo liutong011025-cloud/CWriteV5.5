@@ -61,9 +61,22 @@ export default function RoofDock({
   const levelLabel = level ? `Level ${level}` : "Test"
 
   useEffect(() => {
-    const img = new Image()
+    const img = document.createElement("img")
     img.src = "/pin.png"
+    img.alt = ""
+    img.width = 96
+    img.height = 96
+    img.style.position = "fixed"
+    img.style.left = "-1000px"
+    img.style.top = "0"
+    img.style.width = "96px"
+    img.style.height = "96px"
+    img.draggable = false
+    document.body.appendChild(img)
     dragImageRef.current = img
+    return () => {
+      img.remove()
+    }
   }, [])
 
   return (
@@ -101,7 +114,9 @@ export default function RoofDock({
                 event.dataTransfer.setData("text/plain", pin.id)
                 event.dataTransfer.effectAllowed = "copy"
                 const ghost = dragImageRef.current
-                if (ghost) event.dataTransfer.setDragImage(ghost, 28, 48)
+                if (ghost && ghost.complete && ghost.naturalWidth > 0) {
+                  event.dataTransfer.setDragImage(ghost, 48, 78)
+                }
                 onDragPinStart(pin.id)
               }}
               onDragEnd={() => onDragPinEnd?.()}
