@@ -16,7 +16,8 @@ import GuidedWritingNoAi from "@/components/stages/guided-writing-no-ai"
 import StoryReview from "@/components/stages/story-review"
 import LoginPage from "@/components/auth/login-page"
 import Dashboard from "@/components/teacher/dashboard-v2"
-import JourneyTicket, { type JourneyType } from "@/components/stages/journey-ticket"
+import { type JourneyType } from "@/components/stages/journey-ticket"
+import type { LevelReport } from "@/components/stages/roof-dock"
 import PlanTest from "@/components/stages/plan-test"
 import JourneyMap from "@/components/stages/journey-map"
 import WriteTypeSelection from "@/components/stages/write-type-selection"
@@ -149,6 +150,7 @@ interface PersistedMapState {
 
 const getMapStateKey = (username: string) => `cwriteMapState:${username}`
 const getPlanTestResultKey = (username: string) => `cwritePlanTestResult:${username}`
+const getShelfLevelKey = (username: string) => `cwriteShelfLevel:${username}`
 
 const getChapterBaseMapImageUrl = (chapterIndex: number) => {
   return chapterIndex <= 0 ? "/firstmap.webp" : "/secondmap.webp"
@@ -642,6 +644,10 @@ export default function Home() {
   const [galleryFromEdit, setGalleryFromEdit] = useState<{ type: 'story' | 'review' | 'letter' } | null>(null)
   const [selectedOtherFarmUser, setSelectedOtherFarmUser] = useState<string | null>(null)
   const [planTestResult, setPlanTestResult] = useState<{ score: number; level: number } | null>(null)
+  const [levelOverride, setLevelOverride] = useState<number | null>(null)
+  const [levelReport, setLevelReport] = useState<LevelReport | null>(null)
+  const [levelLoading, setLevelLoading] = useState(false)
+  const pendingJourneyTypeRef = useRef<JourneyType | null>(null)
   const [cagentMood, setCagentMood] = useState<CagentMood>("normal")
   const [valuesMessage, setValuesMessage] = useState<string | null>(null)
   const [valuesSuggestion, setValuesSuggestion] = useState<string | null>(null)
@@ -1218,8 +1224,12 @@ export default function Home() {
       } else {
         setPlanTestResult(null)
       }
+      const shelfRaw = localStorage.getItem(getShelfLevelKey(user.username))
+      const shelfLevelSaved = shelfRaw ? Number(shelfRaw) : NaN
+      setLevelOverride(shelfLevelSaved >= 1 && shelfLevelSaved <= 5 ? shelfLevelSaved : null)
     } catch {
       setPlanTestResult(null)
+      setLevelOverride(null)
     }
   }, [user?.username])
 
@@ -1932,7 +1942,8 @@ export default function Home() {
     return () => window.removeEventListener("headerRefreshUserInfo", onRefresh)
   }, [user?.username])
 
-  const currentLevel = journeySelection?.difficulty ?? writingAssessment?.level ?? 1
+  const shelfLevel = levelOverride ?? levelReport?.level ?? planTestResult?.level ?? null
+  const currentLevel = journeySelection?.difficulty ?? shelfLevel ?? writingAssessment?.level ?? 1
   useEffect(() => {
     try {
       if (typeof window !== "undefined") {
@@ -1942,6 +1953,90 @@ export default function Home() {
       // ignore
     }
   }, [currentLevel])
+
+  const beginJourney = useCallback((type: JourneyType, difficulty: number, score?: number) => {
+    const safeLevel = Math.min(5, Math.max(1, difficulty))
+    setJourneySelection({ type, difficulty: safeLevel })
+    setWritingAssessment((prev) => ({
+      score: score ?? prev?.score ?? planTestResult?.score ?? 0,
+      level: safeLevel,
+      mapImageStatus: prev?.mapImageStatus ?? "idle",
+    }))
+    setLevelBadgeUnlocked(true)
+    setJourneyActive(true)
+    mapPinAnchoredRef.current = true
+    startProcessSession()
+    if (type === "story") {
+      setStoryState({ character: null, plot: null, structure: null, story: "" })
+      setStage("character")
+    } else if (type === "bookReview") {
+      trackProcess("BOOK_001", {}, { stage: "bookReviewWelcome" })
+      setBookReviewState({
+        reviewType: null,
+        bookTitle: null,
+        structure: null,
+        review: "",
+        bookCoverUrl: undefined,
+        bookSummary: undefined,
+      })
+      setStage("bookReviewWelcome")
+    } else if (type === "letter") {
+      trackProcess("LETTER_001", {}, { stage: "letterAdventure" })
+      setLetterState({
+        recipient: null,
+        occasion: null,
+        guidance: null,
+        readerImageUrl: null,
+        sections: [],
+        letter: "",
+      })
+      setStage("letterAdventure")
+    } else if (type === "drama") {
+      trackProcess("DRAMA_001", {}, { stage: "dramaWriting" })
+      setStage("dramaWriting")
+    } else if (type === "poetry") {
+      trackProcess("POETRY_001", {}, { stage: "poetryWriting" })
+      setStage("poetryWriting")
+    }
+  }, [planTestResult?.score])
+
+  useEffect(() => {
+    if (stage === "journeyTicket") setStage("journeyMap")
+  }, [stage])
+
+  useEffect(() => {
+    if (stage !== "journeyMap" || !user?.username || !planTestResult) return
+    let cancelled = false
+    setLevelLoading(true)
+    void fetch("/api/writing-level", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        user_id: user.username,
+        language,
+        testLevel: planTestResult.level,
+      }),
+    })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (cancelled || !data || typeof data.level !== "number") return
+        const source = data.source === "ai" || data.source === "heuristic" || data.source === "test" ? data.source : "heuristic"
+        setLevelReport({
+          source,
+          level: data.level,
+          sampleCount: typeof data.sampleCount === "number" ? data.sampleCount : 0,
+          scores: data.scores ?? null,
+          reason: typeof data.reason === "string" ? data.reason : "",
+        })
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setLevelLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [stage, user?.username, planTestResult, language])
 
   // 根据 12 价值观命中维度更新森林：命中的树 stage +1（上限 4），並記錄是哪篇文章/哪句話讓它長高
   const applyTreeGrowthFromMetrics = useCallback(
@@ -2157,6 +2252,11 @@ export default function Home() {
           valuesMessage={valuesMessage}
           valuesSuggestion={valuesSuggestion}
           language={language}
+          openingMessage={
+            stage === "journeyMap" && !currentPin
+              ? "Please drag the writing pin you want from the right side onto the map to start a writing adventure."
+              : null
+          }
         />
       )}
       {showLevelBadge && writingAssessment && (
@@ -2210,67 +2310,13 @@ export default function Home() {
               )
             }
             setPlanTestResult({ score: result.score, level: result.level })
-            setStage("journeyTicket")
-          }}
-        />
-      )}
-      {stage === "journeyTicket" && user && writingAssessment && (
-        <JourneyTicket
-          language={language}
-          userName={user.username}
-          level={writingAssessment.level}
-          score={writingAssessment.score}
-          onBack={() => {
-            setStage("journeyMap")
-          }}
-          onRetest={() => {
-            setWritingAssessment(null)
-            setPlanTestResult(null)
-            setStage("planTest")
-          }}
-          onStart={({ type, difficulty }) => {
-            setJourneySelection({ type, difficulty })
-            setWritingAssessment((prev) => ({
-              score: prev?.score ?? 0,
-              level: difficulty,
-              mapImageStatus: prev?.mapImageStatus ?? "idle",
-            }))
-            setLevelBadgeUnlocked(true)
-            setJourneyActive(true)
-            mapPinAnchoredRef.current = true
-            startProcessSession()
-            if (type === "story") {
-              setStoryState({ character: null, plot: null, structure: null, story: "" })
-              setStage("character")
-            } else if (type === "bookReview") {
-              trackProcess("BOOK_001", {}, { stage: "bookReviewWelcome" })
-              setBookReviewState({
-                reviewType: null,
-                bookTitle: null,
-                structure: null,
-                review: "",
-                bookCoverUrl: undefined,
-                bookSummary: undefined,
-              })
-              setStage("bookReviewWelcome")
-            } else if (type === "letter") {
-              trackProcess("LETTER_001", {}, { stage: "letterAdventure" })
-              setLetterState({
-                recipient: null,
-                occasion: null,
-                guidance: null,
-                readerImageUrl: null,
-                sections: [],
-                letter: "",
-              })
-              setStage("letterAdventure")
-            } else if (type === "drama") {
-              trackProcess("DRAMA_001", {}, { stage: "dramaWriting" })
-              setStage("dramaWriting")
-            } else if (type === "poetry") {
-              trackProcess("POETRY_001", {}, { stage: "poetryWriting" })
-              setStage("poetryWriting")
+            const pendingType = pendingJourneyTypeRef.current
+            pendingJourneyTypeRef.current = null
+            if (pendingType) {
+              beginJourney(pendingType, result.level, result.score)
+              return
             }
+            setStage("journeyMap")
           }}
         />
       )}
@@ -2292,18 +2338,27 @@ export default function Home() {
           dramaProgress={journeySelection?.type === "drama" ? dramaProgress : undefined}
           poetryProgress={journeySelection?.type === "poetry" ? poetryProgress : undefined}
           noAi={user.noAi}
+          level={shelfLevel}
+          suggestedLevel={levelReport?.level ?? planTestResult?.level ?? null}
+          levelReport={
+            levelOverride && levelReport
+              ? { ...levelReport, source: "choice" }
+              : levelReport
+          }
+          levelLoading={levelLoading}
+          onChangeLevel={(next) => {
+            setLevelOverride(next)
+            if (user?.username) localStorage.setItem(getShelfLevelKey(user.username), String(next))
+          }}
+          onRequestLevelTest={() => setStage("planTest")}
           onBack={() => setStage("userProfile")}
-          onStartJourney={() => {
-            if (planTestResult) {
-              setWritingAssessment({
-                score: planTestResult.score,
-                level: planTestResult.level,
-                mapImageStatus: "idle",
-              })
-              setStage("journeyTicket")
+          onStartJourney={(type) => {
+            if (!planTestResult) {
+              pendingJourneyTypeRef.current = type
+              setStage("planTest")
               return
             }
-            setStage("planTest")
+            beginJourney(type, shelfLevel ?? planTestResult.level)
           }}
           onNavigate={(targetStage) => {
             setStage(targetStage as any)
