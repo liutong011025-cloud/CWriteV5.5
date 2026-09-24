@@ -7,6 +7,8 @@ import { Flag, PencilLine } from "lucide-react"
 import Image from "next/image"
 import type { Language, StoryState, BookReviewState, LetterState, MapFlagItem, MapWorkType } from "@/app/page"
 import type { JourneyType } from "@/components/stages/journey-ticket"
+import RoofDock, { type LevelReport } from "@/components/stages/roof-dock"
+import { DEFAULT_ROOF_LAYOUT, ROOF_PINS, type RoofLayout } from "@/lib/roof-layout"
 import Antigravity from "@/components/effects/antigravity"
 import ShapeBlur from "@/components/effects/shape-blur"
 import Particles from "@/components/effects/Particles"
@@ -64,7 +66,13 @@ interface JourneyMapProps {
   dramaProgress?: DramaProgress
   poetryProgress?: PoetryProgress
   noAi?: boolean
-  onStartJourney?: () => void
+  level?: number | null
+  suggestedLevel?: number | null
+  levelReport?: LevelReport | null
+  levelLoading?: boolean
+  onChangeLevel?: (level: number) => void
+  onRequestLevelTest?: () => void
+  onStartJourney?: (type: JourneyType) => void
   onNavigate: (stage: string) => void
   onBack?: () => void
   onGoProfile?: () => void
@@ -87,12 +95,19 @@ export default function JourneyMap({
   onGoProfile,
   onFlagUpdate,
   onStartJourney,
+  level = null,
+  suggestedLevel = null,
+  levelReport = null,
+  levelLoading = false,
+  onChangeLevel,
+  onRequestLevelTest,
 }: JourneyMapProps) {
   const [internalPin, setInternalPin] = useState<{ x: number; y: number } | null>(pin ?? null)
   const [isPlacingPin, setIsPlacingPin] = useState(false)
-  const [isHoldingPin, setIsHoldingPin] = useState(false)
-  const [isHoveringBox, setIsHoveringBox] = useState(false)
-  const [pinBoxHidden, setPinBoxHidden] = useState(false)
+  const [draggingType, setDraggingType] = useState<JourneyType | null>(null)
+  const [placedType, setPlacedType] = useState<JourneyType | null>(type ?? null)
+  const [showCoach, setShowCoach] = useState(!pin)
+  const [roofLayout, setRoofLayout] = useState<RoofLayout>(DEFAULT_ROOF_LAYOUT)
   const [selectedFlag, setSelectedFlag] = useState<MapFlagItem | null>(null)
   const [editContent, setEditContent] = useState("")
   const [editTitle, setEditTitle] = useState("")
@@ -216,27 +231,28 @@ export default function JourneyMap({
   useEffect(() => {
     if (pin) {
       setInternalPin(pin)
-      setPinBoxHidden(true)
+      setShowCoach(false)
       setIsPlacingPin(true)
       return
     }
     setInternalPin(null)
-    setPinBoxHidden(false)
     setIsPlacingPin(false)
   }, [pin])
 
-  const handleMapClick = (event: MouseEvent<HTMLDivElement>) => {
-    if (!isHoldingPin) return
+  const dropPinAt = (clientX: number, clientY: number, nextType: JourneyType) => {
     const container = mapOverlayRef.current
     if (!container) return
     const frame = resolveMapFrame()
     if (!frame) return
     const rect = container.getBoundingClientRect()
-    const localX = event.clientX - rect.left
-    const localY = event.clientY - rect.top
+    const localX = clientX - rect.left
+    const localY = clientY - rect.top
     const x = localX - frame.left
     const y = localY - frame.top
-    if (x < 0 || y < 0 || x > frame.width || y > frame.height) return
+    if (x < 0 || y < 0 || x > frame.width || y > frame.height) {
+      setDraggingType(null)
+      return
+    }
     const nextPin = {
       x: (x / frame.width) * 100,
       y: (y / frame.height) * 100,
@@ -244,29 +260,28 @@ export default function JourneyMap({
     if (onPinChange) onPinChange(nextPin)
     else setInternalPin(nextPin)
 
-    setIsHoldingPin(false)
+    setPlacedType(nextType)
+    setDraggingType(null)
+    setShowCoach(false)
     setIsPlacingPin(true)
   }
 
   const handleStartJourney = () => {
-    if (!pinPosition) return
+    const nextType = placedType ?? type
+    if (!pinPosition || !nextType) {
+      setShowCoach(true)
+      return
+    }
     setIsPlacingPin(false)
     if (onStartJourney) {
-      onStartJourney()
+      onStartJourney(nextType)
       return
     }
     onNavigate("planTest")
   }
 
   return (
-    <div
-      className="min-h-screen relative overflow-hidden pt-[96px]"
-      style={{
-        cursor: isHoldingPin
-          ? 'url("/pin.webp") 16 32, pointer'
-          : "default",
-      }}
-    >
+    <div className="min-h-screen relative overflow-hidden pt-[96px]">
       {/* Full-screen map image */}
       <div ref={mapOverlayRef} className="fixed inset-0 z-0">
         <img
@@ -371,38 +386,6 @@ export default function JourneyMap({
             </Button>
           )}
 
-          {/* 右下角：圖釘盒 box，點擊後拿起圖釘 */}
-          {!pinBoxHidden && (
-            <div className="pointer-events-auto absolute right-5 bottom-12 z-20 flex flex-col items-center gap-2">
-              <p className="mb-2 max-w-[980px] text-[20px] md:text-2xl leading-tight font-hand font-extrabold text-center text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] atlas-jitter-sm">
-                Drop a pin on the map to start your writing adventure!
-              </p>
-              <button
-                type="button"
-                onMouseEnter={() => setIsHoveringBox(true)}
-                onMouseLeave={() => setIsHoveringBox(false)}
-                onClick={() => {
-                  setIsHoldingPin(true)
-                  setPinBoxHidden(true)
-                }}
-                className="relative rounded-2xl bg-white/0 hover:bg-white/10 transition-transform duration-200 atlas-jitter-sm"
-                aria-label="Pick up pin"
-              >
-                <img
-                  src="/box.webp"
-                  alt="Pin box"
-                  className="w-28 h-auto object-contain drop-shadow-lg transition-transform duration-200 hover:scale-105"
-                  draggable={false}
-                />
-              </button>
-              {isHoveringBox && (
-                <div className="absolute bottom-full right-0 z-30 mb-3 w-[min(92vw,560px)] rounded-xl border border-purple-200 bg-white/95 px-4 py-3 text-center text-base md:text-lg font-hand leading-relaxed text-purple-800 shadow-lg break-words">
-                  Click the pin box to pick up a pin, then click the area on the map where you want to start exploring and writing.
-                </div>
-              )}
-            </div>
-          )}
-
           {/* Map interaction layer is full-screen behind this UI shell */}
           <div className="flex-1 h-full" aria-hidden />
 
@@ -425,11 +408,11 @@ export default function JourneyMap({
           >
             <div className="flex flex-col items-center gap-1">
               <Image
-                src="/pin.webp"
+                src={ROOF_PINS.find((item) => item.id === (placedType ?? type))?.src || "/pin.webp"}
                 alt="Writing start pin"
-                width={52}
+                width={92}
                 height={52}
-                className="drop-shadow-lg group-hover:scale-110 transition-transform"
+                className="h-auto w-16 drop-shadow-lg group-hover:scale-110 transition-transform"
               />
               <span className="inline-flex items-center gap-1 rounded-full bg-white/95 px-3 py-1 text-xs font-semibold text-purple-700 shadow">
                 <Flag className="w-3 h-3 text-purple-500" />
@@ -485,13 +468,33 @@ export default function JourneyMap({
         })}
       </div>
 
-      {/* Transparent capture layer while holding pin — sits above markers + UI */}
-      {isHoldingPin && (
+      {showCoach && (
+        <div className="pointer-events-none fixed inset-0 z-[30]">
+          <div
+            className="absolute inset-0 bg-black/45 backdrop-blur-[3px]"
+            style={{
+              clipPath: `inset(0 ${roofLayout.roofWidth + roofLayout.roofRight + 28}px 0 0)`,
+            }}
+          />
+          <div className="absolute left-1/2 top-1/2 -translate-x-[70%] -translate-y-1/2 text-[#3a3a3a]">
+            <svg width="180" height="80" viewBox="0 0 180 80" aria-hidden>
+              <path d="M8 40 H132" stroke="currentColor" strokeWidth="14" strokeLinecap="round" />
+              <path d="M118 16 L168 40 L118 64" fill="currentColor" />
+            </svg>
+          </div>
+        </div>
+      )}
+
+      {draggingType && (
         <div
-          className="fixed inset-0 z-[25]"
-          style={{ cursor: 'url("/pin.webp") 16 32, pointer' }}
-          onClick={handleMapClick}
-          aria-label="Click to drop pin on map"
+          className="fixed inset-0 z-[35]"
+          onDragOver={(event) => event.preventDefault()}
+          onDrop={(event) => {
+            event.preventDefault()
+            const nextType = (event.dataTransfer.getData("text/plain") || draggingType) as JourneyType
+            dropPinAt(event.clientX, event.clientY, nextType)
+          }}
+          aria-label="Drop the pin on the map"
         />
       )}
 
@@ -622,6 +625,23 @@ export default function JourneyMap({
         </div>
       )}
 
+      <RoofDock
+        layout={roofLayout}
+        onLayoutChange={setRoofLayout}
+        showCoach={showCoach}
+        level={level}
+        suggestedLevel={suggestedLevel}
+        report={levelReport}
+        levelLoading={levelLoading}
+        onChangeLevel={(next) => onChangeLevel?.(next)}
+        onRequestLevelTest={() => onRequestLevelTest?.()}
+        onDragPinStart={(id) => {
+          setDraggingType(id)
+          setShowCoach(false)
+        }}
+        onDragPinEnd={() => setDraggingType(null)}
+      />
+
       <style jsx global>{`
         @keyframes atlas-jitter-sm {
           0%, 100% { transform: translate3d(0, 0, 0) rotate(0deg); }
@@ -631,6 +651,10 @@ export default function JourneyMap({
         }
         .atlas-jitter-sm {
           animation: atlas-jitter-sm 1.8s ease-in-out infinite;
+        }
+        @keyframes roof-pin-breathe {
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.08); }
         }
       `}</style>
     </div>
