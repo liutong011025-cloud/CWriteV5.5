@@ -73,6 +73,8 @@ interface JourneyMapProps {
   onChangeLevel?: (level: number) => void
   onRequestLevelTest?: () => void
   onStartJourney?: (type: JourneyType) => void
+  resumeJourney?: boolean
+  onContinue?: () => void
   onNavigate: (stage: string) => void
   onBack?: () => void
   onGoProfile?: () => void
@@ -95,6 +97,8 @@ export default function JourneyMap({
   onGoProfile,
   onFlagUpdate,
   onStartJourney,
+  resumeJourney = false,
+  onContinue,
   level = null,
   suggestedLevel = null,
   levelReport = null,
@@ -105,7 +109,7 @@ export default function JourneyMap({
   const [internalPin, setInternalPin] = useState<{ x: number; y: number } | null>(pin ?? null)
   const [draggingType, setDraggingType] = useState<JourneyType | null>(null)
   const [placedType, setPlacedType] = useState<JourneyType | null>(type ?? null)
-  const [showCoach, setShowCoach] = useState(!pin)
+  const [showCoach, setShowCoach] = useState(!pin && !resumeJourney)
   const [selectedFlag, setSelectedFlag] = useState<MapFlagItem | null>(null)
   const [editContent, setEditContent] = useState("")
   const [editTitle, setEditTitle] = useState("")
@@ -227,13 +231,14 @@ export default function JourneyMap({
   }
 
   useEffect(() => {
-    if (pin) {
-      setInternalPin(pin)
+    if (pin || resumeJourney) {
+      setInternalPin(pin ?? null)
       setShowCoach(false)
       return
     }
     setInternalPin(null)
-  }, [pin])
+    setShowCoach(true)
+  }, [pin, resumeJourney])
 
   const dropPinAt = (clientX: number, clientY: number, nextType: JourneyType) => {
     const container = mapOverlayRef.current
@@ -378,7 +383,36 @@ export default function JourneyMap({
 
       {/* Pin + flags above UI shell so Start / markers stay clickable */}
       <div className="fixed inset-0 z-[20] pointer-events-none">
-        {pinPosition && (
+        {pinPosition && resumeJourney && (
+          <button
+            type="button"
+            onClick={() => onContinue?.()}
+            className="absolute -translate-x-1/2 -translate-y-full pointer-events-auto group flex flex-col items-center"
+            style={imagePercentToOverlayStyle(pinPosition.x, pinPosition.y)}
+            aria-label="Continue writing"
+          >
+            <Image
+              src={ROOF_PINS.find((item) => item.id === (placedType ?? type))?.src || "/pin.webp"}
+              alt="Writing pin"
+              width={92}
+              height={52}
+              className="h-auto w-16 drop-shadow-lg transition-transform duration-200 group-hover:scale-110"
+            />
+            <span className="mt-1 inline-flex rounded-full bg-white/95 px-3 py-1 text-xs font-bold text-purple-700 shadow transition-transform duration-200 group-hover:scale-110">
+              Continue
+            </span>
+          </button>
+        )}
+        {resumeJourney && !pinPosition && (
+          <button
+            type="button"
+            onClick={() => onContinue?.()}
+            className="pointer-events-auto fixed left-1/2 top-1/2 z-[40] -translate-x-1/2 -translate-y-1/2 rounded-full bg-white px-5 py-2 font-hand text-xl font-extrabold text-purple-800 shadow-xl transition-transform duration-200 hover:scale-110"
+          >
+            Continue
+          </button>
+        )}
+        {pinPosition && !resumeJourney && (
           <div
             className="absolute -translate-x-1/2 -translate-y-full"
             style={imagePercentToOverlayStyle(pinPosition.x, pinPosition.y)}
@@ -442,10 +476,10 @@ export default function JourneyMap({
               clipPath: `inset(0 ${DEFAULT_ROOF_LAYOUT.roofWidth + DEFAULT_ROOF_LAYOUT.roofRight + 28}px 0 0)`,
             }}
           />
-          <div className="absolute left-1/2 top-1/2 -translate-x-[70%] -translate-y-1/2 text-[#3a3a3a]">
-            <svg width="180" height="80" viewBox="0 0 180 80" aria-hidden>
-              <path d="M8 40 H132" stroke="currentColor" strokeWidth="14" strokeLinecap="round" />
-              <path d="M118 16 L168 40 L118 64" fill="currentColor" />
+          <div className="absolute left-[18%] top-1/2 -translate-y-1/2 text-white roof-arrow-flash">
+            <svg width="280" height="120" viewBox="0 0 180 80" aria-hidden>
+              <path d="M8 40 H132" stroke="currentColor" strokeWidth="16" strokeLinecap="round" />
+              <path d="M112 8 L172 40 L112 72" fill="currentColor" />
             </svg>
           </div>
         </div>
@@ -591,6 +625,7 @@ export default function JourneyMap({
         </div>
       )}
 
+      {!resumeJourney && (
       <RoofDock
         layout={DEFAULT_ROOF_LAYOUT}
         showCoach={showCoach}
@@ -606,6 +641,7 @@ export default function JourneyMap({
         }}
         onDragPinEnd={() => setDraggingType(null)}
       />
+      )}
 
       <style jsx global>{`
         @keyframes atlas-jitter-sm {
@@ -620,6 +656,13 @@ export default function JourneyMap({
         @keyframes roof-pin-breathe {
           0%, 100% { transform: scale(1); }
           50% { transform: scale(1.08); }
+        }
+        @keyframes roof-arrow-flash {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.25; }
+        }
+        .roof-arrow-flash {
+          animation: roof-arrow-flash 0.9s ease-in-out infinite;
         }
       `}</style>
     </div>
