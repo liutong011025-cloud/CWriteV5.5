@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useRef } from "react"
 import {
   ROOF_PINS,
   roofHeightFromWidth,
@@ -60,27 +60,17 @@ export default function RoofDock({
   const height = roofHeightFromWidth(layout.roofWidth)
   const levelLabel = level ? `Level ${level}` : "Test"
 
-  useEffect(() => {
-    const img = document.createElement("img")
-    img.src = "/pin.png"
-    img.alt = ""
-    img.width = 96
-    img.height = 96
-    img.style.position = "fixed"
-    img.style.left = "-1000px"
-    img.style.top = "0"
-    img.style.width = "96px"
-    img.style.height = "96px"
-    img.draggable = false
-    document.body.appendChild(img)
-    dragImageRef.current = img
-    return () => {
-      img.remove()
-    }
-  }, [])
-
   return (
     <>
+      <img
+        ref={dragImageRef}
+        src="/pin.png"
+        alt=""
+        width={128}
+        height={128}
+        draggable={false}
+        className="pointer-events-none fixed left-0 top-0 h-32 w-32 opacity-[0.02]"
+      />
       <div
         className="pointer-events-none fixed z-[45]"
         style={{ right: layout.roofRight, bottom: layout.roofBottom, width: layout.roofWidth, height }}
@@ -113,11 +103,9 @@ export default function RoofDock({
               onDragStart={(event) => {
                 event.dataTransfer.setData("text/plain", pin.id)
                 event.dataTransfer.effectAllowed = "copy"
-                const ghost = dragImageRef.current
-                if (ghost && ghost.complete && ghost.naturalWidth > 0) {
-                  event.dataTransfer.setDragImage(ghost, 48, 78)
-                }
                 onDragPinStart(pin.id)
+                const ghost = dragImageRef.current
+                if (ghost) event.dataTransfer.setDragImage(ghost, 64, 100)
               }}
               onDragEnd={() => onDragPinEnd?.()}
               className="pointer-events-auto absolute cursor-grab active:cursor-grabbing"
