@@ -31,6 +31,8 @@ export interface CagentProps {
   valuesSuggestion?: string | null
   /** Header UI language */
   language?: "en" | "zh"
+  /** Fixed first line for this stage. Skips the guide fetch until the student replies. */
+  openingMessage?: string | null
   /** Callback when guide response is needed (e.g. parent fetches and passes content) */
   onOpenDialog?: () => void
 }
@@ -43,6 +45,7 @@ export default function Cagent({
   valuesMessage,
   valuesSuggestion,
   language = "en",
+  openingMessage = null,
 }: CagentProps) {
   const t = getCagentCopy(language)
   const [showBubble, setShowBubble] = useState(false)
@@ -122,12 +125,12 @@ export default function Cagent({
     setUserInput("")
     setIsSleeping(false)
     setShowBubble(true)
-    setGuideText(t.pageWait)
+    setGuideText(openingMessage || t.pageWait)
     scheduleSleep()
-    if (!valuesMessage) {
+    if (!valuesMessage && !openingMessage) {
       fetchGuide()
     }
-  }, [stage, contextSummary, valuesMessage, fetchGuide, scheduleSleep, t.pageWait])
+  }, [stage, contextSummary, valuesMessage, openingMessage, fetchGuide, scheduleSleep, t.pageWait])
 
   const handleOpen = useCallback(() => {
     setShowBubble(true)
