@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma, isDatabaseUrlConfigured } from "@/lib/prisma"
 import { loginLteTrialAccount, syncLteTrialRosterAfterLogin } from "@/lib/lte-trial-roster"
 import { loginInt6136Account } from "@/lib/int6136-roster"
+import { loginWhno8psAccount } from "@/lib/whno8ps-roster"
 
 // 新用户注册开关（学生 + 教师）
 const REGISTRATION_ENABLED = true
@@ -187,6 +188,11 @@ export async function POST(request: NextRequest) {
     const int6136User = await loginInt6136Account(username, password)
     if (int6136User) {
       return NextResponse.json({ success: true, user: int6136User }, { status: 200 })
+    }
+
+    const whno8psUser = await loginWhno8psAccount(username, password)
+    if (whno8psUser) {
+      return NextResponse.json({ success: true, user: whno8psUser }, { status: 200 })
     }
 
     // 4) 其他帳號：需要資料庫
